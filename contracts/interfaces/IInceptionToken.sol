@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IInceptionToken {
+    event VaultChanged(address prevValue, address newValue);
+
+    function mint(address account, uint256 amount) external;
+
+    function burn(address account, uint256 amount) external;
+}
