@@ -79,6 +79,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev performs creating a withdrawal request from EigenLayer
     /// @dev builds the withdrawal request based on the current asset targets
     function withdrawFromEL() external nonReentrant onlyOperator {
+        if (epoch % 2 != 0) {
+            revert RebalanceNotInProgress();
+        }
         epoch++;
         (
             uint256[] memory strategyIndexes,
