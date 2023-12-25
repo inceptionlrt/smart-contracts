@@ -36,7 +36,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
         // approve spending by stategyManager
-        _asset.approve(address(strategyManager), type(uint256).max);
+        require(
+            _asset.approve(address(strategyManager), type(uint256).max),
+            "InceptionVault: approve failed"
+        );
     }
 
     /*//////////////////////////////
@@ -52,20 +55,21 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     /// @dev deposits extra assets into strategy
-    function depositExta() external onlyOperator {
+    function depositExtra() external onlyOperator {
         uint256 vaultBalance = totalAssets();
         uint256 toWithdrawAmount = totalAmountToWithdraw;
         if (vaultBalance <= toWithdrawAmount) {
             return;
         }
 
+        uint256 totalDepositedBefore = getTotalDeposited();
         strategyManager.depositIntoStrategy(
             strategy,
             _asset,
             vaultBalance - toWithdrawAmount
         );
 
-        emit DepositedToEL(vaultBalance - toWithdrawAmount);
+        emit DepositedToEL(totalDepositedBefore - getTotalDeposited());
     }
 
     /*/////////////////////////////////
@@ -122,7 +126,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function claimCompletedWithdrawals(
         IStrategyManager.QueuedWithdrawal calldata withdrawal,
         IERC20[] calldata assetsToClaim
-    ) public {
+    ) public nonReentrant {
         require(
             strategyManager.withdrawalRootPending(
                 strategyManager.calculateWithdrawalRoot(withdrawal)
