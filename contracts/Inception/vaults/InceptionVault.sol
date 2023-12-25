@@ -21,6 +21,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 epoch;
         address receiver;
         uint256 amount;
+        uint256 iShares;
     }
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
@@ -107,6 +108,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         totalAmountToWithdraw += amount;
         Withdrawal storage request = _claimerWithdrawals[receiver];
         request.amount += _getAssetReceivedAmount(amount);
+        request.iShares = iShares;
         request.receiver = receiver;
         request.epoch = epoch;
 
@@ -124,6 +126,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
         Withdrawal storage request = _claimerWithdrawals[receiver];
         uint256 amount = request.amount;
+        /// @notice Ensure the ratio has decreased since the user's withdrawal
+        uint256 currentAmount = Convert.multiplyAndDivideFloor(
+            request.iShares,
+            1e18,
+            ratio()
+        );
+        if (currentAmount < amount) amount = currentAmount;
         totalAmountToWithdraw -= amount;
 
         delete _claimerWithdrawals[receiver];
