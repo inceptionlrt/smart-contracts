@@ -62,14 +62,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             return;
         }
 
-        uint256 totalDepositedBefore = getTotalDeposited();
-        strategyManager.depositIntoStrategy(
+        uint256 shares = strategyManager.depositIntoStrategy(
             strategy,
             _asset,
             vaultBalance - toWithdrawAmount
         );
 
-        emit DepositedToEL(totalDepositedBefore - getTotalDeposited());
+        emit DepositedToEL(strategy.sharesToUnderlyingView(shares));
     }
 
     /*/////////////////////////////////
