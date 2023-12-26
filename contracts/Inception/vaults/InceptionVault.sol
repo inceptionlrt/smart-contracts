@@ -108,7 +108,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         totalAmountToWithdraw += amount;
         Withdrawal storage request = _claimerWithdrawals[receiver];
         request.amount += _getAssetReceivedAmount(amount);
-        request.iShares = iShares;
+        request.iShares += iShares;
         request.receiver = receiver;
         request.epoch = epoch;
 
