@@ -1,13 +1,19 @@
-// require("hardhat-gas-reporter");
-// require("hardhat-storage-layout");
-require("hardhat-tracer");
-require("@nomicfoundation/hardhat-toolbox");
-// require("solidity-coverage");
+// require("@nomicfoundation/hardhat-toolbox");
+require("@openzeppelin/hardhat-upgrades");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   networks: {
     hardhat: {},
+    localhost: {
+      url: "http://127.0.0.1:8545/",
+    },
+    mainnet: {
+      // accounts: [""],
+      url: "https://rpc.ankr.com/eth",
+      chainId: 1,
+      gas: 8000000,
+    },
   },
   solidity: {
     compilers: [
@@ -16,7 +22,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 0,
+            runs: 200,
           },
         },
       },
