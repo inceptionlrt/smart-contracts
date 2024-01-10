@@ -20,7 +20,8 @@ contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
-    IInceptionErrors
+    IInceptionErrors,
+    IInceptionAssetHandler
 {
     using SafeERC20 for IERC20;
 
@@ -31,11 +32,14 @@ contract InceptionAssetsHandler is
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
     ) internal onlyInitializing {
+        __Pausable_init();
+        __ReentrancyGuard_init();
+
         _asset = assetAddress;
     }
 
     /// @dev returns assets and balance of iVault in them
-    function totalAssets() public view returns (uint256) {
+    function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 

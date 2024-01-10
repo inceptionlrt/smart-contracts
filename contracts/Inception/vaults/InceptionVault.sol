@@ -11,9 +11,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Inception re-staking token
     IInceptionToken public inceptionToken;
 
-    /// @dev deposit fee is charged for custom deposit and withdrawal functions
-    uint256 public depositFee;
-
     /// @dev reduce rounding issues
     uint256 public minAmount;
 
@@ -40,15 +37,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        depositFee = 100000000000000000; // 10.00%
         minAmount = 100;
     }
 
     /*//////////////////////////////
     ////// Deposit functions //////
     ////////////////////////////*/
-
-    function previewDeposit(uint256 assets) public view returns (uint256) {}
 
     /// @dev deposits the provided assets directly into EigenLayer
     /// @notice verify the proportion via verifyProportion()
@@ -88,8 +82,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     // ////// Withdrawal functions //////
     // ///////////////////////////////*/
 
-    function previewWithdraw(uint256 assets) public view returns (uint256) {}
-
     /// @dev performs burning iToken from mgs.sender
     /// @dev creates a withdrawal requests based on the current assets targets
     /// @dev 1. Withdraw: from Vault -> decrease the rebalance diff
@@ -102,14 +94,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (receiver == address(0)) {
             revert NullParams();
         }
-        address claimer = msg.sender;
+        address owner = msg.sender;
         uint256 amount = Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
         require(
             amount >= minAmount,
             "InceptionVault: amount is less than the minimum withdrawal"
         );
         // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
+        inceptionToken.burn(owner, iShares);
 
         // update global state and claimer's state
         totalAmountToWithdraw += amount;
@@ -118,26 +110,26 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         request.receiver = receiver;
         request.epoch = epoch;
 
-        emit Withdraw(claimer, receiver, claimer, amount, iShares);
+        emit Withdraw(owner, receiver, owner, amount, iShares);
     }
 
     /// @dev performs claiming of a withdrawal request
     /// @notice checks isAbleToRedeem() function
     /// @notice everyone is able to claim for a proper claimer
-    /// @param claimer represents the receiver(creator) of a withdrawal request
-    function redeem(address claimer) public nonReentrant {
+    /// @param receiver represents the receiver of a withdrawal request
+    function redeem(address receiver) public nonReentrant {
         require(
-            isAbleToRedeem(claimer),
+            isAbleToRedeem(receiver),
             "InceptionVault: claimer is not able to claim"
         );
-        Withdrawal storage request = _claimerWithdrawals[claimer];
+        Withdrawal storage request = _claimerWithdrawals[receiver];
         uint256 amount = request.amount;
         totalAmountToWithdraw -= amount;
 
-        delete _claimerWithdrawals[claimer];
-        _transferAssetTo(claimer, amount);
+        delete _claimerWithdrawals[receiver];
+        _transferAssetTo(receiver, amount);
 
-        emit Redeem(msg.sender, claimer, amount);
+        emit Redeem(msg.sender, receiver, amount);
     }
 
     function getPendingWithdrawalOf(
@@ -214,11 +206,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function setOperator(address newValue) external onlyOwner {
         emit OperatorChanged(_operator, newValue);
         _operator = newValue;
-    }
-
-    function setDepositFee(uint256 newDepositFee) external onlyOwner {
-        emit DepositFeeChanged(depositFee, newDepositFee);
-        depositFee = newDepositFee;
     }
 
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
