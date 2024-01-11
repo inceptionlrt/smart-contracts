@@ -1,4 +1,4 @@
-// require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 require("@openzeppelin/hardhat-upgrades");
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -9,7 +9,7 @@ module.exports = {
       url: "http://127.0.0.1:8545/",
     },
     mainnet: {
-      // accounts: [""],
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: "https://rpc.ankr.com/eth",
       chainId: 1,
       gas: 8000000,
