@@ -71,6 +71,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(strategy.sharesToUnderlyingView(shares));
     }
 
+    function updateEpoch() external onlyOperator {
+        epoch++;
+    }
+
     /*/////////////////////////////////
     ////// Withdrawal functions //////
     ///////////////////////////////*/
