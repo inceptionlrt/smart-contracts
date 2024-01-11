@@ -1,8 +1,8 @@
-const { addresses } = require("./el-addresses");
+const { addresses } = require("./config-addresses");
 const { deployVault } = require("../deploy-vault");
 
 const VaultName = "InstEthVault",
-  TokenName = "Inception stETH",
+  TokenName = "Inception Restaked stETH",
   TokenSymbol = "InstETH";
 
 async function main() {
