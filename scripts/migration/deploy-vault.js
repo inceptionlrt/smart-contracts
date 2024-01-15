@@ -3,17 +3,16 @@ const fs = require("fs");
 
 const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const [deployer] = await ethers.getSigners();
-  let initialNonce = await ethers.provider.getTransactionCount(deployer.address);
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  // console.log("Account balance:", (await deployer.()).toString());
 
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, [tokenName, tokenSymbol]);
-  await iToken.deployed();
+  await iToken.waitForDeployment();
 
-  const iTokenAddress = iToken.address;
+  const iTokenAddress = await iToken.getAddress();
   console.log(`InceptionToken address: ${iTokenAddress}`);
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
@@ -29,20 +28,21 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
 
   // 2. Inception vault
   const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultName);
-  iVault = await upgrades.deployProxy(InceptionVaultFactory, [
+  const iVault = await upgrades.deployProxy(InceptionVaultFactory, [
     addresses.Operator,
     addresses.StrategyManager,
     iTokenAddress,
     strategyAddress,
   ]);
-  await iVault.deployed();
+  await iVault.waitForDeployment();
 
-  const iVaultAddress = iVault.address;
+  const iVaultAddress = await iVault.getAddress();
   console.log(`InceptionVault address: ${iVaultAddress}`);
   const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
 
   // 3. set the vault
-  await iToken.setVault(iVaultAddress);
+  tx = await iToken.setVault(iVaultAddress);
+  await tx.wait();
 
   // 4. save addresses localy
   const iAddresses = {
@@ -50,7 +50,6 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    initialNonce: initialNonce,
   };
 
   const json_addresses = JSON.stringify(iAddresses);

@@ -1,21 +1,30 @@
-const { ethers, upgrades } = require("hardhat");
+const { upgrades } = require("hardhat");
 
-const transferOwnwership = async (_signer, contractAddress, newAdmin) => {
-  console.log(contractAddress, newAdmin);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const transferOwnwership = async (contractAddress, newAdmin) => {
   await upgrades.admin.transferProxyAdminOwnership(contractAddress, newAdmin);
   console.log(`ProxyAdmin ownership of ${contractAddress} transferred to ${newAdmin}`);
+  await sleep(15_000);
 };
 
 const newOwnerAddress = "",
+  InstEthTokenAddress = "",
   InstEthVaultAddress = "",
+  InrEthTokenAddress = "",
   InrEthVaultAddress = "";
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
   // InstEthVault
+  // iToken
+  await transferOwnwership(InstEthTokenAddress, newOwnerAddress);
+  // iVault
   await transferOwnwership(InstEthVaultAddress, newOwnerAddress);
   // InrEthVault
-  await transferOwnwership(deployer, InrEthVaultAddress, newOwnerAddress);
+  // iToken
+  await transferOwnwership(InrEthTokenAddress, newOwnerAddress);
+  // iVault
+  await transferOwnwership(InrEthVaultAddress, newOwnerAddress);
 }
 
 main()
