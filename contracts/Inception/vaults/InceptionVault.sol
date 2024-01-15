@@ -44,12 +44,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    /// @dev deposits the provided assets directly into EigenLayer
-    /// @notice verify the proportion via verifyProportion()
-    function deposit(
-        uint256 amount,
-        address receiver
-    ) public nonReentrant returns (uint256) {
+    function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) {
             revert NullParams();
         }
@@ -57,25 +52,44 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+    }
+
+    /// @dev deposits the provided assets directly into EigenLayer
+    /// @notice verify the proportion via verifyProportion()
+    /// @dev transfers the user's assets to the vault
+    function deposit(
+        uint256 amount,
+        address receiver
+    ) public nonReentrant whenNotPaused returns (uint256) {
         address sender = msg.sender;
         uint256 currentRatio = ratio();
-        uint256 depositedBefore = getTotalDeposited();
-        // get the asset amount from the sender
-        _transferAssetFrom(sender, amount);
-        // deposit assets to EIGEN LAYER strategies
-        _depositAssetToEL(amount);
-        uint256 depositedAmount = getTotalDeposited() - depositedBefore;
 
+        amount = _deposit(amount, sender, receiver);
+
+        // mint Inception token in view of the current ratio
         uint256 iShares = Convert.multiplyAndDivideFloor(
-            depositedAmount,
+            amount,
             currentRatio,
             1e18
         );
         inceptionToken.mint(receiver, iShares);
 
-        emit Deposit(sender, receiver, depositedAmount, iShares);
+        emit Deposit(sender, receiver, amount, iShares);
 
         return iShares;
+    }
+
+    function _deposit(
+        uint256 amount,
+        address sender,
+        address receiver
+    ) internal returns (uint256) {
+        __beforeDeposit(receiver, amount);
+        uint256 depositedBefore = totalAssets();
+        // get the amount from the sender
+        _transferAssetFrom(sender, amount);
+
+        return totalAssets() - depositedBefore;
     }
 
     // /*/////////////////////////////////
