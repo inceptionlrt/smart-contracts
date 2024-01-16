@@ -87,7 +87,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @notice updates _pendingWithdrawalAmount
     /// @notice can be executed only by the operator and within the rebalance period,
     /// when the epoch is odd
-    function withdrawFromEL() external nonReentrant onlyOperator {
+    function withdrawFromEL() external whenNotPaused nonReentrant onlyOperator {
         if (epoch % 2 != 0) {
             revert RebalanceNotInProgress();
         }
@@ -138,7 +138,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function claimCompletedWithdrawals(
         IStrategyManager.QueuedWithdrawal calldata withdrawal,
         IERC20[] calldata assetsToClaim
-    ) public nonReentrant {
+    ) public whenNotPaused nonReentrant {
         require(
             strategyManager.withdrawalRootPending(
                 strategyManager.calculateWithdrawalRoot(withdrawal)

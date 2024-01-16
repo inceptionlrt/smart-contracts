@@ -105,7 +105,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev 1. Withdraw: from Vault -> decrease the rebalance diff
     /// @dev 2. Withdraw: from Vault + EL -> current proportion in Vault(the whole balance) + adjust the EL proportion -> expensive
     /// @param iShares is measured in Inception token(shares)
-    function withdraw(uint256 iShares, address receiver) external nonReentrant {
+    function withdraw(
+        uint256 iShares,
+        address receiver
+    ) public whenNotPaused nonReentrant {
         if (iShares == 0) {
             revert NullParams();
         }
@@ -135,7 +138,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @notice checks isAbleToRedeem() to ensure that the receiver is ready to claim
     /// @notice allows anyone to claim on behalf of the correct receiver
     /// @param receiver Represents the receiver of the withdrawal request
-    function redeem(address receiver) public nonReentrant {
+    function redeem(address receiver) public whenNotPaused nonReentrant {
         require(
             isAbleToRedeem(receiver),
             "InceptionVault: claimer is not able to claim"
