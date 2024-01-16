@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 import "../InceptionVault.sol";
 import "../../../interfaces/IStEth.sol";
 
+/// @author The InceptionLRT team
+/// @title The InstEthVault, specifically designed for the Lido Ethereum LST
 contract InstEthVault is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 import "../InceptionVault.sol";
 import "../../../interfaces/IrEth.sol";
 
+/// @author The InceptionLRT team
+/// @title The InrEthVault, specifically designed for the Rocket Ethereum LST
 contract InrEthVault is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

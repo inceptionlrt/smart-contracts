@@ -4,7 +4,11 @@ pragma solidity ^0.8.17;
 import "../assets-handler/InceptionAssetsHandler.sol";
 import "../../interfaces/IStrategyManager.sol";
 import "../../interfaces/IEigenLayerHandler.sol";
+import "../../interfaces/IDepositManager.sol";
 
+/// @author The InceptionLRT team
+/// @title The EigenLayerHandler contract serves communication with external EigenLayer protocol
+/// @dev Specifically, this includes depositing, and handling withdrawal requests
 contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     IStrategyManager public strategyManager;
     IStrategy public strategy;
@@ -13,8 +17,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     address internal _operator;
 
-    /// @dev totalEthToWithdraw is a sum for all assets in this request
+    /// @dev totalEthToWithdraw is a total pending amount for withdrawal
     uint256 public totalAmountToWithdraw;
+
+    /// @dev pending withdrawal amount in EigenLayer
+    /// was withdrawn but no claimed from EigenLayer
     uint256 internal _pendingWithdrawalAmount;
 
     uint256[44] private __reserver;
@@ -55,7 +62,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     /// @dev deposits extra assets into strategy
-    function depositExtra() external onlyOperator {
+    function depositExtra() external whenNotPaused onlyOperator {
         uint256 vaultBalance = totalAssets();
         uint256 toWithdrawAmount = totalAmountToWithdraw;
         if (vaultBalance <= toWithdrawAmount) {
@@ -71,16 +78,15 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(strategy.sharesToUnderlyingView(shares));
     }
 
-    function updateEpoch(uint256 newEpoch) external onlyOperator {
-        epoch = newEpoch;
-    }
-
     /*/////////////////////////////////
     ////// Withdrawal functions //////
     ///////////////////////////////*/
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev builds the withdrawal request based on the current asset targets
+    /// @dev performs the creation of a withdrawal request from EigenLayer
+    /// @dev automatically generates a withdrawal amount based on the pending state
+    /// @notice updates _pendingWithdrawalAmount
+    /// @notice can be executed only by the operator and within the rebalance period,
+    /// when the epoch is odd
     function withdrawFromEL() external nonReentrant onlyOperator {
         if (epoch % 2 != 0) {
             revert RebalanceNotInProgress();
@@ -97,8 +103,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         _withdrawFromEL(strategyIndexes, sharesToWithdraw, elStrategies);
     }
 
-    /// @dev withdraws assets from EigenLayer
-    /// @dev it's used in withdrawFromELEth()
+    /// @dev generates a withdrawal request for strategyManager
+    /// @dev emits an event with the necessary data for further claiming of this request
     function _withdrawFromEL(
         uint256[] memory strategyIndexes,
         uint256[] memory sharesToWithdraw,
@@ -208,7 +214,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// GET functions //////
     ////////////////////////*/
 
-    /// @dev returns the total deposited into asset strategy
+    /// @dev returns the total deposited assets
+    /// @dev total EL deposited amount +
+    /// totalAssets(vault balance) +
+    /// unclaimed pending withdrawal from EigenLayer
     function getTotalDeposited() public view returns (uint256) {
         return
             strategy.userUnderlyingView(address(this)) +
@@ -222,5 +231,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         returns (uint256 total)
     {
         return _pendingWithdrawalAmount;
+    }
+
+    /// @dev serves to unblock pending withdrawals for claiming them
+    function updateEpoch(uint256 newEpoch) external onlyOperator {
+        epoch = newEpoch;
     }
 }
