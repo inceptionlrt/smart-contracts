@@ -7,16 +7,18 @@ import "../../interfaces/IInceptionVault.sol";
 import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 
+/// @author The InceptionLRT team
+/// @title The InceptionVault maximizes the profit of EigenLayer for the certain asset
 contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Inception re-staking token
     IInceptionToken public inceptionToken;
 
-    /// @dev reduce rounding issues
+    /// @dev reduces rounding issues
     uint256 public minAmount;
 
     /// @dev epoch represents the period of the rebalancing process
-    /// @dev receiver is a receiver of assets on claim()
-    /// @dev amount represents the exact amount of asset
+    /// @dev receiver is a receiver of assets in claim()
+    /// @dev amount represents the exact amount of the asset to be claimed
     struct Withdrawal {
         uint256 epoch;
         address receiver;
@@ -54,9 +56,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
     }
 
-    /// @dev deposits the provided assets directly into EigenLayer
-    /// @notice verify the proportion via verifyProportion()
-    /// @dev transfers the user's assets to the vault
+    /// @dev transfers the msg.sender's assets to the vault.
+    /// @dev mints Inception tokens in accordance with the current ratio.
+    /// @dev issues the tokens to the specified receiver address.
     function deposit(
         uint256 amount,
         address receiver
@@ -64,9 +66,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address sender = msg.sender;
         uint256 currentRatio = ratio();
 
+        // transfers assets from the sender and returns the received amount
+        // the actual received amount might slightly differ from the specified amount,
+        // approximately by -2
         amount = _deposit(amount, sender, receiver);
 
-        // mint Inception token in view of the current ratio
         uint256 iShares = Convert.multiplyAndDivideFloor(
             amount,
             currentRatio,
@@ -101,7 +105,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev 1. Withdraw: from Vault -> decrease the rebalance diff
     /// @dev 2. Withdraw: from Vault + EL -> current proportion in Vault(the whole balance) + adjust the EL proportion -> expensive
     /// @param iShares is measured in Inception token(shares)
-    function withdraw(uint256 iShares, address receiver) external nonReentrant {
+    function withdraw(
+        uint256 iShares,
+        address receiver
+    ) public whenNotPaused nonReentrant {
         if (iShares == 0) {
             revert NullParams();
         }
@@ -127,11 +134,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Withdraw(owner, receiver, owner, amount, iShares);
     }
 
-    /// @dev performs claiming of a withdrawal request
-    /// @notice checks isAbleToRedeem() function
-    /// @notice everyone is able to claim for a proper claimer
-    /// @param receiver represents the receiver of a withdrawal request
-    function redeem(address receiver) public nonReentrant {
+    /// @dev performs the claiming of a withdrawal request
+    /// @notice checks isAbleToRedeem() to ensure that the receiver is ready to claim
+    /// @notice allows anyone to claim on behalf of the correct receiver
+    /// @param receiver Represents the receiver of the withdrawal request
+    function redeem(address receiver) public whenNotPaused nonReentrant {
         require(
             isAbleToRedeem(receiver),
             "InceptionVault: claimer is not able to claim"
@@ -146,6 +153,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Redeem(msg.sender, receiver, amount);
     }
 
+    /// @dev returns the amount of assets to be claimed and the receiver
     function getPendingWithdrawalOf(
         address claimer
     ) public view returns (uint256, address) {
@@ -225,5 +233,17 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
+    }
+
+    /*///////////////////////////////
+    ////// Pausable functions //////
+    /////////////////////////////*/
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

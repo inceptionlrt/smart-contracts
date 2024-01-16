@@ -4,18 +4,16 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../../interfaces/IInceptionToken.sol";
-import "../../interfaces/IDepositManager.sol";
-import "../../interfaces/IDexRouter.sol";
 import "../../interfaces/IInceptionAssetHandler.sol";
 import "../../interfaces/IInceptionErrors.sol";
 
 import "../lib/Convert.sol";
 
+/// @author The InceptionLRT team
+/// @title The InceptionAssetsHandler contract handles operations with the corresponding asset
 contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -38,7 +36,7 @@ contract InceptionAssetsHandler is
         _asset = assetAddress;
     }
 
-    /// @dev returns assets and balance of iVault in them
+    /// @dev returns the balance of iVault in the asset
     function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
@@ -55,6 +53,9 @@ contract InceptionAssetsHandler is
         }
     }
 
+    /// @dev the functions below serve the proper withdrawal and claiming operations
+    /// @notice since a particular LST loses some wei on each transfer,
+    /// this needs to be taken into account
     function _getAssetWithdrawAmount(
         uint256 amount
     ) internal view virtual returns (uint256) {
