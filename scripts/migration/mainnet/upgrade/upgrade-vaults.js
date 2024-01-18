@@ -21,7 +21,7 @@ const upgradeInceptionVault = async (upgradeName, address, vaultName) => {
   const impl = await upgrades.prepareUpgrade(address, iVaultFactory);
   console.log(`New Impl of InceptionVault(${impl}) was deployed`);
 
-  const proxyAdmin = await upgrades.admin.getInstance();
+  const proxyAdmin = await upgrades.erc1967.getAdminAddress(address);
   const provider = await deployer.provider.getNetwork();
   new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider).addOzUpgrade(proxyAdmin, address, impl).save();
 };
