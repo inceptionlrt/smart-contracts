@@ -13,7 +13,8 @@ async function main() {
   const args = [minDelay, [deployer.address], [ownerAddress]];
 
   const timelock = await ethers.deployContract("InceptionTimeLock", args);
-  await timelock.waitForDeployment();
+  await timelock.deployed();
+  console.log(`InceptionTimeLock was deployed with the address: ${timelock.address}`);
 }
 
 main()
