@@ -1,10 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 
-const { InstEthVault } = require("../../addresses/mainnet_InstEthVault.json");
-const { InrEthVault } = require("../../addresses/mainnet_InrEthVault.json");
-
-const InstETHAddress = InstEthVault.iTokenAddress,
-  InrETHAddress = InrEthVault.iTokenAddress;
+const InstETHAddress = "0x7FA768E035F956c41d6aeaa3Bd857e7E5141CAd5",
+  InrETHAddress = "0x80d69e79258FE9D056c822461c4eb0B4ca8802E2";
 
 async function main() {
   // IstETH
@@ -15,14 +12,14 @@ async function main() {
 }
 
 const upgradeInceptionToken = async (address) => {
+  const [deployer] = await ethers.getSigners();
   console.log("Address of the Contract to be upgraded:", address);
   console.log("Upgrading with the account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
   const tx = await upgrades.upgradeProxy(address, iTokenFactory);
-  await tx.wait();
-  console.log("InceptionToken was upgraded");
+  await tx.waitForDeployment();
+  console.log(`InceptionToken(${address}) was upgraded`);
 };
 
 main()
