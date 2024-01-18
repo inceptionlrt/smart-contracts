@@ -1,9 +1,9 @@
 const { ethers } = require("hardhat");
 
+/// multisig
 const ownerAddress = "0x8e6C8799B542E507bfDDCA1a424867e885D96e79";
 
-// TODO
-const minDelay = "";
+const minDelay = "86400";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
