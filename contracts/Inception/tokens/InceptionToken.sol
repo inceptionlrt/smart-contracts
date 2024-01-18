@@ -8,6 +8,9 @@ import "../../interfaces/IInceptionVault.sol";
 
 import "../lib/Convert.sol";
 
+/// @author The InceptionLRT team
+/// @title The InceptionToken contract
+/// @dev Specifically, this includes pausable functions and minting from the vault
 contract InceptionToken is
     OwnableUpgradeable,
     ERC20Upgradeable,
@@ -83,8 +86,8 @@ contract InceptionToken is
     }
 
     /**
-     * @dev Triggers stopped state.
-     * @notice The contract must not be paused.
+     * @dev Triggers stopped state
+     * @notice The contract must not be paused
      */
     function pause() external whenNotPaused onlyOwner {
         _paused = true;
@@ -92,8 +95,8 @@ contract InceptionToken is
     }
 
     /**
-     * @dev Returns to normal state.
-     * @notice The contract must be paused.
+     * @dev Returns to normal state
+     * @notice The contract must be paused
      */
     function unpause() external whenPaused onlyOwner {
         _paused = false;

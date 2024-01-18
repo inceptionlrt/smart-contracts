@@ -1,25 +1,25 @@
 const { ethers, upgrades } = require("hardhat");
 const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
 
-const InstETHAddress = "0x7FA768E035F956c41d6aeaa3Bd857e7E5141CAd5",
-  InrETHAddress = "0x80d69e79258FE9D056c822461c4eb0B4ca8802E2";
+const InstETHAddress = "0x814CC6B8fd2555845541FB843f37418b05977d8d",
+  InrETHAddress = "0x1Aa53BC4Beb82aDf7f5EDEE9e3bBF3434aD59F12";
 
 async function main() {
   // IstETH
-  await upgradeInceptionToken("pausable", InstETHAddress);
+  await upgradeInceptionVault("pausable", InstETHAddress, "InstEthVault");
 
   // InrETH
-  await upgradeInceptionToken("pausable", InrETHAddress);
+  await upgradeInceptionVault("pausable", InrETHAddress, "InrEthVault");
 }
 
-const upgradeInceptionToken = async (upgradeName, address) => {
+const upgradeInceptionVault = async (upgradeName, address, vaultName) => {
   const [deployer] = await ethers.getSigners();
   console.log("Address of the Contract to be upgraded:", address);
   console.log("Upgrading with the account:", deployer.address);
 
-  const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
-  const impl = await upgrades.prepareUpgrade(address, iTokenFactory);
-  console.log(`New Impl of InceptionToken(${impl}) was deployed`);
+  const iVaultFactory = await hre.ethers.getContractFactory(vaultName);
+  const impl = await upgrades.prepareUpgrade(address, iVaultFactory);
+  console.log(`New Impl of InceptionVault(${impl}) was deployed`);
 
   const proxyAdmin = await upgrades.admin.getInstance();
   const provider = await deployer.provider.getNetwork();
