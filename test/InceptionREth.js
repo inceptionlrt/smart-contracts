@@ -6,7 +6,7 @@ const { max } = require("hardhat/internal/util/bigint");
 const { advanceBlocks } = require("../scripts/utils");
 const toBN = ethers.BigNumber.from;
 const abi = ethers.utils.defaultAbiCoder;
-const NetworkSnapshotter = require("./helpers/networkSnapshotter");
+const NetworkSnapshotter = require("./helpers/utils");
 
 const stakerAddress = "",
   staker2Address = "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
