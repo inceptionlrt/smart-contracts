@@ -89,6 +89,8 @@ const mineBlocks = async (count) => {
   }
 }
 const toWei = (ether) => ethers.utils.parseEther(ether.toString());
+
+const toBN = ethers.BigNumber.from;
 const randomBN = (length) => {
   if (length > 0) {
     let randomNum = "";
@@ -105,6 +107,8 @@ const randomBN = (length) => {
 const randomAddress  = () => ethers.Wallet.createRandom().address;
 const format = (bn) => bn.toBigInt().toLocaleString("de-DE");
 
+const e18 = toBN("1000000000000000000");
+
 module.exports = {
   updateStrategyRatio,
   withdrawDataFromTx,
@@ -114,7 +118,9 @@ module.exports = {
   Snapshotter,
   mineBlocks,
   toWei,
+  toBN,
   randomBN,
+  randomAddress,
   format,
-  randomAddress
+  e18,
 };
