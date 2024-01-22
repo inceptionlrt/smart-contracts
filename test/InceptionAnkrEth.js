@@ -43,6 +43,42 @@ assets = [
     staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
     staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
     operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "OEth",
+    assetAddress: "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
+    assetPoolName: "VaultCore",
+    assetPoolAddress: "0x39254033945AA2E4809Cc2977E7087BEE48bd7Ab",
+    vaultName: "InoEthVault",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0xa4c637e0f704745d182e4d38cab7e7485321d059",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const staker = await impersonateWithEth(address, toWei(22));
+      const stETHAddress = "0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
+      console.log(`- stETH`);
+      const stEth = await ethers.getContractAt("stETH", stETHAddress);
+      console.log(`- LidoMockPool`);
+      const stEthPool = await ethers.getContractAt("LidoMockPool", stETHAddress);
+
+      await stEthPool.connect(staker).submit(ethers.ZeroAddress, { value: toWei(20) });
+      const balanceOfStEth = await stEth.balanceOf(staker.address);
+      await stEth.connect(staker).approve(await assetPool.getAddress(), balanceOfStEth);
+
+      await assetPool.connect(staker).mint(stETHAddress, balanceOfStEth, balanceOfStEth - e18);
+      const balanceAfter = await asset.balanceOf(staker.address);
+      console.log(`balanceAfter: ${balanceAfter}`);
+
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+
+      return staker;
+    },
+  },
+/*  {
+    stakerAddress: "",
+    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
+    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
     assetName: "stETH",
     assetAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     assetPoolName: "LidoMockPool",
@@ -83,21 +119,19 @@ assets = [
       await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter.toString());
       return staker;
     },
-  },
+  },*/
 ]
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting block number: ${block.number}`);
   console.log(`... Initialization of Inception ....`);
-  // AETHC
+
   console.log("- Asset");
   const assetFactory = await ethers.getContractFactory(a.assetName);
   const asset = assetFactory.attach(a.assetAddress);
-  // AnkrStakingPool
   console.log("- Asset pool");
   const assetPoolFactory = await ethers.getContractFactory(a.assetPoolName);
   const assetPool = assetPoolFactory.attach(a.assetPoolAddress);
-  // Strategy
   console.log("- Strategy");
   const strategy = await ethers.getContractAt("IStrategy", a.assetStrategyAddress);
 
