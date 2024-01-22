@@ -16,27 +16,74 @@ const {
 
 assets = [
   {
-    assetName: "ankrEth",
     stakerAddress: "",
     staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
     staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
     operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "AETHC",
     assetAddress: "0xe95a203b1a91a908f9b9ce46459d101078c2c3cb",
+    assetPoolName: "AnkrStakingPool",
     assetPoolAddress: "0x84db6ee82b7cf3b47e8f19270abde5718b936670",
+    vaultName: "InankrEthVault",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",
     withdrawalDelayBlocks: 50400,
     ratioErr: 2,
     transactErr: 2,
     impersonateStaker: async (address, iVault, asset, assetPool) => {
-      console.log("HERE");
       const staker = await impersonateWithEth(address, toWei(22));
       await assetPool.connect(staker).stakeAndClaimAethC({ value: toWei(20) });
+      const balanceAfter = await asset.balanceOf(staker.address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      return staker;
+    },
+  },
+  {
+    stakerAddress: "",
+    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
+    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "stETH",
+    assetAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    assetPoolName: "LidoMockPool",
+    assetPoolAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    vaultName: "InstEthVault",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const staker = await impersonateWithEth(address, toWei(22));
+      await assetPool.connect(staker).submit("0x0000000000000000000000000000000000000000", { value: toWei(20) });
+      const balanceAfter = await asset.balanceOf(staker.address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      return staker;
+    },
+  },
+  {
+    stakerAddress: "",
+    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
+    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "rETH",
+    assetAddress: "",
+    assetPoolName: "RocketMockPool",
+    assetPoolAddress: "",
+    vaultName: "InrEthVault",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const staker = await impersonateAccount(address, toWei(22));
+      await assetPool.connect(staker).deposit({ value: toWei(20) });
       const balanceAfter = await asset.balanceOf(staker.address);
       await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter.toString());
       return staker;
     },
-  }
+  },
 ]
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
@@ -44,11 +91,11 @@ const initVault = async (a) => {
   console.log(`... Initialization of Inception ....`);
   // AETHC
   console.log("- Asset");
-  const assetFactory = await ethers.getContractFactory("AETHC");
+  const assetFactory = await ethers.getContractFactory(a.assetName);
   const asset = assetFactory.attach(a.assetAddress);
   // AnkrStakingPool
   console.log("- Asset pool");
-  const assetPoolFactory = await ethers.getContractFactory("AnkrStakingPool");
+  const assetPoolFactory = await ethers.getContractFactory(a.assetPoolName);
   const assetPool = assetPoolFactory.attach(a.assetPoolAddress);
   // Strategy
   console.log("- Strategy");
@@ -59,10 +106,10 @@ const initVault = async (a) => {
   const iTokenFactory = await ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
   // 2. Impersonate operator
-  const operator = await impersonateWithEth(a.operatorAddress, toWei("1"));
+  const operator = await impersonateWithEth(a.operatorAddress, e18);
   // 3. Inception vault
   console.log("- iVault");
-  const iVaultFactory = await ethers.getContractFactory("InstEthVault");
+  const iVaultFactory = await ethers.getContractFactory(a.vaultName);
   const iVault = await upgrades.deployProxy(iVaultFactory, [
     a.operatorAddress,
     a.strategyManagerAddress,
@@ -1117,7 +1164,7 @@ assets.forEach(function (a) {
         expect(stakerPendingWithdrawalsBefore[0]-stakerPendingWithdrawalsAfter[0])
           .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
         expect(stakerBalanceAfter-stakerBalanceBefore)
-          .to.be.closeTo(stakerUnstakeAmount, transactErr * 2);
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
 
