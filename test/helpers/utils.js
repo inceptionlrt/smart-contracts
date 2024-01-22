@@ -1,7 +1,5 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, network } = require("hardhat");
-const hre = require("hardhat");
-
 const updateStrategyRatio = async (strategyAddress, amount, staker) => {
   const strategyFactory = await ethers.getContractFactory("StrategyBaseDummy");
   const strategy = strategyFactory.attach(strategyAddress);
@@ -9,29 +7,29 @@ const updateStrategyRatio = async (strategyAddress, amount, staker) => {
   const assetAddress = await strategy.underlyingToken();
   const assetFactory = await ethers.getContractFactory("InceptionToken");
   const asset = assetFactory.attach(assetAddress);
-  await asset.connect(staker).transfer(strategy.address, amount);
+  await asset.connect(staker).transfer(strategyAddress, amount);
 }
 
 const withdrawDataFromTx = async (tx, iVault) => {
   const receipt = await tx.wait();
-  if (receipt.events.length !== 3) {
-    console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.events.length);
-    console.log(receipt.events);
+  if (receipt.logs.length !== 3) {
+    console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
+    console.log(receipt.logs);
   }
 
-  const WithdrawalQueuedEvent = receipt.events[2].args;
+  const WithdrawalQueuedEvent = receipt.logs[2].args.toObject();
   const withdrawalData = [
-    WithdrawalQueuedEvent["strategies"],
-    WithdrawalQueuedEvent["shares"],
-    iVault.address,
-    [iVault.address, WithdrawalQueuedEvent["nonce"]],
-    WithdrawalQueuedEvent["withdrawalStartBlock"],
-    WithdrawalQueuedEvent["delegatedAddress"],
+    WithdrawalQueuedEvent.strategies.toArray(),
+    WithdrawalQueuedEvent.shares.toArray(),
+    await iVault.getAddress(),
+    [await iVault.getAddress(), WithdrawalQueuedEvent.nonce],
+    WithdrawalQueuedEvent.withdrawalStartBlock,
+    WithdrawalQueuedEvent.delegatedAddress,
   ];
 
   const assetsToWithdraw = [];
-  const StrategyBaseFactory = await hre.ethers.getContractFactory("StrategyBaseDummy");
-  for (const strategyAddress of WithdrawalQueuedEvent["strategies"]) {
+  const StrategyBaseFactory = await ethers.getContractFactory("StrategyBaseDummy");
+  for (const strategyAddress of WithdrawalQueuedEvent.strategies.toArray()) {
     const strategy = StrategyBaseFactory.attach(strategyAddress);
     const assetAddress = await strategy.underlyingToken();
     assetsToWithdraw.push(assetAddress);
@@ -58,7 +56,7 @@ const getStaker = async (address, iVault, asset, donor, amount= 100_000_000_000_
   await asset.connect(donor).transfer(address, amount);
   const balanceAfter = await asset.balanceOf(address);
   // console.log(`Staker asset balance: ${format(balanceAfter)}`);
-  await asset.connect(staker).approve(iVault.address, balanceAfter);
+  await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
   return staker;
 }
 
@@ -88,26 +86,26 @@ const mineBlocks = async (count) => {
     await network.provider.send("evm_mine");
   }
 }
-const toWei = (ether) => ethers.utils.parseEther(ether.toString());
+const toWei = (ether) => ethers.parseEther(ether.toString());
 
-const toBN = ethers.BigNumber.from;
-const randomBN = (length) => {
+const toBN = (n) => BigInt(n);
+const randomBI = (length) => {
   if (length > 0) {
     let randomNum = "";
     randomNum += Math.floor(Math.random() * 9) + 1; // generates a random digit 1-9
     for (let i = 0; i < length - 1; i++) {
       randomNum += Math.floor(Math.random() * 10); // generates a random digit 0-9
     }
-    return ethers.BigNumber.from(randomNum);
+    return BigInt(randomNum);
   } else {
-    return ethers.BigNumber.from(0);
+    return 0n;
   }
 }
 
 const randomAddress  = () => ethers.Wallet.createRandom().address;
-const format = (bn) => bn.toBigInt().toLocaleString("de-DE");
+const format = (bi) => bi.toLocaleString("de-DE");
 
-const e18 = toBN("1000000000000000000");
+const e18 = 1000_000_000_000_000_000n;
 
 module.exports = {
   updateStrategyRatio,
@@ -119,7 +117,7 @@ module.exports = {
   mineBlocks,
   toWei,
   toBN,
-  randomBN,
+  randomBI,
   randomAddress,
   format,
   e18,
