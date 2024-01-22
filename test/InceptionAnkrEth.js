@@ -638,7 +638,6 @@ assets.forEach(function (a) {
         await iVault.connect(staker).withdraw(withdrawAmount, staker.address);
         await iVault.connect(staker2).deposit(depositAmount, staker2.address);
         //depositExtra
-        const totalDepositBefore = await iVault.totalAssets();
         const pendingWithdrawals = await iVault.getPendingWithdrawalOf(staker.address);
         await iVault.connect(operator).depositExtra();
         const totalDepositAfter = await iVault.totalAssets();
