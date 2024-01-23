@@ -315,7 +315,7 @@ assets.forEach(function (a) {
         console.log(`Current ratio is: ${ratio.toString()}`);
         expect(ratio).to.be.eq(e18);
       });
-      return;
+
       it("Deposit to Vault", async function () {
         const amount = 9292557565124725653n;
         const expectedShares = (amount * e18) / (await iVault.ratio());
@@ -433,7 +433,7 @@ assets.forEach(function (a) {
         expect(totalAssetsAfter).to.be.closeTo(0, transactErr);
       });
     });
-    return;
+
     describe("Setters", function () {
       beforeEach(async function () {
         await snapshotter.restore();
