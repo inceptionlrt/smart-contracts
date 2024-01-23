@@ -1,5 +1,6 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, upgrades } = require("hardhat");
+const { ethers, upgrades, network } = require("hardhat");
+const config = require("../hardhat.config");
 const { expect } = require("chai");
 const {
   updateStrategyRatio,
@@ -13,6 +14,12 @@ const {
   format,
   e18,
 } = require("./helpers/utils.js");
+
+/**
+ * To run the tests for the specific assets add its name to the env ASSETS
+ * Windows: export ASSETS=athc,wbeth && npx hardhat test
+ * macOS: ASSETS=athc,wbeth npx hardhat test
+ */
 
 assets = [
   {
@@ -42,13 +49,9 @@ assets = [
       const balanceOfStEth = await stEth.balanceOf(staker.address);
       await stEth.connect(staker).approve(await assetPool.getAddress(), balanceOfStEth);
 
-      // console.log(`to claim: ${(balanceOfStEth - e18).toString()}`);
       await assetPool.connect(staker).mint(stETHAddress, balanceOfStEth, balanceOfStEth - e18);
       const balanceAfter = await asset.balanceOf(staker.address);
       console.log(`balanceAfter: ${balanceAfter}`);
-      // console.log(await asset.creditsBalanceOfHighres(staker.address));
-      // console.log(await asset.creditsBalanceOf(staker.address));
-
       await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
 
       return staker;
@@ -96,6 +99,7 @@ assets = [
     withdrawalDelayBlocks: 50400,
     ratioErr: 2,
     transactErr: 2,
+    blockNumber: 17453047,
     impersonateStaker: async (address, iVault, asset, assetPool) => {
       const staker = await impersonateWithEth(address, toWei(22));
       await assetPool.connect(staker).submit("0x0000000000000000000000000000000000000000", { value: toWei(20) });
@@ -146,7 +150,7 @@ assets = [
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",
     withdrawalDelayBlocks: 50400,
-    ratioErr: 2,
+    ratioErr: 1,
     transactErr: 2,
     impersonateStaker: async (address, iVault, asset, assetPool) => {
       const staker = await impersonateWithEth(address, toWei(22));
@@ -185,43 +189,6 @@ assets = [
     staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
     staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
     operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-    assetName: "OEth",
-    assetAddress: "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
-    assetPoolName: "VaultCore",
-    assetPoolAddress: "0x39254033945AA2E4809Cc2977E7087BEE48bd7Ab",
-    vaultName: "InoEthVault",
-    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
-    assetStrategyAddress: "0xa4c637e0f704745d182e4d38cab7e7485321d059",
-    withdrawalDelayBlocks: 50400,
-    ratioErr: 2,
-    transactErr: 2,
-    impersonateStaker: async (address, iVault, asset, assetPool) => {
-      const staker = await impersonateWithEth(address, toWei(22));
-      const stETHAddress = "0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
-      console.log(`- stETH`);
-      const stEth = await ethers.getContractAt("stETH", stETHAddress);
-      console.log(`- LidoMockPool`);
-      const stEthPool = await ethers.getContractAt("LidoMockPool", stETHAddress);
-
-      await stEthPool.connect(staker).submit(ethers.ZeroAddress, { value: toWei(20) });
-      const balanceOfStEth = await stEth.balanceOf(staker.address);
-      await stEth.connect(staker).approve(await assetPool.getAddress(), balanceOfStEth);
-
-      await assetPool.connect(staker).mint(stETHAddress, balanceOfStEth, balanceOfStEth - e18);
-      const balanceAfter = await asset.balanceOf(staker.address);
-      console.log(`balanceAfter: ${balanceAfter}`);
-      console.log(await asset.creditsBalanceOfHighres(staker.address));
-
-      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-
-      return staker;
-    },
-  },
-  {
-    stakerAddress: "",
-    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
-    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
-    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
     assetName: "CbEth",
     assetAddress: "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
     assetPoolName: "CoinbasePool",
@@ -245,8 +212,7 @@ assets = [
 
       return staker;
     },
-  },
-  */
+  },*/
 ];
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
@@ -254,11 +220,9 @@ const initVault = async (a) => {
   console.log(`... Initialization of Inception ....`);
 
   console.log("- Asset");
-  const assetFactory = await ethers.getContractFactory(a.assetName);
-  const asset = assetFactory.attach(a.assetAddress);
+  const asset = await ethers.getContractAt(a.assetName, a.assetAddress);
   console.log("- Asset pool");
-  const assetPoolFactory = await ethers.getContractFactory(a.assetPoolName);
-  const assetPool = assetPoolFactory.attach(a.assetPoolAddress);
+  const assetPool = await ethers.getContractAt(a.assetPoolName, a.assetPoolAddress);
   console.log("- Strategy");
   const strategy = await ethers.getContractAt("IStrategy", a.assetStrategyAddress);
 
@@ -296,6 +260,21 @@ assets.forEach(function (a) {
     this.timeout(150000);
 
     before(async function () {
+      if (process.env.ASSETS) {
+        const assets = process.env.ASSETS.toLocaleLowerCase().split(',');
+        if (!assets.includes(a.assetName.toLowerCase())) {
+          console.log(`${a.assetName} is not in the list, going to skip`);
+          this.skip();
+        }
+      }
+
+      await network.provider.send("hardhat_reset", [{
+        forking: {
+          jsonRpcUrl: a.url ? a.url : config.networks.hardhat.forking.url,
+          blockNumber: a.blockNumber ? a.blockNumber : config.networks.hardhat.forking.blockNumber,
+        },
+      }]);
+
       [iToken, iVault, asset, assetPool, strategy, operator] = await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
@@ -1309,11 +1288,10 @@ assets.forEach(function (a) {
         console.log(`Pending withdrawals after:\t${format(stakerPendingWithdrawalsAfter[0])}`);
         console.log(`Unstake amount asset value:\t${format(stakerUnstakeAmountAssetValue)}`);
 
-        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0]).to.be.closeTo(
-          stakerUnstakeAmountAssetValue,
-          transactErr * 2
-        );
-        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0])
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerBalanceAfter - stakerBalanceBefore)
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
 
@@ -1328,11 +1306,10 @@ assets.forEach(function (a) {
         console.log(`Staker balance after: ${stakerBalanceAfter}`);
         console.log(`Staker pending withdrawals after: ${stakerPendingWithdrawalsAfter[0]}`);
         const stakerUnstakeAmountAssetValue = await iVault.convertToAssets(staker2UnstakeAmount);
-        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0]).to.be.closeTo(
-          stakerUnstakeAmountAssetValue,
-          transactErr * 2
-        );
-        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0])
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerBalanceAfter - stakerBalanceBefore)
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
       });
 
       it("Ratio is ok after all", async function () {
@@ -1476,7 +1453,7 @@ assets.forEach(function (a) {
         console.log(`Pending withdrawal: ${format(pendingWithdrawal)}`);
 
         expect(pendingWithdrawal).to.be.closeTo(expectedPending, transactErr);
-        expect(pendingWithdrawal).to.be.closeTo((staker2UnstakeAmount * e18) / withdrawRatio, 2 * transactErr);
+        expect(pendingWithdrawal).to.be.closeTo(staker2UnstakeAmount * e18 / withdrawRatio, 2 * transactErr);
         console.log(`Ratio:\t${format(withdrawRatio)}`);
       });
 
