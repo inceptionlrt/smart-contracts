@@ -183,7 +183,6 @@ assets = [
       return staker;
     },
   },
-  /*
   {
     stakerAddress: "",
     staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
@@ -200,19 +199,14 @@ assets = [
     ratioErr: 2,
     transactErr: 2,
     impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0xED1F7bb04D2BA2b6EbE087026F03C96Ea2c357A8", toWei(1));
       const staker = await impersonateWithEth(address, toWei(22));
-
-      await assetPool.connect(staker).deposit(staker.address, ethers.ZeroAddress, { value: toWei(20) });
-      // TODO
-      await assetPool.connect(staker).mintOsToken(staker.address, toWei(15), ethers.ZeroAddress);
-      const balanceAfter = await asset.balanceOf(staker.address);
-      console.log(`balanceAfter: ${balanceAfter}`);
-
+      await asset.connect(donor).transfer(address, 1000_000_000_000_000_000_000n);
+      const balanceAfter = await asset.balanceOf(address);
       await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-
       return staker;
     },
-  },*/
+  },
 ];
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
