@@ -8,9 +8,9 @@ import "../../../interfaces/IrEth.sol";
 /// @title The InankrEthVault, specifically designed for the ANKR Ethereum LST
 contract InankrEthVault is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address operatorAddress,

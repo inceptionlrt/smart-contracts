@@ -1,8 +1,13 @@
 const addresses = {
   Operator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
   StrategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
-  LidoStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
+  AnkrStrategy: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",
+  CoinbaseStrategy: "0x54945180db7943c0ed0fee7edab2bd24620256bc",
+  OriginStrategy: "0xa4c637e0f704745d182e4d38cab7e7485321d059",
+  StakewiseStrategy: "0x57ba429517c3473b6d34ca9acd56c0e735b94c02",
   RocketStrategy: "0x1BeE69b7dFFfA4E2d53C2a2Df135C388AD25dCD2",
+  LidoStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
+  BinanceStrategy: "0x7CA911E83dabf90C90dD3De5411a10F1A6112184",
 };
 
 module.exports = {
