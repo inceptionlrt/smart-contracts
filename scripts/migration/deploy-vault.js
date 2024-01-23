@@ -24,7 +24,24 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     case "InrEthVault":
       strategyAddress = addresses.RocketStrategy;
       break;
+    case "InosEthVault":
+      strategyAddress = addresses.StakewiseStrategy;
+      break;
+    case "InoEthVault":
+      strategyAddress = addresses.OriginStrategy;
+      break;
+    case "InankrEthVault":
+      strategyAddress = addresses.AnkrStrategy;
+      break;
+    case "InwbEthVault":
+      strategyAddress = addresses.BinanceStrategy;
+      break;
+    case "IncbEthVault":
+      strategyAddress = addresses.CoinbaseStrategy;
+      break;
   }
+
+  console.log(addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress);
 
   // 2. Inception vault
   const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultName);
@@ -34,6 +51,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iTokenAddress,
     strategyAddress,
   ]);
+
   await iVault.waitForDeployment();
 
   const iVaultAddress = await iVault.getAddress();

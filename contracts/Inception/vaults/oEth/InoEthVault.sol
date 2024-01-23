@@ -8,9 +8,9 @@ import "../../../interfaces/IrEth.sol";
 /// @title The InoEthVault, specifically designed for the Origin Protocol Ethereum LST
 contract InoEthVault is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address operatorAddress,

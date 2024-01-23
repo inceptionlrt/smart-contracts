@@ -8,12 +8,13 @@ import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionVault maximizes the profit of EigenLayer for the certain asset
+/// @title The InceptionVault contract
+/// @notice Aims to maximize the profit of EigenLayer for a certain asset.
 contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Inception re-staking token
     IInceptionToken public inceptionToken;
 
-    /// @dev reduces rounding issues
+    /// @dev Reduces rounding issues
     uint256 public minAmount;
 
     /// @dev epoch represents the period of the rebalancing process
@@ -56,9 +57,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
     }
 
-    /// @dev transfers the msg.sender's assets to the vault.
-    /// @dev mints Inception tokens in accordance with the current ratio.
-    /// @dev issues the tokens to the specified receiver address.
+    /// @dev Transfers the msg.sender's assets to the vault.
+    /// @dev Mints Inception tokens in accordance with the current ratio.
+    /// @dev Issues the tokens to the specified receiver address.
     function deposit(
         uint256 amount,
         address receiver
@@ -100,10 +101,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     // ////// Withdrawal functions //////
     // ///////////////////////////////*/
 
-    /// @dev performs burning iToken from mgs.sender
-    /// @dev creates a withdrawal requests based on the current assets targets
-    /// @dev 1. Withdraw: from Vault -> decrease the rebalance diff
-    /// @dev 2. Withdraw: from Vault + EL -> current proportion in Vault(the whole balance) + adjust the EL proportion -> expensive
+    /// @dev Performs burning iToken from mgs.sender
+    /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
     function withdraw(
         uint256 iShares,
@@ -134,10 +133,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Withdraw(owner, receiver, owner, amount, iShares);
     }
 
-    /// @dev performs the claiming of a withdrawal request
+    /// @dev Performs the claiming of a withdrawal request
     /// @notice checks isAbleToRedeem() to ensure that the receiver is ready to claim
     /// @notice allows anyone to claim on behalf of the correct receiver
-    /// @param receiver Represents the receiver of the withdrawal request
     function redeem(address receiver) public whenNotPaused nonReentrant {
         require(
             isAbleToRedeem(receiver),
@@ -153,7 +151,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Redeem(msg.sender, receiver, amount);
     }
 
-    /// @dev returns the amount of assets to be claimed and the receiver
+    /// @dev Returns the amount of assets to be claimed and the receiver
     function getPendingWithdrawalOf(
         address claimer
     ) public view returns (uint256, address) {

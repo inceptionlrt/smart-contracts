@@ -1,13 +1,13 @@
 /**
- * Rocket Ethereum LST
+ * Origin Protol Ethereum LST
  */
 
 const { addresses } = require("./config-addresses");
 const { deployVault } = require("../deploy-vault");
 
-const VaultName = "InrEthVault",
-  TokenName = "Inception Restaked rETH",
-  TokenSymbol = "InrETH";
+const VaultName = "InoEthVault",
+  TokenName = "Inception Restaked oETH",
+  TokenSymbol = "InoETH";
 
 async function main() {
   await deployVault(addresses, VaultName, TokenName, TokenSymbol);

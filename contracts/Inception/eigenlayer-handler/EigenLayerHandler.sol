@@ -7,7 +7,8 @@ import "../../interfaces/IEigenLayerHandler.sol";
 import "../../interfaces/IDepositManager.sol";
 
 /// @author The InceptionLRT team
-/// @title The EigenLayerHandler contract serves communication with external EigenLayer protocol
+/// @title The EigenLayerHandler contract
+/// @dev Serves communication with external EigenLayer protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
 contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     IStrategyManager public strategyManager;
@@ -20,7 +21,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev totalEthToWithdraw is a total pending amount for withdrawal
     uint256 public totalAmountToWithdraw;
 
-    /// @dev pending withdrawal amount in EigenLayer
+    /// @dev Pending withdrawal amount in EigenLayer which
     /// was withdrawn but no claimed from EigenLayer
     uint256 internal _pendingWithdrawalAmount;
 
@@ -53,7 +54,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    /// @dev deposits asset to the corresponding strategy
+    /// @dev Deposits the asset to the corresponding strategy
     function _depositAssetToEL(uint256 amount) internal {
         // deposit the asset to the appropriate strategy
         strategyManager.depositIntoStrategy(strategy, _asset, amount);
@@ -61,7 +62,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(amount);
     }
 
-    /// @dev deposits extra assets into strategy
+    /// @dev Deposits extra assets into strategy
     function depositExtra() external whenNotPaused onlyOperator {
         uint256 vaultBalance = totalAssets();
         uint256 toWithdrawAmount = totalAmountToWithdraw;
@@ -82,10 +83,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// Withdrawal functions //////
     ///////////////////////////////*/
 
-    /// @dev performs the creation of a withdrawal request from EigenLayer
-    /// @dev automatically generates a withdrawal amount based on the pending state
-    /// @notice updates _pendingWithdrawalAmount
-    /// @notice can be executed only by the operator and within the rebalance period,
+    /// @dev Performs the creation of a withdrawal request from EigenLayer
+    /// @dev Automatically generates a withdrawal amount based on the pending state
+    /// @notice Updates _pendingWithdrawalAmount
+    /// @notice Can be executed only by the operator and within the rebalance period,
     /// when the epoch is odd
     function withdrawFromEL() external whenNotPaused nonReentrant onlyOperator {
         if (epoch % 2 != 0) {
@@ -103,8 +104,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         _withdrawFromEL(strategyIndexes, sharesToWithdraw, elStrategies);
     }
 
-    /// @dev generates a withdrawal request for strategyManager
-    /// @dev emits an event with the necessary data for further claiming of this request
+    /// @dev Generates a withdrawal request for strategyManager
+    /// @dev Emits an event with the necessary data for further claiming of this request
     function _withdrawFromEL(
         uint256[] memory strategyIndexes,
         uint256[] memory sharesToWithdraw,
@@ -134,7 +135,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         );
     }
 
-    /// @dev withdraws a completed withdrawal from EigenLayer if it exists
+    /// @dev Withdraws a completed withdrawal from EigenLayer if it exists
     function claimCompletedWithdrawals(
         IStrategyManager.QueuedWithdrawal calldata withdrawal,
         IERC20[] calldata assetsToClaim
@@ -166,8 +167,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit WithdrawalClaimed();
     }
 
-    /// @dev withdraws assets from EigenLayer
-    /// @dev it's used in withdrawFromELEth()
+    /// @dev Withdraws assets from EigenLayer
+    /// @dev It's used in withdrawFromELEth()
     function _generateELWithdrawal()
         internal
         view
@@ -214,8 +215,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// GET functions //////
     ////////////////////////*/
 
-    /// @dev returns the total deposited assets
-    /// @dev total EL deposited amount +
+    /// @dev Returns the total deposited assets
+    /// @dev Total EL deposited amount +
     /// totalAssets(vault balance) +
     /// unclaimed pending withdrawal from EigenLayer
     function getTotalDeposited() public view returns (uint256) {
@@ -233,7 +234,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return _pendingWithdrawalAmount;
     }
 
-    /// @dev serves to unblock pending withdrawals for claiming them
+    /// @dev Serves to unblock pending withdrawals for claiming them
     function updateEpoch(uint256 newEpoch) external onlyOperator {
         epoch = newEpoch;
     }

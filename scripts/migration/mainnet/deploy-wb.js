@@ -1,13 +1,13 @@
 /**
- * Rocket Ethereum LST
+ * Wrapped Binance Beacon Ethereum LST
  */
 
 const { addresses } = require("./config-addresses");
 const { deployVault } = require("../deploy-vault");
 
-const VaultName = "InrEthVault",
-  TokenName = "Inception Restaked rETH",
-  TokenSymbol = "InrETH";
+const VaultName = "InwbEthVault",
+  TokenName = "Inception Restaked wbETH",
+  TokenSymbol = "InwbETH";
 
 async function main() {
   await deployVault(addresses, VaultName, TokenName, TokenSymbol);

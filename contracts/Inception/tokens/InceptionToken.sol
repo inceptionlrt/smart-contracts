@@ -8,6 +8,9 @@ import "../../interfaces/IInceptionVault.sol";
 
 import "../lib/Convert.sol";
 
+/// @author The InceptionLRT team
+/// @title The InceptionToken contract
+/// @dev Specifically, this includes pausable functions and minting from the vault
 contract InceptionToken is
     OwnableUpgradeable,
     ERC20Upgradeable,
@@ -15,11 +18,23 @@ contract InceptionToken is
 {
     IInceptionVault public vault;
 
+    bool private _paused;
+
     modifier onlyVault() {
         require(
             msg.sender == address(vault),
             "InceptionToken: only vault allowed"
         );
+        _;
+    }
+
+    modifier whenNotPaused() {
+        require(!paused(), "InceptionToken: paused");
+        _;
+    }
+
+    modifier whenPaused() {
+        require(paused(), "InceptionToken: not paused");
         _;
     }
 
@@ -36,6 +51,15 @@ contract InceptionToken is
         __ERC20_init_unchained(name, symbol);
     }
 
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._beforeTokenTransfer(from, to, amount);
+        require(!paused(), "InceptionToken: token transfer while paused");
+    }
+
     function burn(address account, uint256 amount) external override onlyVault {
         _burn(account, amount);
     }
@@ -44,20 +68,38 @@ contract InceptionToken is
         _mint(account, amount);
     }
 
-    // function convertEthToShares(
-    //     uint256 ethAmount
-    // ) public view returns (uint256) {
-    //     return Convert.multiplyAndDivideFloor(ethAmount, vault.ratio(), 1e18);
-    // }
-
-    // function convertSharesToEth(uint256 iAmount) public view returns (uint256) {
-    //     return Convert.multiplyAndDivideCeil(iAmount, 1e18, vault.ratio());
-    // }
-
-    // convert methods
+    /*//////////////////////
+    //// Set functions ////
+    ////////////////////*/
 
     function setVault(IInceptionVault newValue) external onlyOwner {
         emit VaultChanged(address(vault), address(newValue));
         vault = newValue;
+    }
+
+    /*///////////////////////////
+    //// Pausable functions ////
+    //////////////////////////*/
+
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    /**
+     * @dev Triggers stopped state
+     * @notice The contract must not be paused
+     */
+    function pause() external whenNotPaused onlyOwner {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    /**
+     * @dev Returns to normal state
+     * @notice The contract must be paused
+     */
+    function unpause() external whenPaused onlyOwner {
+        _paused = false;
+        emit Unpaused(_msgSender());
     }
 }
