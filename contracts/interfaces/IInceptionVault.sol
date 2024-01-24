@@ -42,4 +42,6 @@ interface IInceptionVault {
     event DepositFeeChanged(uint256 prevValue, uint256 newValue);
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
+
+    event NameChanged(string prevValue, string newValue);
 }

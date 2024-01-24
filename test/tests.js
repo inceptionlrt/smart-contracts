@@ -32,6 +32,7 @@ assets = [
     assetPoolName: "VaultCore",
     assetPoolAddress: "0x39254033945AA2E4809Cc2977E7087BEE48bd7Ab",
     vaultName: "InoEthVault",
+    vaultFactory: "InVault_E1",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0xa4c637e0f704745d182e4d38cab7e7485321d059",
     withdrawalDelayBlocks: 50400,
@@ -67,6 +68,7 @@ assets = [
     assetPoolName: "WBEth",
     assetPoolAddress: "0xa2e3356610840701bdf5611a53974510ae27e2e1",
     vaultName: "InwbEthVault",
+    vaultFactory: "InVault_E1",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x7CA911E83dabf90C90dD3De5411a10F1A6112184",
     withdrawalDelayBlocks: 50400,
@@ -94,6 +96,7 @@ assets = [
     assetPoolName: "LidoMockPool",
     assetPoolAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     vaultName: "InstEthVault",
+    vaultFactory: "InVault_E2",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
     withdrawalDelayBlocks: 50400,
@@ -118,6 +121,7 @@ assets = [
     assetPoolName: "StakeWiseVault",
     assetPoolAddress: "0x64f2907F92631619ED7Ea510982835F9e1024767",
     vaultName: "InosEthVault",
+    vaultFactory: "InVault_E1",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x57ba429517c3473b6d34ca9acd56c0e735b94c02",
     withdrawalDelayBlocks: 50400,
@@ -147,6 +151,7 @@ assets = [
     assetPoolName: "AnkrStakingPool",
     assetPoolAddress: "0x84db6ee82b7cf3b47e8f19270abde5718b936670",
     vaultName: "InankrEthVault",
+    vaultFactory: "InVault_E1",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",
     withdrawalDelayBlocks: 50400,
@@ -170,6 +175,7 @@ assets = [
     assetPoolName: "RocketMockPool",
     assetPoolAddress: "0xDD3f50F8A6CafbE9b31a427582963f465E745AF8",
     vaultName: "InrEthVault",
+    vaultFactory: "InVault_E2",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x1bee69b7dfffa4e2d53c2a2df135c388ad25dcd2",
     withdrawalDelayBlocks: 50400,
@@ -193,6 +199,7 @@ assets = [
     assetPoolName: "CoinbasePool",
     assetPoolAddress: "0x64f2907F92631619ED7Ea510982835F9e1024767",
     vaultName: "IncbEthVault",
+    vaultFactory: "InVault_E1",
     strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
     assetStrategyAddress: "0x54945180db7943c0ed0fee7edab2bd24620256bc",
     withdrawalDelayBlocks: 50400,
@@ -228,8 +235,9 @@ const initVault = async (a) => {
   const operator = await impersonateWithEth(a.operatorAddress, e18);
   // 3. Inception vault
   console.log("- iVault");
-  const iVaultFactory = await ethers.getContractFactory(a.vaultName);
+  const iVaultFactory = await ethers.getContractFactory(a.vaultFactory);
   const iVault = await upgrades.deployProxy(iVaultFactory, [
+    a.vaultName,
     a.operatorAddress,
     a.strategyManagerAddress,
     await iToken.getAddress(),
@@ -255,19 +263,21 @@ assets.forEach(function (a) {
 
     before(async function () {
       if (process.env.ASSETS) {
-        const assets = process.env.ASSETS.toLocaleLowerCase().split(',');
+        const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
         if (!assets.includes(a.assetName.toLowerCase())) {
           console.log(`${a.assetName} is not in the list, going to skip`);
           this.skip();
         }
       }
 
-      await network.provider.send("hardhat_reset", [{
-        forking: {
-          jsonRpcUrl: a.url ? a.url : config.networks.hardhat.forking.url,
-          blockNumber: a.blockNumber ? a.blockNumber : config.networks.hardhat.forking.blockNumber,
+      await network.provider.send("hardhat_reset", [
+        {
+          forking: {
+            jsonRpcUrl: a.url ? a.url : config.networks.hardhat.forking.url,
+            blockNumber: a.blockNumber ? a.blockNumber : config.networks.hardhat.forking.blockNumber,
+          },
         },
-      }]);
+      ]);
 
       [iToken, iVault, asset, assetPool, strategy, operator] = await initVault(a);
       ratioErr = a.ratioErr;
@@ -1282,10 +1292,11 @@ assets.forEach(function (a) {
         console.log(`Pending withdrawals after:\t${format(stakerPendingWithdrawalsAfter[0])}`);
         console.log(`Unstake amount asset value:\t${format(stakerUnstakeAmountAssetValue)}`);
 
-        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0])
-          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
-        expect(stakerBalanceAfter - stakerBalanceBefore)
-          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0]).to.be.closeTo(
+          stakerUnstakeAmountAssetValue,
+          transactErr * 2
+        );
+        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
 
@@ -1300,10 +1311,11 @@ assets.forEach(function (a) {
         console.log(`Staker balance after: ${stakerBalanceAfter}`);
         console.log(`Staker pending withdrawals after: ${stakerPendingWithdrawalsAfter[0]}`);
         const stakerUnstakeAmountAssetValue = await iVault.convertToAssets(staker2UnstakeAmount);
-        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0])
-          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
-        expect(stakerBalanceAfter - stakerBalanceBefore)
-          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
+        expect(stakerPendingWithdrawalsBefore[0] - stakerPendingWithdrawalsAfter[0]).to.be.closeTo(
+          stakerUnstakeAmountAssetValue,
+          transactErr * 2
+        );
+        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2);
       });
 
       it("Ratio is ok after all", async function () {
@@ -1447,7 +1459,7 @@ assets.forEach(function (a) {
         console.log(`Pending withdrawal: ${format(pendingWithdrawal)}`);
 
         expect(pendingWithdrawal).to.be.closeTo(expectedPending, transactErr);
-        expect(pendingWithdrawal).to.be.closeTo(staker2UnstakeAmount * e18 / withdrawRatio, 2 * transactErr);
+        expect(pendingWithdrawal).to.be.closeTo((staker2UnstakeAmount * e18) / withdrawRatio, 2 * transactErr);
         console.log(`Ratio:\t${format(withdrawRatio)}`);
       });
 

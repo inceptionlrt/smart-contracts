@@ -19,6 +19,7 @@ contract InrEthVault is InceptionVault {
         IStrategy _assetStrategy
     ) external initializer {
         __InceptionVault_init(
+            "InrEthVault",
             operatorAddress,
             _strategyManager,
             _inceptionToken,

@@ -2,23 +2,24 @@
 pragma solidity ^0.8.17;
 
 import "../InceptionVault.sol";
-import "../../../interfaces/IrEth.sol";
+import "../../../interfaces/IStEth.sol";
 
 /// @author The InceptionLRT team
-/// @title The InosEthVault, specifically designed for the StakeWise Ethereum LST
-contract InosEthVault is InceptionVault {
+contract InVault_E1 is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
     function initialize(
+        string memory vaultName,
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) external initializer {
         __InceptionVault_init(
+            vaultName,
             operatorAddress,
             _strategyManager,
             _inceptionToken,

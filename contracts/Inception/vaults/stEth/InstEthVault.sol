@@ -19,6 +19,7 @@ contract InstEthVault is InceptionVault {
         IStrategy _assetStrategy
     ) external initializer {
         __InceptionVault_init(
+            "InstEthVault",
             operatorAddress,
             _strategyManager,
             _inceptionToken,
