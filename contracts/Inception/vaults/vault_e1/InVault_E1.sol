@@ -5,21 +5,21 @@ import "../InceptionVault.sol";
 import "../../../interfaces/IStEth.sol";
 
 /// @author The InceptionLRT team
-/// @title The InstEthVault, specifically designed for the Lido Ethereum LST
-contract InstEthVault is InceptionVault {
+contract InVault_E1 is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
     function initialize(
+        string memory vaultName,
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) external initializer {
         __InceptionVault_init(
-            "InstEthVault",
+            vaultName,
             operatorAddress,
             _strategyManager,
             _inceptionToken,
@@ -30,18 +30,18 @@ contract InstEthVault is InceptionVault {
     function _getAssetWithdrawAmount(
         uint256 amount
     ) internal pure override returns (uint256) {
-        return amount + 2;
+        return amount + 1;
     }
 
     function _getAssetReceivedAmount(
         uint256 amount
     ) internal pure override returns (uint256) {
-        return amount - 2;
+        return amount - 1;
     }
 
     function _getAssetRedeemAmount(
         uint256 amount
     ) internal pure override returns (uint256) {
-        return amount + 2;
+        return amount + 1;
     }
 }

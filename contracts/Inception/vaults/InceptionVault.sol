@@ -28,7 +28,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
 
+    string public name;
+
     function __InceptionVault_init(
+        string memory vaultName,
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
@@ -37,6 +40,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         __Ownable_init();
         __EigenLayerHandler_init(_strategyManager, _assetStrategy);
 
+        name = vaultName;
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
@@ -231,6 +235,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
+    }
+
+    function setName(string memory vaultName) external onlyOwner {
+        emit NameChanged(name, vaultName);
+        name = vaultName;
     }
 
     /*///////////////////////////////

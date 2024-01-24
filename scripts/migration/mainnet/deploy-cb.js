@@ -1,13 +1,13 @@
 /**
- * Rocket Ethereum LST
+ * Coinbase Ethereum LST
  */
 
 const { addresses } = require("./config-addresses");
 const { deployVault } = require("../deploy-vault");
 
-const VaultName = "InrEthVault",
-  TokenName = "Inception Restaked rETH",
-  TokenSymbol = "InrETH";
+const VaultName = "IncbEthVault",
+  TokenName = "Inception Restaked cbETH",
+  TokenSymbol = "IncbETH";
 
 async function main() {
   await deployVault(addresses, VaultName, TokenName, TokenSymbol);

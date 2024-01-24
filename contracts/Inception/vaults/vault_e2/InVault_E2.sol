@@ -5,21 +5,21 @@ import "../InceptionVault.sol";
 import "../../../interfaces/IStEth.sol";
 
 /// @author The InceptionLRT team
-/// @title The InstEthVault, specifically designed for the Lido Ethereum LST
-contract InstEthVault is InceptionVault {
+contract InVault_E2 is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
     function initialize(
+        string memory vaultName,
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) external initializer {
         __InceptionVault_init(
-            "InstEthVault",
+            vaultName,
             operatorAddress,
             _strategyManager,
             _inceptionToken,
