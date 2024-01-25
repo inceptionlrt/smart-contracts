@@ -27,6 +27,56 @@ assets = [
     staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
     staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
     operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "Ethx",
+    assetAddress: "0xA35b1B31Ce002FBF2058D22F30f95D405200A15b",
+    assetPoolName: "MockPool",
+    assetPoolAddress: "x_x_x",
+    vaultName: "InEthxVault",
+    vaultFactory: "InVault_E1",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0x9d7eD45EE2E8FC5482fa2428f15C971e6369011d",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0x1a0EBB8B15c61879a8e8DA7817Bb94374A7c4007", toWei(1));
+      const staker = await impersonateWithEth(address, toWei(22));
+      await asset.connect(donor).transfer(address, "1045000000000000000");
+      const balanceAfter = await asset.balanceOf(address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      return staker;
+    },
+  },
+  {
+    stakerAddress: "",
+    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
+    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    assetName: "SwEth",
+    assetAddress: "0xf951e335afb289353dc249e82926178eac7ded78",
+    assetPoolName: "MockPool",
+    assetPoolAddress: "x_x_x",
+    vaultName: "InswEthVault",
+    vaultFactory: "InVault_E1",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0x0fe4f44bee93503346a3ac9ee5a26b130a5796d6",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    impersonateStaker: async (address, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0xe8b22a88deb45c7848d394fd039b8d811511a9f3", toWei(1));
+      const staker = await impersonateWithEth(address, toWei(22));
+      await asset.connect(donor).transfer(address, "13545000000000000000");
+      const balanceAfter = await asset.balanceOf(address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      return staker;
+    },
+  },
+  {
+    stakerAddress: "",
+    staker2Address: "0xCf682451E33c206efF5E95B5df80c935d1F094C6",
+    staker3Address: "0xbaF50525B394AbB75Fd92750ec2D645F3014401C",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
     assetName: "OEth",
     assetAddress: "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
     assetPoolName: "VaultCore",
@@ -196,7 +246,7 @@ assets = [
     operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
     assetName: "CbEth",
     assetAddress: "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
-    assetPoolName: "CoinbasePool",
+    assetPoolName: "MockPool",
     assetPoolAddress: "0x64f2907F92631619ED7Ea510982835F9e1024767",
     vaultName: "IncbEthVault",
     vaultFactory: "InVault_E1",
