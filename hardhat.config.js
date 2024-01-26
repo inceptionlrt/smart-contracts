@@ -5,13 +5,18 @@ require("@openzeppelin/hardhat-upgrades");
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   networks: {
-    hardhat: {},
+    hardhat: {
+      forking: {
+        url: `${process.env.RPC_URL_ETHEREUM}`,
+        blockNumber: 18923449
+      }
+    },
     localhost: {
       url: "http://127.0.0.1:8545/",
     },
     mainnet: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
-      url: "https://rpc.ankr.com/eth",
+      url: `${process.env.RPC_URL_ETHEREUM}`,
       chainId: 1,
       gas: 8000000,
     },
@@ -23,10 +28,10 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
-          },
-        },
-      },
-    ],
-  },
+            runs: 200
+          }
+        }
+      }
+    ]
+  }
 };
