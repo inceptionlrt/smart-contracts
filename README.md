@@ -38,7 +38,7 @@ For detailed information and developer resources, please follow our [documentati
 - [x] [sfrxETH](https://etherscan.io/address/0xac3e018457b222d93114458476f3e3416abbe38f): Staked Frax Ether.
   - [InsfrxEthVault]().
   - [InsfrxETH]().
-- [x] [mETH](https://etherscan.io/address/0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa): mEth.
+- [x] [mETH](https://etherscan.io/address/0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa): Mantle Staked Ether.
   - [InmEthVault]().
   - [InmETH]().
 
