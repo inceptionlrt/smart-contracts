@@ -512,11 +512,9 @@ assets.forEach(function (a) {
         expect(await iToken.balanceOf(staker.address)).to.be.eq(0n);
       })
 
-      it("Reverts: can not transfer when iToken paused", async function () {
-        await iVault.connect(staker).deposit(toWei(1), staker.address);
-        const amount = await iToken.balanceOf(staker.address);
+      it("Reverts: can not deposit to iVault when iToken is paused", async function () {
         await iToken.pause();
-        await expect(iToken.connect(staker).transfer(staker2.address, amount))
+        await expect(iVault.connect(staker).deposit(toWei(1), staker.address))
           .to.be.revertedWith("InceptionToken: token transfer while paused");
       })
     });
