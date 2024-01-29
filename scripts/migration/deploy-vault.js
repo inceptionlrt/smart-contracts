@@ -53,7 +53,10 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
       strategyAddress = addresses.FraxStrategy;
       break;
     case "InmEthVault":
-      strategyAddress = addresses.MantleEthStrategy;
+      strategyAddress = addresses.MantleStrategy;
+      break;
+    case "InlsEthVault":
+      strategyAddress = addresses.LiquidStrategy;
       break;
   }
 
@@ -68,7 +71,6 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iTokenAddress,
     strategyAddress,
   ]);
-
   await iVault.waitForDeployment();
 
   const iVaultAddress = await iVault.getAddress();
