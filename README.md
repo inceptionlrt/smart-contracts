@@ -19,7 +19,7 @@ For detailed information and developer resources, please follow our [documentati
   - [InoETH](https://etherscan.io/address/0x9181f633E9B9F15A32d5e37094F4C93b333e0E92).
 - [x] [osETH](https://etherscan.io/address/0xf1C9acDc66974dFB6dEcB12aA385b9cD01190E38): StakeWise Staked Ethereum LST.
   - [InosEthVault](https://etherscan.io/address/0xA9F8c770661BeE8DF2D026edB1Cb6FF763C780FF).
-  - [InosETH](https://etherscan.io/address/0xA9F8c770661BeE8DF2D026edB1Cb6FF763C780FF).
+  - [InosETH](https://etherscan.io/address/0xfD07fD5EBEa6F24888a397997E262179Bf494336).
 - [x] [aETHc](https://etherscan.io/address/0xe95a203b1a91a908f9b9ce46459d101078c2c3cb): Ankr Staked Ethereum.
   - [InankrEthVault](https://etherscan.io/address/0x36B429439AB227fAB170A4dFb3321741c8815e55).
   - [InankrETH](https://etherscan.io/address/0xfa2629B9cF3998D52726994E0FcdB750224D8B9D).
