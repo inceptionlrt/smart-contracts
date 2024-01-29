@@ -10,6 +10,9 @@ const addresses = {
   BinanceStrategy: "0x7CA911E83dabf90C90dD3De5411a10F1A6112184",
   StaderStrategy: "0x9d7eD45EE2E8FC5482fa2428f15C971e6369011d",
   SwellStrategy: "0x0fe4f44bee93503346a3ac9ee5a26b130a5796d6",
+  MantleStrategy: "0x298aFB19A105D59E74658C4C334Ff360BadE6dd2",
+  FraxStrategy: "0x8CA7A5d6f3acd3A7A8bC468a8CD0FB14B6BD28b6",
+  LiquidStrategy: "0xAe60d8180437b5C34bB956822ac2710972584473",
 };
 
 module.exports = {

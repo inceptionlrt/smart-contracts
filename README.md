@@ -20,7 +20,7 @@ For detailed information and developer resources, please follow our [documentati
 - [x] [osETH](https://etherscan.io/address/0xf1C9acDc66974dFB6dEcB12aA385b9cD01190E38): StakeWise Staked Ethereum LST.
   - [InosEthVault](https://etherscan.io/address/0xA9F8c770661BeE8DF2D026edB1Cb6FF763C780FF).
   - [InosETH](https://etherscan.io/address/0xfD07fD5EBEa6F24888a397997E262179Bf494336).
-- [x] [aETHc](https://etherscan.io/address/0xe95a203b1a91a908f9b9ce46459d101078c2c3cb): Ankr Staked Ethereum.
+- [x] [ankrETH](https://etherscan.io/address/0xe95a203b1a91a908f9b9ce46459d101078c2c3cb): Ankr Staked Ethereum.
   - [InankrEthVault](https://etherscan.io/address/0x36B429439AB227fAB170A4dFb3321741c8815e55).
   - [InankrETH](https://etherscan.io/address/0xfa2629B9cF3998D52726994E0FcdB750224D8B9D).
 - [x] [cbETH](https://etherscan.io/address/0xBe9895146f7AF43049ca1c1AE358B0541Ea49704): Coinbase Wrapped Staked Ethereum LST.
@@ -38,9 +38,12 @@ For detailed information and developer resources, please follow our [documentati
 - [x] [sfrxETH](https://etherscan.io/address/0xac3e018457b222d93114458476f3e3416abbe38f): Staked Frax Ether.
   - [InsfrxEthVault]().
   - [InsfrxETH]().
-- [x] [mETH](https://etherscan.io/address/0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa): mEth.
+- [x] [mETH](https://etherscan.io/address/0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa): Mantle Staked Ether.
   - [InmEthVault]().
   - [InmETH]().
+- [] [lsETH](https://etherscan.io/address/0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549): Liquid Staked ETH.
+  - [InlsEthVault]().
+  - [InlsETH]().
 
 ## Testing
 
@@ -51,7 +54,14 @@ To run tests for the Inception Protocol, please follow these instructions:
 - Windows: `export RPC_URL_ETHEREUM=""`
 - MacOs/LinuxOs: `RPC_URL_ETHEREUM=""`
 
-2. It's possible to run tests for specific LSTs or all supported:
+2. Set the `solidity.compilers[0].settings.runs: 0` before contracts compilation in hardhat.config.js,
+   otherwise may cause `Block not found` error.
+
+3. Set any `DEPLOYER_PRIVATE_KEY` env or comment the line in hardhat.config.js.
+
+4. Compile with `npx hardhat compile`.
+
+5. It's possible to run tests for specific LSTs or all supported:
 
 - Paricular LSTs case:
   `ASSETS=athc,wbeth npx hardhat test`
