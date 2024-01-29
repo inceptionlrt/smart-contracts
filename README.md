@@ -41,6 +41,9 @@ For detailed information and developer resources, please follow our [documentati
 - [x] [mETH](https://etherscan.io/address/0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa): Mantle Staked Ether.
   - [InmEthVault]().
   - [InmETH]().
+- [] [lsETH](https://etherscan.io/address/0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549): Liquid Staked ETH.
+  - [InlsEthVault]().
+  - [InlsETH]().
 
 ## Testing
 

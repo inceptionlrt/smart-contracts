@@ -55,6 +55,9 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     case "InmEthVault":
       strategyAddress = addresses.MantleStrategy;
       break;
+    case "InlsEthVault":
+      strategyAddress = addresses.LiquidStrategy;
+      break;
   }
 
   console.log(addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress);
