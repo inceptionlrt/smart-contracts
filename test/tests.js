@@ -47,6 +47,54 @@ assets = [
     },
   },
   {
+    assetName: "mEth",
+    assetAddress: "0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa",
+    assetPoolName: "MockPool",
+    assetPoolAddress: "x_x_x",
+    vaultName: "InmEthVault",
+    vaultFactory: "InVault_E1",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0x298aFB19A105D59E74658C4C334Ff360BadE6dd2",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    blockNumber: 18943377,
+    impersonateStaker: async (staker, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0xf89d7b9c864f589bbF53a82105107622B35EaA40", toWei(1));
+      console.log(`balance: ${await asset.balanceOf(donor.address)}`);
+      await asset.connect(donor).transfer(staker.address, toWei(100));
+      const balanceAfter = await asset.balanceOf(staker.address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      console.log(`allowance: ${await asset.allowance(staker.address, await iVault.getAddress())}`);
+      return staker;
+    },
+  },
+  {
+    assetName: "lsEth",
+    assetAddress: "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+    assetPoolName: "MockPool",
+    assetPoolAddress: "x_x_x",
+    vaultName: "InmEthVault",
+    vaultFactory: "InVault_E1",
+    strategyManagerAddress: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategyAddress: "0xAe60d8180437b5C34bB956822ac2710972584473",
+    operatorAddress: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2,
+    transactErr: 2,
+    blockNumber: 18943377,
+    impersonateStaker: async (staker, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0x7286fCB1f0B9652063325f9d9Dc6fef092D6E711", toWei(1));
+      console.log(`balance: ${await asset.balanceOf(donor.address)}`);
+      await asset.connect(donor).transfer(staker.address, toWei(100));
+      const balanceAfter = await asset.balanceOf(staker.address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      console.log(`allowance: ${await asset.allowance(staker.address, await iVault.getAddress())}`);
+      return staker;
+    },
+  },
+  {
     assetName: "Ethx",
     assetAddress: "0xA35b1B31Ce002FBF2058D22F30f95D405200A15b",
     assetPoolName: "MockPool",
@@ -1774,7 +1822,6 @@ assets.forEach(function (a) {
 
       it("Staker2 redeems withdrawals", async function () {
         console.log(`Ratio: ${await iVault.ratio()}`);
-        const staker2UnstakeAmount = await iToken.balanceOf(staker2.address);
         const stakerBalanceBefore = await asset.balanceOf(staker2.address);
         const stakerPendingWithdrawalsBefore = await iVault.getPendingWithdrawalOf(staker2.address);
         await iVault.redeem(staker2.address);

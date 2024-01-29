@@ -54,7 +54,14 @@ To run tests for the Inception Protocol, please follow these instructions:
 - Windows: `export RPC_URL_ETHEREUM=""`
 - MacOs/LinuxOs: `RPC_URL_ETHEREUM=""`
 
-2. It's possible to run tests for specific LSTs or all supported:
+2. Set the `solidity.compilers[0].settings.runs: 0` before contracts compilation in hardhat.config.js, 
+otherwise may cause `Block not found` error.
+
+3. Set any `DEPLOYER_PRIVATE_KEY` env or comment the line in hardhat.config.js.
+
+4. Compile with `npx hardhat compile`.
+
+5. It's possible to run tests for specific LSTs or all supported:
 
 - Paricular LSTs case:
   `ASSETS=athc,wbeth npx hardhat test`
