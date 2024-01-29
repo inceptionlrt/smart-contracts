@@ -8,6 +8,10 @@ const addresses = {
   RocketStrategy: "0x1BeE69b7dFFfA4E2d53C2a2Df135C388AD25dCD2",
   LidoStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
   BinanceStrategy: "0x7CA911E83dabf90C90dD3De5411a10F1A6112184",
+  StaderStrategy: "0x9d7eD45EE2E8FC5482fa2428f15C971e6369011d",
+  SwellStrategy: "0x0fe4f44bee93503346a3ac9ee5a26b130a5796d6",
+  MantleEthStrategy: "0x298aFB19A105D59E74658C4C334Ff360BadE6dd2",
+  FraxEthStrategy: "0x8CA7A5d6f3acd3A7A8bC468a8CD0FB14B6BD28b6",
 };
 
 module.exports = {

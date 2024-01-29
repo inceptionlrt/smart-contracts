@@ -43,6 +43,18 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     case "IncbEthVault":
       strategyAddress = addresses.CoinbaseStrategy;
       break;
+    case "InswEthVault":
+      strategyAddress = addresses.SwellStrategy;
+      break;
+    case "InEthxVault":
+      strategyAddress = addresses.StaderStrategy;
+      break;
+    case "InsfrxEthVault":
+      strategyAddress = addresses.FraxStrategy;
+      break;
+    case "InmEthVault":
+      strategyAddress = addresses.MantleEthStrategy;
+      break;
   }
 
   console.log(addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress);
