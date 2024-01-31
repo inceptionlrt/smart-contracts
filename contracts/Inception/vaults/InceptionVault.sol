@@ -171,7 +171,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return (withdrawal.amount, withdrawal.receiver);
     }
 
-    /// @dev Same examples:
+    /// @dev Some examples:
     /// epoch 0 -- rebalance is not in progress, claimer1 withdrew
     /// epoch 1 -- rebalance in progress, claimer2 withdrew
     /// epoch 2 -- rebalance is finished, claimer1 is able to claim
