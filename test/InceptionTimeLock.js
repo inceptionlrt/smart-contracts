@@ -2,9 +2,11 @@ const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers"
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const minDelay = "10";
+const minDelay = 10n;
 
 describe("InceptionTimeLock", function () {
+  this.timeout(150000);
+
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
@@ -14,16 +16,18 @@ describe("InceptionTimeLock", function () {
 
     const TimeLock = await ethers.getContractFactory("InceptionTimeLock");
     const timelock = await TimeLock.deploy(minDelay, [proposer.address], [executor.address]);
+    const timelockAddress = await timelock.getAddress();
 
-    return { timelock, owner, proposer, executor, admin, account1 };
+    return { timelock, timelockAddress, owner, proposer, executor, admin, account1 };
   }
 
   describe("add tx to queue and execute", function () {
-    let timelock, owner, proposer, executor, admin, tx, account1, txArgs, id, creationTime;
+    let timelock, timelockAddress, owner, proposer, executor, admin, tx, account1, txArgs, id, creationTime;
 
     before(async function () {
       const fixtures = await loadFixture(deploy);
       timelock = fixtures.timelock;
+      timelockAddress = fixtures.timelockAddress;
       owner = fixtures.owner;
       proposer = fixtures.proposer;
       admin = fixtures.admin;
@@ -38,14 +42,14 @@ describe("InceptionTimeLock", function () {
     });
 
     it("add tx to queue by not a proposer :: reverted", async () => {
-      txArgs = [account1.address, "1000", "0x", ethers.utils.formatBytes32String(""), ethers.utils.formatBytes32String(""), minDelay];
+      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay];
       await expect(timelock.connect(account1).schedule(...txArgs)).to.be.revertedWith(
         /AccessControl: account 0x.{40} is missing role 0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1/
       );
     });
 
     it("add tx with less than min offset", async () => {
-      txArgs = [account1.address, "1000", "0x", ethers.utils.formatBytes32String(""), ethers.utils.formatBytes32String(""), minDelay - 1];
+      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay - 1n];
       await expect(timelock.connect(proposer).schedule(...txArgs)).to.be.revertedWith("TimelockController: insufficient delay");
     });
 
@@ -58,13 +62,13 @@ describe("InceptionTimeLock", function () {
         bytes32 salt,
         uint256 delay
        */
-      txArgs = [account1.address, "1000", "0x", ethers.utils.formatBytes32String(""), ethers.utils.formatBytes32String(""), minDelay];
+      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay];
       id = await timelock.hashOperation(...txArgs.slice(0, 5));
       tx = await timelock.connect(proposer).schedule(...txArgs);
       expect(tx)
         .to.emit(timelock, "CallScheduled")
         .withArgs(...txArgs, id);
-      creationTime = await time.latest();
+      creationTime = BigInt(await time.latest());
     });
 
     it("get status after creation", async () => {
@@ -102,7 +106,7 @@ describe("InceptionTimeLock", function () {
     });
 
     it("execute by not an owner when ready:: not owner", async () => {
-      await owner.sendTransaction({ from: owner.address, to: timelock.address, value: txArgs[1] });
+      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs[1] });
       await expect(timelock.connect(account1).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
         /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/
       );
@@ -117,12 +121,12 @@ describe("InceptionTimeLock", function () {
       expect(await timelock.isOperationDone(id)).to.be.true;
       const balanceAfter = await ethers.provider.getBalance(account1.address);
       console.log(`Balance after: ${balanceAfter}`);
-      expect(balanceAfter.sub(balanceBefore)).to.be.eq(txArgs[1]);
-      expect(await ethers.provider.getBalance(timelock.address)).to.be.eq(0);
+      expect(balanceAfter - balanceBefore).to.be.eq(txArgs[1]);
+      expect(await ethers.provider.getBalance(timelockAddress)).to.be.eq(0);
     });
 
     it("repeat execution :: not ready", async () => {
-      await owner.sendTransaction({ from: owner.address, to: timelock.address, value: txArgs[1] });
+      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs[1] });
       await expect(timelock.connect(executor).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
         "TimelockController: operation is not ready"
       );
