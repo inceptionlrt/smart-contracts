@@ -11,15 +11,15 @@ import "../../interfaces/IRebalanceStrategy.sol";
 /// @title The InceptionVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
 contract InceptionVault is IInceptionVault, EigenLayerHandler {
-    /// @dev Inception re-staking token
+    /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
     uint256 public minAmount;
 
-    /// @dev epoch represents the period of the rebalancing process
-    /// @dev receiver is a receiver of assets in claim()
-    /// @dev amount represents the exact amount of the asset to be claimed
+    /// @dev Epoch represents the period of the rebalancing process
+    /// @dev Receiver is a receiver of assets in claim()
+    /// @dev Amount represents the exact amount of the asset to be claimed
     struct Withdrawal {
         uint256 epoch;
         address receiver;
@@ -28,6 +28,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
 
+    /// @dev the unique InceptionVault name
     string public name;
 
     function __InceptionVault_init(
@@ -68,13 +69,33 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 amount,
         address receiver
     ) public nonReentrant whenNotPaused returns (uint256) {
-        address sender = msg.sender;
-        uint256 currentRatio = ratio();
+        return _deposit(amount, msg.sender, receiver);
+    }
 
+    /// @notice The deposit function but with a referral code
+    function depositWithReferral(
+        uint256 amount,
+        address receiver,
+        bytes32 code
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        emit ReferralCode(code);
+        return _deposit(amount, msg.sender, receiver);
+    }
+
+    function _deposit(
+        uint256 amount,
+        address sender,
+        address receiver
+    ) internal returns (uint256) {
+        uint256 currentRatio = ratio();
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2
-        amount = _deposit(amount, sender, receiver);
+        __beforeDeposit(receiver, amount);
+        uint256 depositedBefore = totalAssets();
+        // get the amount from the sender
+        _transferAssetFrom(sender, amount);
+        amount = totalAssets() - depositedBefore;
 
         uint256 iShares = Convert.multiplyAndDivideFloor(
             amount,
@@ -86,19 +107,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Deposit(sender, receiver, amount, iShares);
 
         return iShares;
-    }
-
-    function _deposit(
-        uint256 amount,
-        address sender,
-        address receiver
-    ) internal returns (uint256) {
-        __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
-        // get the amount from the sender
-        _transferAssetFrom(sender, amount);
-
-        return totalAssets() - depositedBefore;
     }
 
     // /*/////////////////////////////////
@@ -138,8 +146,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     /// @dev Performs the claiming of a withdrawal request
-    /// @notice checks isAbleToRedeem() to ensure that the receiver is ready to claim
-    /// @notice allows anyone to claim on behalf of the correct receiver
+    /// @notice Checks isAbleToRedeem() to ensure that the receiver is ready to claim
+    /// @notice Allows anyone to claim on behalf of the correct receiver
     function redeem(address receiver) public whenNotPaused nonReentrant {
         require(
             isAbleToRedeem(receiver),
@@ -163,7 +171,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return (withdrawal.amount, withdrawal.receiver);
     }
 
-    /// @dev same examples:
+    /// @dev Some examples:
     /// epoch 0 -- rebalance is not in progress, claimer1 withdrew
     /// epoch 1 -- rebalance in progress, claimer2 withdrew
     /// epoch 2 -- rebalance is finished, claimer1 is able to claim
@@ -227,9 +235,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setOperator(address newValue) external onlyOwner {
-        emit OperatorChanged(_operator, newValue);
-        _operator = newValue;
+    function setOperator(address newOperator) external onlyOwner {
+        if (newOperator == address(0)) {
+            revert NullParams();
+        }
+        emit OperatorChanged(_operator, newOperator);
+        _operator = newOperator;
     }
 
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
@@ -237,9 +248,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         minAmount = newMinAmount;
     }
 
-    function setName(string memory vaultName) external onlyOwner {
-        emit NameChanged(name, vaultName);
-        name = vaultName;
+    function setName(string memory newVaultName) external onlyOwner {
+        if (bytes(newVaultName).length == 0) {
+            revert NullParams();
+        }
+        emit NameChanged(name, newVaultName);
+        name = newVaultName;
     }
 
     /*///////////////////////////////

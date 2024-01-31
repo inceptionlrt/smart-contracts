@@ -236,6 +236,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev Serves to unblock pending withdrawals for claiming them
     function updateEpoch(uint256 newEpoch) external onlyOperator {
+        if (newEpoch <= epoch) {
+            revert WrongEpoch();
+        }
         epoch = newEpoch;
     }
 }

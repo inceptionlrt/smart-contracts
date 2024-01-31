@@ -2,9 +2,8 @@
 ///// Run with the default network, hardhat ////
 ///////////////////////////////////////////////
 
-const { ethers, network } = require("hardhat");
+const { ethers, network, upgrades } = require("hardhat");
 const { expect } = require("chai");
-const hre = require("hardhat");
 
 const e18 = "1000000000000000000",
   amount = "10000000";
@@ -16,9 +15,8 @@ const initInceptionToken = async () => {
 
   [owner, staker1, staker2] = await ethers.getSigners();
 
-  const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
-  iToken = await iTokenFactory.deploy();
-  await iToken.initialize("Test Token", "TT");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  iToken = await upgrades.deployProxy(iTokenFactory, ["Test Token", "TT"]);
 
   await iToken.setVault(owner.address);
   console.log(`... iToken initialization completed ....`);

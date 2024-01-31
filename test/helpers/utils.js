@@ -1,12 +1,8 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, network } = require("hardhat");
-const updateStrategyRatio = async (strategyAddress, amount, staker) => {
-  const strategyFactory = await ethers.getContractFactory("StrategyBaseDummy");
-  const strategy = strategyFactory.attach(strategyAddress);
-
-  const assetAddress = await strategy.underlyingToken();
-  const assetFactory = await ethers.getContractFactory("InceptionToken");
-  const asset = assetFactory.attach(assetAddress);
+const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
+  const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
+  const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
   await asset.connect(staker).transfer(strategyAddress, amount);
 }
 
@@ -64,22 +60,6 @@ const getRandomStaker = async (iVault, asset, donor, amount) => {
   return await getStaker(randomAddress(), iVault, asset, donor, amount);
 }
 
-class Snapshotter {
-  snapshotId;
-  constructor() {
-    this.snapshotId = 0;
-  }
-  async snapshot() {
-    this.snapshotId = await network.provider.send("evm_snapshot", []);
-    console.log(`... Hardhat snapshot #${this.snapshotId} was captured ...`);
-  }
-  async revert() {
-    await network.provider.send("evm_revert", [this.snapshotId]);
-    console.log(`... Hardhat snapshot #${this.snapshotId} was reverted ...`);
-    this.snapshotId = await network.provider.send("evm_snapshot", []);
-  }
-}
-
 const mineBlocks = async (count) => {
   console.log(`WAIT FOR ${count} BLOCKs`);
   for (let i = 0; i < count; i++) {
@@ -108,12 +88,11 @@ const format = (bi) => bi.toLocaleString("de-DE");
 const e18 = 1000_000_000_000_000_000n;
 
 module.exports = {
-  updateStrategyRatio,
+  addRewardsToStrategy,
   withdrawDataFromTx,
   impersonateWithEth,
   getStaker,
   getRandomStaker,
-  Snapshotter,
   mineBlocks,
   toWei,
   toBN,
