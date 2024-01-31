@@ -88,6 +88,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return iShares;
     }
 
+    /// @notice the deposit function but with a referral code
+    function depositWithReferral(
+        uint256 amount,
+        address receiver,
+        bytes32 code
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        emit ReferralCode(code);
+        return deposit(amount, receiver);
+    }
+
     function _deposit(
         uint256 amount,
         address sender,

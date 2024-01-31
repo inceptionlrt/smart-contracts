@@ -44,4 +44,6 @@ interface IInceptionVault {
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
 
     event NameChanged(string prevValue, string newValue);
+
+    event ReferralCode(bytes32 indexed code);
 }
