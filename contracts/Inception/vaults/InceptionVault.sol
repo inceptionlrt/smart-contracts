@@ -69,13 +69,33 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 amount,
         address receiver
     ) public nonReentrant whenNotPaused returns (uint256) {
-        address sender = msg.sender;
-        uint256 currentRatio = ratio();
+        return _deposit(amount, msg.sender, receiver);
+    }
 
+    /// @notice The deposit function but with a referral code
+    function depositWithReferral(
+        uint256 amount,
+        address receiver,
+        bytes32 code
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        emit ReferralCode(code);
+        return _deposit(amount, msg.sender, receiver);
+    }
+
+    function _deposit(
+        uint256 amount,
+        address sender,
+        address receiver
+    ) internal returns (uint256) {
+        uint256 currentRatio = ratio();
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2
-        amount = _deposit(amount, sender, receiver);
+        __beforeDeposit(receiver, amount);
+        uint256 depositedBefore = totalAssets();
+        // get the amount from the sender
+        _transferAssetFrom(sender, amount);
+        amount = totalAssets() - depositedBefore;
 
         uint256 iShares = Convert.multiplyAndDivideFloor(
             amount,
@@ -87,29 +107,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Deposit(sender, receiver, amount, iShares);
 
         return iShares;
-    }
-
-    /// @notice The deposit function but with a referral code
-    function depositWithReferral(
-        uint256 amount,
-        address receiver,
-        bytes32 code
-    ) public nonReentrant whenNotPaused returns (uint256) {
-        emit ReferralCode(code);
-        return deposit(amount, receiver);
-    }
-
-    function _deposit(
-        uint256 amount,
-        address sender,
-        address receiver
-    ) internal returns (uint256) {
-        __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
-        // get the amount from the sender
-        _transferAssetFrom(sender, amount);
-
-        return totalAssets() - depositedBefore;
     }
 
     // /*/////////////////////////////////
