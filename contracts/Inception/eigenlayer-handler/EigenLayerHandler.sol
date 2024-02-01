@@ -43,7 +43,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         strategy = _assetStrategy;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
-        // approve spending by stategyManager
+        // approve spending by strategyManager
         require(
             _asset.approve(address(strategyManager), type(uint256).max),
             "InceptionVault: approve failed"
