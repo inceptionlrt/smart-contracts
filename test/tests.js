@@ -801,7 +801,7 @@ assets.forEach(function (a) {
           const code = ethers.encodeBytes32String(randomAddress().slice(0,8));
           const tx = await iVault.connect(staker2).depositWithReferral(amount, receiver, code);
           const receipt = await tx.wait();
-          const events = receipt.logs?.filter((e) => {
+          let events = receipt.logs?.filter((e) => {
             return e.eventName === "Deposit";
           });
           expect(events.length).to.be.eq(1);
@@ -809,7 +809,12 @@ assets.forEach(function (a) {
           expect(events[0].args["receiver"]).to.be.eq(receiver);
           expect(events[0].args["amount"]).to.be.closeTo(amount, transactErr);
           expect(events[0].args["iShares"] - expectedShares).to.be.closeTo(0, transactErr);
-          expect(tx).emit(iVault, "ReferralCode").withArgs(code);
+          //Code event
+          events = receipt.logs?.filter((e) => {
+            return e.eventName === "ReferralCode";
+          });
+          expect(events.length).to.be.eq(1);
+          expect(events[0].args["code"]).to.be.eq(code);
 
           const balanceAfter = await iToken.balanceOf(receiver);
           const totalDepositedAfter = await iVault.getTotalDeposited();
