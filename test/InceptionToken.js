@@ -2,7 +2,7 @@
 ///// Run with the default network, hardhat ////
 ///////////////////////////////////////////////
 
-const { ethers, network, upgrades } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const { expect } = require("chai");
 
 const e18 = "1000000000000000000",
