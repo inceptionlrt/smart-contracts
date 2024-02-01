@@ -1,5 +1,5 @@
 const { ethers, upgrades } = require("hardhat");
-const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { readJsonFiles, getVaultImplAndStrategyAddress } = require("../../../utils");
 
 async function main() {
@@ -37,7 +37,9 @@ const getNewImplFor = async (vaultAddress, newImpl) => {
     console.log(`New Impl of InceptionVault(${impl}) was deployed`);
     return impl;
   } catch (err) {
+    console.log("===========================================================================");
     console.error("MISSED VAULT: ", vaultAddress);
+    console.log("===========================================================================");
   }
   return "";
 };
