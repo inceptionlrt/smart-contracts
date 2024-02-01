@@ -63,7 +63,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     /// @dev Deposits extra assets into strategy
-    function depositExtra() external whenNotPaused onlyOperator {
+    function depositExtra() external whenNotPaused nonReentrant onlyOperator {
         uint256 vaultBalance = totalAssets();
         uint256 toWithdrawAmount = totalAmountToWithdraw;
         if (vaultBalance <= toWithdrawAmount) {
