@@ -554,6 +554,13 @@ assets.forEach(function (a) {
         );
       });
 
+      it("Reverts: deposit to iVault when iToken is paused", async function () {
+        await iToken.pause();
+        await expect(iVault.connect(staker).deposit(toWei(1), staker.address)).to.be.revertedWith(
+          "InceptionToken: token transfer while paused"
+        );
+      });
+
       it("unpause(): only owner can", async function () {
         await iToken.pause();
         expect(await iToken.paused()).is.true;
