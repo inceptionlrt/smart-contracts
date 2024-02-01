@@ -90,7 +90,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 currentRatio = ratio();
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
-        // approximately by -2
+        // approximately by -2 wei
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         // get the amount from the sender

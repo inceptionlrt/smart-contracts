@@ -30,7 +30,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     modifier onlyOperator() {
         require(
             msg.sender == _operator,
-            "InceptionVault: only operator allowed"
+            "EigenLayerHandler: only operator allowed"
         );
         _;
     }
@@ -43,10 +43,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         strategy = _assetStrategy;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
-        // approve spending by stategyManager
+        // approve spending by strategyManager
         require(
             _asset.approve(address(strategyManager), type(uint256).max),
-            "InceptionVault: approve failed"
+            "EigenLayerHandler: approve failed"
         );
     }
 
@@ -63,7 +63,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     /// @dev Deposits extra assets into strategy
-    function depositExtra() external whenNotPaused onlyOperator {
+    function depositExtra() external whenNotPaused nonReentrant onlyOperator {
         uint256 vaultBalance = totalAssets();
         uint256 toWithdrawAmount = totalAmountToWithdraw;
         if (vaultBalance <= toWithdrawAmount) {
