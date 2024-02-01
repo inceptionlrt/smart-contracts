@@ -1,6 +1,6 @@
 {
-  "iVaultAddress": "0x90E80E25ABDB6205B08DeBa29a87f7eb039023C2",
-  "iVaultImpl": "0x453fcff2599cc16cc5ab6fcd4aa5e4a791da9e86",
-  "iTokenAddress": "0x57a5a0567187FF4A8dcC1A9bBa86155E355878F2",
-  "iTokenImpl": "0x971b35225361535d04828f16442aaa54009efe1a"
+  "iVaultAddress": "0xfE715358368416E01d3A961D3a037b7359735d5e",
+  "iVaultImpl": "0x4a85b9129b5a060b791f5b657fcb883f2542a4eca",
+  "iTokenAddress": "0xBf19Eead55a6B100667f04F8FBC5371E03E8ab2E",
+  "iTokenImpl": "0xf0b06794b6b068f728481b4f44c9ad0be42fb8ab"
 }

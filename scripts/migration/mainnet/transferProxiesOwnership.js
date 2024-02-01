@@ -43,26 +43,6 @@ async function main() {
   await transferOwnwership(InrEthVaultAddress, newOwnerAddress);
 }
 
-// Function to read JSON file and convert it to an object
-async function readJsonAndSplitAsync(filePath) {
-  try {
-    const jsonString = await fs.readFile(filePath, "utf8");
-    const jsonObject = JSON.parse(jsonString);
-    const dataMap = new Map(Object.entries(jsonObject));
-
-    // Splitting the Map into keys and values arrays
-    const keysArray = Array.from(dataMap.keys());
-    const valuesArray = Array.from(dataMap.values());
-
-    console.log("Keys Array:", keysArray.length);
-    console.log("Values Array:", valuesArray.length);
-
-    return [keysArray, valuesArray];
-  } catch (err) {
-    console.error("Error:", err);
-  }
-}
-
 main()
   .then(() => process.exit(0))
   .catch((error) => {

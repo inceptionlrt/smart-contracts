@@ -1,37 +1,45 @@
 const { ethers, upgrades } = require("hardhat");
 const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
-
-const InstETHAddress = "0x814CC6B8fd2555845541FB843f37418b05977d8d",
-  InrETHAddress = "0x1Aa53BC4Beb82aDf7f5EDEE9e3bBF3434aD59F12";
+const { readJsonFiles, getVaultImplAndStrategyAddress } = require("../../../utils");
 
 async function main() {
-  // IstETH
-  let newImlp = await getNewImplFor(InstETHAddress, "InVault_E2");
-  await upgradeVaultImpl(InstETHAddress, newImlp);
-  // InrETH
-  newImlp = await getNewImplFor(InrETHAddress, "InVault_E2");
-  await upgradeVaultImpl(InrETHAddress, newImlp);
+  // get all current vaults
+  vaults = await readJsonFiles("./scripts/migration/addresses");
+  for (const [vaultName, vaultData] of vaults) {
+    const vaultAddress = vaultData.iVaultAddress;
+    console.log(`Upgdading the InceptionVault:: ${vaultName} with the address: ${vaultAddress}`);
+
+    const [implName] = await getVaultImplAndStrategyAddress(vaultName);
+    let newImpl = await getNewImplFor(vaultAddress, implName);
+    if (newImpl == "") {
+      continue;
+    }
+    await upgradeVaultImpl(vaultAddress, newImpl);
+  }
 }
 
 const upgradeVaultImpl = async (vaultAddress, newImpl) => {
   const timelock = await ethers.getContractAt("InceptionTimeLock", "0x650bd9dee50e3ee15cbb49749ff6abcf55a8fb1e");
   const delay = await timelock.getMinDelay();
-  console.log(delay);
 
   const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(vaultAddress);
-  console.log(proxyAdminAddress);
   const proxyAdmin = await ethers.getContractAt("ProxyAdminMock", proxyAdminAddress);
   const transaction = await proxyAdmin.upgradeAndCall.populateTransaction(vaultAddress, newImpl, "0x");
 
   const res = await timelock.schedule(transaction.to, transaction.value || "0", transaction.data, ethers.ZeroHash, ethers.ZeroHash, delay);
   await res.wait();
-  console.log(res.hash);
+  console.log(`SHEDULE TX for ${vaultAddress}: ${res}`);
 };
 
 const getNewImplFor = async (vaultAddress, newImpl) => {
-  const impl = await upgrades.prepareUpgrade(vaultAddress, await ethers.getContractFactory(newImpl));
-  console.log(`New Impl of InceptionVault(${impl}) was deployed`);
-  return impl;
+  try {
+    const impl = await upgrades.prepareUpgrade(vaultAddress, await ethers.getContractFactory(newImpl));
+    console.log(`New Impl of InceptionVault(${impl}) was deployed`);
+    return impl;
+  } catch (err) {
+    console.error("MISSED VAULT: ", vaultAddress);
+  }
+  return "";
 };
 
 main()
