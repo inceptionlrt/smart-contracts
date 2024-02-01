@@ -30,7 +30,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     modifier onlyOperator() {
         require(
             msg.sender == _operator,
-            "InceptionVault: only operator allowed"
+            "EigenLayerHandler: only operator allowed"
         );
         _;
     }
@@ -46,7 +46,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         // approve spending by strategyManager
         require(
             _asset.approve(address(strategyManager), type(uint256).max),
-            "InceptionVault: approve failed"
+            "EigenLayerHandler: approve failed"
         );
     }
 
