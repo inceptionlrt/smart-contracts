@@ -8,7 +8,7 @@ async function main() {
   console.log("Account balance:", initBalance.toString());
 
   const InstETHRateProviderFactory = await hre.ethers.getContractFactory("InstETHRateProvider");
-  const rateProvider = await InstETHRateProviderFactory.deploy();
+  const rateProvider = await InstETHRateProviderFactory.deploy("0x814CC6B8fd2555845541FB843f37418b05977d8d");
   await rateProvider.waitForDeployment();
 
   console.log("RateProvider address: ", (await rateProvider.getAddress()).toString());

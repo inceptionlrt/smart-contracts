@@ -9,7 +9,9 @@ import "./InceptionRateProvider.sol";
 /// @notice The InceptionRateProvider is used to build a rate provider for instETH LRT.
 contract InstETHRateProvider is InceptionRateProvider {
     // --- Init ---
-    constructor(address vaultAddress) InceptionRateProvider(vaultAddress) {}
+    constructor(
+        address vaultAddress
+    ) payable InceptionRateProvider(vaultAddress) {}
 
     function instETH() external view returns (address) {
         return address(inceptionVault.inceptionToken());

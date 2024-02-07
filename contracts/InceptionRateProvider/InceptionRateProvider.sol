@@ -15,7 +15,7 @@ abstract contract InceptionRateProvider is IRateProvider {
 
     IInceptionVault public inceptionVault;
 
-    constructor(address vaultAddress) {
+    constructor(address vaultAddress) payable {
         inceptionVault = IInceptionVault(vaultAddress);
     }
 
