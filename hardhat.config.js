@@ -2,14 +2,17 @@ require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 
+require("./tasks/get-free-balances");
+require("./tasks/deposit-extra");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   networks: {
     hardhat: {
       forking: {
         url: `${process.env.RPC_URL_ETHEREUM}`,
-        blockNumber: 18923449
-      }
+        blockNumber: 18923449,
+      },
     },
     localhost: {
       url: "http://127.0.0.1:8545/",
@@ -28,10 +31,10 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
-      }
-    ]
-  }
+            runs: 200,
+          },
+        },
+      },
+    ],
+  },
 };
