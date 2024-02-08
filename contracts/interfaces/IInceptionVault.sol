@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
+import "./IInceptionToken.sol";
 
 interface IInceptionVault {
     /*///////////////////
@@ -46,4 +47,8 @@ interface IInceptionVault {
     event NameChanged(string prevValue, string newValue);
 
     event ReferralCode(bytes32 indexed code);
+
+    function inceptionToken() external view returns (IInceptionToken);
+
+    function ratio() external view returns (uint256);
 }
