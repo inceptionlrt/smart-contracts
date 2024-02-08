@@ -17,4 +17,6 @@ interface IInceptionErrors {
     error WithdrawFutile();
 
     error WrongEpoch();
+
+    error DepositOnPause();
 }

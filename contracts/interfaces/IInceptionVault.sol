@@ -48,6 +48,10 @@ interface IInceptionVault {
 
     event ReferralCode(bytes32 indexed code);
 
+    event DepositPaused(address indexed account);
+
+    event DepositUnpaused(address indexed account);
+
     function inceptionToken() external view returns (IInceptionToken);
 
     function ratio() external view returns (uint256);

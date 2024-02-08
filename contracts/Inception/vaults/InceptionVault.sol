@@ -31,6 +31,18 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev the unique InceptionVault name
     string public name;
 
+    /// @dev 1 - paused, 2 - unpaused
+    uint256 public depositPaused;
+
+    /*//////////////////////
+    ////// Modifiers //////
+    ////////////////////*/
+
+    modifier whenDepositPaused() {
+        require(depositPaused == 1, "InceptionVault: deposit is not paused");
+        _;
+    }
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -55,6 +67,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) {
             revert NullParams();
+        }
+        if (depositPaused == 1) {
+            revert DepositOnPause();
         }
         require(
             amount >= minAmount,
@@ -266,5 +281,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function pauseDeposit() external onlyOwner {
+        depositPaused = 1;
+        emit DepositPaused(msg.sender);
+    }
+
+    function unpauseDeposit() external whenDepositPaused onlyOwner {
+        depositPaused = 2;
+        emit DepositUnpaused(msg.sender);
     }
 }
