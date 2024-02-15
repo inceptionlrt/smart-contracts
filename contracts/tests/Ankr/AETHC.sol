@@ -3,4 +3,6 @@ pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-contract AETHC is ERC20Upgradeable {}
+contract AETHC is ERC20Upgradeable {
+    function ratio() external view returns (uint256) {}
+}
