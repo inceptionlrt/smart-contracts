@@ -2,8 +2,8 @@
  * Ankr Ethereum LST
  */
 
-const { addresses } = require("./config-addresses");
-const { deployVault } = require("../deploy-vault");
+const { addresses } = require("../config-addresses");
+const { deployVault } = require("../../deploy-vault");
 
 const VaultName = "InankrEthVault",
   TokenName = "Inception Restaked ankrETH",

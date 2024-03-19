@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.14;
 
-import "./InceptionRateProvider.sol";
+import "../InceptionRateProvider.sol";
 
 /// @author The InceptionLRT team
-/// @title The InstETHRateProvider contract
-/// @notice The InceptionRateProvider is used to build a rate provider for instETH LRT.
-contract InstETHRateProvider is InceptionRateProvider {
-    // --- Init ---
+/// @title The IncbETHRateProvider contract
+/// @notice The InceptionRateProvider is used to build a rate provider for incbETH LRT.
+contract IncbETHRateProvider is InceptionRateProvider {
     constructor(
         address vaultAddress
     ) payable InceptionRateProvider(vaultAddress) {}

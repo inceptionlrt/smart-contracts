@@ -2,8 +2,8 @@
  * Mantle Staked Ether LST
  */
 
-const { addresses } = require("./config-addresses");
-const { deployVault } = require("../deploy-vault");
+const { addresses } = require("../config-addresses");
+const { deployVault } = require("../../deploy-vault");
 
 const VaultName = "InmEthVault",
   TokenName = "Inception Restaked mETH",

@@ -1,5 +1,5 @@
-const { addresses } = require("./config-addresses");
-const { deployVault } = require("../deploy-vault");
+const { addresses } = require("../config-addresses");
+const { deployVault } = require("../../deploy-vault");
 
 const VaultName = "InswEthVault",
   TokenName = "Inception Restaked swETH",

@@ -2,8 +2,8 @@
  * Wrapped Binance Beacon Ethereum LST
  */
 
-const { addresses } = require("./config-addresses");
-const { deployVault } = require("../deploy-vault");
+const { addresses } = require("../config-addresses");
+const { deployVault } = require("../../deploy-vault");
 
 const VaultName = "InwbEthVault",
   TokenName = "Inception Restaked wbETH",
