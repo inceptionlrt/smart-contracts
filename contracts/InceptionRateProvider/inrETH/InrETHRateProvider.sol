@@ -7,7 +7,6 @@ import "../InceptionRateProvider.sol";
 /// @title The InrETHRateProvider contract
 /// @notice The InceptionRateProvider is used to build a rate provider for inrETH LRT.
 contract InrETHRateProvider is InceptionRateProvider {
-    // --- Init ---
     constructor(
         address vaultAddress
     ) payable InceptionRateProvider(vaultAddress) {}

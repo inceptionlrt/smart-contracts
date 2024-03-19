@@ -4,14 +4,14 @@ pragma solidity ^0.8.14;
 import "../InceptionRateProvider.sol";
 
 /// @author The InceptionLRT team
-/// @title The IncbETHRateProvider contract
-/// @notice The InceptionRateProvider is used to build a rate provider for incbETH LRT.
-contract IncbETHRateProvider is InceptionRateProvider {
+/// @title The InsfrxETHRateProvider contract
+/// @notice The InceptionRateProvider is used to build a rate provider for insfrxETH LRT.
+contract InsfrxETHRateProvider is InceptionRateProvider {
     constructor(
         address vaultAddress
     ) payable InceptionRateProvider(vaultAddress) {}
 
-    function incbETH() external view returns (address) {
+    function insfrxETH() external view returns (address) {
         return address(inceptionVault.inceptionToken());
     }
 }
