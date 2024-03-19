@@ -1,7 +1,6 @@
 const fs = require("fs").promises;
 const path = require("path");
 const hre = require("hardhat");
-const { ethers } = require("hardhat");
 const { addresses } = require("./migration/mainnet/config-addresses");
 
 const advanceBlock = async () => {
