@@ -4,7 +4,7 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
   const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
   await asset.connect(staker).transfer(strategyAddress, amount);
-}
+};
 
 const withdrawDataFromTx = async (tx, iVault) => {
   const receipt = await tx.wait();
@@ -31,7 +31,7 @@ const withdrawDataFromTx = async (tx, iVault) => {
     assetsToWithdraw.push(assetAddress);
   }
   return [withdrawalData, assetsToWithdraw];
-}
+};
 
 const impersonateWithEth = async (address, amount) => {
   await helpers.impersonateAccount(address);
@@ -44,9 +44,9 @@ const impersonateWithEth = async (address, amount) => {
   console.log(`Account impersonated at address: ${account.address}`);
   // console.log(`Account balance Eth: ${format(await ethers.provider.getBalance(account.address))}`);
   return account;
-}
+};
 
-const getStaker = async (address, iVault, asset, donor, amount= 100_000_000_000_000_000_000n) => {
+const getStaker = async (address, iVault, asset, donor, amount = 100_000_000_000_000_000_000n) => {
   const staker = await impersonateWithEth(address, toWei(1));
   // console.log(`Donor asset balance: ${format(await asset.balanceOf(donor.address))}`);
   await asset.connect(donor).transfer(address, amount);
@@ -54,18 +54,18 @@ const getStaker = async (address, iVault, asset, donor, amount= 100_000_000_000_
   // console.log(`Staker asset balance: ${format(balanceAfter)}`);
   await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
   return staker;
-}
+};
 
 const getRandomStaker = async (iVault, asset, donor, amount) => {
   return await getStaker(randomAddress(), iVault, asset, donor, amount);
-}
+};
 
 const mineBlocks = async (count) => {
   console.log(`WAIT FOR ${count} BLOCKs`);
   for (let i = 0; i < count; i++) {
     await network.provider.send("evm_mine");
   }
-}
+};
 const toWei = (ether) => ethers.parseEther(ether.toString());
 
 const toBN = (n) => BigInt(n);
@@ -80,9 +80,9 @@ const randomBI = (length) => {
   } else {
     return 0n;
   }
-}
+};
 
-const randomAddress  = () => ethers.Wallet.createRandom().address;
+const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
