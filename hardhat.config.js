@@ -3,7 +3,9 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 
 require("./tasks/get-free-balances");
+require("./tasks/get-inception-vaults");
 require("./tasks/deposit-extra");
+require("./tasks/deploy-rate-provider");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -11,7 +13,7 @@ module.exports = {
     hardhat: {
       forking: {
         url: `${process.env.RPC_URL_ETHEREUM}`,
-        blockNumber: 18923449,
+        blockNumber: 19469027,
       },
     },
     localhost: {

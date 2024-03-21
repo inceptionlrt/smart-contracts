@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.14;
 
-import "./InceptionRateProvider.sol";
+import "../InceptionRateProvider.sol";
 
 /// @author The InceptionLRT team
 /// @title The InstETHRateProvider contract

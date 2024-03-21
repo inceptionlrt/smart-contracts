@@ -1,9 +1,9 @@
-const { addresses } = require("./config-addresses");
-const { deployVault } = require("../deploy-vault");
+const { addresses } = require("../config-addresses");
+const { deployVault } = require("../../deploy-vault");
 
-const VaultName = "InstEthVault",
-  TokenName = "Inception Restaked stETH",
-  TokenSymbol = "InstETH";
+const VaultName = "InEthxVault",
+  TokenName = "Inception Restaked ETHx",
+  TokenSymbol = "InETHx";
 
 async function main() {
   await deployVault(addresses, VaultName, TokenName, TokenSymbol);

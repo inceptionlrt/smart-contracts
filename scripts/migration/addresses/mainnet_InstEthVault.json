@@ -2,5 +2,6 @@
   "iVaultAddress": "0x814CC6B8fd2555845541FB843f37418b05977d8d",
   "iVaultImpl": "0xbbf7fc7036b60d1e88913bd583dc5e39957f9f17",
   "iTokenAddress": "0x7FA768E035F956c41d6aeaa3Bd857e7E5141CAd5",
-  "iTokenImpl": "0xbaa61a8d8bc52f5a9256612fab498c542188a132"
+  "iTokenImpl": "0xbaa61a8d8bc52f5a9256612fab498c542188a132",
+  "rateProvider": "0x343281bb5029c4b698fe736d800115ac64d5de39"
 }

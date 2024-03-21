@@ -93,9 +93,15 @@ const getVaultImplAndStrategyAddress = async (vaultName) => {
   return [vaultFactory, strategyAddress];
 };
 
+async function printBalance(account) {
+  const initBalance = await account.provider.getBalance(account.address);
+  console.log("Account balance:", initBalance.toString());
+}
+
 module.exports = {
   advanceBlocks,
   getVaultImplAndStrategyAddress,
   readJsonAndSplitAsync,
   readJsonFiles,
+  printBalance,
 };
