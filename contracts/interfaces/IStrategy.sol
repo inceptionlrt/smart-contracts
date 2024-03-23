@@ -44,4 +44,7 @@ interface IStrategy {
 
     /// @notice Returns either a brief string explaining the strategy's goal & purpose, or a link to metadata that explains in more detail.
     function explanation() external view returns (string memory);
+
+    /// @notice Simple getter function that returns the current values of `maxPerDeposit` and `maxTotalDeposits`.
+    function getTVLLimits() external view returns (uint256, uint256);
 }

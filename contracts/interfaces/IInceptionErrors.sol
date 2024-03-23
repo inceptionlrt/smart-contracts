@@ -6,9 +6,7 @@ interface IInceptionErrors {
 
     error TransferAssetFromFailed(address assetAddress);
 
-    error RebalanceInProgress();
-
-    error RebalanceNotInProgress();
+    error InsufficientCapacity(uint256 capacity);
 
     error InconsistentData();
 
@@ -16,5 +14,13 @@ interface IInceptionErrors {
 
     error WithdrawFutile();
 
-    error WrongEpoch();
+    error OperatorNotRegistered();
+
+    error ImplementationNotSet();
+
+    /// TVL errors
+
+    error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
+
+    error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
 }

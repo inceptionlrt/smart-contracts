@@ -2,9 +2,11 @@
 pragma solidity ^0.8.17;
 
 import "../assets-handler/InceptionAssetsHandler.sol";
+
 import "../../interfaces/IStrategyManager.sol";
+import "../../interfaces/IDelegationManager.sol";
 import "../../interfaces/IEigenLayerHandler.sol";
-import "../../interfaces/IDepositManager.sol";
+import "../../interfaces/IInceptionStaker.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -16,16 +18,33 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public epoch;
 
+    /// @dev inception operator
     address internal _operator;
 
-    /// @dev totalEthToWithdraw is a total pending amount for withdrawal
+    /// @dev represents the pending amount to be redeemed by claimers,
+    /// @notice + amount to undelegate from EigenLayer
     uint256 public totalAmountToWithdraw;
 
-    /// @dev Pending withdrawal amount in EigenLayer which
-    /// was withdrawn but no claimed from EigenLayer
+    /// @dev represents the amount pending processing until it is claimed
+    /// @dev amount measured in asset
     uint256 internal _pendingWithdrawalAmount;
 
-    uint256[44] private __reserver;
+    IDelegationManager public delegationManager;
+
+    Withdrawal[] public claimerWithdrawalsQueue;
+
+    address internal constant _MOCK_ADDRESS =
+        0x0000000000000000000000000012345000000000;
+
+    /// @dev heap reserved for the claimers
+    uint256 public redeemReservedAmount;
+
+    /// @dev EigenLayer operator -> inception staker
+    mapping(address => address) internal _operatorRestakers;
+    address[] public restakers;
+
+    /// @dev constants are not stored in the storage
+    uint256[50 - 11] private __reserver;
 
     modifier onlyOperator() {
         require(
@@ -43,7 +62,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         strategy = _assetStrategy;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
-        // approve spending by strategyManager
+        // approve spending by stategyManager
+        /// @notice used in the prev version
         require(
             _asset.approve(address(strategyManager), type(uint256).max),
             "EigenLayerHandler: approve failed"
@@ -54,177 +74,169 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    /// @dev Deposits the asset to the corresponding strategy
-    function _depositAssetToEL(uint256 amount) internal {
-        // deposit the asset to the appropriate strategy
-        strategyManager.depositIntoStrategy(strategy, _asset, amount);
-
-        emit DepositedToEL(amount);
-    }
-
-    /// @dev Deposits extra assets into strategy
-    function depositExtra() external whenNotPaused nonReentrant onlyOperator {
-        uint256 vaultBalance = totalAssets();
-        uint256 toWithdrawAmount = totalAmountToWithdraw;
-        if (vaultBalance <= toWithdrawAmount) {
-            return;
+    /// @dev checks whether it's still possible to deposit into the strategy
+    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
+        if (amount > totalAssets() - redeemReservedAmount) {
+            revert InsufficientCapacity(totalAssets());
         }
 
-        uint256 shares = strategyManager.depositIntoStrategy(
-            strategy,
-            _asset,
-            vaultBalance - toWithdrawAmount
-        );
+        (uint256 maxPerDeposit, uint256 maxTotalDeposits) = strategy
+            .getTVLLimits();
 
-        emit DepositedToEL(strategy.sharesToUnderlyingView(shares));
+        if (amount > maxPerDeposit) {
+            revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
+        }
+
+        uint256 currentBalance = _asset.balanceOf(address(strategy));
+        if (currentBalance + amount > maxTotalDeposits) {
+            revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
+        }
+    }
+
+    /// @dev deposits asset to the corresponding strategy
+    function _depositAssetIntoStrategy(
+        address restaker,
+        uint256 amount
+    ) internal {
+        _asset.approve(restaker, amount);
+        IInceptionStaker(restaker).depositAssetIntoStrategy(amount);
+    }
+
+    /// @dev delegates assets held in the strategy to the EL operator.
+    function _delegateToOperator(
+        address restaker,
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) internal {
+        IInceptionStaker(restaker).delegateToOperator(
+            elOperator,
+            approverSalt,
+            approverSignatureAndExpiry
+        );
     }
 
     /*/////////////////////////////////
     ////// Withdrawal functions //////
     ///////////////////////////////*/
 
-    /// @dev Performs the creation of a withdrawal request from EigenLayer
-    /// @dev Automatically generates a withdrawal amount based on the pending state
-    /// @notice Updates _pendingWithdrawalAmount
-    /// @notice Can be executed only by the operator and within the rebalance period,
-    /// when the epoch is odd
-    function withdrawFromEL() external whenNotPaused nonReentrant onlyOperator {
-        if (epoch % 2 != 0) {
-            revert RebalanceNotInProgress();
+    /// @dev performs creating a withdrawal request from EigenLayer
+    /// @dev requires a specific amount to withdraw
+    function undelegateFrom(
+        address elOperatorAddress,
+        uint256 amount
+    ) external nonReentrant onlyOperator {
+        address stakerAddress = _operatorRestakers[elOperatorAddress];
+        if (stakerAddress == address(0)) {
+            revert OperatorNotRegistered();
         }
-        epoch++;
-        (
-            uint256[] memory strategyIndexes,
-            uint256[] memory sharesToWithdraw,
-            IStrategy[] memory elStrategies,
-            uint256 amount
-        ) = _generateELWithdrawal();
-        // make withdrawal from EigenLayer
-        _pendingWithdrawalAmount += amount;
-        _withdrawFromEL(strategyIndexes, sharesToWithdraw, elStrategies);
-    }
-
-    /// @dev Generates a withdrawal request for strategyManager
-    /// @dev Emits an event with the necessary data for further claiming of this request
-    function _withdrawFromEL(
-        uint256[] memory strategyIndexes,
-        uint256[] memory sharesToWithdraw,
-        IStrategy[] memory strategies
-    ) internal {
-        uint96 nonce = uint96(
-            strategyManager.numWithdrawalsQueued(address(this))
-        );
-        address delegatedAddress = IDepositManager(strategyManager.delegation())
-            .delegatedTo(address(this));
-
-        bytes32 rootHash = strategyManager.queueWithdrawal(
-            strategyIndexes,
-            strategies,
-            sharesToWithdraw,
-            address(this),
-            false
-        );
-
-        emit StartWithdrawal(
-            rootHash,
-            strategies,
-            sharesToWithdraw,
-            uint32(block.number),
-            delegatedAddress,
-            nonce
-        );
-    }
-
-    /// @dev Withdraws a completed withdrawal from EigenLayer if it exists
-    function claimCompletedWithdrawals(
-        IStrategyManager.QueuedWithdrawal calldata withdrawal,
-        IERC20[] calldata assetsToClaim
-    ) public whenNotPaused nonReentrant {
-        require(
-            strategyManager.withdrawalRootPending(
-                strategyManager.calculateWithdrawalRoot(withdrawal)
-            ),
-            "InceptionVault: there is no withdrawal"
-        );
-        uint256 depositedBefore = totalAssets();
-        strategyManager.completeQueuedWithdrawal(
-            withdrawal,
-            assetsToClaim,
-            0,
-            true
-        );
-
-        uint256 withdrawalAmount = _getAssetRedeemAmount(
-            totalAssets() - depositedBefore
-        );
-
-        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawalAmount
-            ? 0
-            : _pendingWithdrawalAmount - withdrawalAmount;
-
-        epoch++;
-
-        emit WithdrawalClaimed();
-    }
-
-    /// @dev Withdraws assets from EigenLayer
-    /// @dev It's used in withdrawFromELEth()
-    function _generateELWithdrawal()
-        internal
-        view
-        returns (
-            uint256[] memory,
-            uint256[] memory,
-            IStrategy[] memory,
-            uint256
-        )
-    {
-        uint256[] memory strategyIndexes = new uint256[](1);
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
-        strategies[0] = strategy;
-
-        if (totalAmountToWithdraw <= totalAssets()) {
-            revert WithdrawFutile();
+        if (stakerAddress == _MOCK_ADDRESS) {
+            revert NullParams();
         }
-        if (totalAmountToWithdraw - totalAssets() <= _pendingWithdrawalAmount) {
-            revert WithdrawFutile();
-        }
-        uint256 amount = totalAmountToWithdraw -
-            totalAssets() -
-            _pendingWithdrawalAmount;
 
-        sharesToWithdraw[0] = strategy.underlyingToSharesView(amount);
-
+        uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(
+            stakerAddress
+        );
         uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
-            address(this),
+            stakerAddress,
             strategy
         );
+        uint256 shares = strategy.underlyingToSharesView(amount);
         // we need to withdraw the remaining dust from EigenLayer
-        if (
-            totalAssetSharesInEL < sharesToWithdraw[0] + 5 ||
-            sharesToWithdraw[0] > totalAssetSharesInEL
-        ) {
-            sharesToWithdraw[0] = totalAssetSharesInEL;
+        if (totalAssetSharesInEL < shares + 5) {
+            shares = totalAssetSharesInEL;
+        }
+        amount = strategy.sharesToUnderlyingView(shares);
+
+        emit StartWithdrawal(
+            stakerAddress,
+            strategy,
+            shares,
+            uint32(block.number),
+            elOperatorAddress,
+            nonce
+        );
+
+        _pendingWithdrawalAmount += amount;
+        IInceptionStaker(stakerAddress).withdrawFromEL(shares);
+    }
+
+    /// @dev claims completed withdrawals from EigenLayer, if they exist
+    function claimCompletedWithdrawals(
+        IDelegationManager.Withdrawal[] calldata withdrawals
+    ) public {
+        uint256 withdrawalsNum = withdrawals.length;
+        IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
+        uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
+        bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
+
+        for (uint256 i = 0; i < withdrawalsNum; ) {
+            tokens[i] = new IERC20[](1);
+            tokens[i][0] = _asset;
+            receiveAsTokens[i] = true;
+            unchecked {
+                i++;
+            }
         }
 
-        return (strategyIndexes, sharesToWithdraw, strategies, amount);
+        uint256 balanceBefore = totalAssets();
+        delegationManager.completeQueuedWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
+
+        uint256 withdrawnAmount = totalAssets() - balanceBefore;
+        emit WithdrawalClaimed(withdrawnAmount);
+
+        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
+            ? 0
+            : _pendingWithdrawalAmount - withdrawnAmount;
+
+        if (_pendingWithdrawalAmount < 7) {
+            _pendingWithdrawalAmount = 0;
+        }
+
+        _updateEpoch();
+    }
+
+    function updateEpoch() external onlyOperator {
+        _updateEpoch();
+    }
+
+    /**
+     * @dev let's calculate how many withdrawals we can cover with the withdrawnAmount
+     * @dev #init state:
+     * - balance of the vault: X
+     * - epoch: means that the vault can handle the withdrawal queue up to the epoch index
+     * withdrawalQueue[... : epoch];
+     *
+     * @dev #new state:
+     * - balance of the vault: X + withdrawnAmount
+     * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
+     * withdrawalQueue[epoch : new_epoch];
+     */
+    function _updateEpoch() internal {
+        uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
+        uint256 availableBalance = totalAssets() - redeemReservedAmount;
+        for (uint256 i = epoch; i < withdrawalsNum; ) {
+            uint256 amount = claimerWithdrawalsQueue[i].amount;
+            unchecked {
+                if (amount > availableBalance) {
+                    break;
+                }
+                redeemReservedAmount += amount;
+                availableBalance -= amount;
+                epoch++;
+                i++;
+            }
+        }
     }
 
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
-
-    /// @dev Returns the total deposited assets
-    /// @dev Total EL deposited amount +
-    /// totalAssets(vault balance) +
-    /// unclaimed pending withdrawal from EigenLayer
-    function getTotalDeposited() public view returns (uint256) {
-        return
-            strategy.userUnderlyingView(address(this)) +
-            totalAssets() +
-            _pendingWithdrawalAmount;
-    }
 
     function getPendingWithdrawalAmountFromEL()
         public
@@ -234,11 +246,49 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return _pendingWithdrawalAmount;
     }
 
-    /// @dev Serves to unblock pending withdrawals for claiming them
-    function updateEpoch(uint256 newEpoch) external onlyOperator {
-        if (newEpoch <= epoch) {
-            revert WrongEpoch();
+    /*//////////////////////////
+    ////// SET functions //////
+    ////////////////////////*/
+
+    function setDelegationManager(
+        IDelegationManager newDelegationManager
+    ) external onlyOwner {
+        emit DelegationManagerChanged(
+            address(delegationManager),
+            address(newDelegationManager)
+        );
+        delegationManager = newDelegationManager;
+    }
+
+    function setWithdrawalQueue(
+        address[] memory receivers,
+        uint256[] memory amounts
+    ) external onlyOperator {
+        uint256 numberOfReceivers = receivers.length;
+        require(
+            numberOfReceivers == amounts.length,
+            "InceptionVault: inconsistent input data"
+        );
+
+        // let's update redeemReservedAmount and epoch
+        epoch = 0;
+        uint256 availableBalance = totalAssets() - redeemReservedAmount;
+        for (uint256 i; i < numberOfReceivers; ) {
+            address receiver = receivers[i];
+            uint256 amount = amounts[i];
+            claimerWithdrawalsQueue.push(
+                Withdrawal({epoch: i, receiver: receiver, amount: amount})
+            );
+
+            unchecked {
+                if (amount > availableBalance) {
+                    break;
+                }
+                redeemReservedAmount += amount;
+                availableBalance -= amount;
+                epoch++;
+                i++;
+            }
         }
-        epoch = newEpoch;
     }
 }
