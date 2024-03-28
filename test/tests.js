@@ -15,6 +15,10 @@ const {
   e18,
 } = require("./helpers/utils.js");
 
+BigInt.prototype.format = function () {
+  return this.toLocaleString("de-DE");
+}
+
 /**
  * To run the tests for the specific assets, list their names in the env ASSETS like so:
  * Windows: export ASSETS=athc,wbeth && npx hardhat test
@@ -425,8 +429,8 @@ assets.forEach(function (a) {
       it("Withdraw all", async function () {
         const shares = await iToken.balanceOf(staker.address);
         const assetValue = await iVault.convertToAssets(shares);
-        console.log(`shares:\t\t\t\t\t${format(shares)}`);
-        console.log(`asset value:\t\t\t${format(assetValue)}`);
+        console.log(`shares:\t\t\t\t\t${shares.format()}`);
+        console.log(`asset value:\t\t\t${assetValue.format()}`);
         const tx = await iVault.connect(staker).withdraw(shares, staker2.address);
         const receipt = await tx.wait();
         const events = receipt.logs?.filter((e) => {
@@ -442,7 +446,7 @@ assets.forEach(function (a) {
         const stakerPW = await iVault.getPendingWithdrawalOf(staker.address);
         const staker2PW = await iVault.getPendingWithdrawalOf(staker2.address);
         const totalPW = await iVault.totalAmountToWithdraw();
-        expect(stakerPW[0]).to.be.eq(0);
+        expect(stakerPW[0]).to.be.eq(0n);
         expect(staker2PW[0]).to.be.closeTo(assetValue, transactErr);
         expect(totalPW).to.be.closeTo(assetValue, transactErr);
         expect(await iVault.ratio()).to.be.eq(e18);
