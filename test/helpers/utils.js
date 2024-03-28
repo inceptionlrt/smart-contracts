@@ -6,31 +6,23 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   await asset.connect(staker).transfer(strategyAddress, amount);
 };
 
-const withdrawDataFromTx = async (tx, iVault) => {
+const withdrawDataFromTx = async (tx, iVault, operatorAddress) => {
   const receipt = await tx.wait();
   if (receipt.logs.length !== 3) {
     console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
     console.log(receipt.logs);
   }
 
-  const WithdrawalQueuedEvent = receipt.logs[2].args.toObject();
-  const withdrawalData = [
-    WithdrawalQueuedEvent.strategies.toArray(),
-    WithdrawalQueuedEvent.shares.toArray(),
+  const WithdrawalQueuedEvent = receipt.logs[0].args;
+  return [
+    WithdrawalQueuedEvent["stakerAddress"],
+    operatorAddress,
     await iVault.getAddress(),
-    [await iVault.getAddress(), WithdrawalQueuedEvent.nonce],
-    WithdrawalQueuedEvent.withdrawalStartBlock,
-    WithdrawalQueuedEvent.delegatedAddress,
+    WithdrawalQueuedEvent["nonce"],
+    WithdrawalQueuedEvent["withdrawalStartBlock"],
+    [WithdrawalQueuedEvent["strategy"]],
+    [WithdrawalQueuedEvent["shares"]],
   ];
-
-  const assetsToWithdraw = [];
-  const StrategyBaseFactory = await ethers.getContractFactory("StrategyBaseDummy");
-  for (const strategyAddress of WithdrawalQueuedEvent.strategies.toArray()) {
-    const strategy = StrategyBaseFactory.attach(strategyAddress);
-    const assetAddress = await strategy.underlyingToken();
-    assetsToWithdraw.push(assetAddress);
-  }
-  return [withdrawalData, assetsToWithdraw];
 };
 
 const impersonateWithEth = async (address, amount) => {

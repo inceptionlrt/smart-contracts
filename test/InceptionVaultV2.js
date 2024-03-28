@@ -20,7 +20,7 @@ BigInt.prototype.format = function () {
 }
 const ratioErr = 2n;
 const transactErr = 2n;
-const minWithdrawalDelayBlocks = 10n;
+const minWithdrawalDelayBlocks = 10;
 
 const stakerAddress = "0x100dd6c27454cb1DAdd1391214A344C6208A8C80";
 const staker2Address = "0xCf682451E33c206efF5E95B5df80c935d1F094C6";
@@ -43,6 +43,7 @@ const operators = [
   "0x4dbfa8bcccb1740d8044e1a093f9a078a88e45fe",
   "0x5b9a8c72b29ee17e72ba8b9626bf43a75b15fb3d",
 ];
+const operatorRestaker = new Map();
 
 const initVault = async () => {
   const block = await ethers.provider.getBlock("latest");
@@ -65,8 +66,8 @@ const initVault = async () => {
   // 2. Impersonate operator
   const operator = await impersonateWithEth(operatorAddress, toWei(1));
   // 3. Staker implementation
-  console.log("- Staker implementation");
-  const stakerImplementation = await ethers.deployContract("InceptionStaker");
+  console.log("- Restaker implementation");
+  const restakerImplementation = await ethers.deployContract("InceptionRestaker");
   // 4. Inception vault
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory("InVault_E2");
@@ -77,8 +78,12 @@ const initVault = async () => {
     await iToken.getAddress(),
     rEthStrategyAddress
   ]);
+  await iVault.on("DelegatedTo", (restaker, elOperator, _) => {
+    operatorRestaker.set(elOperator.toLowerCase(), restaker);
+  })
+
   await iVault.setDelegationManager(delegationManagerAddress);
-  await iVault.upgradeTo(await stakerImplementation.getAddress());
+  await iVault.upgradeTo(await restakerImplementation.getAddress());
   await iToken.setVault(await iVault.getAddress());
   console.log(`... iVault initialization completed ....`);
 
@@ -86,7 +91,7 @@ const initVault = async () => {
     const tx = await this.connect(operator).undelegateFrom(stakerOperator, amount);
     const withdrawalData = await withdrawDataFromTx(tx, this, stakerOperator);
     await mineBlocks(minWithdrawalDelayBlocks);
-    await this.connect(operator).claimCompletedWithdrawals([withdrawalData]);
+    await this.connect(operator).claimCompletedWithdrawals(operatorRestaker.get(stakerOperator), [withdrawalData]);
   };
 
   return [iToken, iVault, asset, assetPool, strategy, operator];
