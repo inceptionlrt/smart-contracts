@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "./IDelegationManager.sol";
 
-interface IInceptionStaker {
+interface IInceptionRestaker {
     event StartWithdrawal(
         address indexed stakerAddress,
         bytes32 withdrawalRoot,
@@ -30,4 +30,11 @@ interface IInceptionStaker {
     ) external;
 
     function withdrawFromEL(uint256 shares) external;
+
+    function claimWithdrawal(
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] calldata tokens,
+        uint256[] calldata middlewareTimesIndexes,
+        bool[] calldata receiveAsTokens
+    ) external returns (uint256);
 }
