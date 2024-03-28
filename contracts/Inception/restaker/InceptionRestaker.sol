@@ -5,10 +5,11 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../../interfaces/InceptionStakerErrors.sol";
+import "../../interfaces/InceptionRestakerErrors.sol";
 import "../../interfaces/IDelegationManager.sol";
-import "../../interfaces/IInceptionStaker.sol";
+import "../../interfaces/IInceptionRestaker.sol";
 import "../../interfaces/IStrategy.sol";
 import "../../interfaces/IStrategyManager.sol";
 
@@ -16,13 +17,13 @@ import "../../interfaces/IStrategyManager.sol";
 /// @title The InceptionStaker Contract
 /// @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
 /// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
-contract InceptionStaker is
+contract InceptionRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IInceptionStaker,
-    InceptionStakerErrors
+    IInceptionRestaker,
+    InceptionRestakerErrors
 {
     IERC20 internal _asset;
     address internal _trusteeManager;
@@ -103,10 +104,37 @@ contract InceptionStaker is
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: _vault
+            withdrawer: address(this)
         });
 
         _delegationManager.queueWithdrawals(withdrawals);
+    }
+
+    function claimWithdrawal(
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] calldata tokens,
+        uint256[] calldata middlewareTimesIndexes,
+        bool[] calldata receiveAsTokens
+    ) external onlyTrustee returns (uint256) {
+        IERC20 asset = _strategy.underlyingToken();
+        uint256 balanceBefore = asset.balanceOf(address(this));
+
+        _delegationManager.completeQueuedWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
+
+        // send tokens to the vault
+        uint256 withdrawnAmount = asset.balanceOf(address(this)) -
+            balanceBefore;
+
+        if (!asset.transfer(_vault, withdrawnAmount)) {
+            revert TransferAssetFailed(address(asset));
+        }
+
+        return withdrawnAmount;
     }
 
     function getOperatorAddress() public view returns (address) {

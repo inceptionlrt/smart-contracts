@@ -6,7 +6,9 @@ import "../assets-handler/InceptionAssetsHandler.sol";
 import "../../interfaces/IStrategyManager.sol";
 import "../../interfaces/IDelegationManager.sol";
 import "../../interfaces/IEigenLayerHandler.sol";
-import "../../interfaces/IInceptionStaker.sol";
+import "../../interfaces/IInceptionRestaker.sol";
+
+import "hardhat/console.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -99,7 +101,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) internal {
         _asset.approve(restaker, amount);
-        IInceptionStaker(restaker).depositAssetIntoStrategy(amount);
+        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
     }
 
     /// @dev delegates assets held in the strategy to the EL operator.
@@ -109,7 +111,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        IInceptionStaker(restaker).delegateToOperator(
+        IInceptionRestaker(restaker).delegateToOperator(
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
@@ -158,11 +160,12 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         );
 
         _pendingWithdrawalAmount += amount;
-        IInceptionStaker(stakerAddress).withdrawFromEL(shares);
+        IInceptionRestaker(stakerAddress).withdrawFromEL(shares);
     }
 
     /// @dev claims completed withdrawals from EigenLayer, if they exist
     function claimCompletedWithdrawals(
+        address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public {
         uint256 withdrawalsNum = withdrawals.length;
@@ -179,15 +182,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             }
         }
 
-        uint256 balanceBefore = totalAssets();
-        delegationManager.completeQueuedWithdrawals(
+        uint256 withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawal(
             withdrawals,
             tokens,
             middlewareTimesIndexes,
             receiveAsTokens
         );
 
-        uint256 withdrawnAmount = totalAssets() - balanceBefore;
         emit WithdrawalClaimed(withdrawnAmount);
 
         _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
@@ -265,10 +266,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256[] memory amounts
     ) external onlyOperator {
         uint256 numberOfReceivers = receivers.length;
-        require(
-            numberOfReceivers == amounts.length,
-            "InceptionVault: inconsistent input data"
-        );
+        if (numberOfReceivers != amounts.length) {
+            revert InconsistentData();
+        }
 
         // let's update redeemReservedAmount and epoch
         epoch = 0;
