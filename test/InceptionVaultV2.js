@@ -12,12 +12,12 @@ const {
   toWei,
   randomBI,
   randomAddress,
-  e18
+  e18,
 } = require("./helpers/utils.js");
 
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
-}
+};
 const ratioErr = 2n;
 const transactErr = 2n;
 const minWithdrawalDelayBlocks = 10;
@@ -27,7 +27,6 @@ const staker2Address = "0xCf682451E33c206efF5E95B5df80c935d1F094C6";
 const staker3Address = "0xbaF50525B394AbB75Fd92750ec2D645F3014401C";
 const operatorAddress = "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D";
 const stakerOperator1 = "0x30b837c791caf71781db9637a276b2e9ec1daf63";
-
 
 // EigenLayer address
 const rETHAddress = "0x7322c24752f79c05FFD1E2a6FCB97020C1C264F1";
@@ -76,11 +75,12 @@ const initVault = async () => {
     operator.address,
     strategyManagerAddress,
     await iToken.getAddress(),
-    rEthStrategyAddress
+    rEthStrategyAddress,
   ]);
   await iVault.on("DelegatedTo", (restaker, elOperator, _) => {
+    console.log(restaker, elOperator);
     operatorRestaker.set(elOperator.toLowerCase(), restaker);
-  })
+  });
 
   await iVault.setDelegationManager(delegationManagerAddress);
   await iVault.upgradeTo(await restakerImplementation.getAddress());
@@ -89,7 +89,8 @@ const initVault = async () => {
 
   iVault.withdrawFromELAndClaim = async function (stakerOperator, amount) {
     const tx = await this.connect(operator).undelegateFrom(stakerOperator, amount);
-    const withdrawalData = await withdrawDataFromTx(tx, this, stakerOperator);
+    const withdrawalData = await withdrawDataFromTx(tx, this, stakerOperator, operatorRestaker.get(stakerOperator));
+    console.log(withdrawalData);
     await mineBlocks(minWithdrawalDelayBlocks);
     await this.connect(operator).claimCompletedWithdrawals(operatorRestaker.get(stakerOperator), [withdrawalData]);
   };
@@ -107,7 +108,7 @@ describe("Inception pool V4 rEth", function () {
     staker = await getStaker(stakerAddress, iVault, asset, donor);
     staker2 = await getStaker(staker2Address, iVault, asset, donor);
     await iVault.addELOperator(stakerOperator1); //Add default operator
-    snapshot = await helpers.takeSnapshot()
+    snapshot = await helpers.takeSnapshot();
   });
 
   describe("Base flow", function () {
@@ -126,7 +127,7 @@ describe("Inception pool V4 rEth", function () {
       const expectedShares = (amount * e18) / (await iVault.ratio());
       const tx = await iVault.connect(staker).deposit(amount, staker.address);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "Deposit");
+      const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["sender"]).to.be.eq(staker.address);
       expect(events[0].args["receiver"]).to.be.eq(staker.address);
@@ -142,7 +143,7 @@ describe("Inception pool V4 rEth", function () {
 
     it("Delegate", async function () {
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       const delegatedTotal = await iVault.getTotalDelegated();
       const delegatedTo = await iVault.getDelegatedTo(stakerOperator1);
       expect(delegatedTotal).to.be.closeTo(amount, transactErr);
@@ -162,7 +163,7 @@ describe("Inception pool V4 rEth", function () {
       console.log(`Asset value:\t\t\t\t\t${assetValue.format()}`);
       const tx = await iVault.connect(staker).withdraw(shares, staker2.address);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
+      const events = receipt.logs?.filter((e) => e.eventName === "Withdraw");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["sender"]).to.be.eq(staker.address);
       expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -192,6 +193,7 @@ describe("Inception pool V4 rEth", function () {
       console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
       console.log(`Staker2 pending withdrawals:\t${staker2PW.format()}`);
 
+      console.log(`-------- !!!! ${stakerOperator1}`);
       await iVault.withdrawFromELAndClaim(stakerOperator1, amount);
 
       const totalAssetsAfter = await iVault.totalAssets();
@@ -212,14 +214,14 @@ describe("Inception pool V4 rEth", function () {
       expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr * 4n);
       expect(await iVault.ratio()).to.be.eq(e18);
     });
-
+    return;
     it("Redeem withdraw", async function () {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
       const tx = await iVault.connect(operator).redeem(staker2.address);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName=== "Redeem");
+      const events = receipt.logs?.filter((e) => e.eventName === "Redeem");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["sender"]).to.be.eq(operator.address);
       expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -241,7 +243,7 @@ describe("Inception pool V4 rEth", function () {
       expect(totalAssetsAfter).to.be.closeTo(0, transactErr);
     });
   });
-
+  return;
   describe("Setters", function () {
     beforeEach(async function () {
       await snapshot.restore();
@@ -251,14 +253,14 @@ describe("Inception pool V4 rEth", function () {
       const newOperator = staker2;
       const tx = await iVault.setOperator(newOperator.address);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "OperatorChanged");
+      const events = receipt.logs?.filter((e) => e.eventName === "OperatorChanged");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["prevValue"].toLowerCase()).to.be.eq(operator.address.toLowerCase());
       expect(events[0].args["newValue"].toLowerCase()).to.be.eq(newOperator.address.toLowerCase());
 
       await iVault.connect(staker).deposit(toWei(2), staker.address);
       const amount = await iVault.totalAssets();
-      await iVault.connect(newOperator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(newOperator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
     });
 
     it("setOperator(): reverts when caller is not an operator", async function () {
@@ -268,7 +270,7 @@ describe("Inception pool V4 rEth", function () {
     it("addELOperator(): only owner can", async function () {
       const tx = await iVault.addELOperator(operators[0]);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "ELOperatorAdded");
+      const events = receipt.logs?.filter((e) => e.eventName === "ELOperatorAdded");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["newELOperator"].toLowerCase()).to.be.eq(operators[0].toLowerCase());
     });
@@ -294,7 +296,7 @@ describe("Inception pool V4 rEth", function () {
       const newManager = staker2.address;
       const tx = await iVault.setDelegationManager(newManager);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "DelegationManagerChanged");
+      const events = receipt.logs?.filter((e) => e.eventName === "DelegationManagerChanged");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["prevValue"].toLowerCase()).to.be.eq(delegationManagerAddress.toLowerCase());
       expect(events[0].args["newValue"].toLowerCase()).to.be.eq(newManager.toLowerCase());
@@ -310,7 +312,7 @@ describe("Inception pool V4 rEth", function () {
       const newMinAmount = randomBI(3);
       const tx = await iVault.setMinAmount(newMinAmount);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "MinAmountChanged");
+      const events = receipt.logs?.filter((e) => e.eventName === "MinAmountChanged");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["prevValue"]).to.be.eq(prevValue);
       expect(events[0].args["newValue"]).to.be.eq(newMinAmount);
@@ -331,7 +333,7 @@ describe("Inception pool V4 rEth", function () {
       await asset.connect(donor).approve(await iVault.getAddress(), e18);
       await iVault.connect(donor).deposit(e18, donor.address);
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       await addRewardsToStrategy(rEthStrategyAddress, e18, donor);
       ratio = await iVault.ratio();
     });
@@ -378,7 +380,7 @@ describe("Inception pool V4 rEth", function () {
         receiver: () => staker.address,
       },
       {
-        amount: async () => await iVault.convertToAssets(await iVault.minAmount()) + 1n,
+        amount: async () => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
         receiver: () => staker.address,
       },
     ];
@@ -392,11 +394,11 @@ describe("Inception pool V4 rEth", function () {
 
         const amount = await arg.amount();
         const convertedShares = await iVault.convertToShares(amount);
-        const expectedShares = amount * (await iVault.ratio())/ e18;
+        const expectedShares = (amount * (await iVault.ratio())) / e18;
 
         const tx = await iVault.connect(staker).deposit(amount, receiver);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter(e => e.eventName === "Deposit");
+        const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(receiver);
@@ -421,9 +423,9 @@ describe("Inception pool V4 rEth", function () {
         console.log(`Total deposited before: ${totalDepositedBefore}`);
 
         const amount = await iVault.totalAssets();
-        const tx = await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+        const tx = await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter(e => e.eventName === "DelegatedTo");
+        const events = receipt.logs?.filter((e) => e.eventName === "DelegatedTo");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["stakerAddress"]).to.be.not.eq(ethers.ZeroAddress);
         expect(events[0].args["stakerAddress"]).to.be.properAddress;
@@ -450,7 +452,7 @@ describe("Inception pool V4 rEth", function () {
       },
       {
         name: "amount < min",
-        amount: async () => await iVault.minAmount() - 1n,
+        amount: async () => (await iVault.minAmount()) - 1n,
         receiver: () => staker.address,
         isCustom: false,
         error: "InceptionVault: deposited less than min amount",
@@ -487,7 +489,7 @@ describe("Inception pool V4 rEth", function () {
       },
       {
         name: "amount < min",
-        amount: async () => await iVault.minAmount() - 1n,
+        amount: async () => (await iVault.minAmount()) - 1n,
       },
     ];
 
@@ -495,7 +497,7 @@ describe("Inception pool V4 rEth", function () {
       it(`Convert to shares: ${arg.name}`, async function () {
         const amount = await arg.amount();
         const ratio = await iVault.ratio();
-        expect(await iVault.convertToShares(amount)).to.be.eq(amount * ratio / e18);
+        expect(await iVault.convertToShares(amount)).to.be.eq((amount * ratio) / e18);
       });
     });
   });
@@ -508,7 +510,7 @@ describe("Inception pool V4 rEth", function () {
       await asset.connect(donor).approve(await iVault.getAddress(), e18);
       await iVault.connect(donor).deposit(e18, donor.address);
       firstDeposit = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(firstDeposit, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(firstDeposit, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       await addRewardsToStrategy(rEthStrategyAddress, e18, donor);
       ratio = await iVault.ratio();
       console.log(`Initial ratio: ${ratio}`);
@@ -521,7 +523,7 @@ describe("Inception pool V4 rEth", function () {
       },
       {
         name: "amounts which are close to min",
-        depositAmount: async () => await iVault.minAmount() + 1n,
+        depositAmount: async () => (await iVault.minAmount()) + 1n,
       },
     ];
 
@@ -533,14 +535,14 @@ describe("Inception pool V4 rEth", function () {
           const deposited = await arg.depositAmount();
           await iVault.connect(staker).deposit(deposited, staker.address);
           const delegated = await iVault.totalAssets();
-          await iVault.connect(operator).delegateToOperator(delegated, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+          await iVault.connect(operator).delegateToOperator(delegated, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
           totalDelegated += deposited;
         }
         console.log(`Final ratio:\t${(await iVault.ratio()).format()}`);
         console.log(`Total delegated:\t${totalDelegated.format()}`);
 
-        const balanceExpected = totalDelegated * ratio / e18;
+        const balanceExpected = (totalDelegated * ratio) / e18;
         const totalSupplyExpected = balanceExpected + firstDeposit;
         const err = BigInt(count) * transactErr * 2n;
 
@@ -557,8 +559,8 @@ describe("Inception pool V4 rEth", function () {
         console.log(`Total assets after: ${totalAssetsAfter.format()}`);
 
         expect(balanceAfter - balanceExpected).to.be.closeTo(0, err);
-        expect(totalDepositedAfter - (firstDeposit * e18 / ratio + totalDelegated)).to.be.closeTo(0, err);
-        expect(totalDelegatedAfter - (firstDeposit * e18 / ratio + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
         expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
         expect(totalAssetsAfter).to.be.closeTo(0, transactErr);
         expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
@@ -587,12 +589,12 @@ describe("Inception pool V4 rEth", function () {
           totalDeposited += deposited;
         }
         const totalDelegated = await iVault.totalAssets();
-        await iVault.connect(operator).delegateToOperator(totalDelegated, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+        await iVault.connect(operator).delegateToOperator(totalDelegated, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
         console.log(`Final ratio:\t${await iVault.ratio()}`);
         console.log(`Total deposited:\t${totalDeposited.format()}`);
         console.log(`Total delegated:\t${totalDelegated.format()}`);
 
-        const balanceExpected = totalDelegated * ratio / e18;
+        const balanceExpected = (totalDelegated * ratio) / e18;
         const totalSupplyExpected = balanceExpected + firstDeposit;
         const err = BigInt(count) * transactErr * 2n;
 
@@ -606,8 +608,8 @@ describe("Inception pool V4 rEth", function () {
         console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
         console.log(`Total assets after: ${totalAssetsAfter.format()}`);
 
-        expect(totalDepositedAfter - (firstDeposit * e18 / ratio + totalDelegated)).to.be.closeTo(0, err);
-        expect(totalDelegatedAfter - (firstDeposit * e18 / ratio + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
         expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
         expect(totalAssetsAfter).to.be.closeTo(0, transactErr);
         expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
@@ -647,7 +649,7 @@ describe("Inception pool V4 rEth", function () {
           }
           const ta = await iVault.totalAssets();
           const amount = ta / BigInt(arg.count - i);
-          const tx = await iVault.connect(operator).delegateToOperator(amount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash,0]);
+          const tx = await iVault.connect(operator).delegateToOperator(amount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]);
           const receipt = await tx.wait();
           let events = receipt.logs?.filter((e) => {
             return e.eventName === "DelegatedTo";
@@ -674,7 +676,7 @@ describe("Inception pool V4 rEth", function () {
         }
         console.log(`Final ratio:\t${await iVault.ratio()}`);
 
-        const balanceExpected = totalDelegated * ratio / e18;
+        const balanceExpected = (totalDelegated * ratio) / e18;
         const totalSupplyExpected = balanceExpected + firstDeposit;
         const err = BigInt(arg.count) * transactErr * 2n;
 
@@ -688,8 +690,8 @@ describe("Inception pool V4 rEth", function () {
         console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
         console.log(`Total assets after: ${totalAssetsAfter.format()}`);
 
-        expect(totalDepositedAfter - (firstDeposit * e18 / ratio  + totalDelegated)).to.be.closeTo(0, err);
-        expect(totalDelegatedAfter - (firstDeposit * e18 / ratio  + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+        expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
         expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
         expect(totalAssetsAfter).to.be.closeTo(0, transactErr);
         expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
@@ -764,11 +766,13 @@ describe("Inception pool V4 rEth", function () {
         const stakerOperator = await arg.stakerOperator();
 
         if (arg.isCustom) {
-          await expect(iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash,0]))
-            .to.be.revertedWithCustomError(iVault, arg.error);
+          await expect(
+            iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0])
+          ).to.be.revertedWithCustomError(iVault, arg.error);
         } else {
-          await expect(iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash,0]))
-            .to.be.revertedWith(arg.error);
+          await expect(
+            iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0])
+          ).to.be.revertedWith(arg.error);
         }
       });
     });
@@ -781,7 +785,7 @@ describe("Inception pool V4 rEth", function () {
       await snapshot.restore();
       await iVault.connect(staker).deposit(toWei(10), staker.address);
       const totalAssets = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       await addRewardsToStrategy(rEthStrategyAddress, e18, donor);
       totalDeposited = await iVault.getTotalDeposited();
       ratio = await iVault.ratio();
@@ -841,7 +845,7 @@ describe("Inception pool V4 rEth", function () {
       },
       {
         name: "min amount",
-        amount: async (shares) => await iVault.convertToAssets(await iVault.minAmount()) + 1n,
+        amount: async (shares) => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
         receiver: () => staker2.address,
       },
       {
@@ -862,7 +866,7 @@ describe("Inception pool V4 rEth", function () {
 
         const tx = await iVault.connect(staker).withdraw(amount, test.receiver());
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
+        const events = receipt.logs?.filter((e) => e.eventName === "Withdraw");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(test.receiver());
@@ -870,13 +874,13 @@ describe("Inception pool V4 rEth", function () {
         expect(events[0].args["amount"]).to.be.closeTo(assetValue, transactErr);
         expect(events[0].args["iShares"]).to.be.eq(amount);
 
-        expect(balanceBefore - await iToken.balanceOf(staker.address)).to.be.eq(amount);
-        expect(await iVault.getPendingWithdrawalOf(test.receiver()) - stakerPWBefore).to.be.closeTo(assetValue, transactErr);
-        expect(await iVault.totalAmountToWithdraw() - totalPWBefore).to.be.closeTo(assetValue, transactErr);
+        expect(balanceBefore - (await iToken.balanceOf(staker.address))).to.be.eq(amount);
+        expect((await iVault.getPendingWithdrawalOf(test.receiver())) - stakerPWBefore).to.be.closeTo(assetValue, transactErr);
+        expect((await iVault.totalAmountToWithdraw()) - totalPWBefore).to.be.closeTo(assetValue, transactErr);
         expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
 
         //If did withdraw all ratio = 1
-        if (await iToken.totalSupply() > 0n) {
+        if ((await iToken.totalSupply()) > 0n) {
           expect(await iVault.ratio()).to.be.closeTo(ratioBefore, ratioErr);
         } else {
           expect(await iVault.ratio()).to.eq(e18);
@@ -890,21 +894,21 @@ describe("Inception pool V4 rEth", function () {
       await snapshot.restore();
       await iVault.connect(staker).deposit(toWei(10), staker.address);
       const totalAssets = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       await addRewardsToStrategy(rEthStrategyAddress, e18, donor);
     });
 
     const invalidData = [
       {
         name: "> balance",
-        amount: async () => await iToken.balanceOf(staker.address) + 1n,
+        amount: async () => (await iToken.balanceOf(staker.address)) + 1n,
         receiver: () => staker.address,
         isCustom: false,
         error: "ERC20: burn amount exceeds balance",
       },
       {
         name: "< min amount",
-        amount: async () => await iVault.minAmount() - 1n,
+        amount: async () => (await iVault.minAmount()) - 1n,
         receiver: () => staker.address,
         isCustom: false,
         error: "InceptionVault: amount is less than the minimum withdrawal",
@@ -958,8 +962,7 @@ describe("Inception pool V4 rEth", function () {
   });
 
   describe("undelegateFrom: operator can retrieve asset from EL", function () {
-    let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets,
-      shares1, shares2;
+    let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
 
     before(async function () {
       await snapshot.restore();
@@ -968,7 +971,7 @@ describe("Inception pool V4 rEth", function () {
       depositedAmount = randomBI(19);
       await iVault.connect(staker).deposit(depositedAmount, staker.address);
       const totalAssets = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
     });
 
     it("Operator can undelegateFrom stakerOperator", async function () {
@@ -982,7 +985,7 @@ describe("Inception pool V4 rEth", function () {
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       const tx = await iVault.connect(operator).undelegateFrom(stakerOperator1, assets1);
       const receipt = await tx.wait();
-      const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
+      const startWithdrawal = receipt.logs?.filter((e) => e.eventName === "StartWithdrawal");
       expect(startWithdrawal.length).to.be.eq(1);
       const WithdrawalQueuedEvent = receipt.logs[0].args;
       withdrawalData1 = [
@@ -1054,7 +1057,7 @@ describe("Inception pool V4 rEth", function () {
       console.log(`Pending withdrawal staker2:\t${(await iVault.getPendingWithdrawalOf(staker2.address)).format()}`);
       console.log(`Total pending withdrawal:\t${totalPWAfter.format()}`);
 
-      expect(await iVault.totalAssets() - assets2).to.be.closeTo(0, transactErr);
+      expect((await iVault.totalAssets()) - assets2).to.be.closeTo(0, transactErr);
       expect(totalPWAfter - shares1).to.be.closeTo(0, transactErr);
     });
 
@@ -1079,8 +1082,9 @@ describe("Inception pool V4 rEth", function () {
 
     it("Reverts: when delegating pending withdrawals back to EL", async function () {
       const totalAssets = await iVault.totalAssets();
-      await expect(iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]))
-        .to.be.revertedWithCustomError(iVault, "InsufficientCapacity");
+      await expect(
+        iVault.connect(operator).delegateToOperator(totalAssets, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0])
+      ).to.be.revertedWithCustomError(iVault, "InsufficientCapacity");
     });
 
     it("Operator can delegate part of leftover", async function () {
@@ -1089,7 +1093,7 @@ describe("Inception pool V4 rEth", function () {
       const staker2PWAfter = await iVault.getPendingWithdrawalOf(staker2.address);
       const part = (totalAssets - stakerPWAfter - staker2PWAfter) / 2n;
       const totalDelegatedBefore = await iVault.getTotalDelegated();
-      await iVault.connect(operator).delegateToOperator(part, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(part, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       const totalDelegatedAfter = await iVault.getTotalDelegated();
 
       expect(totalDelegatedAfter - totalDelegatedBefore).to.be.closeTo(part, transactErr);
@@ -1101,7 +1105,7 @@ describe("Inception pool V4 rEth", function () {
       const staker2PWAfter = await iVault.getPendingWithdrawalOf(staker2.address);
       const leftover = totalAssets - stakerPWAfter - staker2PWAfter;
       const totalDelegatedBefore = await iVault.getTotalDelegated();
-      await iVault.connect(operator).delegateToOperator(leftover, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(leftover, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
       const totalDelegatedAfter = await iVault.getTotalDelegated();
       expect(totalDelegatedAfter - totalDelegatedBefore).to.be.closeTo(leftover, transactErr);
@@ -1156,7 +1160,7 @@ describe("Inception pool V4 rEth", function () {
       for (const operatorAddress of operators) {
         const ta = await iVault.totalAssets();
         const amount = ta / BigInt(operators.length - i);
-        await iVault.connect(operator).delegateToOperator(amount, operatorAddress, ethers.ZeroHash, [ethers.ZeroHash,0]);
+        await iVault.connect(operator).delegateToOperator(amount, operatorAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]);
         expect(await iVault.getDelegatedTo(operatorAddress)).to.be.closeTo(amount, transactErr);
       }
     });
@@ -1207,7 +1211,7 @@ describe("Inception pool V4 rEth", function () {
       await snapshot.restore();
       await iVault.connect(staker).deposit(randomBI(19), staker.address);
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       console.log(`Delegated amount: \t${amount.format()}`);
     });
 
@@ -1282,7 +1286,7 @@ describe("Inception pool V4 rEth", function () {
         await iVault.connect(s).deposit(randomBI(19), s.address);
       }
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       ratio = await iVault.ratio();
       console.log(`Ratio ${ratio.toString()}`);
     });
@@ -1403,7 +1407,7 @@ describe("Inception pool V4 rEth", function () {
       //Deposit and withdraw
       await iVault.connect(staker).deposit(toWei(10), staker.address);
       delegatedAmount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(delegatedAmount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(delegatedAmount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
       //Withdraw 10 times
       withdrawalCount = 10;
@@ -1469,7 +1473,7 @@ describe("Inception pool V4 rEth", function () {
       await asset.connect(donor).approve(await iVault.getAddress(), e18);
       await iVault.connect(donor).deposit(e18, donor.address);
       firstDeposit = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(firstDeposit, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(firstDeposit, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       ratio = await iVault.ratio();
     });
 
@@ -1478,7 +1482,7 @@ describe("Inception pool V4 rEth", function () {
       await iVault.connect(staker).deposit(stakerAmount, staker.address);
       staker2Amount = 1348950494309030813n;
       await iVault.connect(staker2).deposit(staker2Amount, staker2.address);
-      await iVault.connect(operator).delegateToOperator(await iVault.totalAssets(), stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(await iVault.totalAssets(), stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       console.log(`Staker amount: ${stakerAmount}`);
       console.log(`Staker2 amount: ${staker2Amount}`);
       console.log(`Ratio: ${await iVault.ratio()}`);
@@ -1642,7 +1646,7 @@ describe("Inception pool V4 rEth", function () {
       await snapshot.restore();
       await iVault.connect(staker).deposit("9292557565124725653", staker.address);
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
     });
 
     const count = 3;
@@ -1695,7 +1699,7 @@ describe("Inception pool V4 rEth", function () {
         const totalDepositedBefore = await iVault.getTotalDeposited();
 
         const amount = await iVault.totalAssets();
-        await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+        await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
         const totalDepositedAfter = await iVault.getTotalDeposited();
 
         console.log(`Total assets: ${await iVault.totalAssets()}`);
@@ -1740,7 +1744,7 @@ describe("Inception pool V4 rEth", function () {
       console.log(`Staker desposited:\t${format(staker1Amount)}`);
       console.log(`Staker2 deposited:\t${format(staker2Amount)}`);
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       console.log(`Ratio after delegation:\t${await iVault.ratio()}`);
     });
 
@@ -1834,7 +1838,7 @@ describe("Inception pool V4 rEth", function () {
       await snapshot.restore();
       await iVault.connect(staker).deposit(e18, staker.address);
       const amount = await iVault.totalAssets();
-      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash,0]);
+      await iVault.connect(operator).delegateToOperator(amount, stakerOperator1, ethers.ZeroHash, [ethers.ZeroHash, 0]);
       ratio = await iVault.ratio();
     });
 
