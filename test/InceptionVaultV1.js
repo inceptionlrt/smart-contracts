@@ -1904,11 +1904,6 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(e18, staker.address);
       });
 
-      const testData = [
-        { amount: "1000000000000000000" },
-        { amount: "1000000000000000000" },
-        { amount: "1000000000000000000" }];
-
       it("Ratio is not affected by strategy rewards until the first deposit to EL", async function () {
         const ratioBefore = await iVault.ratio();
         await addRewardsToStrategy(a.assetStrategyAddress, toWei(1), staker2);
@@ -1932,6 +1927,11 @@ assets.forEach(function (a) {
 
         expect(ratioAfter).to.be.lt(ratioBefore);
       });
+
+      const testData = [
+        { amount: "1000000000000000000" },
+        { amount: "1000000000000000000" },
+        { amount: "1000000000000000000" }];
 
       testData.forEach(function (test) {
         it(`Ratio declines when the strategy rewards are growing: ${test.amount}`, async function () {
