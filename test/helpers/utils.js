@@ -6,7 +6,7 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   await asset.connect(staker).transfer(strategyAddress, amount);
 };
 
-const withdrawDataFromTx = async (tx, iVault, operatorAddress, inceptionRestaker) => {
+const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
   const receipt = await tx.wait();
   if (receipt.logs.length !== 3) {
     console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
@@ -17,7 +17,7 @@ const withdrawDataFromTx = async (tx, iVault, operatorAddress, inceptionRestaker
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,
-    inceptionRestaker,
+    restaker,
     WithdrawalQueuedEvent["nonce"],
     WithdrawalQueuedEvent["withdrawalStartBlock"],
     [WithdrawalQueuedEvent["strategy"]],
