@@ -8,8 +8,6 @@ import "../../interfaces/IDelegationManager.sol";
 import "../../interfaces/IEigenLayerHandler.sol";
 import "../../interfaces/IInceptionRestaker.sol";
 
-import "hardhat/console.sol";
-
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
 /// @dev Serves communication with external EigenLayer protocol

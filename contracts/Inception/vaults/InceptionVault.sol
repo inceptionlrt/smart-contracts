@@ -147,7 +147,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 approverSignatureAndExpiry
             );
 
-        console.log("DelegatedTo:restaker: ", restaker);
         emit DelegatedTo(restaker, elOperator, amount);
     }
 
