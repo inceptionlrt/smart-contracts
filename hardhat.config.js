@@ -12,6 +12,12 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
+        url: `${process.env.RPC_URL_HOLESKY}`,
+        blockNumber: 1232177,
+      }
+    },
+    hardhat_mainnet: {
+      forking: {
         url: `${process.env.RPC_URL_ETHEREUM}`,
         blockNumber: 19469027,
       },
