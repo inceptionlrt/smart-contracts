@@ -110,7 +110,7 @@ contract InceptionRestaker is
         _delegationManager.queueWithdrawals(withdrawals);
     }
 
-    function claimWithdrawal(
+    function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
         uint256[] calldata middlewareTimesIndexes,

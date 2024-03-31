@@ -127,7 +127,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function undelegateFrom(
         address elOperatorAddress,
         uint256 amount
-    ) external nonReentrant onlyOperator {
+    ) external whenNotPaused nonReentrant onlyOperator {
         address stakerAddress = _operatorRestakers[elOperatorAddress];
         if (stakerAddress == address(0)) {
             revert OperatorNotRegistered();
@@ -167,7 +167,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function claimCompletedWithdrawals(
         address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
-    ) public {
+    ) public whenNotPaused nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
         uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
@@ -182,7 +182,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             }
         }
 
-        uint256 withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawal(
+        uint256 withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
             withdrawals,
             tokens,
             middlewareTimesIndexes,
@@ -202,7 +202,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         _updateEpoch();
     }
 
-    function updateEpoch() external onlyOperator {
+    function updateEpoch() external whenNotPaused onlyOperator {
         _updateEpoch();
     }
 

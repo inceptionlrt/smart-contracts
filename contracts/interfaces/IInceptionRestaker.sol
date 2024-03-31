@@ -31,7 +31,7 @@ interface IInceptionRestaker {
 
     function withdrawFromEL(uint256 shares) external;
 
-    function claimWithdrawal(
+    function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
         uint256[] calldata middlewareTimesIndexes,

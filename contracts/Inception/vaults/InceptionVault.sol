@@ -116,7 +116,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address elOperator,
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) external nonReentrant onlyOperator {
+    ) external nonReentrant whenNotPaused onlyOperator {
         if (elOperator == address(0)) {
             revert NullParams();
         }
@@ -147,6 +147,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 approverSignatureAndExpiry
             );
 
+        console.log("DelegatedTo:restaker: ", restaker);
         emit DelegatedTo(restaker, elOperator, amount);
     }
 
@@ -262,7 +263,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return _stakerImplementation;
     }
 
-    function upgradeTo(address newImplementation) external onlyOwner {
+    function upgradeTo(
+        address newImplementation
+    ) external whenNotPaused onlyOwner {
         require(
             Address.isContract(newImplementation),
             "InceptionVault: implementation is not a contract"
