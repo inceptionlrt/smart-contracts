@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
-interface IInceptionErrors {
+interface IInceptionVaultErrors {
     error TransferAssetFailed(address assetAddress);
 
     error TransferAssetFromFailed(address assetAddress);
@@ -17,6 +17,10 @@ interface IInceptionErrors {
     error OperatorNotRegistered();
 
     error ImplementationNotSet();
+
+    error NotEigenLayerOperator();
+
+    error EigenLayerOperatorAlreadyExists();
 
     /// TVL errors
 
