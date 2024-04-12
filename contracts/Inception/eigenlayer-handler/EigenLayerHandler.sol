@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "../assets-handler/InceptionAssetsHandler.sol";
 
@@ -62,12 +62,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         strategy = _assetStrategy;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
-        // approve spending by stategyManager
-        /// @notice used in the prev version
-        require(
-            _asset.approve(address(strategyManager), type(uint256).max),
-            "EigenLayerHandler: approve failed"
-        );
     }
 
     /*//////////////////////////////
@@ -257,36 +251,5 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             address(newDelegationManager)
         );
         delegationManager = newDelegationManager;
-    }
-
-    function setWithdrawalQueue(
-        address[] memory receivers,
-        uint256[] memory amounts
-    ) external onlyOperator {
-        uint256 numberOfReceivers = receivers.length;
-        if (numberOfReceivers != amounts.length) {
-            revert InconsistentData();
-        }
-
-        // let's update redeemReservedAmount and epoch
-        epoch = 0;
-        uint256 availableBalance = totalAssets() - redeemReservedAmount;
-        for (uint256 i; i < numberOfReceivers; ) {
-            address receiver = receivers[i];
-            uint256 amount = amounts[i];
-            claimerWithdrawalsQueue.push(
-                Withdrawal({epoch: i, receiver: receiver, amount: amount})
-            );
-
-            unchecked {
-                if (amount > availableBalance) {
-                    break;
-                }
-                redeemReservedAmount += amount;
-                availableBalance -= amount;
-                epoch++;
-                i++;
-            }
-        }
     }
 }

@@ -1,6 +1,8 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
+const RESTAKER_ADDRESS = "";
+
 const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const [deployer] = await ethers.getSigners();
 
@@ -8,13 +10,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
+  console.log(`InceptionRestaker address: ${RESTAKER_ADDRESS}`);
+
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
-  const iToken = await upgrades.deployProxy(iTokenFactory, [tokenName, tokenSymbol]);
+  const iToken = await upgrades.deployProxy(iTokenFactory, [tokenName, tokenSymbol], { kind: "transparent" });
   await iToken.waitForDeployment();
-
   const iTokenAddress = await iToken.getAddress();
   console.log(`InceptionToken address: ${iTokenAddress}`);
+
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
   let strategyAddress;
@@ -60,19 +64,14 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
       break;
   }
 
-  console.log(addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress);
-
   // 2. Inception vault
   const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory);
-  const iVault = await upgrades.deployProxy(InceptionVaultFactory, [
-    vaultName,
-    addresses.Operator,
-    addresses.StrategyManager,
-    iTokenAddress,
-    strategyAddress,
-  ]);
+  const iVault = await upgrades.deployProxy(
+    InceptionVaultFactory,
+    [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
+    { kind: "transparent" }
+  );
   await iVault.waitForDeployment();
-
   const iVaultAddress = await iVault.getAddress();
   console.log(`InceptionVault address: ${iVaultAddress}`);
   const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
@@ -81,8 +80,19 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   tx = await iToken.setVault(iVaultAddress);
   await tx.wait();
 
-  const fininalBalance = await deployer.provider.getBalance(deployer.address);
+  // 4. set the delegation Manager
+  tx = await iVault.setDelegationManager(addresses.DelegationManager);
+  await tx.wait();
 
+  // 5. set the IRestaker Impl
+  tx = await iVault.upgradeTo(RESTAKER_ADDRESS);
+  await tx.wait();
+
+  // 6. add Ankr Operator
+  tx = await iVault.addELOperator(addresses.AnkrOperator);
+  await tx.wait();
+
+  const fininalBalance = await deployer.provider.getBalance(deployer.address);
   console.log(`deployed spent: ${initBalance - fininalBalance}`);
 
   // 4. save addresses localy
@@ -91,6 +101,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
+    RestakerImpl: RESTAKER_ADDRESS,
   };
 
   const json_addresses = JSON.stringify(iAddresses);

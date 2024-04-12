@@ -790,10 +790,10 @@
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-toolbox/-/hardhat-toolbox-4.0.0.tgz#eb1f619218dd1414fa161dfec92d3e5e53a2f407"
   integrity sha512-jhcWHp0aHaL0aDYj8IJl80v4SZXWMS1A2XxXa1CA6pBiFfJKuZinCkO6wb+POAt0LIfXB3gA3AgdcOccrcwBwA==
 
-"@nomicfoundation/hardhat-verify@^2.0.3":
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.3.tgz#173557f8cfa53c8c9da23a326f54d24fe459ae68"
-  integrity sha512-ESbRu9by53wu6VvgwtMtm108RSmuNsVqXtzg061D+/4R7jaWh/Wl/8ve+p6SdDX7vA1Z3L02hDO1Q3BY4luLXQ==
+"@nomicfoundation/hardhat-verify@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.5.tgz#dcc2cb5e5c55a39704c7d492436f80f05a4ca5a3"
+  integrity sha512-Tg4zu8RkWpyADSFIgF4FlJIUEI4VkxcvELsmbJn2OokbvH2SnUrqKmw0BBfDrtvP0hhmx8wsnrRKP5DV/oTyTA==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@ethersproject/address" "^5.0.2"
@@ -871,31 +871,15 @@
     "@nomicfoundation/solidity-analyzer-win32-ia32-msvc" "0.1.1"
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc" "0.1.1"
 
-"@nomiclabs/hardhat-etherscan@^3.1.8":
-  version "3.1.8"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-etherscan/-/hardhat-etherscan-3.1.8.tgz#3c12ee90b3733e0775e05111146ef9418d4f5a38"
-  integrity sha512-v5F6IzQhrsjHh6kQz4uNrym49brK9K5bYCq2zQZ729RYRaifI9hHbtmK+KkIVevfhut7huQFEQ77JLRMAzWYjQ==
-  dependencies:
-    "@ethersproject/abi" "^5.1.2"
-    "@ethersproject/address" "^5.0.2"
-    cbor "^8.1.0"
-    chalk "^2.4.2"
-    debug "^4.1.1"
-    fs-extra "^7.0.1"
-    lodash "^4.17.11"
-    semver "^6.3.0"
-    table "^6.8.0"
-    undici "^5.14.0"
-
 "@openzeppelin/contracts-upgradeable@^4.8.3":
-  version "4.9.5"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.9.5.tgz#572b5da102fc9be1d73f34968e0ca56765969812"
-  integrity sha512-f7L1//4sLlflAN7fVzJLoRedrf5Na3Oal5PZfIq55NFcVZ90EpV1q5xOvL4lFvg3MNICSDr2hH0JUBxwlxcoPg==
+  version "4.9.6"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.9.6.tgz#38b21708a719da647de4bb0e4802ee235a0d24df"
+  integrity sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==
 
 "@openzeppelin/contracts@^4.8.3":
-  version "4.9.5"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.5.tgz#1eed23d4844c861a1835b5d33507c1017fa98de8"
-  integrity sha512-ZK+W5mVhRppff9BE6YdR8CC52C8zAvsVAiWhEtQ5+oNxFE6h1WdeWo+FJSF8KKvtxxVYZ7MTP/5KoVpAU3aSWg==
+  version "4.9.6"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.6.tgz#2a880a24eb19b4f8b25adc2a5095f2aa27f39677"
+  integrity sha512-xSmezSupL+y9VkHZJGDoCBpmnB2ogM13ccaYDWqJTfS3dbuHkgjuwDFUmaFauBCboQMGB/S5UqUl2y54X99BmA==
 
 "@openzeppelin/defender-admin-client@^1.52.0":
   version "1.54.1"
