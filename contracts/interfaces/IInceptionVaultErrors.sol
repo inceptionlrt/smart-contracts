@@ -22,6 +22,8 @@ interface IInceptionVaultErrors {
 
     error EigenLayerOperatorAlreadyExists();
 
+    error AlreadyDelegated();
+
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);

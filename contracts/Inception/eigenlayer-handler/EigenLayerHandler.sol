@@ -96,6 +96,17 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
     }
 
+    function depositAssetIntoStrategyFromVault(
+        uint256 amount
+    ) external nonReentrant onlyOperator {
+        strategyManager.depositIntoStrategy(strategy, _asset, amount);
+    }
+
+    /// @dev deposits asset to the corresponding strategy
+    function _depositAssetIntoStrategyFromVault(uint256 amount) internal {
+        strategyManager.depositIntoStrategy(strategy, _asset, amount);
+    }
+
     /// @dev delegates assets held in the strategy to the EL operator.
     function _delegateToOperator(
         address restaker,
@@ -107,6 +118,18 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
+        );
+    }
+
+    function _delegateToOperatorFromVault(
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) internal {
+        delegationManager.delegateTo(
+            elOperator,
+            approverSignatureAndExpiry,
+            approverSalt
         );
     }
 
