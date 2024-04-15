@@ -159,10 +159,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (elOperator == address(0)) {
             revert NullParams();
         }
-        if (delegationManager.delegatedTo(address(this)) == address(0))
+        if (delegationManager.delegatedTo(address(this)) != address(0))
             revert AlreadyDelegated();
-
-        _beforeDepositAssetIntoStrategy(amount);
 
         _delegateToOperatorFromVault(
             elOperator,

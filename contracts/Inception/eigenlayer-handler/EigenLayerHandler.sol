@@ -99,6 +99,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function depositAssetIntoStrategyFromVault(
         uint256 amount
     ) external nonReentrant onlyOperator {
+        _beforeDepositAssetIntoStrategy(amount);
         strategyManager.depositIntoStrategy(strategy, _asset, amount);
     }
 
