@@ -147,11 +147,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 approverSignatureAndExpiry
             );
 
-        emit DelegatedTo(restaker, elOperator, amount);
+        emit DelegatedTo(restaker, elOperator);
     }
 
     function delegateToOperatorFromVault(
-        uint256 amount,
         address elOperator,
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
@@ -159,10 +158,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (elOperator == address(0)) {
             revert NullParams();
         }
-        if (delegationManager.delegatedTo(address(this)) == address(0))
+        if (delegationManager.delegatedTo(address(this)) != address(0))
             revert AlreadyDelegated();
-
-        _beforeDepositAssetIntoStrategy(amount);
 
         _delegateToOperatorFromVault(
             elOperator,
@@ -170,7 +167,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             approverSignatureAndExpiry
         );
 
-        emit DelegatedTo(address(this), elOperator, amount);
+        emit DelegatedTo(address(this), elOperator);
     }
 
     /*///////////////////////////////////////

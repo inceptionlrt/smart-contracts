@@ -26,8 +26,7 @@ interface IEigenLayerHandler {
 
     event DelegatedTo(
         address indexed stakerAddress,
-        address indexed operatorAddress,
-        uint256 amount
+        address indexed operatorAddress
     );
 
     event Withdrawn(address asset, uint256 shares, uint256 ethAmount);
