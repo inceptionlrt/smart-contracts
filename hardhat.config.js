@@ -14,7 +14,7 @@ module.exports = {
       forking: {
         url: `${process.env.RPC_URL_HOLESKY}`,
         blockNumber: 1232177,
-      }
+      },
     },
     hardhat_mainnet: {
       forking: {
@@ -35,7 +35,7 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.17",
+        version: "0.8.20",
         settings: {
           optimizer: {
             enabled: true,

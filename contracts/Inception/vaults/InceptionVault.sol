@@ -147,7 +147,27 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 approverSignatureAndExpiry
             );
 
-        emit DelegatedTo(restaker, elOperator, amount);
+        emit DelegatedTo(restaker, elOperator);
+    }
+
+    function delegateToOperatorFromVault(
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) external nonReentrant whenNotPaused onlyOperator {
+        if (elOperator == address(0)) {
+            revert NullParams();
+        }
+        if (delegationManager.delegatedTo(address(this)) != address(0))
+            revert AlreadyDelegated();
+
+        _delegateToOperatorFromVault(
+            elOperator,
+            approverSalt,
+            approverSignatureAndExpiry
+        );
+
+        emit DelegatedTo(address(this), elOperator);
     }
 
     /*///////////////////////////////////////
@@ -342,7 +362,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 ++i;
             }
         }
-        return total;
+        return total + strategy.userUnderlyingView(address(this));
     }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {
