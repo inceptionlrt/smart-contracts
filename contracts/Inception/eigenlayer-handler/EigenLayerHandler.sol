@@ -94,6 +94,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ) internal {
         _asset.approve(restaker, amount);
         IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
+
+        emit DepositedToEL(restaker, amount);
     }
 
     function depositAssetIntoStrategyFromVault(
@@ -101,6 +103,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ) external nonReentrant onlyOperator {
         _beforeDepositAssetIntoStrategy(amount);
         strategyManager.depositIntoStrategy(strategy, _asset, amount);
+
+        emit DepositedToEL(address(this), amount);
     }
 
     /// @dev deposits asset to the corresponding strategy
