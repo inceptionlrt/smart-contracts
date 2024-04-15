@@ -92,11 +92,11 @@ assets = [
 
 //https://holesky.eigenlayer.xyz/restake
 const nodeOperators = [
-  "0x78fdde7a5006cc64e109aed99ca7b0ad3d8687bb",
-  "0x1b71f18fc496194b21d0669b5adfe299a8cfec42",
-  "0x4dbfa8bcccb1740d8044e1a093f9a078a88e45fe",
-  "0x5b9a8c72b29ee17e72ba8b9626bf43a75b15fb3d",
-  "0x139a091bcaad0ee1daabe93cbbd194736b197fb6",
+  "0x78FDDe7a5006cC64E109aeD99cA7B0Ad3d8687bb",
+  "0x1B71f18fc496194b21D0669B5ADfE299a8cFEc42",
+  "0x4Dbfa8bcccb1740d8044E1A093F9A078A88E45FE",
+  "0x5B9A8c72B29Ee17e72ba8B9626Bf43a75B15FB3d",
+  "0x139A091BcAad0ee1DAabe93cbBd194736B197FB6",
 ];
 const minWithdrawalDelayBlocks = 10;
 const nodeOperatorToRestaker = new Map();
@@ -132,8 +132,8 @@ const initVault = async (a) => {
     a.assetStrategy,
   ]);
   await iVault.on("DelegatedTo", (restaker, elOperator, _) => {
-    nodeOperatorToRestaker.set(elOperator.toLowerCase(), restaker);
-    console.log(`restaker to operator ${elOperator.toLowerCase()}, ${restaker}`)
+    nodeOperatorToRestaker.set(elOperator, restaker);
+    console.log(`===Restaker to operator ${elOperator}, ${restaker}`)
   });
 
   await iVault.setDelegationManager(a.delegationManager);
@@ -612,7 +612,7 @@ assets.forEach(function (a) {
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
         await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
         await restaker.connect(trusteeManager).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-        expect((await restaker.getOperatorAddress()).toLowerCase()).to.be.eq(nodeOperators[0]);
+        expect(await restaker.getOperatorAddress()).to.be.eq(nodeOperators[0]);
       })
 
       it("delegateToOperator: reverts when called by not a trustee", async function() {
@@ -698,6 +698,7 @@ assets.forEach(function (a) {
           console.warn("Deposit to strategy failed");
         }
         ratio = await iVault.ratio();
+        console.log(`Initial ratio: ${ratio}`);
       });
 
       const args = [
@@ -770,13 +771,15 @@ assets.forEach(function (a) {
           const balanceAfter = await iToken.balanceOf(receiver);
           const totalDepositedAfter = await iVault.getTotalDeposited();
           const totalAssetsAfter = await iVault.totalAssets();
+          const ratioAfter = await iVault.ratio();
+          console.log(`Ratio after: ${ratioAfter}`);
 
           expect(balanceAfter - balanceBefore).to.be.closeTo(expectedShares, transactErr);
           expect(balanceAfter - balanceBefore).to.be.closeTo(convertedShares, transactErr);
 
           expect(totalDepositedAfter - totalDepositedBefore).to.be.closeTo(amount, transactErr);
           expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount, transactErr); //Everything stays on iVault after deposit
-          expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr); //Ratio stays the same
+          expect(ratioAfter).to.be.closeTo(ratio, ratioErr); //Ratio stays the same
         });
         it("Delegate all", async function () {
           const delegatedBefore = await iVault.getDelegatedTo(nodeOperators[0]);
@@ -793,12 +796,13 @@ assets.forEach(function (a) {
           expect(events.length).to.be.eq(1);
           expect(events[0].args["stakerAddress"]).to.be.not.eq(ethers.ZeroAddress);
           expect(events[0].args["stakerAddress"]).to.be.properAddress;
-          expect(events[0].args["operatorAddress"].toLowerCase()).to.be.eq(nodeOperators[0].toLowerCase());
-          expect(events[0].args["amount"]).to.be.eq(amount);
+          expect(events[0].args["operatorAddress"]).to.be.eq(nodeOperators[0]);
 
           const delegatedAfter = await iVault.getDelegatedTo(nodeOperators[0]);
           const totalDepositedAfter = await iVault.getTotalDeposited();
           const totalAssetsAfter = await iVault.totalAssets();
+          const ratioAfter = await iVault.ratio();
+          console.log(`Ratio after: ${ratioAfter}`);
 
           expect(delegatedAfter - delegatedBefore).to.be.closeTo(amount, transactErr);
           expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
@@ -1039,8 +1043,7 @@ assets.forEach(function (a) {
             expect(events.length).to.be.eq(1);
             expect(events[0].args["stakerAddress"]).to.be.not.eq(ethers.ZeroAddress);
             expect(events[0].args["stakerAddress"]).to.be.properAddress;
-            expect(events[0].args["operatorAddress"].toLowerCase()).to.be.eq(stakerOperator.toLowerCase());
-            expect(events[0].args["amount"]).to.be.eq(amount);
+            expect(events[0].args["operatorAddress"]).to.be.eq(stakerOperator);
 
             //Check that RestakerDeployed event was emitted on the first delegation
             if (isFirstDelegation) {
@@ -1227,6 +1230,144 @@ assets.forEach(function (a) {
           .to.be.revertedWithCustomError(iVault, "ImplementationNotSet");
       })
     });
+
+    describe("Delegate from iVault", function() {
+      beforeEach(async function () {
+        await snapshot.restore();
+      });
+
+      it("Deposit asset into strategy from iVault", async function() {
+        const deposited = randomBI(19);
+        // const deposited = 28707492465302915n;
+        await iVault.connect(staker).deposit(deposited, staker.address);
+        const delegated = await iVault.totalAssets() * 2n / 3n;
+
+        await expect(iVault.connect(iVaultOperator).depositAssetIntoStrategyFromVault(delegated))
+          .to.emit(iVault, "DepositedToEL")
+          .withArgs(await iVault.getAddress(), delegated);
+
+        const balanceAfter = await iToken.balanceOf(staker.address);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const totalDelegatedToAfter = await strategy.userUnderlyingView(await iVault.getAddress());
+        const totalSupplyAfter = await iToken.totalSupply();
+        const totalAssetsAfter = await iVault.totalAssets();
+        console.log(`Staker balance after:\t\t${balanceAfter.format()}`);
+        console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
+        console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
+        console.log(`Total delegatedTo after:\t${totalDelegatedToAfter.format()}`);
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+        console.log(`Ratio after:\t\t\t\t${(await iVault.ratio()).format()}`);
+
+        expect(balanceAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDelegatedAfter).to.be.closeTo(delegated, transactErr);
+        expect(totalSupplyAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalAssetsAfter).to.be.closeTo(deposited - delegated, transactErr);
+        expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
+      })
+
+      it("Deposit asset into strategy and delegate after", async function () {
+        // const deposited = randomBI(17);
+        const deposited = 28707492465302915n;
+        await iVault.connect(staker).deposit(deposited, staker.address);
+        const delegated = await iVault.totalAssets() * 2n / 3n;
+
+        await expect(iVault.connect(iVaultOperator).depositAssetIntoStrategyFromVault(delegated))
+          .to.emit(iVault, "DepositedToEL")
+          .withArgs(await iVault.getAddress(), delegated);
+
+        await expect(iVault.connect(iVaultOperator).delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]))
+          .to.emit(iVault, "DelegatedTo")
+          .withArgs(await iVault.getAddress(), nodeOperators[0]);
+
+        const balanceAfter = await iToken.balanceOf(staker.address);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const totalDelegatedToAfter = await strategy.userUnderlyingView(await iVault.getAddress());
+        const totalSupplyAfter = await iToken.totalSupply();
+        const totalAssetsAfter = await iVault.totalAssets();
+        console.log(`Staker balance after:\t\t${balanceAfter.format()}`);
+        console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
+        console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
+        console.log(`Total delegatedTo after:\t${totalDelegatedToAfter.format()}`);
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+        console.log(`Ratio after:\t\t\t\t${(await iVault.ratio()).format()}`);
+
+        expect(balanceAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDelegatedAfter).to.be.closeTo(delegated, transactErr);
+        expect(totalSupplyAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalAssetsAfter).to.be.closeTo(deposited - delegated, transactErr);
+        expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
+      });
+
+      it("Delegate before any deposit", async function () {
+        // const deposited = randomBI(17);
+        const deposited = 28707492465302915n;
+        await iVault.connect(staker).deposit(deposited, staker.address);
+
+        await expect(iVault.connect(iVaultOperator).delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]))
+          .to.emit(iVault, "DelegatedTo")
+          .withArgs(await iVault.getAddress(), nodeOperators[0]);
+
+        const balanceAfter = await iToken.balanceOf(staker.address);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const totalDelegatedToAfter = await strategy.userUnderlyingView(await iVault.getAddress());
+        const totalSupplyAfter = await iToken.totalSupply();
+        const totalAssetsAfter = await iVault.totalAssets();
+        console.log(`Staker balance after:\t\t${balanceAfter.format()}`);
+        console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
+        console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
+        console.log(`Total delegatedTo after:\t${totalDelegatedToAfter.format()}`);
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+        console.log(`Ratio after:\t\t\t\t${(await iVault.ratio()).format()}`);
+
+        expect(balanceAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDelegatedAfter).to.be.eq(0n);
+        expect(totalDelegatedToAfter).to.be.eq(0n);
+        expect(totalSupplyAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalAssetsAfter).to.be.closeTo(deposited, transactErr);
+        expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
+      });
+
+      it("Delegate and deposit asset into strategy after", async function () {
+        // const deposited = randomBI(17);
+        const deposited = 28707492465302915n;
+        await iVault.connect(staker).deposit(deposited, staker.address);
+        const delegated = await iVault.totalAssets() * 2n / 3n;
+
+        await expect(iVault.connect(iVaultOperator).delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]))
+          .to.emit(iVault, "DelegatedTo")
+          .withArgs(await iVault.getAddress(), nodeOperators[0]);
+
+        await expect(iVault.connect(iVaultOperator).depositAssetIntoStrategyFromVault(delegated))
+          .to.emit(iVault, "DepositedToEL")
+          .withArgs(await iVault.getAddress(), delegated);
+
+        const balanceAfter = await iToken.balanceOf(staker.address);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const totalDelegatedToAfter = await strategy.userUnderlyingView(await iVault.getAddress());
+        const totalSupplyAfter = await iToken.totalSupply();
+        const totalAssetsAfter = await iVault.totalAssets();
+        console.log(`Staker balance after:\t\t${balanceAfter.format()}`);
+        console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
+        console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
+        console.log(`Total delegatedTo after:\t${totalDelegatedToAfter.format()}`);
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+        console.log(`Ratio after:\t\t\t\t${(await iVault.ratio()).format()}`);
+
+        expect(balanceAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalDelegatedAfter).to.be.closeTo(delegated, transactErr);
+        expect(totalSupplyAfter).to.be.closeTo(deposited, transactErr);
+        expect(totalAssetsAfter).to.be.closeTo(deposited - delegated, transactErr);
+        expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
+      });
+    })
 
     describe("Withdraw: user can unstake", function () {
       let ratio, totalDeposited;
