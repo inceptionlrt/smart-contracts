@@ -102,6 +102,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external nonReentrant onlyOperator {
         _beforeDepositAssetIntoStrategy(amount);
+
+        _asset.approve(address(strategyManager), amount);
         strategyManager.depositIntoStrategy(strategy, _asset, amount);
 
         emit DepositedToEL(address(this), amount);
