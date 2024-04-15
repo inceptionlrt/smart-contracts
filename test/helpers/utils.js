@@ -13,7 +13,7 @@ const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
     console.log(receipt.logs);
   }
 
-  const WithdrawalQueuedEvent = receipt.logs[0].args;
+  const WithdrawalQueuedEvent = receipt.logs?.find((e) => e.eventName === "StartWithdrawal").args;
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,
