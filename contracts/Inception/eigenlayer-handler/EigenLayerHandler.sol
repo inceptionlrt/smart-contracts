@@ -62,6 +62,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         strategy = _assetStrategy;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
+        // approve spending by strategyManager
+        require(
+            _asset.approve(address(strategyManager), type(uint256).max),
+            "EigenLayerHandler: approve failed"
+        );
     }
 
     /*//////////////////////////////
@@ -103,7 +108,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ) external nonReentrant onlyOperator {
         _beforeDepositAssetIntoStrategy(amount);
 
-        _asset.approve(address(strategyManager), amount);
         strategyManager.depositIntoStrategy(strategy, _asset, amount);
 
         emit DepositedToEL(address(this), amount);
