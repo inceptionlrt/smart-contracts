@@ -6,7 +6,7 @@ This repository contains smart contracts, vaults, tokens, and associated tests f
 
 For detailed information and developer resources, please follow our [documentation](https://docs.inceptionlrt.com/for-developers/inception-vault-dev-details-testnet).
 
-The contracts are upgradeable and guarded with the [TimeLockController contract](https://docs.openzeppelin.com/contracts/4.x/api/governance#TimelockController).
+The contracts are upgradeable and guarded with the [TimeLockController](https://docs.openzeppelin.com/contracts/4.x/api/governance#TimelockController) contract.
 The address can be found here: [InceptionTimeLock](https://etherscan.io/address/0x650bd9dee50e3ee15cbb49749ff6abcf55a8fb1e)
 
 Additionally, the corresponding _RateProviders_ were deployed for all LRT (InceptionToken), see below. The RateProvider allows you to calculate the _rate_, providing a redemption price for _1 LRT_.
