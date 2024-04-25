@@ -16,6 +16,8 @@ interface IInceptionVaultErrors {
 
     error OperatorNotRegistered();
 
+    error RestakerNotRegistered();
+
     error ImplementationNotSet();
 
     error NotEigenLayerOperator();

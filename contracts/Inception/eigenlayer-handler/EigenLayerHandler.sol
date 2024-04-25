@@ -265,6 +265,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 receiveAsTokens
             );
         } else {
+            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
             withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
                 withdrawals,
                 tokens,
@@ -339,6 +340,19 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 i++;
             }
         }
+    }
+
+    function _restakerExists(
+        address restakerAddress
+    ) internal view returns (bool) {
+        uint256 numOfRestakers = restakers.length;
+        for (uint256 i = 0; i < numOfRestakers; ) {
+            if (restakerAddress == restakers[i]) return true;
+            unchecked {
+                ++i;
+            }
+        }
+        return false;
     }
 
     /*//////////////////////////
