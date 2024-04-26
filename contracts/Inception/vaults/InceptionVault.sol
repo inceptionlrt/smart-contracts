@@ -60,6 +60,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
     }
 
+    function __afterDeposit(uint256 iShares) internal pure {
+        require(iShares > 0, "InceptionVault: deposited less than min amount");
+    }
+
     /// @dev Transfers the msg.sender's assets to the vault.
     /// @dev Mints Inception tokens in accordance with the current ratio.
     /// @dev Issues the tokens to the specified receiver address.
@@ -101,6 +105,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             1e18
         );
         inceptionToken.mint(receiver, iShares);
+        __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
 
