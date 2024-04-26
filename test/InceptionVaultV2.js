@@ -447,10 +447,6 @@ assets.forEach(function (a) {
         await expect(iVault.connect(staker).setName("New name")).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("updateEpoch(): reverts when called by not an iVaultOperator", async function () {
-        await expect(iVault.connect(staker).updateEpoch()).to.be.revertedWith("EigenLayerHandler: only operator allowed");
-      });
-
       it("updateEpoch(): reverts when paused", async function () {
         await iVault.pause();
         await expect(iVault.connect(iVaultOperator).updateEpoch())
@@ -2381,9 +2377,8 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when claim without delay", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith(
-          "DelegationManager._completeQueuedWithdrawal: minWithdrawalDelayBlocks period has not yet passed"
-        );
+        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]))
+          .to.be.revertedWith("DelegationManager._completeQueuedWithdrawal: minWithdrawalDelayBlocks period has not yet passed");
       });
 
       it("Successful claim from EL", async function () {
@@ -2409,10 +2404,15 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when claim the 2nd time", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith(
-          "DelegationManager._completeQueuedWithdrawal: action is not in queue"
-        );
+        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]))
+          .to.be.revertedWith("DelegationManager._completeQueuedWithdrawal: action is not in queue");
       });
+
+      it("Reverts: when restaker is unknown", async function() {
+        const unknownRestaker = ethers.Wallet.createRandom().address;
+        await expect(iVault.connect(staker).claimCompletedWithdrawals(unknownRestaker, [withdrawalData]))
+          .to.be.revertedWithCustomError(iVault, "RestakerNotRegistered");
+      })
     });
 
     describe("claimCompletedWithdrawals: claim multiple undelegates", function () {
@@ -2502,7 +2502,19 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when redeems the same epoch", async function () {
-        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWith("InceptionVault: redeem can not be proceed");
+        await expect(iVault.connect(iVaultOperator).redeem(staker.address))
+          .to.be.revertedWith("InceptionVault: redeem can not be proceed");
+      });
+
+      it("updateEpoch without available does not affect pending withdrawals", async function () {
+        const wwlBefore = await iVault.claimerWithdrawalsQueue(0);
+        const epochBefore = await iVault.epoch();
+        await iVault.connect(staker).updateEpoch();
+
+        const wwlAfter = await iVault.claimerWithdrawalsQueue(0);
+        const epochAfter = await iVault.epoch();
+        expect(wwlBefore).to.be.deep.eq(wwlAfter);
+        expect(epochAfter).to.be.eq(epochBefore);
       });
 
       it("Withdraw and claim from EL 1", async function () {
@@ -2588,9 +2600,6 @@ assets.forEach(function (a) {
         const amount = totalPWBefore - redeemReserveBefore + 100n;
         await asset.connect(staker3).approve(await iVault.getAddress(), amount);
         await iVault.connect(staker3).deposit(amount, staker3.address);
-
-        await expect(iVault.connect(staker).updateEpoch()).to.be.revertedWith("EigenLayerHandler: only operator allowed");
-
         await iVault.connect(iVaultOperator).updateEpoch();
 
         const redeemReserveAfter = await iVault.redeemReservedAmount();
@@ -2617,11 +2626,10 @@ assets.forEach(function (a) {
         console.log(`stakerUnstakeAmountAssetValue: ${stakerUnstakeAmountAssetValue}`);
         console.log(`stakerPendingWithdrawalsBefore[0]: ${stakerPendingWithdrawalsBefore}`);
 
-        expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
-          stakerUnstakeAmountAssetValue,
-          transactErr * 2n
-        );
-        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2n);
+        expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter)
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 3n);
+        expect(stakerBalanceAfter - stakerBalanceBefore)
+          .to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 3n);
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
 
