@@ -30,8 +30,10 @@ const impersonateWithEth = async (address, amount) => {
   const account = await ethers.getSigner(address);
 
   //Deposit some Eth to account
-  const [treasury] = await ethers.getSigners();
-  await treasury.sendTransaction({ to: address, value: amount });
+  if (amount > 0n) {
+    const [treasury] = await ethers.getSigners();
+    await treasury.sendTransaction({ to: address, value: amount });
+  }
 
   console.log(`Account impersonated at address: ${account.address}`);
   // console.log(`Account balance Eth: ${format(await ethers.provider.getBalance(account.address))}`);

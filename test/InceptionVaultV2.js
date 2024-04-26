@@ -100,6 +100,7 @@ const nodeOperators = [
 ];
 const minWithdrawalDelayBlocks = 10;
 const nodeOperatorToRestaker = new Map();
+const forcedWithdrawals = [];
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -131,10 +132,16 @@ const initVault = async (a) => {
     await iToken.getAddress(),
     a.assetStrategy,
   ]);
+  iVault.address = await iVault.getAddress();
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
     console.log(`===Restaker to operator ${elOperator}, ${restaker}`);
   });
+  console.log("- Delegation manager")
+  const delegationManager = await ethers.getContractAt("IDelegationManager", a.delegationManager);
+  await delegationManager.on("WithdrawalQueued", (newRoot, migratedWithdrawal) => {
+    console.log(`===Withdrawal queued: ${migratedWithdrawal.shares[0]}`);
+  })
 
   await iVault.setDelegationManager(a.delegationManager);
   await iVault.upgradeTo(await restakerImp.getAddress());
@@ -158,13 +165,13 @@ const initVault = async (a) => {
     await this.connect(iVaultOperator).claimCompletedWithdrawals(restaker, [withdrawalData]);
   };
 
-  return [iToken, iVault, asset, assetPool, strategy, iVaultOperator, restakerImp];
+  return [iToken, iVault, asset, assetPool, strategy, iVaultOperator, restakerImp, delegationManager];
 };
 
 assets.forEach(function (a) {
   describe(`Inception pool V2 ${a.assetName}`, function () {
     this.timeout(150000);
-    let iToken, iVault, asset, assetPool, strategy, restakerImp;
+    let iToken, iVault, asset, assetPool, strategy, restakerImp, delegationManager;
     let iVaultOperator, staker, staker2, staker3;
     let ratioErr, transactErr;
     let snapshot;
@@ -187,7 +194,7 @@ assets.forEach(function (a) {
         },
       ]);
 
-      [iToken, iVault, asset, assetPool, strategy, iVaultOperator, restakerImp] = await initVault(a);
+      [iToken, iVault, asset, assetPool, strategy, iVaultOperator, restakerImp, delegationManager] = await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
 
@@ -2083,6 +2090,66 @@ assets.forEach(function (a) {
         expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.true;
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
       });
+    })
+
+    describe("Undelegate forced by node operator", function () {
+      let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
+      let nodeOperator;
+      before(async function () {
+        await snapshot.restore();
+        await new Promise(r => setTimeout(r, 2000));
+        forcedWithdrawals.length = 0;
+        await iVault.addELOperator(nodeOperators[1]);
+        //Deposit and delegate to default stakerOperator
+        depositedAmount = toWei(20);
+        await iVault.connect(staker).deposit(depositedAmount, staker.address);
+        const totalAssets = await iVault.totalAssets();
+        await iVault.connect(iVaultOperator).delegateToOperator(totalAssets / 2n, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault.connect(iVaultOperator).delegateToOperator(totalAssets / 4n, nodeOperators[1], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+      });
+
+      it("ForceUndelegate does not break ratio", async function () {
+        nodeOperator = await impersonateWithEth(nodeOperators[0], 0n);
+
+        console.log(`Total delegated ${await iVault.getTotalDelegated()}`);
+        console.log(`Ratio before ${await iVault.ratio()}`);
+        console.log(`Shares before ${await delegationManager.operatorShares(nodeOperators[0], a.assetStrategy)}`);
+
+        const restaker =  nodeOperatorToRestaker.get(nodeOperator.address);
+        const tx = await delegationManager.connect(nodeOperator).undelegate(restaker);
+        const receipt = await tx.wait();
+        console.log(`Ratio after ${await iVault.ratio()}`);
+        console.log(`Total delegated ${await iVault.getTotalDelegated()}`);
+        console.log(`Shares after ${await delegationManager.operatorShares(nodeOperators[0], a.assetStrategy)}`);
+
+        const withdrawalQueued = receipt.logs?.filter(e => e.eventName === "WithdrawalQueued");
+        expect(withdrawalQueued.length).to.be.eq(1);
+        const WithdrawalQueuedEvent = withdrawalQueued[0].args.toObject();
+        withdrawalData1 = [
+          WithdrawalQueuedEvent.withdrawal.staker,
+          nodeOperator.address,
+          nodeOperatorToRestaker.get(nodeOperators[0]),
+          WithdrawalQueuedEvent.withdrawal.nonce,
+          WithdrawalQueuedEvent.withdrawal.startBlock,
+          [...WithdrawalQueuedEvent.withdrawal.strategies],
+          [...WithdrawalQueuedEvent.withdrawal.shares],
+        ];
+        console.log(withdrawalData1);
+      });
+
+      it("Claim force undelegate", async function () {
+        await mineBlocks(minWithdrawalDelayBlocks);
+        const restaker =  nodeOperatorToRestaker.get(nodeOperator.address);
+        const restakerBalanceBefore = await asset.balanceOf(iVault.address);
+
+        console.log(`iVault balance before: ${restakerBalanceBefore.format()}`);
+        await iVault.connect(staker).claimCompletedWithdrawals(restaker, [withdrawalData1]);
+
+        const restakerBalanceAfter = await asset.balanceOf(iVault.address);
+        console.log(`iVault balance after: ${restakerBalanceAfter.format()}`);
+        console.log(`Ratio after ${await iVault.ratio()}`);
+      });
+
     })
 
     describe("UndelegateFrom: negative cases", function () {
