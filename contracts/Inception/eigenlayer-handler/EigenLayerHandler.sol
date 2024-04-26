@@ -309,7 +309,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return withdrawnAmount;
     }
 
-    function updateEpoch() external whenNotPaused onlyOperator {
+    function updateEpoch() external whenNotPaused {
         _updateEpoch();
     }
 
