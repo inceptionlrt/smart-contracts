@@ -51,17 +51,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////////////////////////////*/
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
+        if (receiver == address(0)) revert NullParams();
         require(
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
-        require(iShares > 0, "InceptionVault: deposited less than min amount");
+        require(iShares > 0, "InceptionVault: result iShares 0");
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -355,7 +354,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return getTotalDelegated() + totalAssets() + _pendingWithdrawalAmount;
     }
 
-    /// @dev returns the total deposited into asset strategy
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ) {
@@ -368,6 +366,26 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             }
         }
         return total + strategy.userUnderlyingView(address(this));
+    }
+
+    function _verifyDelegated() public view returns (bool) {
+        uint256 stakersNum = restakers.length;
+        for (uint256 i = 0; i < stakersNum; ) {
+            if (restakers[i] == address(0)) {
+                continue;
+            }
+            if (
+                strategy.userUnderlyingView(restakers[i]) > 0 &&
+                !delegationManager.isDelegated(restakers[i])
+            ) return false;
+        }
+
+        if (
+            strategy.userUnderlyingView(address(this)) > 0 &&
+            !delegationManager.isDelegated(address(this))
+        ) return false;
+
+        return true;
     }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {

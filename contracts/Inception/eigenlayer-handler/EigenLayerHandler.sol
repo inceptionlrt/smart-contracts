@@ -380,4 +380,31 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         );
         delegationManager = newDelegationManager;
     }
+
+    function forceUndelegateRecovery(
+        uint256 amount,
+        address restaker,
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) external onlyOperator {
+        _pendingWithdrawalAmount += amount;
+
+        if (restaker == address(this)) {
+            _delegateToOperatorFromVault(
+                elOperator,
+                approverSalt,
+                approverSignatureAndExpiry
+            );
+        } else {
+            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
+            _delegateToOperator(
+                restaker,
+                elOperator,
+                approverSalt,
+                approverSignatureAndExpiry
+            );
+            _operatorRestakers[elOperator] = restaker;
+        }
+    }
 }

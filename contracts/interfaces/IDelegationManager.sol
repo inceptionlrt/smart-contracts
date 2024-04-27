@@ -90,4 +90,6 @@ interface IDelegationManager {
     function withdrawalDelayBlocks() external view returns (uint256);
 
     function isOperator(address operator) external view returns (bool);
+
+    function isDelegated(address staker) external view returns (bool);
 }
