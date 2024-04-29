@@ -178,13 +178,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
 
-    function __beforeWithdraw(address receiver, uint256 iShares) internal pure {
+    function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) {
             revert NullParams();
         }
         if (receiver == address(0)) {
             revert NullParams();
         }
+        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -369,15 +370,17 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function _verifyDelegated() public view returns (bool) {
-        uint256 stakersNum = restakers.length;
-        for (uint256 i = 0; i < stakersNum; ) {
+        for (uint256 i = 0; i < restakers.length; ) {
             if (restakers[i] == address(0)) {
+                unchecked {
+                    ++i;
+                }
                 continue;
             }
-            if (
-                strategy.userUnderlyingView(restakers[i]) > 0 &&
-                !delegationManager.isDelegated(restakers[i])
-            ) return false;
+            if (!delegationManager.isDelegated(restakers[i])) return false;
+            unchecked {
+                ++i;
+            }
         }
 
         if (
