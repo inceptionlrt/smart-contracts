@@ -2092,7 +2092,7 @@ assets.forEach(function (a) {
       });
     })
 
-    describe("Undelegate forced by node operator", function () {
+    describe("Foce undelegate by node operator", function () {
       let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
       let nodeOperator;
       before(async function () {
@@ -2108,13 +2108,14 @@ assets.forEach(function (a) {
         await iVault.connect(iVaultOperator).delegateToOperator(totalAssets / 4n, nodeOperators[1], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
-      it("ForceUndelegate does not break ratio", async function () {
+      it("Node operator makes force undelegate", async function () {
         nodeOperator = await impersonateWithEth(nodeOperators[0], 0n);
 
         console.log(`Total delegated ${await iVault.getTotalDelegated()}`);
         console.log(`Ratio before ${await iVault.ratio()}`);
         console.log(`Shares before ${await delegationManager.operatorShares(nodeOperators[0], a.assetStrategy)}`);
 
+        //Force undelegate
         const restaker =  nodeOperatorToRestaker.get(nodeOperator.address);
         const tx = await delegationManager.connect(nodeOperator).undelegate(restaker);
         const receipt = await tx.wait();
@@ -2136,6 +2137,17 @@ assets.forEach(function (a) {
         ];
         console.log(withdrawalData1);
       });
+
+      it("Deposits paused", async function() {
+        await expect(iVault.connect(staker).deposit(randomBI(18), staker.address))
+          .to.be.revertedWithCustomError(iVault, "InceptionOnPause");
+      })
+
+      it("Withdrawals paused", async function() {
+        const shares = await iToken.balanceOf(staker.address);
+        await expect(iVault.connect(staker).withdraw(shares, staker.address))
+          .to.be.revertedWithCustomError(iVault, "InceptionOnPause");
+      })
 
       it("Claim force undelegate", async function () {
         await mineBlocks(minWithdrawalDelayBlocks);
