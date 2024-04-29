@@ -383,28 +383,18 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     function forceUndelegateRecovery(
         uint256 amount,
-        address restaker,
-        address elOperator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+        address restaker
     ) external onlyOperator {
         _pendingWithdrawalAmount += amount;
 
-        if (restaker == address(this)) {
-            _delegateToOperatorFromVault(
-                elOperator,
-                approverSalt,
-                approverSignatureAndExpiry
-            );
-        } else {
-            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            _delegateToOperator(
-                restaker,
-                elOperator,
-                approverSalt,
-                approverSignatureAndExpiry
-            );
-            _operatorRestakers[elOperator] = restaker;
+        for (uint256 i = 0; i < restakers.length; ) {
+            if (restakers[i] == restaker) {
+                delete restakers[i];
+                return;
+            }
+            unchecked {
+                ++i;
+            }
         }
     }
 }
