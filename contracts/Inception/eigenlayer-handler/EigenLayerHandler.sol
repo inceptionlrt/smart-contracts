@@ -385,16 +385,21 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount,
         address restaker
     ) external onlyOperator {
-        _pendingWithdrawalAmount += amount;
+        if (restaker == address(0)) revert NullParams();
 
         for (uint256 i = 0; i < restakers.length; ) {
-            if (restakers[i] == restaker) {
+            if (
+                restakers[i] == restaker &&
+                !delegationManager.isDelegated(restakers[i])
+            ) {
                 delete restakers[i];
-                return;
+                break;
             }
             unchecked {
                 ++i;
             }
         }
+
+        _pendingWithdrawalAmount += amount;
     }
 }
