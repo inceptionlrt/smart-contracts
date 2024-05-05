@@ -332,22 +332,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function ratio() public view returns (uint256) {
-        // take into account pending withdrawn amount
-        uint256 denominator = getTotalDeposited() < totalAmountToWithdraw
+        uint256 totalDeposited = getTotalDeposited();
+        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
+        // take into account the pending withdrawn amount
+        uint256 denominator = totalDeposited < totalAmountToWithdraw
             ? 0
-            : getTotalDeposited() - totalAmountToWithdraw;
-        if (
-            denominator == 0 ||
-            IERC20(address(inceptionToken)).totalSupply() == 0
-        ) {
-            return 1e18;
-        }
-        return
-            Convert.multiplyAndDivideCeil(
-                IERC20(address(inceptionToken)).totalSupply(),
-                1e18,
-                denominator
-            );
+            : totalDeposited - totalAmountToWithdraw;
+
+        if (denominator == 0 || totalSupply == 0) return 1e18;
+
+        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
     }
 
     /// @dev returns the total deposited into asset strategy
@@ -466,5 +460,41 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /*///////////////////////////////////
+    /////////// M2 migration ///////////
+    /////////////////////////////////*/
+
+    function distributePendingWithdrawals(
+        address[] memory receivers
+    ) external onlyOperator {
+        uint256 numberOfReceivers = receivers.length;
+        for (uint256 i = 0; i < numberOfReceivers; ) {
+            address receiver = receivers[i];
+            Withdrawal memory request = _claimerWithdrawals[receiver];
+            uint256 amount = request.amount;
+            if (amount == 0) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
+            totalAmountToWithdraw -= amount;
+            delete _claimerWithdrawals[receiver];
+
+            _transferAssetTo(receiver, amount);
+
+            emit Redeem(msg.sender, receiver, amount);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function updateEpoch(uint256 newEpoch) external onlyOperator {
+        epoch = newEpoch;
     }
 }

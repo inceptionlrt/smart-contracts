@@ -55,6 +55,8 @@ contract InceptionRestaker is
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
+        // Ensure compatibility with future versions of ERC165Upgradeable
+        __ERC165_init();
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
