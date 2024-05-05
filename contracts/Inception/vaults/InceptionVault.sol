@@ -56,7 +56,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
-        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -363,7 +362,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return total + strategy.userUnderlyingView(address(this));
     }
 
-    function _verifyDelegated() public view returns (bool) {
+    function _verifyDelegated() internal view returns (bool) {
         for (uint256 i = 0; i < restakers.length; ) {
             if (restakers[i] == address(0)) {
                 unchecked {
@@ -460,41 +459,5 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function unpause() external onlyOwner {
         _unpause();
-    }
-
-    /*///////////////////////////////////
-    /////////// M2 migration ///////////
-    /////////////////////////////////*/
-
-    function distributePendingWithdrawals(
-        address[] memory receivers
-    ) external onlyOperator {
-        uint256 numberOfReceivers = receivers.length;
-        for (uint256 i = 0; i < numberOfReceivers; ) {
-            address receiver = receivers[i];
-            Withdrawal memory request = _claimerWithdrawals[receiver];
-            uint256 amount = request.amount;
-            if (amount == 0) {
-                unchecked {
-                    ++i;
-                }
-                continue;
-            }
-
-            totalAmountToWithdraw -= amount;
-            delete _claimerWithdrawals[receiver];
-
-            _transferAssetTo(receiver, amount);
-
-            emit Redeem(msg.sender, receiver, amount);
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function updateEpoch(uint256 newEpoch) external onlyOperator {
-        epoch = newEpoch;
     }
 }

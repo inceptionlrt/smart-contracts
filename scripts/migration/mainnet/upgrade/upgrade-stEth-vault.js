@@ -13,7 +13,7 @@ const upgradeInceptionVault = async (upgradeName, address) => {
   console.log("Upgrading with the account:", deployer.address);
 
   const iVaultFactory = await hre.ethers.getContractFactory("InVault_E2");
-  const impl = await upgrades.prepareUpgrade(address, iVaultFactory);
+  const impl = await upgrades.prepareUpgrade(address, iVaultFactory, { kind: "transparent" });
   console.log(`New Impl of InceptionVault(${impl}) was deployed`);
 
   const proxyAdmin = await upgrades.erc1967.getAdminAddress(address);
