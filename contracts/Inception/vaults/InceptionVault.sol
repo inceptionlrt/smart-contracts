@@ -56,6 +56,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -340,8 +341,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         if (denominator == 0 || totalSupply == 0) return 1e18;
 
-        return (1e18 * (totalSupply + 1e3)) / (denominator + 1e3);
-        // return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
+        return
+            Convert.multiplyAndDivideCeil(
+                totalSupply + 1e3,
+                1e18,
+                denominator + 1e3
+            );
     }
 
     /// @dev returns the total deposited into asset strategy
