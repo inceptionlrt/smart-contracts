@@ -374,6 +374,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function setDelegationManager(
         IDelegationManager newDelegationManager
     ) external onlyOwner {
+        if (address(delegationManager) != address(0))
+            revert DelegationManagerImmutable();
+
         emit DelegationManagerChanged(
             address(delegationManager),
             address(newDelegationManager)

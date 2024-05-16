@@ -341,12 +341,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         if (denominator == 0 || totalSupply == 0) return 1e18;
 
-        return
-            Convert.multiplyAndDivideCeil(
-                totalSupply + 1e3,
-                1e18,
-                denominator + 1e3
-            );
+        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
     }
 
     /// @dev returns the total deposited into asset strategy
