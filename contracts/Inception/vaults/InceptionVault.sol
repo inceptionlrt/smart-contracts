@@ -461,45 +461,4 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function unpause() external onlyOwner {
         _unpause();
     }
-
-    /*///////////////////////////////////
-    /////////// M2 migration ///////////
-    /////////////////////////////////*/
-
-    function setWithdrawalQueue(
-        address[] memory receivers
-    ) external onlyOperator {
-        uint256 numberOfReceivers = receivers.length;
-
-        // let's update redeemReservedAmount and epoch
-        for (uint256 i = 0; i < numberOfReceivers; ) {
-            address receiver = receivers[i];
-
-            Withdrawal memory request = _claimerWithdrawals[receiver];
-            uint256 amount = request.amount;
-            if (amount == 0) {
-                unchecked {
-                    ++i;
-                }
-                continue;
-            }
-
-            // update global state and claimer's state
-            claimerWithdrawalsQueue.push(
-                Withdrawal({
-                    epoch: claimerWithdrawalsQueue.length,
-                    receiver: receiver,
-                    amount: amount
-                })
-            );
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function updateEpoch(uint256 newEpoch) external onlyOperator {
-        epoch = newEpoch;
-    }
 }
