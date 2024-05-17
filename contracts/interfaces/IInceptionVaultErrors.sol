@@ -28,6 +28,8 @@ interface IInceptionVaultErrors {
 
     error AlreadyDelegated();
 
+    error DelegationManagerImmutable();
+
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);

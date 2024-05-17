@@ -56,6 +56,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
