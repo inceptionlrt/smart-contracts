@@ -472,7 +472,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 numberOfReceivers = receivers.length;
 
         // let's update redeemReservedAmount and epoch
-        for (uint256 i = epoch; i < numberOfReceivers; ) {
+        for (uint256 i = 0; i < numberOfReceivers; ) {
             address receiver = receivers[i];
 
             Withdrawal memory request = _claimerWithdrawals[receiver];
