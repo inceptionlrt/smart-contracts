@@ -265,6 +265,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 receiveAsTokens
             );
         } else {
+            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
             withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
                 withdrawals,
                 tokens,
@@ -308,7 +309,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return withdrawnAmount;
     }
 
-    function updateEpoch() external whenNotPaused onlyOperator {
+    function updateEpoch() external whenNotPaused {
         _updateEpoch();
     }
 
@@ -341,6 +342,19 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         }
     }
 
+    function _restakerExists(
+        address restakerAddress
+    ) internal view returns (bool) {
+        uint256 numOfRestakers = restakers.length;
+        for (uint256 i = 0; i < numOfRestakers; ) {
+            if (restakerAddress == restakers[i]) return true;
+            unchecked {
+                ++i;
+            }
+        }
+        return false;
+    }
+
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
@@ -360,10 +374,35 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function setDelegationManager(
         IDelegationManager newDelegationManager
     ) external onlyOwner {
+        if (address(delegationManager) != address(0))
+            revert DelegationManagerImmutable();
+
         emit DelegationManagerChanged(
             address(delegationManager),
             address(newDelegationManager)
         );
         delegationManager = newDelegationManager;
+    }
+
+    function forceUndelegateRecovery(
+        uint256 amount,
+        address restaker
+    ) external onlyOperator {
+        if (restaker == address(0)) revert NullParams();
+
+        for (uint256 i = 0; i < restakers.length; ) {
+            if (
+                restakers[i] == restaker &&
+                !delegationManager.isDelegated(restakers[i])
+            ) {
+                restakers[i] == _MOCK_ADDRESS;
+                break;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        _pendingWithdrawalAmount += amount;
     }
 }

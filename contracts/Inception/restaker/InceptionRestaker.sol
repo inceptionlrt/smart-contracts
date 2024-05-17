@@ -14,7 +14,7 @@ import "../../interfaces/IStrategy.sol";
 import "../../interfaces/IStrategyManager.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionStaker Contract
+/// @title The InceptionRestaker Contract
 /// @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
 /// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
 contract InceptionRestaker is
@@ -36,7 +36,7 @@ contract InceptionRestaker is
     modifier onlyTrustee() {
         require(
             msg.sender == _vault || msg.sender == _trusteeManager,
-            "InceptionStaker: only vault or trustee manager"
+            "InceptionRestaker: only vault or trustee manager"
         );
         _;
     }
@@ -55,6 +55,8 @@ contract InceptionRestaker is
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
+        // Ensure compatibility with future versions of ERC165Upgradeable
+        __ERC165_init();
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);

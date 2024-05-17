@@ -54,6 +54,10 @@ interface IDelegationManager {
         bytes32 approverSalt
     ) external;
 
+    function undelegate(address staker) external;
+
+    event WithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal);
+
     function completeQueuedWithdrawal(
         Withdrawal calldata withdrawal,
         IERC20[] calldata tokens,
@@ -86,4 +90,6 @@ interface IDelegationManager {
     function withdrawalDelayBlocks() external view returns (uint256);
 
     function isOperator(address operator) external view returns (bool);
+
+    function isDelegated(address staker) external view returns (bool);
 }

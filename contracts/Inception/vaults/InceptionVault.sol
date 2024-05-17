@@ -51,13 +51,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////////////////////////////*/
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
+        if (receiver == address(0)) revert NullParams();
         require(
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+        if (!_verifyDelegated()) revert InceptionOnPause();
+    }
+
+    function __afterDeposit(uint256 iShares) internal pure {
+        require(iShares > 0, "InceptionVault: result iShares 0");
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -101,6 +104,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             1e18
         );
         inceptionToken.mint(receiver, iShares);
+        __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
 
@@ -174,13 +178,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
 
-    function __beforeWithdraw(address receiver, uint256 iShares) internal pure {
+    function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) {
             revert NullParams();
         }
         if (receiver == address(0)) {
             revert NullParams();
         }
+        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -327,22 +332,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function ratio() public view returns (uint256) {
-        // take into account pending withdrawn amount
-        uint256 denominator = getTotalDeposited() < totalAmountToWithdraw
+        uint256 totalDeposited = getTotalDeposited();
+        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
+        // take into account the pending withdrawn amount
+        uint256 denominator = totalDeposited < totalAmountToWithdraw
             ? 0
-            : getTotalDeposited() - totalAmountToWithdraw;
-        if (
-            denominator == 0 ||
-            IERC20(address(inceptionToken)).totalSupply() == 0
-        ) {
-            return 1e18;
-        }
-        return
-            Convert.multiplyAndDivideCeil(
-                IERC20(address(inceptionToken)).totalSupply(),
-                1e18,
-                denominator
-            );
+            : totalDeposited - totalAmountToWithdraw;
+
+        if (denominator == 0 || totalSupply == 0) return 1e18;
+
+        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
     }
 
     /// @dev returns the total deposited into asset strategy
@@ -350,7 +349,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return getTotalDelegated() + totalAssets() + _pendingWithdrawalAmount;
     }
 
-    /// @dev returns the total deposited into asset strategy
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ) {
@@ -363,6 +361,28 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             }
         }
         return total + strategy.userUnderlyingView(address(this));
+    }
+
+    function _verifyDelegated() internal view returns (bool) {
+        for (uint256 i = 0; i < restakers.length; ) {
+            if (restakers[i] == address(0)) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+            if (!delegationManager.isDelegated(restakers[i])) return false;
+            unchecked {
+                ++i;
+            }
+        }
+
+        if (
+            strategy.userUnderlyingView(address(this)) > 0 &&
+            !delegationManager.isDelegated(address(this))
+        ) return false;
+
+        return true;
     }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {

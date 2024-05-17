@@ -8,6 +8,8 @@ interface IInceptionVaultErrors {
 
     error InsufficientCapacity(uint256 capacity);
 
+    error InceptionOnPause();
+
     error InconsistentData();
 
     error NullParams();
@@ -16,6 +18,8 @@ interface IInceptionVaultErrors {
 
     error OperatorNotRegistered();
 
+    error RestakerNotRegistered();
+
     error ImplementationNotSet();
 
     error NotEigenLayerOperator();
@@ -23,6 +27,8 @@ interface IInceptionVaultErrors {
     error EigenLayerOperatorAlreadyExists();
 
     error AlreadyDelegated();
+
+    error DelegationManagerImmutable();
 
     /// TVL errors
 
