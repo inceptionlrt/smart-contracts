@@ -1,20 +1,11 @@
 const { ethers, upgrades } = require("hardhat");
 const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
 
-// InEthxVault - "InVault_E1"
-const vaultAddress = "0x90E80E25ABDB6205B08DeBa29a87f7eb039023C2";
-
-// // InmEthVault - "InVault_E1"
-// const vaultAddress = "0xd0ee89d82183D7Ddaef14C6b4fC0AA742F426355";
-// // InsfrxEthVault - "InVault_E1"
-// const vaultAddress = "0x295234B7E370a5Db2D2447aCA83bc7448f151161";
-// // InswEthVault - "InVault_E1"
-// const vaultAddress = "0xc4181dC7BB31453C4A48689ce0CBe975e495321c";
+// InstEthVault - "InVault_E2"
+const vaultAddress = "0x814CC6B8fd2555845541FB843f37418b05977d8d";
 
 async function main() {
-  // await upgradeInceptionVault("m2_migration", vaultAddress, "InVault_E2");
-
-  await upgradeInceptionVault("m2_migration", vaultAddress, "InVault_E1");
+  await upgradeInceptionVault("m2_migration", vaultAddress, "InVault_E2");
 }
 
 const upgradeInceptionVault = async (upgradeName, address, vaultImplContract) => {
