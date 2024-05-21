@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
+import "../../interfaces/IOwnable.sol";
 import "../../interfaces/IInceptionVault.sol";
 import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
+import "../../interfaces/IDelegationManager.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
@@ -17,19 +21,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Reduces rounding issues
     uint256 public minAmount;
 
-    /// @dev Epoch represents the period of the rebalancing process
-    /// @dev Receiver is a receiver of assets in claim()
-    /// @dev Amount represents the exact amount of the asset to be claimed
-    struct Withdrawal {
-        uint256 epoch;
-        address receiver;
-        uint256 amount;
-    }
-
     mapping(address => Withdrawal) private _claimerWithdrawals;
 
     /// @dev the unique InceptionVault name
     string public name;
+
+    /// @dev Factory variables
+    address private _stakerImplementation;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -53,13 +51,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////////////////////////////*/
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
+        if (receiver == address(0)) revert NullParams();
         require(
             amount >= minAmount,
             "InceptionVault: deposited less than min amount"
         );
+        if (!_verifyDelegated()) revert InceptionOnPause();
+    }
+
+    function __afterDeposit(uint256 iShares) internal pure {
+        require(iShares > 0, "InceptionVault: result iShares 0");
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -103,15 +104,89 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             1e18
         );
         inceptionToken.mint(receiver, iShares);
+        __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
 
         return iShares;
     }
 
-    // /*/////////////////////////////////
-    // ////// Withdrawal functions //////
-    // ///////////////////////////////*/
+    /*/////////////////////////////////
+    ////// Delegation functions //////
+    ///////////////////////////////*/
+
+    function delegateToOperator(
+        uint256 amount,
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) external nonReentrant whenNotPaused onlyOperator {
+        if (elOperator == address(0)) {
+            revert NullParams();
+        }
+        _beforeDepositAssetIntoStrategy(amount);
+
+        // try to find a restaker for the specific EL operator
+        address restaker = _operatorRestakers[elOperator];
+        if (restaker == address(0)) {
+            revert OperatorNotRegistered();
+        }
+
+        bool delegate = false;
+        if (restaker == _MOCK_ADDRESS) {
+            delegate = true;
+            // deploy a new restaker
+            restaker = _deployNewStub();
+            _operatorRestakers[elOperator] = restaker;
+            restakers.push(restaker);
+        }
+
+        _depositAssetIntoStrategy(restaker, amount);
+
+        if (delegate)
+            _delegateToOperator(
+                restaker,
+                elOperator,
+                approverSalt,
+                approverSignatureAndExpiry
+            );
+
+        emit DelegatedTo(restaker, elOperator);
+    }
+
+    function delegateToOperatorFromVault(
+        address elOperator,
+        bytes32 approverSalt,
+        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    ) external nonReentrant whenNotPaused onlyOperator {
+        if (elOperator == address(0)) {
+            revert NullParams();
+        }
+        if (delegationManager.delegatedTo(address(this)) != address(0))
+            revert AlreadyDelegated();
+
+        _delegateToOperatorFromVault(
+            elOperator,
+            approverSalt,
+            approverSignatureAndExpiry
+        );
+
+        emit DelegatedTo(address(this), elOperator);
+    }
+
+    /*///////////////////////////////////////
+    ///////// Withdrawal functions /////////
+    /////////////////////////////////////*/
+
+    function __beforeWithdraw(address receiver, uint256 iShares) internal view {
+        if (iShares == 0) {
+            revert NullParams();
+        }
+        if (receiver == address(0)) {
+            revert NullParams();
+        }
+        if (!_verifyDelegated()) revert InceptionOnPause();
+    }
 
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
@@ -119,105 +194,210 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function withdraw(
         uint256 iShares,
         address receiver
-    ) public whenNotPaused nonReentrant {
-        if (iShares == 0) {
-            revert NullParams();
-        }
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
-        address owner = msg.sender;
+    ) external whenNotPaused nonReentrant {
+        __beforeWithdraw(receiver, iShares);
+        address claimer = msg.sender;
         uint256 amount = Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
         require(
             amount >= minAmount,
             "InceptionVault: amount is less than the minimum withdrawal"
         );
         // burn Inception token in view of the current ratio
-        inceptionToken.burn(owner, iShares);
+        inceptionToken.burn(claimer, iShares);
 
         // update global state and claimer's state
         totalAmountToWithdraw += amount;
-        Withdrawal storage request = _claimerWithdrawals[receiver];
-        request.amount += _getAssetReceivedAmount(amount);
-        request.receiver = receiver;
-        request.epoch = epoch;
-
-        emit Withdraw(owner, receiver, owner, amount, iShares);
-    }
-
-    /// @dev Performs the claiming of a withdrawal request
-    /// @notice Checks isAbleToRedeem() to ensure that the receiver is ready to claim
-    /// @notice Allows anyone to claim on behalf of the correct receiver
-    function redeem(address receiver) public whenNotPaused nonReentrant {
-        require(
-            isAbleToRedeem(receiver),
-            "InceptionVault: claimer is not able to claim"
+        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
+        genRequest.amount += _getAssetReceivedAmount(amount);
+        claimerWithdrawalsQueue.push(
+            Withdrawal({
+                epoch: claimerWithdrawalsQueue.length,
+                receiver: receiver,
+                amount: _getAssetReceivedAmount(amount)
+            })
         );
-        Withdrawal storage request = _claimerWithdrawals[receiver];
-        uint256 amount = request.amount;
-        totalAmountToWithdraw -= amount;
 
-        delete _claimerWithdrawals[receiver];
-        _transferAssetTo(receiver, amount);
-
-        emit Redeem(msg.sender, receiver, amount);
+        emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
 
-    /// @dev Returns the amount of assets to be claimed and the receiver
-    function getPendingWithdrawalOf(
+    function redeem(address receiver) public whenNotPaused nonReentrant {
+        (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
+            receiver
+        );
+        require(isAble, "InceptionVault: redeem can not be proceed");
+
+        uint256 numOfWithdrawals = availableWithdrawals.length;
+        uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
+
+        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
+        uint256 redeemedAmount;
+        for (uint256 i = 0; i < numOfWithdrawals; ) {
+            uint256 withdrawalNum = availableWithdrawals[i];
+            Withdrawal memory request = claimerWithdrawalsQueue[withdrawalNum];
+            uint256 amount = request.amount;
+            // update the genRequest and the global state
+            genRequest.amount -= amount;
+
+            totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
+            redeemReservedAmount -= amount;
+            redeemedAmount += amount;
+            redeemedWithdrawals[i] = withdrawalNum;
+
+            delete claimerWithdrawalsQueue[availableWithdrawals[i]];
+            unchecked {
+                ++i;
+            }
+        }
+
+        // let's update the lowest epoch associated with the claimer
+        genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
+
+        _transferAssetTo(receiver, redeemedAmount);
+
+        emit RedeemedRequests(redeemedWithdrawals);
+        emit Redeem(msg.sender, receiver, redeemedAmount);
+    }
+
+    /*//////////////////////////////
+    ////// Factory functions //////
+    ////////////////////////////*/
+
+    function _deployNewStub() internal returns (address) {
+        if (_stakerImplementation == address(0)) {
+            revert ImplementationNotSet();
+        }
+        // deploy new beacon proxy and do init call
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,address,address)",
+            delegationManager,
+            strategyManager,
+            strategy,
+            _operator
+        );
+        address deployedAddress = address(new BeaconProxy(address(this), data));
+
+        IOwnable asOwnable = IOwnable(deployedAddress);
+        asOwnable.transferOwnership(owner());
+
+        emit RestakerDeployed(deployedAddress);
+        return deployedAddress;
+    }
+
+    function implementation() external view returns (address) {
+        return _stakerImplementation;
+    }
+
+    function upgradeTo(
+        address newImplementation
+    ) external whenNotPaused onlyOwner {
+        require(
+            Address.isContract(newImplementation),
+            "InceptionVault: implementation is not a contract"
+        );
+        emit ImplementationUpgraded(_stakerImplementation, newImplementation);
+        _stakerImplementation = newImplementation;
+    }
+
+    function isAbleToRedeem(
         address claimer
-    ) public view returns (uint256, address) {
-        Withdrawal memory withdrawal = _claimerWithdrawals[claimer];
-        return (withdrawal.amount, withdrawal.receiver);
+    ) public view returns (bool able, uint256[] memory) {
+        // get the general request
+        uint256 index;
+        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+        uint256 from = genRequest.epoch;
+        uint256[] memory availableWithdrawals = new uint256[](epoch - from);
+        if (genRequest.amount == 0) {
+            return (false, availableWithdrawals);
+        }
+
+        for (uint256 i = 0; i < epoch; ) {
+            if (claimerWithdrawalsQueue[i].receiver == claimer) {
+                able = true;
+                availableWithdrawals[index] = i;
+                ++index;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        // decrease arrays
+        if (availableWithdrawals.length - index > 0) {
+            assembly {
+                mstore(availableWithdrawals, index)
+            }
+        }
+
+        return (able, availableWithdrawals);
     }
 
-    /// @dev Some examples:
-    /// epoch 0 -- rebalance is not in progress, claimer1 withdrew
-    /// epoch 1 -- rebalance in progress, claimer2 withdrew
-    /// epoch 2 -- rebalance is finished, claimer1 is able to claim
-    /// epoch 3 -- rebalance in progress
-    /// epoch 4 -- rebalance is finished, claimer2 is able to claim
-    function isAbleToRedeem(address claimer) public view returns (bool) {
-        Withdrawal storage request = _claimerWithdrawals[claimer];
-        // the request is empty
-        if (request.amount == 0) {
-            return false;
-        }
-        if (request.amount > totalAssets()) {
-            return false;
-        }
-        // a claimer withdrew during the rebalance
-        if (request.epoch % 2 != 0) {
-            if (epoch - request.epoch < 3) {
-                return false;
+    function ratio() public view returns (uint256) {
+        uint256 totalDeposited = getTotalDeposited();
+        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
+        // take into account the pending withdrawn amount
+        uint256 denominator = totalDeposited < totalAmountToWithdraw
+            ? 0
+            : totalDeposited - totalAmountToWithdraw;
+
+        if (denominator == 0 || totalSupply == 0) return 1e18;
+
+        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
+    }
+
+    /// @dev returns the total deposited into asset strategy
+    function getTotalDeposited() public view returns (uint256) {
+        return getTotalDelegated() + totalAssets() + _pendingWithdrawalAmount;
+    }
+
+    function getTotalDelegated() public view returns (uint256 total) {
+        uint256 stakersNum = restakers.length;
+        for (uint256 i = 0; i < stakersNum; ) {
+            if (restakers[i] == address(0)) {
+                continue;
             }
-        } else {
-            if (epoch - request.epoch < 2) {
-                return false;
+            total += strategy.userUnderlyingView(restakers[i]);
+            unchecked {
+                ++i;
             }
         }
+        return total + strategy.userUnderlyingView(address(this));
+    }
+
+    function _verifyDelegated() internal view returns (bool) {
+        for (uint256 i = 0; i < restakers.length; ) {
+            if (restakers[i] == address(0)) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+            if (!delegationManager.isDelegated(restakers[i])) return false;
+            unchecked {
+                ++i;
+            }
+        }
+
+        if (
+            strategy.userUnderlyingView(address(this)) > 0 &&
+            !delegationManager.isDelegated(address(this))
+        ) return false;
 
         return true;
     }
 
-    function ratio() public view returns (uint256) {
-        // take into account pending withdrawn amount
-        uint256 denominator = getTotalDeposited() < totalAmountToWithdraw
-            ? 0
-            : getTotalDeposited() - totalAmountToWithdraw;
-        if (
-            denominator == 0 ||
-            IERC20(address(inceptionToken)).totalSupply() == 0
-        ) {
-            return 1e18;
-        }
-        return
-            Convert.multiplyAndDivideCeil(
-                IERC20(address(inceptionToken)).totalSupply(),
-                1e18,
-                denominator
-            );
+    function getDelegatedTo(address elOperator) public view returns (uint256) {
+        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
+
+    function getPendingWithdrawalOf(
+        address claimer
+    ) public view returns (uint256) {
+        return _claimerWithdrawals[claimer].amount;
+    }
+
+    /*//////////////////////////////
+    ////// Convert functions //////
+    ////////////////////////////*/
 
     function convertToShares(
         uint256 assets
@@ -254,6 +434,20 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         }
         emit NameChanged(name, newVaultName);
         name = newVaultName;
+    }
+
+    function addELOperator(address newELOperator) external onlyOwner {
+        require(
+            delegationManager.isOperator(newELOperator),
+            "InceptionVault: it is not an EL operator"
+        );
+        require(
+            _operatorRestakers[newELOperator] == address(0),
+            "InceptionVault: operator already exists"
+        );
+
+        _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
+        emit ELOperatorAdded(newELOperator);
     }
 
     /*///////////////////////////////

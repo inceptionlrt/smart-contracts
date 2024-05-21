@@ -12,8 +12,8 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `${process.env.RPC_URL_ETHEREUM}`,
-        blockNumber: 19469027,
+        url: `${process.env.RPC_URL_HOLESKY}`,
+        blockNumber: 1442030,
       },
     },
     localhost: {
@@ -29,7 +29,7 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.17",
+        version: "0.8.20",
         settings: {
           optimizer: {
             enabled: true,

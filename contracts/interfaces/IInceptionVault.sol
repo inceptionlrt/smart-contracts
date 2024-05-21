@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 import "./IInceptionToken.sol";
 
 interface IInceptionVault {
@@ -30,6 +29,8 @@ interface IInceptionVault {
         uint256 amount
     );
 
+    event RedeemedRequests(uint256[] withdrawals);
+
     event WithdrawalQueued(
         address depositor,
         uint96 nonce,
@@ -43,6 +44,12 @@ interface IInceptionVault {
     event DepositFeeChanged(uint256 prevValue, uint256 newValue);
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
+
+    event ELOperatorAdded(address indexed newELOperator);
+
+    event RestakerDeployed(address indexed restaker);
+
+    event ImplementationUpgraded(address prevValue, address newValue);
 
     event NameChanged(string prevValue, string newValue);
 
