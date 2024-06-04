@@ -154,39 +154,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address elOperatorAddress,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address stakerAddress = _operatorRestakers[elOperatorAddress];
-        if (stakerAddress == address(0)) {
+        address staker = _operatorRestakers[elOperatorAddress];
+        if (staker == address(0)) {
             revert OperatorNotRegistered();
         }
-        if (stakerAddress == _MOCK_ADDRESS) {
+        if (staker == _MOCK_ADDRESS) {
             revert NullParams();
         }
-
-        uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(
-            stakerAddress
-        );
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
-            stakerAddress,
-            strategy
-        );
-        uint256 shares = strategy.underlyingToSharesView(amount);
-        // we need to withdraw the remaining dust from EigenLayer
-        if (totalAssetSharesInEL < shares + 5) {
-            shares = totalAssetSharesInEL;
-        }
-        amount = strategy.sharesToUnderlyingView(shares);
-
-        emit StartWithdrawal(
-            stakerAddress,
-            strategy,
-            shares,
-            uint32(block.number),
-            elOperatorAddress,
-            nonce
-        );
-
-        _pendingWithdrawalAmount += amount;
-        IInceptionRestaker(stakerAddress).withdrawFromEL(shares);
+        IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
@@ -195,38 +170,44 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address staker = address(this);
+
+        uint256[] memory sharesToWithdraw = new uint256[](1);
+        IStrategy[] memory strategies = new IStrategy[](1);
+
+        sharesToWithdraw[0] = _undelegate(amount, staker);
+        strategies[0] = strategy;
+        IDelegationManager.QueuedWithdrawalParams[]
+            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+                1
+            );
+
+        /// @notice from Vault
+        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
+            strategies: strategies,
+            shares: sharesToWithdraw,
+            withdrawer: address(this)
+        });
+        delegationManager.queueWithdrawals(withdrawals);
+    }
+
+    function _undelegate(
+        uint256 amount,
+        address staker
+    ) internal returns (uint256) {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
         uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
             staker,
             strategy
         );
         uint256 shares = strategy.underlyingToSharesView(amount);
+        amount = strategy.sharesToUnderlyingView(shares);
+
         // we need to withdraw the remaining dust from EigenLayer
         if (totalAssetSharesInEL < shares + 5) {
             shares = totalAssetSharesInEL;
         }
-        amount = strategy.sharesToUnderlyingView(shares);
-
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
-
-        strategies[0] = strategy;
-        sharesToWithdraw[0] = shares;
-        IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
-
-        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
-            strategies: strategies,
-            shares: sharesToWithdraw,
-            withdrawer: address(this)
-        });
 
         _pendingWithdrawalAmount += amount;
-
-        delegationManager.queueWithdrawals(withdrawals);
-
         emit StartWithdrawal(
             staker,
             strategy,
@@ -235,6 +216,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             delegationManager.delegatedTo(staker),
             nonce
         );
+        return shares;
     }
 
     /// @dev claims completed withdrawals from EigenLayer, if they exist
@@ -389,7 +371,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address restaker
     ) external onlyOperator {
         if (restaker == address(0)) revert NullParams();
-
         for (uint256 i = 0; i < restakers.length; ) {
             if (
                 restakers[i] == restaker &&
@@ -402,7 +383,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 ++i;
             }
         }
-
         _pendingWithdrawalAmount += amount;
     }
 }
