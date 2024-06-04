@@ -77,7 +77,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        if (amount > totalAssets() - redeemReservedAmount) {
+        if (
+            amount > totalAssets() - redeemReservedAmount - currentFlashCapacity
+        ) {
             revert InsufficientCapacity(totalAssets());
         }
 
