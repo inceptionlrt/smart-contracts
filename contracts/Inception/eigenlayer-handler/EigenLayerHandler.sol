@@ -43,10 +43,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     mapping(address => address) internal _operatorRestakers;
     address[] public restakers;
 
+    uint256 internal _depositBonusAmount;
     uint256 public currentFlashCapacity;
 
     /// @dev constants are not stored in the storage
-    uint256[50 - 12] private __reserver;
+    uint256[50 - 13] private __reserver;
 
     modifier onlyOperator() {
         require(
@@ -315,7 +316,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
         uint256 availableBalance = totalAssets() -
             redeemReservedAmount -
-            currentFlashCapacity;
+            currentFlashCapacity -
+            _depositBonusAmount;
         for (uint256 i = epoch; i < withdrawalsNum; ) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
             unchecked {

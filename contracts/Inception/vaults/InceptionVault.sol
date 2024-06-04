@@ -37,8 +37,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     address public treasuryAddress;
     IInceptionRatioFeed public ratioFeed;
 
-    uint256 internal _depositBonusAmount;
-
     uint256 public baseRate;
     uint256 public optimalRate;
 
