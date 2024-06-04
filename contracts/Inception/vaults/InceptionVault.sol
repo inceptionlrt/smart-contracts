@@ -82,10 +82,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (!_verifyDelegated()) revert InceptionOnPause();
 
-        uint256 capacity = getFlashPoolCapacity();
+        uint256 capacity = currentFlashCapacity;
         if (capacity < TARGET) {
             uint256 lackCapacity = TARGET - capacity;
-            if (lackCapacity < amount) return amount - lackCapacity;
+            if (lackCapacity < amount) return lackCapacity;
+
             return amount;
         }
 
@@ -128,24 +129,27 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 replenishedAmount = __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 bonusShares;
-        if (_depositBonusAmount > 0 && replenishedAmount > 0) {
-            uint256 depositBonus = calculateDepositBonus(
-                replenishedAmount,
-                (getFlashPoolCapacity() * 1e18) / TARGET
-            );
-            if (depositBonus > _depositBonusAmount) {
-                depositBonus = _depositBonusAmount;
-                _depositBonusAmount = 0;
-            } else {
-                _depositBonusAmount -= depositBonus;
-            }
+        if (replenishedAmount > 0) {
+            currentFlashCapacity += replenishedAmount;
+            if (_depositBonusAmount > 0) {
+                uint256 depositBonus = calculateDepositBonus(
+                    replenishedAmount,
+                    (currentFlashCapacity * 1e18) / TARGET
+                );
+                if (depositBonus > _depositBonusAmount) {
+                    depositBonus = _depositBonusAmount;
+                    _depositBonusAmount = 0;
+                } else {
+                    _depositBonusAmount -= depositBonus;
+                }
 
-            bonusShares = Convert.multiplyAndDivideFloor(
-                depositBonus,
-                currentRatio,
-                1e18
-            );
-            emit DepositBonus(depositBonus);
+                bonusShares = Convert.multiplyAndDivideFloor(
+                    depositBonus,
+                    currentRatio,
+                    1e18
+                );
+                emit DepositBonus(depositBonus);
+            }
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
@@ -331,7 +335,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             1e18,
             currentRatio
         );
-        uint256 capacity = getFlashPoolCapacity();
+        uint256 capacity = currentFlashCapacity;
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (amount > capacity) revert InsufficientCapacity(capacity);
@@ -497,12 +501,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return total + strategy.userUnderlyingView(address(this));
     }
 
-    function getFlashPoolCapacity() public view returns (uint256) {
-        return
-            totalAssets() < redeemReservedAmount
-                ? 0
-                : totalAssets() - redeemReservedAmount;
-    }
+    // function getFlashPoolCapacity() public view returns (uint256) {
+    //     return
+    //         totalAssets() < redeemReservedAmount
+    //             ? 0
+    //             : totalAssets() - redeemReservedAmount;
+    // }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
