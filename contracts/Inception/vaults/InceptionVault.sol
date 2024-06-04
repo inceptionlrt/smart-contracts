@@ -355,6 +355,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         /// @notice instant transfer fee to the treasuryAddress
         _transferAssetTo(treasuryAddress, fee / 2);
         /// @notice instant transfer amount to the receiver
+        currentFlashCapacity -= amount;
         _transferAssetTo(receiver, amount);
 
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
