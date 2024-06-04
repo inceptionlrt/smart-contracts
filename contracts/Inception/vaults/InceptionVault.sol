@@ -129,7 +129,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 depositedBefore = totalAssets();
         uint256 bonusShares;
         if (_depositBonusAmount > 0 && replenishedAmount > 0) {
-            uint256 depositBonus = 2;
+            uint256 depositBonus = calculateDepositBonus(
+                replenishedAmount,
+                (getFlashPoolCapacity() * 1e18) / TARGET
+            );
             if (depositBonus > _depositBonusAmount) {
                 depositBonus = _depositBonusAmount;
                 _depositBonusAmount = 0;
@@ -336,7 +339,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        uint256 fee = 1;
+        uint256 fee = calculateFlashUnstakeFee(
+            amount,
+            (capacity * 1e18) / TARGET
+        );
         emit FlashWithdrawFee(fee);
 
         amount -= fee;
@@ -492,7 +498,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function getFlashPoolCapacity() public view returns (uint256) {
-        return totalAssets() - redeemReservedAmount;
+        return
+            totalAssets() < redeemReservedAmount
+                ? 0
+                : totalAssets() - redeemReservedAmount;
     }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {
