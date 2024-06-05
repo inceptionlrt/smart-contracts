@@ -102,6 +102,14 @@ const randomBI = (length) => {
   }
 };
 
+const randomBIMax = (max) => {
+  let random = 0n;
+  if (max > 0n) {
+    random += BigInt(Math.random() * Number(max));
+  }
+  return random;
+};
+
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
@@ -118,6 +126,7 @@ module.exports = {
   toWei,
   toBN,
   randomBI,
+  randomBIMax,
   randomAddress,
   format,
   e18,

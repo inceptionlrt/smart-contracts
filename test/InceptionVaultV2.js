@@ -214,6 +214,11 @@ assets.forEach(function (a) {
       snapshot = await helpers.takeSnapshot();
     });
 
+    after(async function() {
+      await iVault.removeAllListeners();
+      await delegationManager.removeAllListeners();
+    })
+
     describe("Base flow w the FlashWithdrawal feature", function () {
       let deposited;
       before(async function () {
@@ -409,7 +414,7 @@ assets.forEach(function (a) {
         const totalAssetsAfter = await iVault.totalAssets();
         const totalDepositedAfter = await iVault.getTotalDeposited();
         const totalDelegatedAfter = await iVault.getTotalDelegated();
-        const redeemReserve = await iVault.redeemReservedAmount();
+        const redeemReserve = await iVault.redeemReservedAmountredeemReservedAmount();
 
         console.log(`Available withdrawals:\t${await iVault.isAbleToRedeem(staker2.address)}`);
         console.log(`Total deposited after:\t${totalDepositedAfter.format()}`);
@@ -2344,7 +2349,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("Foce undelegate by node operator", function () {
+    describe("Force undelegate by node operator", function () {
       let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
       let nodeOperator, restaker, delegatedNodeOperator1;
       before(async function () {
