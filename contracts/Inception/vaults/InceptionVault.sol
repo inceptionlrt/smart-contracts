@@ -139,7 +139,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 emit DepositBonus(depositBonus);
             }
         }
-        currentFlashCapacity += replenishedAmount;
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
