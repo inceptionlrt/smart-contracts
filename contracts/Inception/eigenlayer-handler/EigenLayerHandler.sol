@@ -44,8 +44,16 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     address[] public restakers;
 
     uint256 internal _depositBonusAmount;
-    uint256 public currentFlashCapacity;
 
+    uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
+    uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
+    uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
+    uint256 public constant TARGET = 15 * 1e18; // 500 BNB
+    uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
+    uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
+    uint256 public constant slope1_fee = 0.005 * 1e18;
+
+    /// !!!!! TODO !!!!!
     /// @dev constants are not stored in the storage
     uint256[50 - 13] private __reserver;
 
@@ -78,23 +86,18 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        if (
-            amount > totalAssets() - redeemReservedAmount - currentFlashCapacity
-        ) {
+        if (amount > getFreeBalance())
             revert InsufficientCapacity(totalAssets());
-        }
 
         (uint256 maxPerDeposit, uint256 maxTotalDeposits) = strategy
             .getTVLLimits();
 
-        if (amount > maxPerDeposit) {
+        if (amount > maxPerDeposit)
             revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
-        }
 
         uint256 currentBalance = _asset.balanceOf(address(strategy));
-        if (currentBalance + amount > maxTotalDeposits) {
+        if (currentBalance + amount > maxTotalDeposits)
             revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
-        }
     }
 
     /// @dev deposits asset to the corresponding strategy
@@ -243,6 +246,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             }
         }
 
+        uint256 availableBalace = getFreeBalance();
+
         uint256 withdrawnAmount;
         if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
@@ -271,7 +276,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             _pendingWithdrawalAmount = 0;
         }
 
-        _updateEpoch();
+        _updateEpoch(availableBalace + withdrawnAmount);
     }
 
     function _claimCompletedWithdrawalsForVault(
@@ -297,7 +302,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     function updateEpoch() external whenNotPaused {
-        _updateEpoch();
+        _updateEpoch(getFreeBalance());
     }
 
     /**
@@ -312,12 +317,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
      * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
      * withdrawalQueue[epoch : new_epoch];
      */
-    function _updateEpoch() internal {
+    function _updateEpoch(uint256 availableBalance) internal {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-        uint256 availableBalance = totalAssets() -
-            redeemReservedAmount -
-            currentFlashCapacity -
-            _depositBonusAmount;
         for (uint256 i = epoch; i < withdrawalsNum; ) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
             unchecked {
@@ -355,6 +356,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         returns (uint256 total)
     {
         return _pendingWithdrawalAmount;
+    }
+
+    function getFlashCapacity() public view returns (uint256 total) {
+        return totalAssets() - redeemReservedAmount - _depositBonusAmount;
+    }
+
+    function getFreeBalance() public view returns (uint256 total) {
+        return getFlashCapacity() < TARGET ? 0 : getFlashCapacity() - TARGET;
     }
 
     /*//////////////////////////

@@ -40,14 +40,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     uint256 public baseRate;
     uint256 public optimalRate;
 
-    uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
-    uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
-    uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
-    uint256 public constant TARGET = 15 * 1e18; // 500 BNB
-    uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
-    uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
-    uint256 public constant slope1_fee = 0.005 * 1e18;
-
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -74,13 +66,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function __beforeDeposit(
         address receiver,
-        uint256 amount
+        uint256 amount,
+        uint256 capacity
     ) internal view returns (uint256) {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (!_verifyDelegated()) revert InceptionOnPause();
 
-        uint256 capacity = currentFlashCapacity;
         if (capacity < TARGET) {
             uint256 lackCapacity = TARGET - capacity;
             if (lackCapacity < amount) return lackCapacity;
@@ -124,7 +116,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
-        uint256 replenishedAmount = __beforeDeposit(receiver, amount);
+        uint256 currentFlashCapacity = getFlashCapacity();
+        uint256 replenishedAmount = __beforeDeposit(
+            receiver,
+            amount,
+            currentFlashCapacity
+        );
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         if (replenishedAmount > 0) {
@@ -327,7 +324,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             1e18,
             currentRatio
         );
-        uint256 capacity = currentFlashCapacity;
+        uint256 capacity = getFlashCapacity();
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (amount > capacity) revert InsufficientCapacity(capacity);
@@ -341,7 +338,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
         emit FlashWithdrawFee(fee);
 
-        currentFlashCapacity -= amount;
         amount -= fee;
         _depositBonusAmount += fee / 2;
 
