@@ -109,7 +109,9 @@ const randomBIMax = (max) => {
   }
   return random;
 };
-
+async function sleep(msec) {
+  return new Promise(resolve => setTimeout(resolve, msec));
+};
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
@@ -127,6 +129,7 @@ module.exports = {
   toBN,
   randomBI,
   randomBIMax,
+  sleep,
   randomAddress,
   format,
   e18,

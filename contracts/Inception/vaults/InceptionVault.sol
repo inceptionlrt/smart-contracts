@@ -126,11 +126,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // approximately by -2 wei
         uint256 replenishedAmount = __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
-        uint256 bonusShares;
+        uint256 depositBonus;
         if (replenishedAmount > 0) {
-            currentFlashCapacity += replenishedAmount;
             if (_depositBonusAmount > 0) {
-                uint256 depositBonus = calculateDepositBonus(
+                depositBonus = calculateDepositBonus(
                     replenishedAmount,
                     (currentFlashCapacity * 1e18) / TARGET
                 );
@@ -140,25 +139,20 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 } else {
                     _depositBonusAmount -= depositBonus;
                 }
-
-                bonusShares = Convert.multiplyAndDivideFloor(
-                    depositBonus,
-                    currentRatio,
-                    1e18
-                );
                 emit DepositBonus(depositBonus);
             }
         }
+        currentFlashCapacity += replenishedAmount;
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
 
         uint256 iShares = Convert.multiplyAndDivideFloor(
-            amount,
+            amount + depositBonus,
             currentRatio,
             1e18
         );
-        inceptionToken.mint(receiver, iShares + bonusShares);
+        inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
@@ -347,13 +341,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
         emit FlashWithdrawFee(fee);
 
+        currentFlashCapacity -= amount;
         amount -= fee;
         _depositBonusAmount += fee / 2;
 
         /// @notice instant transfer fee to the treasuryAddress
         _transferAssetTo(treasuryAddress, fee / 2);
         /// @notice instant transfer amount to the receiver
-        currentFlashCapacity -= amount;
         _transferAssetTo(receiver, amount);
 
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
