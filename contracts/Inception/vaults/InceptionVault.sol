@@ -511,6 +511,18 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return true;
     }
 
+    function maxDeposit(address /*receiver*/) public view returns (uint256) {
+        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
+        return maxPerDeposit;
+    }
+
+    function maxRedeem(
+        address account
+    ) public view returns (uint256 maxShares) {
+        return
+            convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
+    }
+
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
