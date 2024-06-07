@@ -458,7 +458,7 @@ assets.forEach(function (a) {
         expect(totalAssetsAfter).to.be.closeTo(0, transactErr * 2n);
       });
     });
-    return;
+
     describe("Base flow", function () {
       let deposited;
       before(async function () {

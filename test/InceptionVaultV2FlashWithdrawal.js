@@ -185,7 +185,7 @@ assets.forEach(function (a) {
   describe(`Inception pool V2 ${a.assetName}`, function () {
     this.timeout(150000);
     let iToken, iVault, ratioFeed, asset, assetPool, strategy, restakerImp, delegationManager;
-    let iVaultOperator, staker, staker2, staker3;
+    let iVaultOperator, staker, staker2, staker3, treasury;
     let ratioErr, transactErr;
     let snapshot;
     let TARGET;
@@ -216,6 +216,7 @@ assets.forEach(function (a) {
       staker = await a.impersonateStaker(staker, iVault, asset, assetPool);
       staker2 = await a.impersonateStaker(staker2, iVault, asset, assetPool);
       staker3 = await a.impersonateStaker(staker3, iVault, asset, assetPool);
+      treasury = await iVault.treasuryAddress();
       TARGET = await iVault.TARGET();
       snapshot = await helpers.takeSnapshot();
     });
@@ -301,7 +302,7 @@ assets.forEach(function (a) {
           }
           console.log(`EL balance:\t\t\t${(await iVault.getTotalDelegated()).format()}`);
           console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
-          console.log(`Flash pool:\t\t\t${(await iVault.currentFlashCapacity()).format()}`);
+          console.log(`Flash pool:\t\t\t${(await iVault.getFlashCapacity()).format()}`);
           console.log(`Available bonus:\t${totalBonus.format()}`);
 
           if (state.delegatedBefore) {
@@ -309,10 +310,9 @@ assets.forEach(function (a) {
             await iVault.connect(staker3).deposit(TARGET + e18, staker3.address);
             const totalAssets = await iVault.totalAssets();
             const redeemReservedAmount = await iVault.redeemReservedAmount();
-            const currentFlashCapacity = await iVault.currentFlashCapacity();
-            const freeCapacity = totalAssets - redeemReservedAmount - currentFlashCapacity - totalBonus;
-            console.log(`Free capacity: ${freeCapacity}`);
-            await iVault.connect(iVaultOperator).delegateToOperator(freeCapacity, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+            const freeBalance = await  iVault.getFreeBalance();
+            console.log(`Free capacity: ${freeBalance}`);
+            await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
             await addRewardsToStrategy(a.assetStrategy, e18, staker3);
             //flash withdrawal the rest
             const shares = await iVault.convertToShares(TARGET);
@@ -323,10 +323,10 @@ assets.forEach(function (a) {
 
           console.log(`EL balance:\t\t\t${(await iVault.getTotalDelegated()).format()}`);
           console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
-          console.log(`Flash pool:\t\t\t${(await iVault.currentFlashCapacity()).format()}`);
+          console.log(`Flash pool:\t\t\t${(await iVault.getFlashCapacity()).format()}`);
           console.log(`Available bonus:\t${totalBonus.format()}`);
           console.log(`Initial ratio:\t${(await iVault.ratio()).format()}`);
-          expect(await iVault.currentFlashCapacity()).to.be.closeTo(0n, 1n);
+          expect(await iVault.getFlashCapacity()).to.be.closeTo(0n, 2n);
           localSnapshot = await takeSnapshot();
         })
 
@@ -343,12 +343,16 @@ assets.forEach(function (a) {
             //Deposit 1st time
             let availableBonus = totalBonus;
             const predepositAmount = arg.predepositAmount();
+            let flashCapacityBefore = predepositAmount;
             const receiver = arg.receiver();
-            const flashCapacityBefore = TARGET >= predepositAmount ? predepositAmount : TARGET;
             if (predepositAmount > 0n) {
               await iVault.connect(staker).deposit(predepositAmount, receiver);
-              const predepositBonus = await iVault.calculateDepositBonus(flashCapacityBefore, 0n);
-              availableBonus = (availableBonus - predepositBonus) > 0 ? availableBonus - predepositBonus : 0n;
+              const predepositReplenish = predepositAmount > TARGET ? TARGET : predepositAmount;
+              const predepositBonus = await iVault.calculateDepositBonus(predepositReplenish, 0n);
+              if(availableBonus > 0) {
+                availableBonus = (availableBonus - predepositBonus) > 0 ? availableBonus - predepositBonus : 0n;
+                flashCapacityBefore += predepositBonus;
+              }
             }
             console.log(`Ratio after predeposit:\t${(await iVault.ratio()).format()}`);
 
@@ -357,11 +361,11 @@ assets.forEach(function (a) {
             const totalAssetsBefore = await iVault.totalAssets();
             console.log(`Target: ${TARGET.format()}`);
             console.log(`flashCapacityBeforeCalc: ${flashCapacityBefore.format()}`);
-            console.log(`flashCapacityBefore: ${(await iVault.currentFlashCapacity()).format()}`);
+            console.log(`flashCapacityBefore: ${(await iVault.getFlashCapacity()).format()}`);
 
             const amount = await arg.amount();
             console.log(`amount: ${amount.format()}`);
-            const lack = TARGET - flashCapacityBefore;
+            const lack = TARGET - flashCapacityBefore > 0 ? TARGET - flashCapacityBefore : 0n;
             console.log(`lack: ${lack.format()}`);
             const replenishedAmount = lack > 0 ? (lack >= amount ? amount : lack) : 0n;
             console.log(`replenishedAmount: ${replenishedAmount.format()}`);
@@ -388,7 +392,7 @@ assets.forEach(function (a) {
             const balanceAfter = await iToken.balanceOf(receiver);
             const totalDepositedAfter = await iVault.getTotalDeposited();
             const totalAssetsAfter = await iVault.totalAssets();
-            const flashCapacityAfter = await iVault.currentFlashCapacity();
+            const flashCapacityAfter = await iVault.getFlashCapacity();
             const ratioAfter = await iVault.ratio();
             console.log(`Ratio after:\t${ratioAfter.format()}`);
             console.log(`Rewards after:\t${(availableBonus - expectedBonus).format()}`);
@@ -398,7 +402,7 @@ assets.forEach(function (a) {
 
             expect(totalDepositedAfter - totalDepositedBefore).to.be.closeTo(amount + expectedBonus, transactErr);
             expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount, transactErr); //Everything stays on iVault after deposit
-            expect(flashCapacityAfter).to.be.closeTo(flashCapacityBefore + replenishedAmount, transactErr);
+            expect(flashCapacityAfter).to.be.closeTo(flashCapacityBefore + amount + expectedBonus, transactErr);
             expect(ratioAfter).to.be.closeTo(ratioBefore, ratioErr); //Ratio stays the same
           })
         })
@@ -407,66 +411,82 @@ assets.forEach(function (a) {
 
     describe("Flash withdrawal", function () {
 
+      beforeEach(async function() {
+        await snapshot.restore();
+      })
+
       const args = [
         {
-          name: "part when pool capacity is full",
+          name: "partially when pool capacity > TARGET",
+          poolCapacity: () => TARGET + e18,
+          amount: () => e18 / 2n,
+          receiver: () => staker,
+        },
+        {
+          name: "partially when pool capacity > TARGET",
+          poolCapacity: () => TARGET + e18,
+          amount: () => e18 + TARGET / 2n,
+          receiver: () => staker,
+        },
+        {
+          name: "all when pool capacity > TARGET",
+          poolCapacity: () => TARGET + e18,
+          amount: () => TARGET + e18,
+          receiver: () => staker,
+        },
+        {
+          name: "partially when pool capacity = TARGET",
           poolCapacity: () => TARGET,
-          freeBalance: () => e18,
           amount: () => TARGET / 4n,
           receiver: () => staker,
         },
         {
-          name: "all pool capacity is full",
+          name: "all when pool capacity = TARGET",
           poolCapacity: () => TARGET,
-          freeBalance: () => e18,
           amount: () => TARGET,
           receiver: () => staker,
         },
         {
-          name: "when pool capacity is less than target",
+          name: "partially when pool capacity < TARGET",
           poolCapacity: () => TARGET * 3n / 4n,
-          freeBalance: () => e18,
           amount: () => TARGET / 4n,
           receiver: () => staker,
         },
         {
-          name: "min amount",
+          name: "all when pool capacity < TARGET",
           poolCapacity: () => TARGET * 3n / 4n,
-          freeBalance: () => e18,
-          amount: async () => await iVault.minAmount(),
+          amount: () => TARGET * 3n / 4n,
           receiver: () => staker,
         },
-
       ]
 
       args.forEach(function (arg) {
         it(`Flash withdrawal: ${arg.name}`, async function () {
           //Deposit
-          const poolCapacity = arg.poolCapacity();
-          const freeBalance = arg.freeBalance();
-          const predepositAmount = freeBalance > 0 ? TARGET + freeBalance : poolCapacity;
+          const predepositAmount = arg.poolCapacity();
           await iVault.connect(staker).deposit(predepositAmount, staker.address);
-          if (poolCapacity < TARGET) {
-            const amount = TARGET - poolCapacity;
-            await iVault.connect(staker).flashWithdraw(amount, staker.address);
-          }
 
           //flashWithdraw
           const ratioBefore = await iVault.ratio()
           console.log(`Ratio before:\t${ratioBefore.format()}`);
 
-          const balanceBefore = await iToken.balanceOf(staker);
+          const iTokenBalanceBefore = await iToken.balanceOf(staker);
+          const assetBalanceBefore = await asset.balanceOf(staker);
+          const treasuryBalanceBefore = await asset.balanceOf(treasury);
           const totalDepositedBefore = await iVault.getTotalDeposited();
           const totalAssetsBefore = await iVault.totalAssets();
-          const flashCapacityBefore = await iVault.currentFlashCapacity();
+          const flashCapacityBefore = await iVault.getFlashCapacity();
+          const freeBalanceBefore = await iVault.getFreeBalance();
           console.log(`flashCapacityBefore: ${flashCapacityBefore.format()}`);
+          console.log(`freeBalanceBefore: ${freeBalanceBefore.format()}`);
 
           const amount = await arg.amount();
-          const shares = (amount * ratioBefore) / e18;
+          const shares = (amount * ratioBefore) / e18 - 1n;
           const receiver = await arg.receiver();
           const expectedFee = await iVault.calculateFlashUnstakeFee(amount, flashCapacityBefore * e18 / TARGET);
           console.log(`amount: ${amount.format()}`);
-          console.log(`exepcted fee: ${expectedFee.format()}`);
+          console.log(`shares: ${shares.format()}`);
+          console.log(`expected fee: ${expectedFee.format()}`);
 
           let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address);
           const receipt = await tx.wait();
@@ -478,20 +498,28 @@ assets.forEach(function (a) {
           expect(withdrawEvent[0].args["amount"]).to.be.closeTo(amount - expectedFee, transactErr);
           expect(withdrawEvent[0].args["iShares"]).to.be.closeTo(shares, transactErr);
           //DepositBonus event
-          expect(receipt.logs.find((l) => l.eventName === 'FlashWithdrawFee')?.args.amount || 0n)
-            .to.be.closeTo(expectedFee, transactErr);
+          const fee = receipt.logs.find((l) => l.eventName === 'FlashWithdrawFee').args.amount;
+          expect(fee).to.be.closeTo(expectedFee, transactErr);
 
-          const balanceAfter = await iToken.balanceOf(staker);
+          const iTokenBalanceAfter = await iToken.balanceOf(staker);
+          const assetBalanceAfter = await asset.balanceOf(staker);
+          const treasuryBalanceAfter = await asset.balanceOf(treasury);
           const totalDepositedAfter = await iVault.getTotalDeposited();
           const totalAssetsAfter = await iVault.totalAssets();
-          const flashCapacityAfter = await iVault.currentFlashCapacity();
-          console.log(`balance diff: ${(balanceBefore - balanceAfter).format()}`);
+          const flashCapacityAfter = await iVault.getFlashCapacity();
+          console.log(`balance diff: ${(iTokenBalanceBefore - iTokenBalanceAfter).format()}`);
           console.log(`totalDeposited diff: ${(totalDepositedBefore - totalDepositedAfter).format()}`);
           console.log(`totalAssets diff: ${(totalAssetsBefore - totalAssetsAfter).format()}`);
           console.log(`flashCapacity diff: ${(flashCapacityBefore - flashCapacityAfter).format()}`);
+          console.log(`fee: ${fee.format()}`);
+
+          expect(iTokenBalanceBefore - iTokenBalanceAfter).to.be.eq(shares);
+          expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee, 2n);
+          expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n,  2n);
+          expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
+          expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, transactErr);
+          expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, transactErr);
         })
-
-
       })
     })
 
