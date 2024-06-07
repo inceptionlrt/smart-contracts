@@ -137,6 +137,7 @@ const initVault = async (a) => {
     a.assetStrategy,
   ]);
   iVault.address = await iVault.getAddress();
+  await iVault.setTargetFlashCapacity(toWei(15));
 
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
@@ -217,7 +218,7 @@ assets.forEach(function (a) {
       staker2 = await a.impersonateStaker(staker2, iVault, asset, assetPool);
       staker3 = await a.impersonateStaker(staker3, iVault, asset, assetPool);
       treasury = await iVault.treasuryAddress();
-      TARGET = await iVault.TARGET();
+      TARGET = await iVault.targetCapacity();
       snapshot = await helpers.takeSnapshot();
     });
 
@@ -348,7 +349,7 @@ assets.forEach(function (a) {
             if (predepositAmount > 0n) {
               await iVault.connect(staker).deposit(predepositAmount, receiver);
               const predepositReplenish = predepositAmount > TARGET ? TARGET : predepositAmount;
-              const predepositBonus = await iVault.calculateDepositBonus(predepositReplenish, 0n);
+              const predepositBonus = await iVault.calculateDepositBonus(predepositReplenish);
               if(availableBonus > 0) {
                 availableBonus = (availableBonus - predepositBonus) > 0 ? availableBonus - predepositBonus : 0n;
                 flashCapacityBefore += predepositBonus;
@@ -369,7 +370,7 @@ assets.forEach(function (a) {
             console.log(`lack: ${lack.format()}`);
             const replenishedAmount = lack > 0 ? (lack >= amount ? amount : lack) : 0n;
             console.log(`replenishedAmount: ${replenishedAmount.format()}`);
-            const calculatedBonus = await iVault.calculateDepositBonus(replenishedAmount, (flashCapacityBefore * e18) / TARGET);
+            const calculatedBonus = await iVault.calculateDepositBonus(replenishedAmount);
 
             console.log(`calculatedBonus: ${calculatedBonus.format()}`);
             console.log(`available bonus: ${availableBonus.format()}`);
