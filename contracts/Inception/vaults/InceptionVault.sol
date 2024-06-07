@@ -66,15 +66,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function __beforeDeposit(
         address receiver,
-        uint256 amount,
-        uint256 capacity
+        uint256 amount
     ) internal view returns (uint256) {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (!_verifyDelegated()) revert InceptionOnPause();
 
-        if (capacity < TARGET) {
-            uint256 lackCapacity = TARGET - capacity;
+        uint256 capacity = getFlashCapacity();
+        if (capacity < targetCapacity) {
+            uint256 lackCapacity = targetCapacity - capacity;
             if (lackCapacity < amount) return lackCapacity;
 
             return amount;
@@ -116,20 +116,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
-        uint256 currentFlashCapacity = getFlashCapacity();
-        uint256 replenishedAmount = __beforeDeposit(
-            receiver,
-            amount,
-            currentFlashCapacity
-        );
+
+        uint256 replenishedAmount = __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         if (replenishedAmount > 0) {
             if (_depositBonusAmount > 0) {
-                depositBonus = calculateDepositBonus(
-                    replenishedAmount,
-                    (currentFlashCapacity * 1e18) / TARGET
-                );
+                depositBonus = calculateDepositBonus(replenishedAmount);
                 if (depositBonus > _depositBonusAmount) {
                     depositBonus = _depositBonusAmount;
                     _depositBonusAmount = 0;
@@ -331,10 +324,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        uint256 fee = calculateFlashUnstakeFee(
-            amount,
-            (capacity * 1e18) / TARGET
-        );
+        uint256 fee = calculateFlashUnstakeFee(amount);
         emit FlashWithdrawFee(fee);
 
         amount -= fee;
@@ -350,9 +340,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
-        uint256 depositAmount,
-        uint256 utilization
-    ) public pure returns (uint256) {
+        uint256 depositAmount
+    ) public view returns (uint256) {
+        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
         if (utilization <= 0.25 * 1e18) {
             return (depositAmount * MAX_STAKING_BONUS) / 1e18; // 0.5%
         } else if (utilization < 1e18) {
@@ -366,9 +356,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashUnstakeFee(
-        uint256 amount,
-        uint256 utilization
-    ) public pure returns (uint256) {
+        uint256 amount
+    ) public view returns (uint256) {
+        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
         if (utilization <= 1e18) {
             return Convert.multiplyAndDivideFloor(amount, MAX_RATE, 1e18);
         } else if (utilization <= 0.25 * 1e18) {
