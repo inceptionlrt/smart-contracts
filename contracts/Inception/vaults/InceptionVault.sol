@@ -64,23 +64,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    function __beforeDeposit(
-        address receiver,
-        uint256 amount
-    ) internal view returns (uint256) {
+    function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (!_verifyDelegated()) revert InceptionOnPause();
-
-        uint256 capacity = getFlashCapacity();
-        if (capacity < targetCapacity) {
-            uint256 lackCapacity = targetCapacity - capacity;
-            if (lackCapacity < amount) return lackCapacity;
-
-            return amount;
-        }
-
-        return 0;
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -117,21 +104,20 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
 
-        uint256 replenishedAmount = __beforeDeposit(receiver, amount);
+        __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        if (replenishedAmount > 0) {
-            if (_depositBonusAmount > 0) {
-                depositBonus = calculateDepositBonus(replenishedAmount);
-                if (depositBonus > _depositBonusAmount) {
-                    depositBonus = _depositBonusAmount;
-                    _depositBonusAmount = 0;
-                } else {
-                    _depositBonusAmount -= depositBonus;
-                }
-                emit DepositBonus(depositBonus);
+        if (_depositBonusAmount > 0) {
+            depositBonus = calculateDepositBonus(amount);
+            if (depositBonus > _depositBonusAmount) {
+                depositBonus = _depositBonusAmount;
+                _depositBonusAmount = 0;
+            } else {
+                _depositBonusAmount -= depositBonus;
             }
+            emit DepositBonus(depositBonus);
         }
+
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
@@ -340,15 +326,22 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
-        uint256 depositAmount
+        uint256 amount
     ) public view returns (uint256) {
+        // uint256 capacity = getFlashCapacity();
+        // if (capacity >= targetCapacity) {
+        //     return 0;
+        // }
+
+        // uint256 lackCapacity = targetCapacity - capacity;
+        // if (lackCapacity < amount) amount = lackCapacity;
+
         uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
         if (utilization <= 0.25 * 1e18) {
-            return (depositAmount * MAX_STAKING_BONUS) / 1e18; // 0.5%
+            return (amount * MAX_STAKING_BONUS) / 1e18; // 0.5%
         } else if (utilization < 1e18) {
             return
-                (depositAmount *
-                    ((MAX_STAKING_BONUS + MIN_STAKING_BONUS) / 2)) / 1e18; // average of min and max
+                (amount * ((MAX_STAKING_BONUS + MIN_STAKING_BONUS) / 2)) / 1e18;
         } else {
             return 0;
         }
