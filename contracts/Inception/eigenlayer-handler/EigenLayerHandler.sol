@@ -44,11 +44,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     address[] public restakers;
 
     uint256 internal _depositBonusAmount;
+    uint256 public targetCapacity;
 
     uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
     uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
     uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
-    uint256 public constant TARGET = 15 * 1e18; // 500 BNB
     uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
     uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
     uint256 public constant slope1_fee = 0.005 * 1e18;
@@ -363,7 +363,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     function getFreeBalance() public view returns (uint256 total) {
-        return getFlashCapacity() < TARGET ? 0 : getFlashCapacity() - TARGET;
+        return
+            getFlashCapacity() < targetCapacity
+                ? 0
+                : getFlashCapacity() - targetCapacity;
     }
 
     /*//////////////////////////
@@ -381,6 +384,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             address(newDelegationManager)
         );
         delegationManager = newDelegationManager;
+    }
+
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
+        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
+        targetCapacity = newTargetCapacity;
     }
 
     function forceUndelegateRecovery(
