@@ -296,7 +296,7 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).lt(e18);
       });
 
-      it("Flash withdraw all capacity", async function() {
+      it("Flash withdraw all capacity", async function () {
         const sharesBefore = await iToken.balanceOf(staker);
         const assetBalanceBefore = await asset.balanceOf(staker);
         const treasuryBalanceBefore = await asset.balanceOf(treasury);
@@ -739,6 +739,160 @@ assets.forEach(function (a) {
         })
       })
 
+    })
+
+    describe("Deposit rewards calculation", function () {
+
+      beforeEach(async function() {
+        await snapshot.restore();
+        TARGET = toWei(15);
+        await iVault.setTargetFlashCapacity(TARGET);
+      })
+
+      const feeFunctions = [
+        {
+          from: 0n,
+          to: toWei(0.25), //25%
+          k: -toWei(0.05),
+          b: toWei(0.015),
+          depositBonus: async function (amount, currentFlashCap) {
+            //y1
+            const TARGET = await iVault.targetCapacity();
+            const currentUtilization = currentFlashCap * e18 / TARGET;
+            const y1 =  - 5n * currentUtilization / 100n + toWei(0.015);
+            //y2
+            const upperBound = this.to * TARGET / e18;
+            const replenish = upperBound > amount ? amount : upperBound;
+            const targetUtilization = (currentFlashCap + replenish) * e18 / TARGET;
+            const y2 = - 5n * targetUtilization / 100n + toWei(0.015);
+
+            //(y1+y2)/2
+            const medianBonusPercent = (y1 + y2) / 2n;
+            //deposit bonus
+            //replenish * (y1+y2)/2
+            const bonus = replenish * medianBonusPercent / e18;
+            console.log(`---Section 1`);
+            return {
+              bonus: bonus,
+              replenished: replenish
+            }
+          }
+        },
+        {
+          from: toWei(0.25),
+          to: toWei(1),
+          k: 0n,
+          b: toWei(0.0025),
+          depositBonus: async function (amount, currentFlashCap) {
+            const TARGET = await iVault.targetCapacity();
+            const upperBound = this.to * TARGET / e18;
+            const replenish = upperBound > currentFlashCap + amount ? amount : upperBound - currentFlashCap;
+            const bonus = replenish * toWei(0.0025) / e18;
+            console.log(`---Section 2`);
+            return {
+              bonus: bonus,
+              replenished: replenish
+            }
+          }
+        },
+        {
+          from: toWei(1),
+          to: ethers.MaxUint256, //inf+
+          k: 0n,
+          b: 0n,
+          depositBonus: async function (amount, currentFlashCap) {
+            console.log(`---Section 3`);
+            return {
+              bonus: 0n,
+              replenished: amount
+            }
+          }
+        },
+      ]
+
+      const args = [
+        {
+          name: "from 0 to 25% of TARGET",
+          flashCapacity: () => 0n,
+          amount: () => TARGET * 25n / 100n
+        },
+        {
+          name: "from 25% to 100% of TARGET",
+          flashCapacity: () => TARGET * 25n / 100n,
+          amount: () => TARGET * 75n / 100n
+        },
+        {
+          name: "from 0% to 100% of TARGET",
+          flashCapacity: () => 0n,
+          amount: () => TARGET
+        },
+        {
+          name: "from 0% to 200% of TARGET",
+          flashCapacity: () => 0n,
+          amount: () => TARGET * 2n
+        },
+      ]
+
+      args.forEach(function (arg) {
+        it(`Deposit ${arg.name}`, async function () {
+          let flashCapacity = arg.flashCapacity();
+          if (flashCapacity > 0n) {
+            await iVault.connect(staker).deposit(flashCapacity, staker.address);
+          }
+          let amount = arg.amount();
+          let depositBonus = 0n;
+          while (amount > 0n) {
+            for(const feeFunc of feeFunctions) {
+              const utilization = flashCapacity * e18 / TARGET;
+              if(amount > 0n && feeFunc.from <= utilization && utilization < feeFunc.to) {
+                console.log(`Utilization:\t\t\t${utilization.format()}`);
+                const { bonus, replenished } = await feeFunc.depositBonus(amount, flashCapacity);
+                console.log(`Replenished:\t\t\t${replenished.format()}`);
+                console.log(`Bonus:\t\t\t\t\t${bonus.format()}`);
+                flashCapacity += replenished;
+                amount -= replenished;
+                depositBonus += bonus;
+              }
+            }
+          }
+          console.log(`Total Deposit bonus:\t${depositBonus.format()}`);
+        })
+
+        it(`Deposit#2 ${arg.name}`, async function () {
+          let flashCapacity = arg.flashCapacity();
+          if (flashCapacity > 0n) {
+            await iVault.connect(staker).deposit(flashCapacity, staker.address);
+          }
+          let amount = arg.amount();
+          let depositBonus = 0n;
+          while (amount > 0n) {
+            for(const feeFunc of feeFunctions) {
+              const initialUtilization = flashCapacity * e18 / TARGET;
+              if(amount > 0n && feeFunc.from <= initialUtilization && initialUtilization < feeFunc.to) {
+                console.log(`Utilization:\t\t\t${initialUtilization.format()}`);
+                const y1 =  initialUtilization * feeFunc.k / e18  + feeFunc.b;
+                //y2
+                const upperBound = feeFunc.to * TARGET / e18;
+                const replenished = upperBound > flashCapacity + amount ? amount : upperBound - flashCapacity;
+                const targetUtilization = (flashCapacity + replenished) * e18 / TARGET;
+                const y2 = targetUtilization * feeFunc.k / e18  + feeFunc.b;
+
+                //(y1+y2)/2
+                const medianBonusPercent = (y1 + y2) / 2n;
+                //deposit bonus
+                //replenish * (y1+y2)/2
+                const bonus = replenished * medianBonusPercent / e18;
+                console.log(`Replenished:\t\t\t${replenished.format()}`);
+                console.log(`Bonus:\t\t\t\t\t${bonus.format()}`);
+                flashCapacity += replenished;
+                amount -= replenished;
+                depositBonus += bonus;
+              }
+            }
+          }
+          console.log(`Total Deposit bonus:\t${depositBonus.format()}`);
+        })
+      })
     })
   })
 })
