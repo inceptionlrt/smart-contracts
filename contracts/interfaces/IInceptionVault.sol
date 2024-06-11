@@ -51,9 +51,15 @@ interface IInceptionVault {
 
     event ImplementationUpgraded(address prevValue, address newValue);
 
+    event RatioFeedChanged(address prevValue, address newValue);
+
     event NameChanged(string prevValue, string newValue);
 
     event ReferralCode(bytes32 indexed code);
+
+    event DepositBonus(uint256 amount);
+
+    event FlashWithdrawFee(uint256 amount);
 
     function inceptionToken() external view returns (IInceptionToken);
 

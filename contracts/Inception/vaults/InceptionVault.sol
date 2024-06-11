@@ -10,6 +10,7 @@ import "../../interfaces/IInceptionVault.sol";
 import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 import "../../interfaces/IDelegationManager.sol";
+import "../../interfaces/IInceptionRatioFeed.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
@@ -29,6 +30,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Factory variables
     address private _stakerImplementation;
 
+    /**
+     *  @dev Flash withdrawal params
+     */
+
+    address public treasuryAddress;
+    IInceptionRatioFeed public ratioFeed;
+
+    uint256 public baseRate;
+    uint256 public optimalRate;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -44,6 +55,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         inceptionToken = _inceptionToken;
 
         minAmount = 100;
+
+        /// TODO
+        treasuryAddress = msg.sender;
     }
 
     /*//////////////////////////////
@@ -52,10 +66,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
-        require(
-            amount >= minAmount,
-            "InceptionVault: deposited less than min amount"
-        );
+        if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -92,14 +103,27 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
+
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
+        uint256 depositBonus;
+        if (_depositBonusAmount > 0) {
+            depositBonus = calculateDepositBonus(amount);
+            if (depositBonus > _depositBonusAmount) {
+                depositBonus = _depositBonusAmount;
+                _depositBonusAmount = 0;
+            } else {
+                _depositBonusAmount -= depositBonus;
+            }
+            emit DepositBonus(depositBonus);
+        }
+
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
 
         uint256 iShares = Convert.multiplyAndDivideFloor(
-            amount,
+            amount + depositBonus,
             currentRatio,
             1e18
         );
@@ -258,6 +282,87 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Redeem(msg.sender, receiver, redeemedAmount);
     }
 
+    /*/////////////////////////////////////////////
+    ///////// Flash Withdrawal functions /////////
+    ///////////////////////////////////////////*/
+
+    /// @dev Performs burning iToken from mgs.sender
+    /// @dev Creates a withdrawal requests based on the current ratio
+    /// @param iShares is measured in Inception token(shares)
+    function flashWithdraw(
+        uint256 iShares,
+        address receiver
+    ) external whenNotPaused nonReentrant {
+        __beforeWithdraw(receiver, iShares);
+
+        address claimer = msg.sender;
+        uint256 currentRatio = ratio();
+        uint256 amount = Convert.multiplyAndDivideFloor(
+            iShares,
+            1e18,
+            currentRatio
+        );
+        uint256 capacity = getFlashCapacity();
+
+        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount > capacity) revert InsufficientCapacity(capacity);
+
+        // burn Inception token in view of the current ratio
+        inceptionToken.burn(claimer, iShares);
+
+        uint256 fee = calculateFlashUnstakeFee(amount);
+        emit FlashWithdrawFee(fee);
+
+        amount -= fee;
+        _depositBonusAmount += fee / 2;
+
+        /// @notice instant transfer fee to the treasuryAddress
+        _transferAssetTo(treasuryAddress, fee / 2);
+        /// @notice instant transfer amount to the receiver
+        _transferAssetTo(receiver, amount);
+
+        emit Withdraw(claimer, receiver, claimer, amount, iShares);
+    }
+
+    /// @notice Function to calculate deposit bonus based on the utilization rate
+    function calculateDepositBonus(
+        uint256 amount
+    ) public view returns (uint256) {
+        // uint256 capacity = getFlashCapacity();
+        // if (capacity >= targetCapacity) {
+        //     return 0;
+        // }
+
+        // uint256 lackCapacity = targetCapacity - capacity;
+        // if (lackCapacity < amount) amount = lackCapacity;
+
+        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
+        if (utilization <= 0.25 * 1e18) {
+            return (amount * MAX_STAKING_BONUS) / 1e18; // 0.5%
+        } else if (utilization < 1e18) {
+            return
+                (amount * ((MAX_STAKING_BONUS + MIN_STAKING_BONUS) / 2)) / 1e18;
+        } else {
+            return 0;
+        }
+    }
+
+    /// @dev Function to calculate flash withdrawal fee based on the utilization rate
+    function calculateFlashUnstakeFee(
+        uint256 amount
+    ) public view returns (uint256) {
+        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
+        if (utilization <= 1e18) {
+            return Convert.multiplyAndDivideFloor(amount, MAX_RATE, 1e18);
+        } else if (utilization <= 0.25 * 1e18) {
+            uint256 coeff = slope1_fee -
+                ((utilization - 0.25 * 1e18) * (MAX_RATE - slope1_fee)) /
+                (0.25 * 1e18);
+            return Convert.multiplyAndDivideFloor(amount, coeff, 1e18);
+        }
+        return 0;
+    }
+
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
@@ -346,7 +451,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev returns the total deposited into asset strategy
     function getTotalDeposited() public view returns (uint256) {
-        return getTotalDelegated() + totalAssets() + _pendingWithdrawalAmount;
+        return
+            getTotalDelegated() +
+            totalAssets() +
+            _pendingWithdrawalAmount -
+            _depositBonusAmount;
     }
 
     function getTotalDelegated() public view returns (uint256 total) {
@@ -361,6 +470,23 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             }
         }
         return total + strategy.userUnderlyingView(address(this));
+    }
+
+    // function getFlashPoolCapacity() public view returns (uint256) {
+    //     return
+    //         totalAssets() < redeemReservedAmount
+    //             ? 0
+    //             : totalAssets() - redeemReservedAmount;
+    // }
+
+    function getDelegatedTo(address elOperator) public view returns (uint256) {
+        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
+    }
+
+    function getPendingWithdrawalOf(
+        address claimer
+    ) public view returns (uint256) {
+        return _claimerWithdrawals[claimer].amount;
     }
 
     function _verifyDelegated() internal view returns (bool) {
@@ -385,16 +511,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return true;
     }
 
-    function getDelegatedTo(address elOperator) public view returns (uint256) {
-        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
-    }
-
-    function getPendingWithdrawalOf(
-        address claimer
-    ) public view returns (uint256) {
-        return _claimerWithdrawals[claimer].amount;
-    }
-
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
@@ -415,10 +531,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
+    function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
+        if (address(newRatioFeed) == address(0)) revert NullParams();
+
+        emit RatioFeedChanged(address(ratioFeed), address(newRatioFeed));
+        ratioFeed = newRatioFeed;
+    }
+
     function setOperator(address newOperator) external onlyOwner {
-        if (newOperator == address(0)) {
-            revert NullParams();
-        }
+        if (newOperator == address(0)) revert NullParams();
+
         emit OperatorChanged(_operator, newOperator);
         _operator = newOperator;
     }
@@ -429,9 +551,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function setName(string memory newVaultName) external onlyOwner {
-        if (bytes(newVaultName).length == 0) {
-            revert NullParams();
-        }
+        if (bytes(newVaultName).length == 0) revert NullParams();
+
         emit NameChanged(name, newVaultName);
         name = newVaultName;
     }
