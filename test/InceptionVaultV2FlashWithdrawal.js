@@ -745,7 +745,7 @@ assets.forEach(function (a) {
 
       beforeEach(async function() {
         await snapshot.restore();
-        TARGET = toWei(15);
+        TARGET = toWei(500);
         await iVault.setTargetFlashCapacity(TARGET);
       })
 
@@ -831,6 +831,31 @@ assets.forEach(function (a) {
           flashCapacity: () => 0n,
           amount: () => TARGET * 2n
         },
+        {
+          name: "0 to 100Eth",
+          flashCapacity: () => 0n,
+          amount: () => toWei(100)
+        },
+        {
+          name: "0 to 125Eth",
+          flashCapacity: () => 0n,
+          amount: () => toWei(125)
+        },
+        {
+          name: "0 to 150Eth",
+          flashCapacity: () => 0n,
+          amount: () => toWei(150)
+        },
+        {
+          name: "0 to 500Eth",
+          flashCapacity: () => 0n,
+          amount: () => toWei(500)
+        },
+        {
+          name: "0 to 600Eth",
+          flashCapacity: () => 0n,
+          amount: () => toWei(600)
+        },
       ]
 
       args.forEach(function (arg) {
@@ -840,7 +865,7 @@ assets.forEach(function (a) {
             await iVault.connect(staker).deposit(flashCapacity, staker.address);
           }
           let amount = arg.amount();
-          let depositBonus = 0n;
+          let expectedBonus = 0n;
           while (amount > 0n) {
             for(const feeFunc of feeFunctions) {
               const utilization = flashCapacity * e18 / TARGET;
@@ -851,14 +876,17 @@ assets.forEach(function (a) {
                 console.log(`Bonus:\t\t\t\t\t${bonus.format()}`);
                 flashCapacity += replenished;
                 amount -= replenished;
-                depositBonus += bonus;
+                expectedBonus += bonus;
               }
             }
           }
-          console.log(`Total Deposit bonus:\t${depositBonus.format()}`);
+          let contractBonus = await iVault.calculateDepositBonus(arg.amount());
+          console.log(`Expected deposit bonus:\t${expectedBonus.format()}`);
+          console.log(`Contract deposit bonus:\t${contractBonus.format()}`);
+          expect(contractBonus).to.be.closeTo(expectedBonus, 1n);
         })
 
-        it(`Deposit#2 ${arg.name}`, async function () {
+/*        it(`Deposit#2 ${arg.name}`, async function () {
           let flashCapacity = arg.flashCapacity();
           if (flashCapacity > 0n) {
             await iVault.connect(staker).deposit(flashCapacity, staker.address);
@@ -891,8 +919,172 @@ assets.forEach(function (a) {
             }
           }
           console.log(`Total Deposit bonus:\t${depositBonus.format()}`);
+        })*/
+
+/*        it(`Deposit ${arg.name}`, async function () {
+          let flashCapacity = arg.flashCapacity();
+          if (flashCapacity > 0n) {
+            await iVault.connect(staker).deposit(flashCapacity, staker.address);
+          }
+          let amount = arg.amount();
+
+          let bonus = await iVault.calculateDepositBonus(amount);
+          console.log(`${arg.name}: ${bonus.format()}`);
+
+        })*/
+      })
+
+    })
+
+    describe("Withdraw fee calculation", function () {
+
+      beforeEach(async function() {
+        await snapshot.restore();
+        TARGET = toWei(500);
+        await iVault.setTargetFlashCapacity(TARGET);
+      })
+
+      const feeFunctions = [
+        {
+          from: ethers.MaxUint256, //inf+
+          to: toWei(1),
+          k: 0n,
+          b: 0n,
+          withdrawFee: async function (amount, currentFlashCap) {
+            console.log(`---Section 3`);
+            const TARGET = await iVault.targetCapacity();
+            const replenish = TARGET > currentFlashCap - amount ? currentFlashCap - TARGET : amount;
+            return {
+              fee: 0n,
+              replenished: replenish
+            }
+          }
+        },
+        {
+          from: toWei(1),
+          to: toWei(0.25),
+          k: 0n,
+          b: toWei(0.005),
+          withdrawFee: async function (amount, currentFlashCap) {
+            const TARGET = await iVault.targetCapacity();
+            const lowerBound = this.to * TARGET / e18;
+            const replenish = lowerBound > currentFlashCap - amount ? currentFlashCap - lowerBound : amount;
+            const fee = replenish * toWei(0.005) / e18;
+            console.log(`---Section 2`);
+            return {
+              fee: fee,
+              replenished: replenish
+            }
+          }
+        },
+        {
+          from: toWei(0.25), //25%
+          to: 0n,
+          k: -toWei(0.1),
+          b: toWei(0.03),
+          withdrawFee: async function (amount, currentFlashCap) {
+            //y1
+            const TARGET = await iVault.targetCapacity();
+            const currentUtilization = currentFlashCap * e18 / TARGET;
+            const y1 =  - currentUtilization / 10n + toWei(0.03);
+            //y2
+            const replenish = amount;
+            const targetUtilization = (currentFlashCap - replenish) * e18 / TARGET;
+            const y2 = - targetUtilization / 10n + toWei(0.03);
+
+            //(y1+y2)/2
+            const medianBonusPercent = (y1 + y2) / 2n;
+            //deposit bonus
+            //replenish * (y1+y2)/2
+            const fee = replenish * medianBonusPercent / e18;
+            console.log(`---Section 1`);
+            return {
+              fee: fee,
+              replenished: replenish
+            }
+          }
+        },
+      ]
+
+      const args = [
+        {
+          name: "from 25 to 0% of TARGET",
+          flashCapacity: () => TARGET * 25n / 100n,
+          amount: () => TARGET * 25n / 100n
+        },
+        {
+          name: "from 100% to 25% of TARGET",
+          flashCapacity: () => TARGET,
+          amount: () => TARGET * 75n / 100n
+        },
+        {
+          name: "from 100% to 0%",
+          flashCapacity: () => TARGET,
+          amount: () => TARGET
+        },
+        {
+          name: "from 200% to 0% of TARGET",
+          flashCapacity: () => TARGET * 2n,
+          amount: () => TARGET * 2n
+        },
+        {
+          name: "100Eth",
+          flashCapacity: () => toWei(100),
+          amount: () => toWei(100)
+        },
+        {
+          name: "125Eth",
+          flashCapacity: () => toWei(125),
+          amount: () => toWei(125)
+        },
+        {
+          name: "150Eth",
+          flashCapacity: () => toWei(150),
+          amount: () => toWei(150)
+        },
+        {
+          name: "500Eth",
+          flashCapacity: () => toWei(500),
+          amount: () => toWei(500)
+        },
+        {
+          name: "600Eth",
+          flashCapacity: () => toWei(600),
+          amount: () => toWei(600)
+        },
+      ]
+
+      args.forEach(function (arg) {
+        it(`Flash withdraw ${arg.name}`, async function () {
+          let flashCapacity = arg.flashCapacity();
+          if (flashCapacity > 0n) {
+            await iVault.connect(staker).deposit(flashCapacity, staker.address);
+          }
+          console.log(`Initial capacity:\t\t${await iVault.getFlashCapacity()}`);
+
+          let amount = arg.amount();
+          let expectedFee = 0n;
+          while (amount > 0n) {
+            for(const feeFunc of feeFunctions) {
+              const utilization = flashCapacity * e18 / TARGET;
+              if(amount > 0n && feeFunc.to < utilization && utilization <= feeFunc.from) {
+                console.log(`Utilization:\t\t\t${utilization.format()}`);
+                const { fee, replenished } = await feeFunc.withdrawFee(amount, flashCapacity);
+                console.log(`Replenished:\t\t\t${replenished.format()}`);
+                console.log(`Bonus:\t\t\t\t\t${fee.format()}`);
+                flashCapacity -= replenished;
+                amount -= replenished;
+                expectedFee += fee;
+              }
+            }
+          }
+          let contractFee = await iVault.calculateFlashUnstakeFee(arg.amount());
+          console.log(`Expected withdraw fee:\t${expectedFee.format()}`);
+          console.log(`Contract withdraw fee:\t${contractFee.format()}`);
+          expect(contractFee).to.be.closeTo(expectedFee, 1n);
         })
       })
+
     })
   })
 })
