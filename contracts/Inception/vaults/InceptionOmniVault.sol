@@ -7,14 +7,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../assets-handler/InceptionOmniAssetHandler.sol";
 
 import "../../interfaces/IOwnable.sol";
-import "../../interfaces/IInceptionVault.sol";
+import "../../interfaces/IOmniInceptionVault.sol";
 import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 import "../../interfaces/IInceptionRatioFeed.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionOmniVault contract
-contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
+contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -127,26 +127,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (receiver == address(0)) {
             revert NullParams();
         }
-    }
-
-    /// @dev Performs burning iToken from mgs.sender
-    /// @param iShares is measured in Inception token(shares)
-    function withdraw(
-        uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
-        __beforeWithdraw(receiver, iShares);
-        address claimer = msg.sender;
-        uint256 amount = Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
-        require(
-            amount >= minAmount,
-            "InceptionVault: amount is less than the minimum withdrawal"
-        );
-        // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
-        _transferAssetTo(receiver, _getAssetReceivedAmount(amount));
-
-        emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
 
     /*/////////////////////////////////////////////
@@ -276,6 +256,13 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
+    }
+
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
+        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
+        targetCapacity = newTargetCapacity;
     }
 
     function setName(string memory newVaultName) external onlyOwner {

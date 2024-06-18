@@ -16,13 +16,16 @@ describe("InceptionOmniVault", function () {
     ]);
 
     // Deploy InceptionOmniVault
-    const iVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
+    const iVaultFactory = await ethers.getContractFactory("InEthOmniVault");
     const inceptionOmniVault = await upgrades.deployProxy(iVaultFactory, [
       await inceptionToken.getAddress(),
     ]);
     const vaultAddr = await inceptionOmniVault.getAddress();
 
     await inceptionToken.setVault(vaultAddr);
+    inceptionOmniVault.setTargetFlashCapacity(
+      ethers.parseUnits("500", "ether"),
+    );
 
     return { inceptionOmniVault, inceptionToken, owner, user, treasury };
   }
@@ -51,7 +54,7 @@ describe("InceptionOmniVault", function () {
     });
   });
 
-  it("Should withdraw successfully", async function () {
+  it("Should flash withdraw successfully", async function () {
     const { inceptionOmniVault, inceptionToken, user } = await loadFixture(
       deployVaultFixture,
     );
@@ -69,7 +72,7 @@ describe("InceptionOmniVault", function () {
 
     // Withdraw
     await expect(
-      inceptionOmniVault.connect(user).withdraw(userShares, user.address),
+      inceptionOmniVault.connect(user).flashWithdraw(userShares, user.address),
     )
       .to.emit(inceptionOmniVault, "Withdraw")
       .withArgs(user.address, user.address, user.address, anyValue, userShares);
