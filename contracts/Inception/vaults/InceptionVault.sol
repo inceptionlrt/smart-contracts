@@ -328,39 +328,61 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        // uint256 capacity = getFlashCapacity();
-        // if (capacity >= targetCapacity) {
-        //     return 0;
-        // }
+        uint256 bonus;
+        uint256 capacity = getFlashCapacity();
+        uint256 optimalCapacity = targetCapacity * 25 / 100;
 
-        // uint256 lackCapacity = targetCapacity - capacity;
-        // if (lackCapacity < amount) amount = lackCapacity;
-
-        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
-        if (utilization <= 0.25 * 1e18) {
-            return (amount * MAX_STAKING_BONUS) / 1e18; // 0.5%
-        } else if (utilization < 1e18) {
-            return
-                (amount * ((MAX_STAKING_BONUS + MIN_STAKING_BONUS) / 2)) / 1e18;
-        } else {
-            return 0;
+        if(amount > 0 && capacity < optimalCapacity) {
+            uint256 replenished = amount;
+            if(optimalCapacity < capacity + amount) {
+                replenished = optimalCapacity - capacity;
+            }
+            uint256 bonusPercent = 15 * 1e15 - 50 * 1e15 * (capacity + replenished / 2) / targetCapacity;
+            capacity += replenished;
+            bonus += (replenished * bonusPercent) / 1e18;
+            amount -= replenished;
         }
+        if(amount > 0 && capacity <= targetCapacity) {
+            uint256 replenished = targetCapacity > capacity + amount ? amount : targetCapacity - capacity;
+            bonus += replenished * 25 / 10000; //0.25%
+        }
+        return bonus;
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashUnstakeFee(
         uint256 amount
     ) public view returns (uint256) {
-        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
-        if (utilization <= 1e18) {
-            return Convert.multiplyAndDivideFloor(amount, MAX_RATE, 1e18);
-        } else if (utilization <= 0.25 * 1e18) {
-            uint256 coeff = slope1_fee -
-                ((utilization - 0.25 * 1e18) * (MAX_RATE - slope1_fee)) /
-                (0.25 * 1e18);
-            return Convert.multiplyAndDivideFloor(amount, coeff, 1e18);
+        uint256 capacity = getFlashCapacity();
+        if (amount > capacity) revert InsufficientCapacity(capacity);
+
+        uint256 fee;
+        uint256 optimalCapacity = targetCapacity * 25 / 100;
+
+        if(amount > 0 && capacity > targetCapacity) {
+//            uint256 replenished = capacity - amount < targetCapacity ? capacity - targetCapacity : amount;
+            uint256 replenished = amount;
+            if(capacity - amount < targetCapacity) {
+                replenished = capacity - targetCapacity;
+            }
+            amount -= replenished;
+            capacity -= replenished;
         }
-        return 0;
+        if(amount > 0 && capacity > optimalCapacity) {
+//            uint256 replenished = capacity - amount < optimalCapacity ? capacity - optimalCapacity : amount;
+            uint256 replenished = amount;
+            if(capacity - amount < optimalCapacity) {
+                replenished = capacity - optimalCapacity;
+            }
+            fee += replenished * 5 / 1000; //0.5%
+            amount -= replenished;
+            capacity -= replenished;
+        }
+        if(amount > 0) {
+            uint256 bonusPercent = 30 * 1e15 - 1e17 * (capacity - amount / 2) / targetCapacity;
+            fee += (amount * bonusPercent) / 1e18;
+        }
+        return fee;
     }
 
     /*//////////////////////////////
