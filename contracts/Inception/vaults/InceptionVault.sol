@@ -12,6 +12,10 @@ import "../../interfaces/IRebalanceStrategy.sol";
 import "../../interfaces/IDelegationManager.sol";
 import "../../interfaces/IInceptionRatioFeed.sol";
 
+import "../lib/InceptionLibrary.sol";
+
+import "hardhat/console.sol";
+
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
@@ -39,6 +43,19 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     uint256 public baseRate;
     uint256 public optimalRate;
+
+    /// @dev 100%
+    uint256 public constant MAX_PERCENT = 100 * 1e18;
+
+    uint256 public depositBonusSlope;
+    uint256 public flashWithdrawalSlope;
+
+    // uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
+    // uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
+    // uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
+    // uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
+    // uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
+    // uint256 public constant slope1_fee = 0.005 * 1e18;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -109,6 +126,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 depositBonus;
         if (_depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
+            console.log("-------------------- depositBonus: ", depositBonus);
             if (depositBonus > _depositBonusAmount) {
                 depositBonus = _depositBonusAmount;
                 _depositBonusAmount = 0;
@@ -145,16 +163,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (elOperator == address(0)) {
-            revert NullParams();
-        }
+        if (elOperator == address(0)) revert NullParams();
+
         _beforeDepositAssetIntoStrategy(amount);
 
         // try to find a restaker for the specific EL operator
         address restaker = _operatorRestakers[elOperator];
-        if (restaker == address(0)) {
-            revert OperatorNotRegistered();
-        }
+        if (restaker == address(0)) revert OperatorNotRegistered();
 
         bool delegate = false;
         if (restaker == _MOCK_ADDRESS) {
@@ -183,9 +198,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (elOperator == address(0)) {
-            revert NullParams();
-        }
+        if (elOperator == address(0)) revert NullParams();
+
         if (delegationManager.delegatedTo(address(this)) != address(0))
             revert AlreadyDelegated();
 
@@ -203,12 +217,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /////////////////////////////////////*/
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
-        if (iShares == 0) {
-            revert NullParams();
-        }
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
+        if (iShares == 0) revert NullParams();
+        if (receiver == address(0)) revert NullParams();
+
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -222,10 +233,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
-        require(
-            amount >= minAmount,
-            "InceptionVault: amount is less than the minimum withdrawal"
-        );
+        if (amount < minAmount) revert LowerMinAmount(minAmount);
+
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
@@ -313,6 +322,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 fee = calculateFlashUnstakeFee(amount);
         emit FlashWithdrawFee(fee);
 
+        /// TODO
         amount -= fee;
         _depositBonusAmount += fee / 2;
 
@@ -328,25 +338,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        uint256 bonus;
         uint256 capacity = getFlashCapacity();
-        uint256 optimalCapacity = targetCapacity * 25 / 100;
+        uint256 optimalCapacity = (targetCapacity * 25) / 100;
 
-        if(amount > 0 && capacity < optimalCapacity) {
-            uint256 replenished = amount;
-            if(optimalCapacity < capacity + amount) {
-                replenished = optimalCapacity - capacity;
-            }
-            uint256 bonusPercent = 15 * 1e15 - 50 * 1e15 * (capacity + replenished / 2) / targetCapacity;
-            capacity += replenished;
-            bonus += (replenished * bonusPercent) / 1e18;
-            amount -= replenished;
-        }
-        if(amount > 0 && capacity <= targetCapacity) {
-            uint256 replenished = targetCapacity > capacity + amount ? amount : targetCapacity - capacity;
-            bonus += replenished * 25 / 10000; //0.25%
-        }
-        return bonus;
+        return
+            InceptionLibrary.calculateDepositBonus(
+                amount,
+                capacity,
+                optimalCapacity,
+                targetCapacity
+            );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
@@ -357,29 +358,32 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
         uint256 fee;
-        uint256 optimalCapacity = targetCapacity * 25 / 100;
+        uint256 optimalCapacity = (targetCapacity * 25) / 100;
 
-        if(amount > 0 && capacity > targetCapacity) {
-//            uint256 replenished = capacity - amount < targetCapacity ? capacity - targetCapacity : amount;
+        if (amount > 0 && capacity > targetCapacity) {
+            //            uint256 replenished = capacity - amount < targetCapacity ? capacity - targetCapacity : amount;
             uint256 replenished = amount;
-            if(capacity - amount < targetCapacity) {
+            if (capacity - amount < targetCapacity) {
                 replenished = capacity - targetCapacity;
             }
             amount -= replenished;
             capacity -= replenished;
         }
-        if(amount > 0 && capacity > optimalCapacity) {
-//            uint256 replenished = capacity - amount < optimalCapacity ? capacity - optimalCapacity : amount;
+        if (amount > 0 && capacity > optimalCapacity) {
+            //            uint256 replenished = capacity - amount < optimalCapacity ? capacity - optimalCapacity : amount;
             uint256 replenished = amount;
-            if(capacity - amount < optimalCapacity) {
+            if (capacity - amount < optimalCapacity) {
                 replenished = capacity - optimalCapacity;
             }
-            fee += replenished * 5 / 1000; //0.5%
+            fee += (replenished * 5) / 1000; //0.5%
             amount -= replenished;
             capacity -= replenished;
         }
-        if(amount > 0) {
-            uint256 bonusPercent = 30 * 1e15 - 1e17 * (capacity - amount / 2) / targetCapacity;
+        if (amount > 0) {
+            uint256 bonusPercent = 30 *
+                1e15 -
+                (1e17 * (capacity - amount / 2)) /
+                targetCapacity;
             fee += (amount * bonusPercent) / 1e18;
         }
         return fee;
@@ -417,10 +421,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function upgradeTo(
         address newImplementation
     ) external whenNotPaused onlyOwner {
-        require(
-            Address.isContract(newImplementation),
-            "InceptionVault: implementation is not a contract"
-        );
+        if (!Address.isContract(newImplementation)) revert NotContract();
+
         emit ImplementationUpgraded(_stakerImplementation, newImplementation);
         _stakerImplementation = newImplementation;
     }
@@ -433,9 +435,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
         uint256 from = genRequest.epoch;
         uint256[] memory availableWithdrawals = new uint256[](epoch - from);
-        if (genRequest.amount == 0) {
-            return (false, availableWithdrawals);
-        }
+        if (genRequest.amount == 0) return (false, availableWithdrawals);
 
         for (uint256 i = 0; i < epoch; ) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
@@ -483,9 +483,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ) {
-            if (restakers[i] == address(0)) {
-                continue;
-            }
+            if (restakers[i] == address(0)) continue;
+
             total += strategy.userUnderlyingView(restakers[i]);
             unchecked {
                 ++i;
@@ -493,13 +492,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         }
         return total + strategy.userUnderlyingView(address(this));
     }
-
-    // function getFlashPoolCapacity() public view returns (uint256) {
-    //     return
-    //         totalAssets() < redeemReservedAmount
-    //             ? 0
-    //             : totalAssets() - redeemReservedAmount;
-    // }
 
     function getDelegatedTo(address elOperator) public view returns (uint256) {
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
@@ -533,18 +525,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return true;
     }
 
-    function maxDeposit(address /*receiver*/) public view returns (uint256) {
-        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
-        return maxPerDeposit;
-    }
-
-    function maxRedeem(
-        address account
-    ) public view returns (uint256 maxShares) {
-        return
-            convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
-    }
-
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
@@ -564,6 +544,18 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /*//////////////////////////
     ////// SET functions //////
     ////////////////////////*/
+
+    function setFlashVaultParams(
+        uint256 newDepositBonusSlope,
+        uint256 newWithdrawalFeeSlope,
+        uint256 newTargetCapacity
+    ) external onlyOwner {
+        depositBonusSlope = newDepositBonusSlope;
+
+        flashWithdrawalSlope = newWithdrawalFeeSlope;
+
+        targetCapacity = newTargetCapacity;
+    }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
         if (address(newRatioFeed) == address(0)) revert NullParams();
@@ -592,14 +584,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function addELOperator(address newELOperator) external onlyOwner {
-        require(
-            delegationManager.isOperator(newELOperator),
-            "InceptionVault: it is not an EL operator"
-        );
-        require(
-            _operatorRestakers[newELOperator] == address(0),
-            "InceptionVault: operator already exists"
-        );
+        if (!delegationManager.isOperator(newELOperator))
+            revert NotEigenLayerOperator();
+
+        if (_operatorRestakers[newELOperator] != address(0))
+            revert EigenLayerOperatorAlreadyExists();
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
         emit ELOperatorAdded(newELOperator);

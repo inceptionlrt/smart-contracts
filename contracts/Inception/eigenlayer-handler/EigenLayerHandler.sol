@@ -46,13 +46,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 internal _depositBonusAmount;
     uint256 public targetCapacity;
 
-    uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
-    uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
-    uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
-    uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
-    uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
-    uint256 public constant slope1_fee = 0.005 * 1e18;
-
     /// !!!!! TODO !!!!!
     /// @dev constants are not stored in the storage
     uint256[50 - 13] private __reserver;
@@ -163,12 +156,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address staker = _operatorRestakers[elOperatorAddress];
-        if (staker == address(0)) {
-            revert OperatorNotRegistered();
-        }
-        if (staker == _MOCK_ADDRESS) {
-            revert NullParams();
-        }
+        if (staker == address(0)) revert OperatorNotRegistered();
+        if (staker == _MOCK_ADDRESS) revert NullParams();
+
         IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
     }
 
@@ -211,9 +201,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         amount = strategy.sharesToUnderlyingView(shares);
 
         // we need to withdraw the remaining dust from EigenLayer
-        if (totalAssetSharesInEL < shares + 5) {
-            shares = totalAssetSharesInEL;
-        }
+        if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
 
         _pendingWithdrawalAmount += amount;
         emit StartWithdrawal(

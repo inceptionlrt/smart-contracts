@@ -14,6 +14,8 @@ interface IInceptionVaultErrors {
 
     error NullParams();
 
+    error NotContract();
+
     error WithdrawFutile();
 
     error OperatorNotRegistered();
@@ -21,10 +23,6 @@ interface IInceptionVaultErrors {
     error RestakerNotRegistered();
 
     error ImplementationNotSet();
-
-    error NotEigenLayerOperator();
-
-    error EigenLayerOperatorAlreadyExists();
 
     error AlreadyDelegated();
 
@@ -37,4 +35,10 @@ interface IInceptionVaultErrors {
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
 
     error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
+
+    /// EigenLayer Operators
+
+    error NotEigenLayerOperator();
+
+    error EigenLayerOperatorAlreadyExists();
 }
