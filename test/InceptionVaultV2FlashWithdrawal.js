@@ -61,6 +61,7 @@ assets = [
     withdrawalDelayBlocks: 10,
     ratioErr: 2n,
     transactErr: 5n,
+    withdrawErr: 0n,
     impersonateStaker: async (staker, iVault, asset, assetPool) => {
       const donor = await impersonateWithEth("0x570EDBd50826eb9e048aA758D4d78BAFa75F14AD", toWei(1));
       await asset.connect(donor).transfer(staker.address, toWei(1000));
@@ -83,6 +84,7 @@ assets = [
     withdrawalDelayBlocks: 10,
     ratioErr: 3n,
     transactErr: 4n,
+    withdrawErr: 1n,
     // blockNumber: 17453047,
     impersonateStaker: async (staker, iVault, asset, assetPool) => {
       const donor = await impersonateWithEth("0x66b25CFe6B9F0e61Bd80c4847225Baf4EE6Ba0A2", toWei(1));
@@ -104,7 +106,6 @@ const nodeOperators = [
 ];
 const minWithdrawalDelayBlocks = 10;
 const nodeOperatorToRestaker = new Map();
-const forcedWithdrawals = [];
 const initVault = async (a) => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -940,7 +941,7 @@ assets.forEach(function (a) {
 
       beforeEach(async function() {
         await snapshot.restore();
-        TARGET = toWei(500);
+        TARGET = toWei(100);
         await iVault.setTargetFlashCapacity(TARGET);
       })
 
@@ -1008,49 +1009,54 @@ assets.forEach(function (a) {
 
       const args = [
         {
-          name: "from 25 to 0% of TARGET",
-          flashCapacity: () => TARGET * 25n / 100n,
-          amount: () => TARGET * 25n / 100n
+          name: "from 200% to 100% of TARGET",
+          flashCapacity: () => TARGET * 2n,
+          amountPercent: () => 50n, //the half of flash capacity
         },
         {
           name: "from 100% to 25% of TARGET",
           flashCapacity: () => TARGET,
-          amount: () => TARGET * 75n / 100n
+          amountPercent: () => 75n,
         },
         {
-          name: "from 100% to 0%",
+          name: "from 25 to 0% of TARGET",
+          flashCapacity: () => TARGET * 25n / 100n,
+          amountPercent: () => 100n,
+        },
+        {
+          name: "from 100% to 0% of TARGET",
           flashCapacity: () => TARGET,
-          amount: () => TARGET
+          amountPercent: () => 100n,
         },
         {
           name: "from 200% to 0% of TARGET",
           flashCapacity: () => TARGET * 2n,
-          amount: () => TARGET * 2n
+          amountPercent: () => 100n,
+        },
+        {
+          name: "20Eth",
+          flashCapacity: () => toWei(20),
+          amountPercent: () => 100n,
+        },
+        {
+          name: "25Eth",
+          flashCapacity: () => toWei(25),
+          amountPercent: () => 100n,
+        },
+        {
+          name: "30Eth",
+          flashCapacity: () => toWei(30),
+          amountPercent: () => 100n,
         },
         {
           name: "100Eth",
           flashCapacity: () => toWei(100),
-          amount: () => toWei(100)
+          amountPercent: () => 100n,
         },
         {
-          name: "125Eth",
-          flashCapacity: () => toWei(125),
-          amount: () => toWei(125)
-        },
-        {
-          name: "150Eth",
-          flashCapacity: () => toWei(150),
-          amount: () => toWei(150)
-        },
-        {
-          name: "500Eth",
-          flashCapacity: () => toWei(500),
-          amount: () => toWei(500)
-        },
-        {
-          name: "600Eth",
-          flashCapacity: () => toWei(600),
-          amount: () => toWei(600)
+          name: "120Eth",
+          flashCapacity: () => toWei(120),
+          amountPercent: () => 100n,
         },
       ]
 
@@ -1058,27 +1064,29 @@ assets.forEach(function (a) {
         it(`Flash withdraw ${arg.name}`, async function () {
           let flashCapacity = arg.flashCapacity();
           if (flashCapacity > 0n) {
-            await iVault.connect(staker).deposit(flashCapacity, staker.address);
+            await iVault.connect(staker).deposit(flashCapacity + a.withdrawErr * 2n, staker.address);
           }
-          console.log(`Initial capacity:\t\t${await iVault.getFlashCapacity()}`);
+          const initialCapacity = await iVault.getFlashCapacity();
+          console.log(`Initial capacity:\t\t${initialCapacity.format()}`);
 
-          let amount = arg.amount();
+          const amount = initialCapacity * arg.amountPercent() / 100n;
+          let _amount = amount;
           let expectedFee = 0n;
-          while (amount > 0n) {
+          while (_amount > 0n) {
             for(const feeFunc of feeFunctions) {
               const utilization = flashCapacity * e18 / TARGET;
-              if(amount > 0n && feeFunc.to < utilization && utilization <= feeFunc.from) {
+              if(_amount > 0n && feeFunc.to < utilization && utilization <= feeFunc.from) {
                 console.log(`Utilization:\t\t\t${utilization.format()}`);
-                const { fee, replenished } = await feeFunc.withdrawFee(amount, flashCapacity);
+                const { fee, replenished } = await feeFunc.withdrawFee(_amount, flashCapacity);
                 console.log(`Replenished:\t\t\t${replenished.format()}`);
                 console.log(`Bonus:\t\t\t\t\t${fee.format()}`);
                 flashCapacity -= replenished;
-                amount -= replenished;
+                _amount -= replenished;
                 expectedFee += fee;
               }
             }
           }
-          let contractFee = await iVault.calculateFlashUnstakeFee(arg.amount());
+          let contractFee = await iVault.calculateFlashUnstakeFee(amount);
           console.log(`Expected withdraw fee:\t${expectedFee.format()}`);
           console.log(`Contract withdraw fee:\t${contractFee.format()}`);
           expect(contractFee).to.be.closeTo(expectedFee, 1n);
