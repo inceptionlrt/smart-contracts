@@ -16,7 +16,7 @@ interface IInceptionVaultErrors {
 
     error NotContract();
 
-    error WithdrawFutile();
+    error DepositInconsistentResultedState();
 
     error OperatorNotRegistered();
 
@@ -24,9 +24,13 @@ interface IInceptionVaultErrors {
 
     error ImplementationNotSet();
 
+    error OnlyOperatorAllowed();
+
     error AlreadyDelegated();
 
     error DelegationManagerImmutable();
+
+    error IsNotAbleToRedeem();
 
     error LowerMinAmount(uint256 minAmount);
 

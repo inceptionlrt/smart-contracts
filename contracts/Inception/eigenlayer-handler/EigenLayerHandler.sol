@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "../assets-handler/InceptionAssetsHandler.sol";
+import {InceptionAssetsHandler, IERC20, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
-import "../../interfaces/IStrategyManager.sol";
-import "../../interfaces/IDelegationManager.sol";
-import "../../interfaces/IEigenLayerHandler.sol";
-import "../../interfaces/IInceptionRestaker.sol";
+import {IStrategyManager, IStrategy} from "../../interfaces/IStrategyManager.sol";
+import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
+import {IEigenLayerHandler} from "../../interfaces/IEigenLayerHandler.sol";
+import {IInceptionRestaker} from "../../interfaces/IInceptionRestaker.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -43,7 +43,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     mapping(address => address) internal _operatorRestakers;
     address[] public restakers;
 
-    uint256 internal _depositBonusAmount;
+    uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
     /// !!!!! TODO !!!!!
@@ -51,10 +51,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256[50 - 13] private __reserver;
 
     modifier onlyOperator() {
-        require(
-            msg.sender == _operator,
-            "EigenLayerHandler: only operator allowed"
-        );
+        if (msg.sender != _operator) revert OnlyOperatorAllowed();
         _;
     }
 
@@ -225,13 +222,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
         bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
 
-        for (uint256 i = 0; i < withdrawalsNum; ) {
+        for (uint256 i = 0; i < withdrawalsNum; ++i) {
             tokens[i] = new IERC20[](1);
             tokens[i][0] = _asset;
             receiveAsTokens[i] = true;
-            unchecked {
-                i++;
-            }
         }
 
         uint256 availableBalace = getFreeBalance();
@@ -315,8 +309,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 }
                 redeemReservedAmount += amount;
                 availableBalance -= amount;
-                epoch++;
-                i++;
+                ++epoch;
+                ++i;
             }
         }
     }
@@ -325,11 +319,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address restakerAddress
     ) internal view returns (bool) {
         uint256 numOfRestakers = restakers.length;
-        for (uint256 i = 0; i < numOfRestakers; ) {
+        for (uint256 i = 0; i < numOfRestakers; ++i) {
             if (restakerAddress == restakers[i]) return true;
-            unchecked {
-                ++i;
-            }
         }
         return false;
     }
@@ -347,7 +338,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - redeemReservedAmount - _depositBonusAmount;
+        return totalAssets() - redeemReservedAmount - depositBonusAmount;
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -386,16 +377,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address restaker
     ) external onlyOperator {
         if (restaker == address(0)) revert NullParams();
-        for (uint256 i = 0; i < restakers.length; ) {
+        for (uint256 i = 0; i < restakers.length; ++i) {
             if (
                 restakers[i] == restaker &&
                 !delegationManager.isDelegated(restakers[i])
             ) {
                 restakers[i] == _MOCK_ADDRESS;
                 break;
-            }
-            unchecked {
-                ++i;
             }
         }
         _pendingWithdrawalAmount += amount;

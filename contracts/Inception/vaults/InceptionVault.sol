@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
+import {IOwnable} from "../../interfaces/IOwnable.sol";
+import {IInceptionVault} from "../../interfaces/IInceptionVault.sol";
+import {IInceptionToken} from "../../interfaces/IInceptionToken.sol";
+import {IRebalanceStrategy} from "../../interfaces/IRebalanceStrategy.sol";
+import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../interfaces/IInceptionRatioFeed.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
-import "../../interfaces/IOwnable.sol";
-import "../../interfaces/IInceptionVault.sol";
-import "../../interfaces/IInceptionToken.sol";
-import "../../interfaces/IRebalanceStrategy.sol";
-import "../../interfaces/IDelegationManager.sol";
-import "../../interfaces/IInceptionRatioFeed.sol";
-
-import "../lib/InceptionLibrary.sol";
-
-import "hardhat/console.sol";
+import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
@@ -38,24 +35,23 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
      *  @dev Flash withdrawal params
      */
 
-    address public treasuryAddress;
+    /// @dev 100%
+    uint256 public constant MAX_PERCENT = 100 * 1e4;
+
+    address public treasury;
     IInceptionRatioFeed public ratioFeed;
 
-    uint256 public baseRate;
-    uint256 public optimalRate;
+    uint32 public utilizationKink;
 
-    /// @dev 100%
-    uint256 public constant MAX_PERCENT = 100 * 1e18;
+    uint32 public maxBonusRate;
+    uint32 public optimalBonusPercent;
+    uint32 public optimalBonusRate;
+    uint32 public depositBonusSlope;
 
-    uint256 public depositBonusSlope;
-    uint256 public flashWithdrawalSlope;
-
-    // uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
-    // uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
-    // uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
-    // uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
-    // uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
-    // uint256 public constant slope1_fee = 0.005 * 1e18;
+    uint32 public maxFlashFeeRate;
+    uint32 public optimalWithdrawalRate;
+    uint32 public flashWithdrawalSlope;
+    uint32 public protocolFee;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -73,8 +69,23 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         minAmount = 100;
 
-        /// TODO
-        treasuryAddress = msg.sender;
+        /// @notice TODO
+
+        utilizationKink = 25 * 1e4;
+
+        /// @dev deposit bonus
+        maxBonusRate = 15 * 1e3;
+        optimalBonusRate = 25 * 1e2;
+        depositBonusSlope = 5 * 1e4;
+
+        /// @dev withdrawal fee
+        maxFlashFeeRate = 30 * 1e3;
+        optimalWithdrawalRate = 5 * 1e3;
+        flashWithdrawalSlope = 1e5;
+
+        protocolFee = 50 * 1e4;
+
+        treasury = msg.sender;
     }
 
     /*//////////////////////////////
@@ -88,7 +99,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
-        require(iShares > 0, "InceptionVault: result iShares 0");
+        if (iShares == 0) revert DepositInconsistentResultedState();
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -124,14 +135,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        if (_depositBonusAmount > 0) {
+        if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
-            console.log("-------------------- depositBonus: ", depositBonus);
-            if (depositBonus > _depositBonusAmount) {
-                depositBonus = _depositBonusAmount;
-                _depositBonusAmount = 0;
+            if (depositBonus > depositBonusAmount) {
+                depositBonus = depositBonusAmount;
+                depositBonusAmount = 0;
             } else {
-                _depositBonusAmount -= depositBonus;
+                depositBonusAmount -= depositBonus;
             }
             emit DepositBonus(depositBonus);
         }
@@ -257,14 +267,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
-        require(isAble, "InceptionVault: redeem can not be proceed");
+        if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
         uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
-        for (uint256 i = 0; i < numOfWithdrawals; ) {
+        for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
             Withdrawal memory request = claimerWithdrawalsQueue[withdrawalNum];
             uint256 amount = request.amount;
@@ -277,9 +287,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             redeemedWithdrawals[i] = withdrawalNum;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
-            unchecked {
-                ++i;
-            }
         }
 
         // let's update the lowest epoch associated with the claimer
@@ -305,47 +312,41 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         __beforeWithdraw(receiver, iShares);
 
         address claimer = msg.sender;
-        uint256 currentRatio = ratio();
-        uint256 amount = Convert.multiplyAndDivideFloor(
-            iShares,
-            1e18,
-            currentRatio
-        );
-        uint256 capacity = getFlashCapacity();
+        uint256 amount = convertToAssets(iShares);
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
-        if (amount > capacity) revert InsufficientCapacity(capacity);
+        /// TODO
+        if (amount > getFlashCapacity()) revert InsufficientCapacity(0);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashUnstakeFee(amount);
-        emit FlashWithdrawFee(fee);
-
         /// TODO
         amount -= fee;
-        _depositBonusAmount += fee / 2;
+        uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
+        depositBonusAmount += (fee - protocolWithdrawalFee);
 
-        /// @notice instant transfer fee to the treasuryAddress
-        _transferAssetTo(treasuryAddress, fee / 2);
+        /// @notice instant transfer fee to the treasury
+        _transferAssetTo(treasury, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
-        emit Withdraw(claimer, receiver, claimer, amount, iShares);
+        emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        uint256 capacity = getFlashCapacity();
-        uint256 optimalCapacity = (targetCapacity * 25) / 100;
-
         return
             InceptionLibrary.calculateDepositBonus(
                 amount,
-                capacity,
-                optimalCapacity,
+                getFlashCapacity(),
+                (targetCapacity * utilizationKink) / MAX_PERCENT,
+                optimalBonusRate,
+                maxBonusRate,
+                depositBonusSlope,
                 targetCapacity
             );
     }
@@ -357,36 +358,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        uint256 fee;
-        uint256 optimalCapacity = (targetCapacity * 25) / 100;
-
-        if (amount > 0 && capacity > targetCapacity) {
-            //            uint256 replenished = capacity - amount < targetCapacity ? capacity - targetCapacity : amount;
-            uint256 replenished = amount;
-            if (capacity - amount < targetCapacity) {
-                replenished = capacity - targetCapacity;
-            }
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        if (amount > 0 && capacity > optimalCapacity) {
-            //            uint256 replenished = capacity - amount < optimalCapacity ? capacity - optimalCapacity : amount;
-            uint256 replenished = amount;
-            if (capacity - amount < optimalCapacity) {
-                replenished = capacity - optimalCapacity;
-            }
-            fee += (replenished * 5) / 1000; //0.5%
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        if (amount > 0) {
-            uint256 bonusPercent = 30 *
-                1e15 -
-                (1e17 * (capacity - amount / 2)) /
-                targetCapacity;
-            fee += (amount * bonusPercent) / 1e18;
-        }
-        return fee;
+        return
+            InceptionLibrary.calculateWithdrawalFee(
+                amount,
+                capacity,
+                (targetCapacity * utilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                flashWithdrawalSlope,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
@@ -433,42 +414,29 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // get the general request
         uint256 index;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
-        uint256 from = genRequest.epoch;
-        uint256[] memory availableWithdrawals = new uint256[](epoch - from);
+        uint256[] memory availableWithdrawals = new uint256[](
+            epoch - genRequest.epoch
+        );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        for (uint256 i = 0; i < epoch; ) {
+        for (uint256 i = 0; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
                 ++index;
             }
-            unchecked {
-                ++i;
-            }
         }
-
         // decrease arrays
-        if (availableWithdrawals.length - index > 0) {
+        if (availableWithdrawals.length - index > 0)
             assembly {
                 mstore(availableWithdrawals, index)
             }
-        }
 
         return (able, availableWithdrawals);
     }
 
     function ratio() public view returns (uint256) {
-        uint256 totalDeposited = getTotalDeposited();
-        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
-        // take into account the pending withdrawn amount
-        uint256 denominator = totalDeposited < totalAmountToWithdraw
-            ? 0
-            : totalDeposited - totalAmountToWithdraw;
-
-        if (denominator == 0 || totalSupply == 0) return 1e18;
-
-        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, denominator);
+        return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
     /// @dev returns the total deposited into asset strategy
@@ -477,18 +445,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             getTotalDelegated() +
             totalAssets() +
             _pendingWithdrawalAmount -
-            _depositBonusAmount;
+            depositBonusAmount;
     }
 
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
-        for (uint256 i = 0; i < stakersNum; ) {
+        for (uint256 i = 0; i < stakersNum; ++i) {
             if (restakers[i] == address(0)) continue;
-
             total += strategy.userUnderlyingView(restakers[i]);
-            unchecked {
-                ++i;
-            }
         }
         return total + strategy.userUnderlyingView(address(this));
     }
@@ -504,17 +468,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function _verifyDelegated() internal view returns (bool) {
-        for (uint256 i = 0; i < restakers.length; ) {
+        for (uint256 i = 0; i < restakers.length; i++) {
             if (restakers[i] == address(0)) {
-                unchecked {
-                    ++i;
-                }
                 continue;
             }
             if (!delegationManager.isDelegated(restakers[i])) return false;
-            unchecked {
-                ++i;
-            }
         }
 
         if (
@@ -523,6 +481,18 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         ) return false;
 
         return true;
+    }
+
+    function maxDeposit(address /*receiver*/) public view returns (uint256) {
+        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
+        return maxPerDeposit;
+    }
+
+    function maxRedeem(
+        address account
+    ) public view returns (uint256 maxShares) {
+        return
+            convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
     }
 
     /*//////////////////////////////
@@ -545,16 +515,23 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setFlashVaultParams(
-        uint256 newDepositBonusSlope,
-        uint256 newWithdrawalFeeSlope,
-        uint256 newTargetCapacity
-    ) external onlyOwner {
-        depositBonusSlope = newDepositBonusSlope;
+    // function setFlashVaultParams(
+    //     uint256 newDepositBonusSlope,
+    //     uint256 newWithdrawalFeeSlope,
+    //     uint256 newTargetCapacity
+    // ) external onlyOwner {
+    //     depositBonusSlope = newDepositBonusSlope;
 
-        flashWithdrawalSlope = newWithdrawalFeeSlope;
+    //     flashWithdrawalSlope = newWithdrawalFeeSlope;
 
-        targetCapacity = newTargetCapacity;
+    //     targetCapacity = newTargetCapacity;
+    // }
+
+    function setTreasuryAddress(address newTreasury) external onlyOwner {
+        if (newTreasury == address(0)) revert NullParams();
+
+        emit TreasuryChanged(treasury, newTreasury);
+        treasury = newTreasury;
     }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
