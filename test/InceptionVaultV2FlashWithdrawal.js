@@ -1011,52 +1011,72 @@ assets.forEach(function (a) {
         {
           name: "from 200% to 100% of TARGET",
           flashCapacity: () => TARGET * 2n,
-          amountPercent: () => 50n, //the half of flash capacity
+          amount: () => TARGET,
+        },
+        {
+          name: "from 200% to 100%-1wei of TARGET",
+          flashCapacity: () => TARGET * 2n,
+          amount: () => TARGET+1n,
         },
         {
           name: "from 100% to 25% of TARGET",
           flashCapacity: () => TARGET,
-          amountPercent: () => 75n,
+          amount: () => TARGET * 75n / 100n,
+        },
+        {
+          name: "from 100% to 25%-1wei of TARGET",
+          flashCapacity: () => TARGET,
+          amount: () => TARGET * 75n / 100n + 1n,
+        },
+        {
+          name: "1 wei at 100%",
+          flashCapacity: () => TARGET,
+          amount: () => 1n,
         },
         {
           name: "from 25 to 0% of TARGET",
           flashCapacity: () => TARGET * 25n / 100n,
-          amountPercent: () => 100n,
+          amount: () => TARGET * 25n / 100n,
+        },
+        {
+          name: "1 wei at 25%",
+          flashCapacity: () => TARGET * 25n / 100n,
+          amount: () => 1n,
         },
         {
           name: "from 100% to 0% of TARGET",
           flashCapacity: () => TARGET,
-          amountPercent: () => 100n,
+          amount: () => TARGET,
         },
         {
           name: "from 200% to 0% of TARGET",
           flashCapacity: () => TARGET * 2n,
-          amountPercent: () => 100n,
+          amount: () => TARGET * 2n,
         },
         {
           name: "20Eth",
           flashCapacity: () => toWei(20),
-          amountPercent: () => 100n,
+          amount: () => toWei(20),
         },
         {
           name: "25Eth",
           flashCapacity: () => toWei(25),
-          amountPercent: () => 100n,
+          amount: () => toWei(25),
         },
         {
           name: "30Eth",
           flashCapacity: () => toWei(30),
-          amountPercent: () => 100n,
+          amount: () => toWei(30),
         },
         {
           name: "100Eth",
           flashCapacity: () => toWei(100),
-          amountPercent: () => 100n,
+          amount: () => toWei(100),
         },
         {
           name: "120Eth",
           flashCapacity: () => toWei(120),
-          amountPercent: () => 100n,
+          amount: () => toWei(120),
         },
       ]
 
@@ -1069,7 +1089,7 @@ assets.forEach(function (a) {
           const initialCapacity = await iVault.getFlashCapacity();
           console.log(`Initial capacity:\t\t${initialCapacity.format()}`);
 
-          const amount = initialCapacity * arg.amountPercent() / 100n;
+          const amount = arg.amount();
           let _amount = amount;
           let expectedFee = 0n;
           while (_amount > 0n) {
