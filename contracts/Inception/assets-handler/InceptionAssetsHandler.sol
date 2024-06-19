@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../../interfaces/IInceptionAssetHandler.sol";
-import "../../interfaces/IInceptionVaultErrors.sol";
+import {IInceptionAssetHandler} from "../../interfaces/IInceptionAssetHandler.sol";
+import {IInceptionVaultErrors} from "../../interfaces/IInceptionVaultErrors.sol";
 
-import "../lib/Convert.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
@@ -36,21 +36,24 @@ contract InceptionAssetsHandler is
         _asset = assetAddress;
     }
 
+    /// @dev returns the address of the underlying token used for the vault for accounting, depositing, withdrawing.
+    function asset() public view returns (address) {
+        return address(_asset);
+    }
+
     /// @dev returns the balance of iVault in the asset
     function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
-        if (!_asset.transferFrom(staker, address(this), amount)) {
+        if (!_asset.transferFrom(staker, address(this), amount))
             revert TransferAssetFromFailed(address(_asset));
-        }
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount)) {
+        if (!_asset.transfer(receiver, amount))
             revert TransferAssetFailed(address(_asset));
-        }
     }
 
     /// @dev The functions below serve the proper withdrawal and claiming operations
@@ -63,12 +66,6 @@ contract InceptionAssetsHandler is
     }
 
     function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetRedeemAmount(
         uint256 amount
     ) internal view virtual returns (uint256) {
         return amount;
