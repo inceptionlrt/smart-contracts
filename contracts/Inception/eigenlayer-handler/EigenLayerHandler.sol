@@ -43,8 +43,19 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     mapping(address => address) internal _operatorRestakers;
     address[] public restakers;
 
+    uint256 internal _depositBonusAmount;
+    uint256 public targetCapacity;
+
+    uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
+    uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
+    uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
+    uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
+    uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
+    uint256 public constant slope1_fee = 0.005 * 1e18;
+
+    /// !!!!! TODO !!!!!
     /// @dev constants are not stored in the storage
-    uint256[50 - 11] private __reserver;
+    uint256[50 - 13] private __reserver;
 
     modifier onlyOperator() {
         require(
@@ -75,21 +86,18 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        if (amount > totalAssets() - redeemReservedAmount) {
+        if (amount > getFreeBalance())
             revert InsufficientCapacity(totalAssets());
-        }
 
         (uint256 maxPerDeposit, uint256 maxTotalDeposits) = strategy
             .getTVLLimits();
 
-        if (amount > maxPerDeposit) {
+        if (amount > maxPerDeposit)
             revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
-        }
 
         uint256 currentBalance = _asset.balanceOf(address(strategy));
-        if (currentBalance + amount > maxTotalDeposits) {
+        if (currentBalance + amount > maxTotalDeposits)
             revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
-        }
     }
 
     /// @dev deposits asset to the corresponding strategy
@@ -154,39 +162,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address elOperatorAddress,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address stakerAddress = _operatorRestakers[elOperatorAddress];
-        if (stakerAddress == address(0)) {
+        address staker = _operatorRestakers[elOperatorAddress];
+        if (staker == address(0)) {
             revert OperatorNotRegistered();
         }
-        if (stakerAddress == _MOCK_ADDRESS) {
+        if (staker == _MOCK_ADDRESS) {
             revert NullParams();
         }
-
-        uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(
-            stakerAddress
-        );
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
-            stakerAddress,
-            strategy
-        );
-        uint256 shares = strategy.underlyingToSharesView(amount);
-        // we need to withdraw the remaining dust from EigenLayer
-        if (totalAssetSharesInEL < shares + 5) {
-            shares = totalAssetSharesInEL;
-        }
-        amount = strategy.sharesToUnderlyingView(shares);
-
-        emit StartWithdrawal(
-            stakerAddress,
-            strategy,
-            shares,
-            uint32(block.number),
-            elOperatorAddress,
-            nonce
-        );
-
-        _pendingWithdrawalAmount += amount;
-        IInceptionRestaker(stakerAddress).withdrawFromEL(shares);
+        IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
@@ -195,38 +178,44 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address staker = address(this);
+
+        uint256[] memory sharesToWithdraw = new uint256[](1);
+        IStrategy[] memory strategies = new IStrategy[](1);
+
+        sharesToWithdraw[0] = _undelegate(amount, staker);
+        strategies[0] = strategy;
+        IDelegationManager.QueuedWithdrawalParams[]
+            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+                1
+            );
+
+        /// @notice from Vault
+        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
+            strategies: strategies,
+            shares: sharesToWithdraw,
+            withdrawer: address(this)
+        });
+        delegationManager.queueWithdrawals(withdrawals);
+    }
+
+    function _undelegate(
+        uint256 amount,
+        address staker
+    ) internal returns (uint256) {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
         uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
             staker,
             strategy
         );
         uint256 shares = strategy.underlyingToSharesView(amount);
+        amount = strategy.sharesToUnderlyingView(shares);
+
         // we need to withdraw the remaining dust from EigenLayer
         if (totalAssetSharesInEL < shares + 5) {
             shares = totalAssetSharesInEL;
         }
-        amount = strategy.sharesToUnderlyingView(shares);
-
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
-
-        strategies[0] = strategy;
-        sharesToWithdraw[0] = shares;
-        IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
-
-        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
-            strategies: strategies,
-            shares: sharesToWithdraw,
-            withdrawer: address(this)
-        });
 
         _pendingWithdrawalAmount += amount;
-
-        delegationManager.queueWithdrawals(withdrawals);
-
         emit StartWithdrawal(
             staker,
             strategy,
@@ -235,6 +224,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             delegationManager.delegatedTo(staker),
             nonce
         );
+        return shares;
     }
 
     /// @dev claims completed withdrawals from EigenLayer, if they exist
@@ -255,6 +245,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 i++;
             }
         }
+
+        uint256 availableBalace = getFreeBalance();
 
         uint256 withdrawnAmount;
         if (restaker == address(this)) {
@@ -284,7 +276,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             _pendingWithdrawalAmount = 0;
         }
 
-        _updateEpoch();
+        _updateEpoch(availableBalace + withdrawnAmount);
     }
 
     function _claimCompletedWithdrawalsForVault(
@@ -310,7 +302,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     function updateEpoch() external whenNotPaused {
-        _updateEpoch();
+        _updateEpoch(getFreeBalance());
     }
 
     /**
@@ -325,9 +317,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
      * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
      * withdrawalQueue[epoch : new_epoch];
      */
-    function _updateEpoch() internal {
+    function _updateEpoch(uint256 availableBalance) internal {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-        uint256 availableBalance = totalAssets() - redeemReservedAmount;
         for (uint256 i = epoch; i < withdrawalsNum; ) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
             unchecked {
@@ -367,6 +358,17 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return _pendingWithdrawalAmount;
     }
 
+    function getFlashCapacity() public view returns (uint256 total) {
+        return totalAssets() - redeemReservedAmount - _depositBonusAmount;
+    }
+
+    function getFreeBalance() public view returns (uint256 total) {
+        return
+            getFlashCapacity() < targetCapacity
+                ? 0
+                : getFlashCapacity() - targetCapacity;
+    }
+
     /*//////////////////////////
     ////// SET functions //////
     ////////////////////////*/
@@ -384,12 +386,18 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         delegationManager = newDelegationManager;
     }
 
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
+        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
+        targetCapacity = newTargetCapacity;
+    }
+
     function forceUndelegateRecovery(
         uint256 amount,
         address restaker
     ) external onlyOperator {
         if (restaker == address(0)) revert NullParams();
-
         for (uint256 i = 0; i < restakers.length; ) {
             if (
                 restakers[i] == restaker &&
@@ -402,7 +410,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 ++i;
             }
         }
-
         _pendingWithdrawalAmount += amount;
     }
 }

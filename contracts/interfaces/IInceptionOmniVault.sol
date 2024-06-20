@@ -23,43 +23,19 @@ interface IInceptionVault {
         uint256 iShares
     );
 
-    event Redeem(
-        address indexed sender,
-        address indexed receiver,
-        uint256 amount
-    );
-
-    event RedeemedRequests(uint256[] withdrawals);
-
-    event WithdrawalQueued(
-        address depositor,
-        uint96 nonce,
-        address withdrawer,
-        address delegatedAddress,
-        bytes32 withdrawalRoot
-    );
-
     event OperatorChanged(address prevValue, address newValue);
 
     event DepositFeeChanged(uint256 prevValue, uint256 newValue);
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
 
-    event ELOperatorAdded(address indexed newELOperator);
-
     event RestakerDeployed(address indexed restaker);
 
     event ImplementationUpgraded(address prevValue, address newValue);
 
-    event RatioFeedChanged(address prevValue, address newValue);
-
     event NameChanged(string prevValue, string newValue);
 
     event ReferralCode(bytes32 indexed code);
-
-    event DepositBonus(uint256 amount);
-
-    event FlashWithdrawFee(uint256 amount);
 
     function inceptionToken() external view returns (IInceptionToken);
 

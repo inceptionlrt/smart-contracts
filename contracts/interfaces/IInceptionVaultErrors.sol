@@ -30,6 +30,8 @@ interface IInceptionVaultErrors {
 
     error DelegationManagerImmutable();
 
+    error LowerMinAmount(uint256 minAmount);
+
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);

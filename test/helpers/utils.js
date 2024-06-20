@@ -1,9 +1,35 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, network } = require("hardhat");
+BigInt.prototype.format = function () {
+  return this.toLocaleString("de-DE");
+};
 const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
   const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
   await asset.connect(staker).transfer(strategyAddress, amount);
+};
+
+const calculateRatio = async (vault, token) => {
+  const totalSupply = await token.totalSupply();
+  const totalDeposited = await vault.getTotalDeposited();
+  const totalAmountToWithdraw = await vault.totalAmountToWithdraw();
+
+  let denominator;
+  if (totalDeposited < totalAmountToWithdraw) {
+    denominator = 0;
+  } else {
+    denominator = totalDeposited - totalAmountToWithdraw;
+  }
+
+  if (denominator == 0 || totalSupply == 0) {
+    const ratio = e18;
+    console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+    return ratio;
+  }
+
+  const ratio = (totalSupply * e18) / denominator;
+  console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+  return ratio;
 };
 
 const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
@@ -76,6 +102,16 @@ const randomBI = (length) => {
   }
 };
 
+const randomBIMax = (max) => {
+  let random = 0n;
+  if (max > 0n) {
+    random += BigInt(Math.random() * Number(max));
+  }
+  return random;
+};
+async function sleep(msec) {
+  return new Promise(resolve => setTimeout(resolve, msec));
+};
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
@@ -85,12 +121,15 @@ module.exports = {
   addRewardsToStrategy,
   withdrawDataFromTx,
   impersonateWithEth,
+  calculateRatio,
   getStaker,
   getRandomStaker,
   mineBlocks,
   toWei,
   toBN,
   randomBI,
+  randomBIMax,
+  sleep,
   randomAddress,
   format,
   e18,
