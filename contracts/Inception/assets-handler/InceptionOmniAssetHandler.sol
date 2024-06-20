@@ -35,7 +35,7 @@ contract InceptionOmniAssetsHandler is
     function _transferAssetTo(address receiver, uint256 amount) internal {
         (bool success, ) = receiver.call{value: amount}("");
         if (!success) {
-            revert TransferAssetFailed(address(0));
+            revert TransferAssetFailed(receiver);
         }
     }
 
