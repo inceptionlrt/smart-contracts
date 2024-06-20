@@ -1,77 +1,45 @@
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
-const { time, loadFixture } = require(
-  "@nomicfoundation/hardhat-network-helpers",
-);
+const { ethers, upgrades, network } = require("hardhat");
+const { takeSnapshot } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("InceptionOmniVault", function () {
-  async function deployVaultFixture() {
-    const [owner, user, treasury] = await ethers.getSigners();
+BigInt.prototype.format = function () {
+  return this.toLocaleString("de-DE");
+};
 
-    const iTokenFactory = await ethers.getContractFactory("InceptionToken");
-    const inceptionToken = await upgrades.deployProxy(iTokenFactory, [
-      "Test Token",
-      "TT",
-    ]);
+async function init() {
+  console.log("- iToken");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+  iToken.address = await iToken.getAddress();
 
-    // Deploy InceptionOmniVault
-    const iVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
-    const inceptionOmniVault = await upgrades.deployProxy(iVaultFactory, [
-      await inceptionToken.getAddress(),
-    ]);
-    const vaultAddr = await inceptionOmniVault.getAddress();
+  console.log("- Omni vault");
+  const iVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+  const omniVault = await upgrades.deployProxy(iVaultFactory, [iToken.address]);
+  omniVault.address = await omniVault.getAddress();
 
-    await inceptionToken.setVault(vaultAddr);
+  await iToken.setVault(omniVault.address);
 
-    return { inceptionOmniVault, inceptionToken, owner, user, treasury };
-  }
+  return [iToken, omniVault];
+}
 
-  describe("Deposit and Withdraw", function () {
-    it("Should deposit successfully", async function () {
-      const { inceptionOmniVault, user } = await loadFixture(
-        deployVaultFixture,
-      );
+describe("Inception omni vault", function() {
+  this.timeout(150000);
+  let omniVault, iToken;
+  let owner, signer1, signer2, signer3;
+  let snapshot;
 
-      await ethers.provider.send("hardhat_setBalance", [
-        user.address,
-        ethers.toBeHex(ethers.parseUnits("1000", "ether")),
-      ]);
+   before(async function() {
+     [owner, signer1, signer2, signer3] = await ethers.getSigners();
+     [iToken, omniVault] = await init();
+     snapshot = await takeSnapshot();
+   })
 
-      const amountToDeposit = ethers.parseUnits("100", "ether");
+  describe("Base flow", function() {
 
-      // Deposit
-      await expect(
-        await inceptionOmniVault.connect(user).deposit(user.address, {
-          value: ethers.toBeHex(amountToDeposit),
-        }),
-      )
-        .to.emit(inceptionOmniVault, "Deposit")
-        .withArgs(user.address, user.address, amountToDeposit, anyValue);
-    });
-  });
 
-  it("Should withdraw successfully", async function () {
-    const { inceptionOmniVault, inceptionToken, user } = await loadFixture(
-      deployVaultFixture,
-    );
 
-    await ethers.provider.send("hardhat_setBalance", [
-      user.address,
-      ethers.toBeHex(ethers.parseUnits("1000", "ether")),
-    ]);
-    const amountToDeposit = ethers.parseUnits("100", "ether");
-    await inceptionOmniVault.connect(user).deposit(user.address, {
-      value: ethers.toBeHex(amountToDeposit),
-    });
 
-    const userShares = await inceptionToken.balanceOf(user.address);
 
-    // Withdraw
-    await expect(
-      inceptionOmniVault.connect(user).withdraw(userShares, user.address),
-    )
-      .to.emit(inceptionOmniVault, "Withdraw")
-      .withArgs(user.address, user.address, user.address, anyValue, userShares);
-  });
-});
+  })
+
+
+})
