@@ -7,14 +7,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../assets-handler/InceptionOmniAssetHandler.sol";
 
 import "../../interfaces/IOwnable.sol";
-import "../../interfaces/IOmniInceptionVault.sol";
+import "../../interfaces/IInceptionOmniVault.sol";
 import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 import "../../interfaces/IInceptionRatioFeed.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionOmniVault contract
-contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
+contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -32,16 +32,22 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
 
     uint256 public baseRate;
     uint256 public optimalRate;
+    uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
-    uint256 internal _depositBonusAmount;
+    uint256 public constant MAX_PERCENT = 100 * 1e4;
 
-    uint256 public constant BASE_RATE = 0.005 * 1e18; // 0.5%
-    uint256 public constant OPTIMAL_RATE = 0.015 * 1e18; // 1.5%
-    uint256 public constant MAX_RATE = 0.03 * 1e18; // 3%
-    uint256 public constant MIN_STAKING_BONUS = 0.001 * 1e18; // 0.1%
-    uint256 public constant MAX_STAKING_BONUS = 0.005 * 1e18; // 0.5%
-    uint256 public constant slope1_fee = 0.005 * 1e18;
+    uint32 public utilizationKink;
+
+    uint32 public maxBonusRate;
+    uint32 public optimalBonusPercent;
+    uint32 public optimalBonusRate;
+    uint32 public depositBonusSlope;
+
+    uint32 public maxFlashFeeRate;
+    uint32 public optimalWithdrawalRate;
+    uint32 public flashWithdrawalSlope;
+    uint32 public protocolFee;
 
     function __InceptionOmniVault_init(
         string memory vaultName,
@@ -92,13 +98,13 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
 
         __beforeDeposit(receiver, amount);
         uint256 depositBonus;
-        if (_depositBonusAmount > 0) {
+        if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
-            if (depositBonus > _depositBonusAmount) {
-                depositBonus = _depositBonusAmount;
-                _depositBonusAmount = 0;
+            if (depositBonus > depositBonusAmount) {
+                depositBonus = depositBonusAmount;
+                depositBonusAmount = 0;
             } else {
-                _depositBonusAmount -= depositBonus;
+                depositBonusAmount -= depositBonus;
             }
             emit DepositBonus(depositBonus);
         }
@@ -149,7 +155,7 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
             1e18,
             currentRatio
         );
-        uint256 capacity = totalAssets() - _depositBonusAmount;
+        uint256 capacity = totalAssets() - depositBonusAmount;
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (amount > capacity) revert InsufficientCapacity(capacity);
@@ -158,48 +164,83 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashUnstakeFee(amount);
-        emit FlashWithdrawFee(fee);
 
         amount -= fee;
-        _depositBonusAmount += fee / 2;
+        depositBonusAmount += fee / 2;
 
         /// @notice instant transfer fee to the treasuryAddress
         _transferAssetTo(treasuryAddress, fee / 2);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
-        emit Withdraw(claimer, receiver, claimer, amount, iShares);
+        emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
         uint256 amount
-    ) public view returns (uint256) {
-        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
-        if (utilization <= 0.25 * 1e18) {
-            return (amount * MAX_STAKING_BONUS) / 1e18; // 0.5%
-        } else if (utilization < 1e18) {
-            return
-                (amount * ((MAX_STAKING_BONUS + MIN_STAKING_BONUS) / 2)) / 1e18;
-        } else {
-            return 0;
+    ) public view returns (uint256 bonus) {
+        uint256 capacity = getFlashCapacity(amount);
+        uint256 optimalCapacity = (targetCapacity * utilizationKink) / MAX_PERCENT;
+
+        if (amount > 0 && capacity < optimalCapacity) {
+            uint256 replenished = amount;
+            if (optimalCapacity < capacity + amount)
+                replenished = optimalCapacity - capacity;
+
+            uint256 bonusPercent = maxBonusRate -
+                (depositBonusSlope * (capacity + replenished / 2)) /
+                targetCapacity;
+
+            capacity += replenished;
+            bonus += (replenished * bonusPercent) / MAX_PERCENT;
+            amount -= replenished;
+        }
+        /// @dev the utilization rate is in the range [25: ] %
+        if (amount > 0 && capacity <= targetCapacity) {
+            uint256 replenished = targetCapacity > capacity + amount
+                ? amount
+                : targetCapacity - capacity;
+
+            bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
         }
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashUnstakeFee(
         uint256 amount
-    ) public view returns (uint256) {
-        uint256 utilization = (getFlashCapacity() * 1e18) / targetCapacity;
-        if (utilization <= 1e18) {
-            return Convert.multiplyAndDivideFloor(amount, MAX_RATE, 1e18);
-        } else if (utilization <= 0.25 * 1e18) {
-            uint256 coeff = slope1_fee -
-                ((utilization - 0.25 * 1e18) * (MAX_RATE - slope1_fee)) /
-                (0.25 * 1e18);
-            return Convert.multiplyAndDivideFloor(amount, coeff, 1e18);
+    ) public view returns (uint256 fee) {
+        uint256 capacity = getFlashCapacity(amount);
+        if (amount > capacity) revert InsufficientCapacity(capacity);
+
+        uint256 optimalCapacity = (targetCapacity * utilizationKink) / MAX_PERCENT;
+
+        /// @dev the utilization rate is greater 1, [ :100] %
+        if (amount > 0 && capacity > targetCapacity) {
+            uint256 replenished = amount;
+            if (capacity - amount < targetCapacity)
+                replenished = capacity - targetCapacity;
+
+            amount -= replenished;
+            capacity -= replenished;
         }
-        return 0;
+        /// @dev the utilization rate is in the range [100:25] %
+        if (amount > 0 && capacity > optimalCapacity) {
+            uint256 replenished = amount;
+            if (capacity - amount < optimalCapacity)
+                replenished = capacity - optimalCapacity;
+
+            fee += (replenished * optimalWithdrawalRate) / MAX_PERCENT; // 0.5%
+            amount -= replenished;
+            capacity -= replenished;
+        }
+        /// @dev the utilization rate is in the range [25:0] %
+        if (amount > 0) {
+            uint256 bonusPercent = maxFlashFeeRate -
+                (flashWithdrawalSlope * (capacity - amount / 2)) /
+                targetCapacity;
+            fee += (amount * bonusPercent) / MAX_PERCENT;
+        }
     }
 
     /*//////////////////////////////
@@ -207,23 +248,11 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
     ////////////////////////////*/
 
     function ratio() public view returns (uint256) {
-        uint256 totalDeposited = getTotalDeposited();
-        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
-        // take into account the pending withdrawn amount
-        if (totalDeposited == 0 || totalSupply == 0) return 1e18;
-
-        return Convert.multiplyAndDivideCeil(totalSupply, 1e18, totalDeposited);
+        return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    /// @dev returns the total deposited
-    function getTotalDeposited() public view returns (uint256) {
-        return
-            totalAssets() -
-            _depositBonusAmount;
-    }
-
-    function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - _depositBonusAmount;
+    function getFlashCapacity(uint256 amount) public view returns (uint256 total) {
+        return totalAssets() - depositBonusAmount - amount;
     }
 
     /*//////////////////////////////
@@ -256,6 +285,11 @@ contract InceptionOmniVault is IOmniInceptionVault, InceptionOmniAssetsHandler {
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
+    }
+
+    function setTreasuryAddress(address newTreasury) external onlyOwner {
+        emit TreasuryUpdated(newTreasury);
+        treasuryAddress = newTreasury;
     }
 
     function setTargetFlashCapacity(
