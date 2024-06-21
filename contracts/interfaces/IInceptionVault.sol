@@ -50,8 +50,6 @@ interface IInceptionVault {
 
     event OperatorChanged(address prevValue, address newValue);
 
-    event DepositFeeChanged(uint256 prevValue, uint256 newValue);
-
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
 
     event ELOperatorAdded(address indexed newELOperator);
@@ -69,6 +67,22 @@ interface IInceptionVault {
     event ReferralCode(bytes32 indexed code);
 
     event DepositBonus(uint256 amount);
+
+    event UtilizationKinkChanged(uint256 prevValue, uint256 newValue);
+
+    event DepositBonusParamsChanged(
+        uint256 newMaxBonusRate,
+        uint256 newOptimalBonusRate,
+        uint256 newDepositBonusSlope
+    );
+
+    event WithdrawFeeParamsChanged(
+        uint256 newMaxFlashFeeRate,
+        uint256 newOptimalWithdrawalRate,
+        uint256 newFlashWithdrawalSlope
+    );
+
+    event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
     function inceptionToken() external view returns (IInceptionToken);
 
