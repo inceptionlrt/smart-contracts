@@ -382,7 +382,7 @@ assets.forEach(function (a) {
         const totalDelegatedBefore = await iVault.getTotalDelegated();
         const staker2PW = await iVault.getPendingWithdrawalOf(staker2.address);
         const amount = await iVault.totalAmountToWithdraw();
-        console.log(`Total deposited after:\t\t\t${totalDepositedBefore.format()}`);
+        console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
         console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
         console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
         console.log(`Staker2 pending withdrawals:\t${staker2PW.format()}`);

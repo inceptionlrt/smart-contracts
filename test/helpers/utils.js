@@ -28,6 +28,9 @@ const calculateRatio = async (vault, token) => {
   }
 
   const ratio = (totalSupply * e18) / denominator;
+  if ((totalSupply * e18) % denominator !== 0n) {
+    return ratio + 1n;
+  }
   // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
   return ratio;
 };
