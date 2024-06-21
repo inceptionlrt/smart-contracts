@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "../InceptionVault.sol";
-import "../../../interfaces/IStEth.sol";
+import {InceptionVault, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault.sol";
 
 /// @author The InceptionLRT team
 contract InVault_E1 is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    // constructor() {
+    //     _disableInitializers();
+    // }
 
     function initialize(
         string memory vaultName,
@@ -37,11 +36,5 @@ contract InVault_E1 is InceptionVault {
         uint256 amount
     ) internal pure override returns (uint256) {
         return amount - 1;
-    }
-
-    function _getAssetRedeemAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
-        return amount + 1;
     }
 }

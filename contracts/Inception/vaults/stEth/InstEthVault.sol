@@ -38,10 +38,4 @@ contract InstEthVault is InceptionVault {
     ) internal pure override returns (uint256) {
         return amount - 2;
     }
-
-    function _getAssetRedeemAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
-        return amount + 2;
-    }
 }

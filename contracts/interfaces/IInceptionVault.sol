@@ -23,6 +23,15 @@ interface IInceptionVault {
         uint256 iShares
     );
 
+    event FlashWithdraw(
+        address indexed sender,
+        address indexed receiver,
+        address indexed owner,
+        uint256 amount,
+        uint256 iShares,
+        uint256 fee
+    );
+
     event Redeem(
         address indexed sender,
         address indexed receiver,
@@ -55,11 +64,11 @@ interface IInceptionVault {
 
     event NameChanged(string prevValue, string newValue);
 
+    event TreasuryChanged(address prevValue, address newValue);
+
     event ReferralCode(bytes32 indexed code);
 
     event DepositBonus(uint256 amount);
-
-    event FlashWithdrawFee(uint256 amount);
 
     function inceptionToken() external view returns (IInceptionToken);
 
