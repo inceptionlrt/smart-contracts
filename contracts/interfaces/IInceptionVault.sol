@@ -73,13 +73,15 @@ interface IInceptionVault {
     event DepositBonusParamsChanged(
         uint256 newMaxBonusRate,
         uint256 newOptimalBonusRate,
-        uint256 newDepositBonusSlope
+        uint256 newDepositBonusSlope,
+        uint256 newDepositUtilizationKink
     );
 
     event WithdrawFeeParamsChanged(
         uint256 newMaxFlashFeeRate,
         uint256 newOptimalWithdrawalRate,
-        uint256 newFlashWithdrawalSlope
+        uint256 newFlashWithdrawalSlope,
+        uint256 newWithdrawUtilizationKink
     );
 
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);

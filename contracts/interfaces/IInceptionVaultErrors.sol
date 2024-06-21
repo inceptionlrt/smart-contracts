@@ -12,6 +12,8 @@ interface IInceptionVaultErrors {
 
     error InconsistentData();
 
+    error ApproveError();
+
     error NullParams();
 
     error ParameterExceedsLimits(uint256 param);

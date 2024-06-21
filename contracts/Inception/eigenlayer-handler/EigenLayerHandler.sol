@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionAssetsHandler, IERC20, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
+import {InceptionAssetsHandler, IERC20, InceptionLibrary} from "../assets-handler/InceptionAssetsHandler.sol";
 
 import {IStrategyManager, IStrategy} from "../../interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
@@ -46,7 +46,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
-    /// !!!!! TODO !!!!!
     /// @dev constants are not stored in the storage
     uint256[50 - 13] private __reserver;
 
@@ -64,10 +63,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
         // approve spending by strategyManager
-        require(
-            _asset.approve(address(strategyManager), type(uint256).max),
-            "EigenLayerHandler: approve failed"
-        );
+        if (!_asset.approve(address(strategyManager), type(uint256).max))
+            revert ApproveError();
     }
 
     /*//////////////////////////////

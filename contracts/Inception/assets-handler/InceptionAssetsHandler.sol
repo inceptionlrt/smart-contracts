@@ -9,7 +9,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IInceptionAssetHandler} from "../../interfaces/IInceptionAssetHandler.sol";
 import {IInceptionVaultErrors} from "../../interfaces/IInceptionVaultErrors.sol";
 
-import {Convert} from "../lib/Convert.sol";
+import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
