@@ -71,19 +71,19 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         /// @notice TODO
 
-        utilizationKink = 25 * 1e4;
+        utilizationKink = 25 * 1e8;
 
         /// @dev deposit bonus
-        maxBonusRate = 15 * 1e3;
-        optimalBonusRate = 25 * 1e2;
-        depositBonusSlope = 5 * 1e4;
+        maxBonusRate = 15 * 1e7;
+        optimalBonusRate = 25 * 1e6;
+        depositBonusSlope = 5 * 1e8;
 
         /// @dev withdrawal fee
-        maxFlashFeeRate = 30 * 1e3;
-        optimalWithdrawalRate = 5 * 1e3;
-        flashWithdrawalSlope = 1e5;
+        maxFlashFeeRate = 30 * 1e7;
+        optimalWithdrawalRate = 5 * 1e7;
+        flashWithdrawalSlope = 1e9;
 
-        protocolFee = 50 * 1e4;
+        protocolFee = 50 * 1e8;
 
         treasury = msg.sender;
     }
@@ -505,16 +505,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint32 newOptimalBonusRate,
         uint32 newDepositBonusSlope
     ) external onlyOwner {
-        if (newMaxBonusRate >= MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-        if (newOptimalBonusRate >= MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-        if (newDepositBonusSlope >= MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-
-        // maxBonusRate = newMaxBonusRate;
-        // optimalBonusRate = newOptimalBonusRate;
-        // depositBonusSlope = newDepositBonusSlope;
+        maxBonusRate = newMaxBonusRate;
+        optimalBonusRate = newOptimalBonusRate;
+        depositBonusSlope = newDepositBonusSlope;
 
         emit DepositBonusParamsChanged(
             newMaxBonusRate,
@@ -529,9 +522,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint32 newFlashWithdrawalSlope
     ) external onlyOwner {
         /// @dev withdrawal fee
-        // maxFlashFeeRate = newMaxFlashFeeRate;
-        // optimalWithdrawalRate = newOptimalWithdrawalRate;
-        // flashWithdrawalSlope = newFlashWithdrawalSlope;
+        maxFlashFeeRate = newMaxFlashFeeRate;
+        optimalWithdrawalRate = newOptimalWithdrawalRate;
+        flashWithdrawalSlope = newFlashWithdrawalSlope;
 
         emit WithdrawFeeParamsChanged(
             newMaxFlashFeeRate,
