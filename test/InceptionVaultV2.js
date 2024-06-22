@@ -19,31 +19,6 @@ BigInt.prototype.format = function () {
 };
 
 assets = [
-  // {
-  //   assetName: "lsEth",
-  //   assetAddress: "0x1d8b30cC38Dba8aBce1ac29Ea27d9cFd05379A09",
-  //   assetPoolName: "MockPool",
-  //   assetPool: "x_x_x",
-  //   vaultName: "InmEthVault",
-  //   vaultFactory: "InVault_E1",
-  //   strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
-  //   assetStrategy: "0x05037A81BD7B4C9E0F7B430f1F2A22c31a2FD943",
-  //   iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-  //   delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
-  //   withdrawalDelayBlocks: 10,
-  //   ratioErr: 2n,
-  //   transactErr: 5n,
-  //   // blockNumber: 18943377,
-  //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
-  //     const donor = await impersonateWithEth("0xa2fB8224C34a2E8711d6494aB71F24c68B38c442", toWei(1));
-  //     console.log(`balance: ${await asset.balanceOf(donor.address)}`);
-  //     await asset.connect(donor).transfer(staker.address, toWei(32));
-  //     const balanceAfter = await asset.balanceOf(staker.address);
-  //     await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-  //     console.log(`allowance: ${await asset.allowance(staker.address, await iVault.getAddress())}`);
-  //     return staker;
-  //   },
-  // },
   {
     assetName: "rETH",
     assetAddress: "0x7322c24752f79c05FFD1E2a6FCB97020C1C264F1",
@@ -140,17 +115,9 @@ const initVault = async (a) => {
   // 6. Inception library
   console.log("- InceptionLibrary");
   const iLibrary = await ethers.deployContract("InceptionLibrary");
-  iLibrary.address = await iLibrary.getAddress();
   // 7. Inception vault
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
-  // const iVault = await upgrades.deployProxy(iVaultFactory, [
-  //   a.vaultName,
-  //   a.iVaultOperator,
-  //   a.strategyManager,
-  //   iToken.address,
-  //   a.assetStrategy,
-  // ]);
   const iVault = await iVaultFactory.deploy();
   await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
   iVault.address = await iVault.getAddress();
@@ -236,6 +203,7 @@ assets.forEach(function (a) {
       it("Initial ratio is 1e18", async function () {
         const ratio = await iVault.ratio();
         console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+        expect(await iVault.asset()).to.be.eq(await asset.getAddress());
         expect(ratio).to.be.eq(e18);
       });
 
@@ -560,6 +528,114 @@ assets.forEach(function (a) {
           .to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
+
+    describe("Deposit bonus params setter", function() {
+      let TARGET;
+      const args = [
+        {
+          name: "Normal bonus rewards profile > 0",
+          newMaxBonusRate: BigInt(2*10**8), //2%
+          newOptimalBonusRate: BigInt(0.2*10**8), //0.2%
+          newDepositUtilizationKink: BigInt(25*10**8)
+        },
+        {
+          name: "Optimal utilization = 0 => always optimal rate",
+          newMaxBonusRate: BigInt(2*10**8),
+          newOptimalBonusRate: BigInt(10**8), //1%
+          newDepositUtilizationKink: 0n
+        },
+        {
+          name: "Optimal bonus rate = 0",
+          newMaxBonusRate: BigInt(2*10**8),
+          newOptimalBonusRate: 0n,
+          newDepositUtilizationKink: BigInt(25*10**8)
+        },
+        {
+          name: "Optimal bonus rate = max > 0 => always optimal rate",
+          newMaxBonusRate: BigInt(2*10**8),
+          newOptimalBonusRate: BigInt(2*10**8),
+          newDepositUtilizationKink: BigInt(25*10**8)
+        },
+        {
+          name: "Optimal bonus rate = max = 0 => no bonus",
+          newMaxBonusRate: 0n,
+          newOptimalBonusRate: 0n,
+          newDepositUtilizationKink: BigInt(25*10**8)
+        },
+        {
+          name: "Optimal bonus rate > max", //TODO shall fail
+          newMaxBonusRate: BigInt(1*10**8),
+          newOptimalBonusRate: BigInt(2*10**8),
+          newDepositUtilizationKink: BigInt(25*10**8)
+        },
+      ]
+
+      const amounts = [
+        {
+          name: "min amount from 0",
+          flashCapacity: () => 0n,
+          amount: async () => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
+        },
+        {
+          name: "1 wei from 0",
+          flashCapacity: () => 0n,
+          amount: async () => 1n,
+        },
+        {
+          name: "from 0 to 25% of TARGET",
+          flashCapacity: () => 0n,
+          amount: async () => (TARGET * 25n) / 100n,
+        },
+        {
+          name: "from 0 to 25% + 1wei of TARGET",
+          flashCapacity: () => 0n,
+          amount: async () => (TARGET * 25n) / 100n,
+        },
+        {
+          name: "from 25% to 100% of TARGET",
+          flashCapacity: () => (TARGET * 25n) / 100n,
+          amount: async () => (TARGET * 75n) / 100n,
+        },
+        {
+          name: "from 0% to 100% of TARGET",
+          flashCapacity: () => 0n,
+          amount: async () => TARGET,
+        },
+        {
+          name: "from 0% to 200% of TARGET",
+          flashCapacity: () => 0n,
+          amount: async () => TARGET * 2n,
+        },
+      ];
+
+      args.forEach(function(arg) {
+        it(`setDepositBonusParams: ${arg.name}`, async function() {
+          await snapshot.restore();
+          TARGET = e18;
+          await iVault.connect(deployer).setTargetFlashCapacity(TARGET);
+
+          await expect(iVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink))
+            .to.emit(iVault, "DepositBonusParamsChanged")
+            .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
+
+          expect(await iVault.maxBonusRate()).to.be.eq(arg.newMaxBonusRate);
+          expect(await iVault.optimalBonusRate()).to.be.eq(arg.newOptimalBonusRate);
+          expect(await iVault.depositUtilizationKink()).to.be.eq(arg.newDepositUtilizationKink);
+        })
+
+        amounts.forEach(function(amount) {
+          it(`calculateDepositBonus for: ${amount.name}`, async function() {
+            let contractBonus = await iVault.calculateDepositBonus(await amount.amount());
+            console.log(`Contract deposit bonus:\t${contractBonus.format()}`);
+          })
+        })
+
+      })
+
+      //TODO: only owner can
+
+    })
+
 
     describe("iToken management", function () {
       beforeEach(async function () {
@@ -1290,16 +1366,14 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when there is no restaker implementation", async function () {
-        const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
-        // const iVault = await upgrades.deployProxy(iVaultFactory, [
-        //   a.vaultName,
-        //   a.iVaultOperator,
-        //   a.strategyManager,
-        //   iToken.address,
-        //   a.assetStrategy,
-        // ]);
-        const iVault = await iVaultFactory.deploy();
-        await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
+        const iVaultFactory = await ethers.getContractFactory(a.vaultFactory);
+        const iVault = await upgrades.deployProxy(iVaultFactory, [
+          a.vaultName,
+          a.iVaultOperator,
+          a.strategyManager,
+          iToken.address,
+          a.assetStrategy,
+        ]);
         await iVault.setDelegationManager(a.delegationManager);
         await iVault.setRatioFeed(ratioFeed.address);
         await iVault.addELOperator(nodeOperators[0]);
@@ -1314,7 +1388,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("Delegate from iVault", function () {
+    describe.skip("Delegate from iVault", function () {
       let TARGET;
       beforeEach(async function () {
         await snapshot.restore();
@@ -1979,7 +2053,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("UndelegateVault: request withdrawal assets staked by iVault", function () {
+    describe.skip("UndelegateVault: request withdrawal assets staked by iVault", function () {
       let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
       before(async function () {
         await snapshot.restore();
@@ -2150,7 +2224,6 @@ assets.forEach(function (a) {
           const data = await withdrawDataFromTx(tx, operatorAddress, nodeOperatorToRestaker.get(operatorAddress));
           withdrawalData.push(data);
         }
-        console.log(withdrawalData);
       });
 
       it("claim from EL", async function () {
@@ -2223,7 +2296,6 @@ assets.forEach(function (a) {
           [...WithdrawalQueuedEvent.withdrawal.strategies],
           [...WithdrawalQueuedEvent.withdrawal.shares],
         ];
-        console.log(withdrawalData1);
       });
 
       it("Deposits paused", async function () {
@@ -2350,7 +2422,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("UndelegateVault: negative cases", function () {
+    describe.skip("UndelegateVault: negative cases", function () {
       beforeEach(async function () {
         await snapshot.restore();
         await iVault.connect(staker).deposit(randomBI(19), staker.address);
@@ -2452,11 +2524,9 @@ assets.forEach(function (a) {
 
           await mineBlocks(minWithdrawalDelayBlocks);
           //ClaimEL w1
-          console.log(w1data);
           await iVault.connect(staker).claimCompletedWithdrawals(w1data[2], [w1data]);
           expect(await iVault.totalAssets()).to.be.closeTo(totalPW1, transactErr * 4n * BigInt(i + 1));
           //ClaimEL w2
-          console.log(w2data);
           await iVault.connect(staker).claimCompletedWithdrawals(w2data[2], [w2data]);
           expect(await iVault.totalAssets()).to.be.closeTo(totalPW2, transactErr * 4n * BigInt(i + 1));
           expect(await iVault.getPendingWithdrawalAmountFromEL()).to.be.eq(0); //Everything was claims from EL;

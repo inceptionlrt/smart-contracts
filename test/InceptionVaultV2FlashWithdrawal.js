@@ -22,31 +22,6 @@ BigInt.prototype.format = function () {
 };
 
 assets = [
-  // {
-  //   assetName: "lsEth",
-  //   assetAddress: "0x1d8b30cC38Dba8aBce1ac29Ea27d9cFd05379A09",
-  //   assetPoolName: "MockPool",
-  //   assetPool: "x_x_x",
-  //   vaultName: "InmEthVault",
-  //   vaultFactory: "InVault_E1",
-  //   strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
-  //   assetStrategy: "0x05037A81BD7B4C9E0F7B430f1F2A22c31a2FD943",
-  //   iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-  //   delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
-  //   withdrawalDelayBlocks: 10,
-  //   ratioErr: 2n,
-  //   transactErr: 5n,
-  //   // blockNumber: 18943377,
-  //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
-  //     const donor = await impersonateWithEth("0xa2fB8224C34a2E8711d6494aB71F24c68B38c442", toWei(1));
-  //     console.log(`balance: ${await asset.balanceOf(donor.address)}`);
-  //     await asset.connect(donor).transfer(staker.address, toWei(32));
-  //     const balanceAfter = await asset.balanceOf(staker.address);
-  //     await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-  //     console.log(`allowance: ${await asset.allowance(staker.address, await iVault.getAddress())}`);
-  //     return staker;
-  //   },
-  // },
   {
     assetName: "rETH",
     assetAddress: "0x7322c24752f79c05FFD1E2a6FCB97020C1C264F1",
@@ -134,7 +109,7 @@ const initVault = async (a) => {
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
   const iVault = await iVaultFactory.deploy();
-  await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, await iToken.getAddress(), a.assetStrategy);
+  await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
   iVault.address = await iVault.getAddress();
 
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
@@ -623,6 +598,7 @@ assets.forEach(function (a) {
     describe("Flash withdrawal", function () {
       beforeEach(async function () {
         await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
         await iVault.connect(staker3).deposit(toWei(10), staker.address);
         const freeBalance = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
