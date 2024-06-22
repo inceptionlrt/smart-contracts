@@ -324,7 +324,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                depositBonusSlope,
                 targetCapacity
             );
     }
@@ -343,7 +342,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                flashWithdrawalSlope,
                 targetCapacity
             );
     }

@@ -438,7 +438,7 @@ assets.forEach(function (a) {
         expect(totalAssetsAfter).to.be.closeTo(depositFees, transactErr * 2n);
       });
     });
-    return;
+
     describe("Deposit", function () {
       let ratio;
 
