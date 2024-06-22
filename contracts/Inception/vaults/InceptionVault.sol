@@ -495,6 +495,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint64 newOptimalBonusRate,
         uint64 newDepositUtilizationKink
     ) external onlyOwner {
+        if (newMaxBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxBonusRate);
+        if (newOptimalBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalBonusRate);
+        if (newDepositUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newDepositUtilizationKink);
+
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
         depositUtilizationKink = newDepositUtilizationKink;
@@ -511,9 +518,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint64 newOptimalWithdrawalRate,
         uint64 newWithdrawUtilizationKink
     ) external onlyOwner {
+        if (newMaxFlashFeeRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxFlashFeeRate);
+        if (newOptimalWithdrawalRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+        if (newWithdrawUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
-
         withdrawUtilizationKink = newWithdrawUtilizationKink;
 
         emit WithdrawFeeParamsChanged(
