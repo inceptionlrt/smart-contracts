@@ -491,9 +491,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////////////////////////*/
 
     function setDepositBonusParams(
-        uint32 newMaxBonusRate,
-        uint32 newOptimalBonusRate,
-        uint32 newDepositUtilizationKink
+        uint64 newMaxBonusRate,
+        uint64 newOptimalBonusRate,
+        uint64 newDepositUtilizationKink
     ) external onlyOwner {
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
@@ -507,9 +507,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function setFlashWithdrawFeeParams(
-        uint32 newMaxFlashFeeRate,
-        uint32 newOptimalWithdrawalRate,
-        uint32 newWithdrawUtilizationKink
+        uint64 newMaxFlashFeeRate,
+        uint64 newOptimalWithdrawalRate,
+        uint64 newWithdrawUtilizationKink
     ) external onlyOwner {
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
@@ -523,7 +523,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         );
     }
 
-    function setProtocolFee(uint32 newProtocolFee) external onlyOwner {
+    function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
 
