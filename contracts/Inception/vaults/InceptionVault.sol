@@ -43,13 +43,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev deposit bonus
     uint64 public maxBonusRate;
     uint64 public optimalBonusRate;
-    uint64 public depositBonusSlope;
     uint64 public depositUtilizationKink;
 
     /// @dev flash withdrawal fee
     uint64 public maxFlashFeeRate;
     uint64 public optimalWithdrawalRate;
-    uint64 public flashWithdrawalSlope;
     uint64 public withdrawUtilizationKink;
 
     function __InceptionVault_init(
@@ -76,13 +74,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         depositUtilizationKink = 25 * 1e8;
         maxBonusRate = 15 * 1e7;
         optimalBonusRate = 25 * 1e6;
-        depositBonusSlope = 5 * 1e8;
 
         /// @dev withdrawal fee
         withdrawUtilizationKink = 25 * 1e8;
         maxFlashFeeRate = 30 * 1e7;
         optimalWithdrawalRate = 5 * 1e7;
-        flashWithdrawalSlope = 1e9;
 
         treasury = msg.sender;
     }
@@ -94,6 +90,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
+
+        if (targetCapacity == 0) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -149,7 +147,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
 
-        uint256 iShares = InceptionLibrary.multiplyAndDivideFloor(
+        uint256 iShares = Convert.multiplyAndDivideFloor(
             amount + depositBonus,
             currentRatio,
             1e18
@@ -209,6 +207,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert NullParams();
         if (receiver == address(0)) revert NullParams();
+
+        if (targetCapacity == 0) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -477,13 +477,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function convertToShares(
         uint256 assets
     ) public view returns (uint256 shares) {
-        return InceptionLibrary.multiplyAndDivideFloor(assets, ratio(), 1e18);
+        return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
     function convertToAssets(
         uint256 iShares
     ) public view returns (uint256 assets) {
-        return InceptionLibrary.multiplyAndDivideFloor(iShares, 1e18, ratio());
+        return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
     /*//////////////////////////
@@ -493,18 +493,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function setDepositBonusParams(
         uint32 newMaxBonusRate,
         uint32 newOptimalBonusRate,
-        uint32 newDepositBonusSlope,
         uint32 newDepositUtilizationKink
     ) external onlyOwner {
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
-        depositBonusSlope = newDepositBonusSlope;
         depositUtilizationKink = newDepositUtilizationKink;
 
         emit DepositBonusParamsChanged(
             newMaxBonusRate,
             newOptimalBonusRate,
-            newDepositBonusSlope,
             newDepositUtilizationKink
         );
     }
@@ -512,18 +509,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function setFlashWithdrawFeeParams(
         uint32 newMaxFlashFeeRate,
         uint32 newOptimalWithdrawalRate,
-        uint32 newFlashWithdrawalSlope,
         uint32 newWithdrawUtilizationKink
     ) external onlyOwner {
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
-        flashWithdrawalSlope = newFlashWithdrawalSlope;
+
         withdrawUtilizationKink = newWithdrawUtilizationKink;
 
         emit WithdrawFeeParamsChanged(
             newMaxFlashFeeRate,
             newOptimalWithdrawalRate,
-            newFlashWithdrawalSlope,
             newWithdrawUtilizationKink
         );
     }

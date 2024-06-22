@@ -6,9 +6,9 @@ import {InceptionVault, IStrategyManager, IInceptionToken, IStrategy} from "../I
 /// @author The InceptionLRT team
 contract InVault_E2 is InceptionVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    // constructor() {
+    //     _disableInitializers();
+    // }
 
     function initialize(
         string memory vaultName,

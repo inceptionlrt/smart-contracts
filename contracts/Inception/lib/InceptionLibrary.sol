@@ -20,15 +20,15 @@ library InceptionLibrary {
         uint256 optimalBonusRate,
         uint256 maxDepositBonusRate,
         uint256 targetCapacity
-    ) internal pure returns (uint256 bonus) {
+    ) external pure returns (uint256 bonus) {
         /// @dev the utilization rate is in the range [0:25] %
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
-            uint256 bonusSlope = (maxDepositBonusRate - optimalBonusRate) * 1e18 /
-                (optimalCapacity * 1e18 / targetCapacity);
+            uint256 bonusSlope = ((maxDepositBonusRate - optimalBonusRate) *
+                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 bonusPercent = maxDepositBonusRate -
                 (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
@@ -54,7 +54,7 @@ library InceptionLibrary {
         uint256 optimaFeeRate,
         uint256 maxFlashWithdrawalFeeRate,
         uint256 targetCapacity
-    ) internal pure returns (uint256 fee) {
+    ) external pure returns (uint256 fee) {
         /// @dev the utilization rate is greater 1, [ :100] %
         if (amount > 0 && capacity > targetCapacity) {
             uint256 replenished = amount;
@@ -76,72 +76,12 @@ library InceptionLibrary {
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
-            uint256 feeSlope = (maxFlashWithdrawalFeeRate - optimaFeeRate) * 1e18 /
-                (optimalCapacity * 1e18 / targetCapacity);
+            uint256 feeSlope = ((maxFlashWithdrawalFeeRate - optimaFeeRate) *
+                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 bonusPercent = maxFlashWithdrawalFeeRate -
                 (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
         }
-    }
-
-    /********************************************************
-     ************************ Convert ***********************
-     ********************************************************/
-
-    function saturatingMultiply(
-        uint256 a,
-        uint256 b
-    ) internal pure returns (uint256) {
-        unchecked {
-            if (a == 0) return 0;
-            uint256 c = a * b;
-            if (c / a != b) return type(uint256).max;
-            return c;
-        }
-    }
-
-    function saturatingAdd(
-        uint256 a,
-        uint256 b
-    ) internal pure returns (uint256) {
-        unchecked {
-            uint256 c = a + b;
-            if (c < a) return type(uint256).max;
-            return c;
-        }
-    }
-
-    // Preconditions:
-    //  1. a may be arbitrary (up to 2 ** 256 - 1)
-    //  2. b * c < 2 ** 256
-    // Returned value: min(floor((a * b) / c), 2 ** 256 - 1)
-    function multiplyAndDivideFloor(
-        uint256 a,
-        uint256 b,
-        uint256 c
-    ) internal pure returns (uint256) {
-        return
-            saturatingAdd(
-                saturatingMultiply(a / c, b),
-                ((a % c) * b) / c // can't fail because of assumption 2.
-            );
-    }
-
-    // Preconditions:
-    //  1. a may be arbitrary (up to 2 ** 256 - 1)
-    //  2. b * c < 2 ** 256
-    // Returned value: min(ceil((a * b) / c), 2 ** 256 - 1)
-    function multiplyAndDivideCeil(
-        uint256 a,
-        uint256 b,
-        uint256 c
-    ) internal pure returns (uint256) {
-        require(c != 0, "c == 0");
-        return
-            saturatingAdd(
-                saturatingMultiply(a / c, b),
-                ((a % c) * b + (c - 1)) / c // can't fail because of assumption 2.
-            );
     }
 }

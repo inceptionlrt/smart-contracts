@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionAssetsHandler, IERC20, InceptionLibrary} from "../assets-handler/InceptionAssetsHandler.sol";
+import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
 import {IStrategyManager, IStrategy} from "../../interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";

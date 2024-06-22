@@ -10,6 +10,7 @@ import {IInceptionAssetHandler} from "../../interfaces/IInceptionAssetHandler.so
 import {IInceptionVaultErrors} from "../../interfaces/IInceptionVaultErrors.sol";
 
 import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
