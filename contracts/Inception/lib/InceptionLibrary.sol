@@ -18,8 +18,7 @@ library InceptionLibrary {
         uint256 capacity,
         uint256 optimalCapacity,
         uint256 optimalBonusRate,
-        uint256 maxDepositBonusPercent,
-        uint256 bonusSlope,
+        uint256 maxDepositBonusRate,
         uint256 targetCapacity
     ) internal pure returns (uint256 bonus) {
         /// @dev the utilization rate is in the range [0:25] %
@@ -28,7 +27,9 @@ library InceptionLibrary {
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
-            uint256 bonusPercent = maxDepositBonusPercent -
+            uint256 bonusSlope = (maxDepositBonusRate - optimalBonusRate) * 1e18 /
+                (optimalCapacity * 1e18 / targetCapacity);
+            uint256 bonusPercent = maxDepositBonusRate -
                 (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
 
@@ -51,8 +52,7 @@ library InceptionLibrary {
         uint256 capacity,
         uint256 optimalCapacity,
         uint256 optimaFeeRate,
-        uint256 maxFlashWithdrawalFeePercent,
-        uint256 feeSlope,
+        uint256 maxFlashWithdrawalFeeRate,
         uint256 targetCapacity
     ) internal pure returns (uint256 fee) {
         /// @dev the utilization rate is greater 1, [ :100] %
@@ -76,7 +76,9 @@ library InceptionLibrary {
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
-            uint256 bonusPercent = maxFlashWithdrawalFeePercent -
+            uint256 feeSlope = (maxFlashWithdrawalFeeRate - optimaFeeRate) * 1e18 /
+                (optimalCapacity * 1e18 / targetCapacity);
+            uint256 bonusPercent = maxFlashWithdrawalFeeRate -
                 (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
