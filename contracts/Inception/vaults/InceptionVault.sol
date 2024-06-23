@@ -300,7 +300,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        uint256 fee = calculateFlashUnstakeFee(amount);
+        uint256 fee = calculateFlashWithdrawFee(amount);
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
@@ -329,7 +329,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashUnstakeFee(
+    function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
