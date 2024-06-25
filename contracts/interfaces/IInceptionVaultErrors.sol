@@ -14,6 +14,8 @@ interface IInceptionVaultErrors {
 
     error NullParams();
 
+    error ParameterExceedsLimits(uint256 param);
+
     error NotContract();
 
     error DepositInconsistentResultedState();

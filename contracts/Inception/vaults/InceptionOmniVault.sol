@@ -12,6 +12,7 @@ import "../../interfaces/IInceptionToken.sol";
 import "../../interfaces/IRebalanceStrategy.sol";
 import "../../interfaces/IInceptionRatioFeed.sol";
 
+
 /// @author The InceptionLRT team
 /// @title The InceptionOmniVault contract
 contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
@@ -30,24 +31,20 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     address public treasuryAddress;
     IInceptionRatioFeed public ratioFeed;
 
-    uint256 public baseRate;
-    uint256 public optimalRate;
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
-    uint256 public constant MAX_PERCENT = 100 * 1e4;
+    uint256 public constant MAX_PERCENT = 100 * 1e8;
 
-    uint32 public utilizationKink;
+    uint256 public protocolFee;
 
-    uint32 public maxBonusRate;
-    uint32 public optimalBonusPercent;
-    uint32 public optimalBonusRate;
-    uint32 public depositBonusSlope;
+    uint256 public maxBonusRate;
+    uint256 public optimalBonusRate;
+    uint256 public depositUtilizationKink;
 
-    uint32 public maxFlashFeeRate;
-    uint32 public optimalWithdrawalRate;
-    uint32 public flashWithdrawalSlope;
-    uint32 public protocolFee;
+    uint256 public maxFlashFeeRate;
+    uint256 public optimalWithdrawalRate;
+    uint256 public withdrawUtilizationKink;
 
     function __InceptionOmniVault_init(
         string memory vaultName,
@@ -59,6 +56,16 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         inceptionToken = _inceptionToken;
 
         minAmount = 100;
+
+        /// @dev deposit bonus
+        depositUtilizationKink = 25 * 1e8;
+        maxBonusRate = 1.5 * 1e8;
+        optimalBonusRate = 0.25 * 1e8;
+
+        /// @dev withdrawal fee
+        withdrawUtilizationKink = 25 * 1e8;
+        maxFlashFeeRate = 3 * 1e8;
+        optimalWithdrawalRate = 0.5 * 1e8;
 
         /// TODO
         treasuryAddress = msg.sender;
@@ -99,7 +106,8 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         __beforeDeposit(receiver, amount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
-            depositBonus = calculateDepositBonus(amount);
+            uint256 capacity = getFlashCapacity();
+            depositBonus = _calculateDepositBonus(amount, capacity - amount);
             if (depositBonus > depositBonusAmount) {
                 depositBonus = depositBonusAmount;
                 depositBonusAmount = 0;
@@ -155,8 +163,7 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
             1e18,
             currentRatio
         );
-        uint256 capacity = totalAssets() - depositBonusAmount;
-
+        uint256 capacity = getFlashCapacity();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
@@ -180,16 +187,24 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256 bonus) {
-        uint256 capacity = getFlashCapacity(amount);
-        uint256 optimalCapacity = (targetCapacity * utilizationKink) / MAX_PERCENT;
+        uint256 capacity = getFlashCapacity();
+        return _calculateDepositBonus(amount, capacity);
+    }
+
+    function _calculateDepositBonus(
+        uint256 amount, uint256 capacity
+    ) internal view returns (uint256 bonus) {
+        uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) / MAX_PERCENT;
 
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
+            uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) *
+                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 bonusPercent = maxBonusRate -
-                (depositBonusSlope * (capacity + replenished / 2)) /
+                (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
 
             capacity += replenished;
@@ -210,10 +225,11 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     function calculateFlashUnstakeFee(
         uint256 amount
     ) public view returns (uint256 fee) {
-        uint256 capacity = getFlashCapacity(amount);
+
+        uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        uint256 optimalCapacity = (targetCapacity * utilizationKink) / MAX_PERCENT;
+        uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT;
 
         /// @dev the utilization rate is greater 1, [ :100] %
         if (amount > 0 && capacity > targetCapacity) {
@@ -236,8 +252,10 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
+            uint256 feeSlope = ((maxFlashFeeRate - optimalWithdrawalRate) *
+                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 bonusPercent = maxFlashFeeRate -
-                (flashWithdrawalSlope * (capacity - amount / 2)) /
+                (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
         }
@@ -251,8 +269,8 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getFlashCapacity(uint256 amount) public view returns (uint256 total) {
-        return totalAssets() - depositBonusAmount - amount;
+    function getFlashCapacity() public view returns (uint256 total) {
+        return totalAssets() - depositBonusAmount;
     }
 
     /*//////////////////////////////
@@ -275,6 +293,52 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     ////// SET functions //////
     ////////////////////////*/
 
+    function setDepositBonusParams(
+        uint64 newMaxBonusRate,
+        uint64 newOptimalBonusRate,
+        uint64 newDepositUtilizationKink
+    ) external onlyOwner {
+        if (newMaxBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxBonusRate);
+        if (newOptimalBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalBonusRate);
+        if (newDepositUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newDepositUtilizationKink);
+
+        maxBonusRate = newMaxBonusRate;
+        optimalBonusRate = newOptimalBonusRate;
+        depositUtilizationKink = newDepositUtilizationKink;
+
+        emit DepositBonusParamsChanged(
+            newMaxBonusRate,
+            newOptimalBonusRate,
+            newDepositUtilizationKink
+        );
+    }
+
+    function setFlashWithdrawFeeParams(
+        uint64 newMaxFlashFeeRate,
+        uint64 newOptimalWithdrawalRate,
+        uint64 newWithdrawUtilizationKink
+    ) external onlyOwner {
+        if (newMaxFlashFeeRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxFlashFeeRate);
+        if (newOptimalWithdrawalRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+        if (newWithdrawUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+
+        maxFlashFeeRate = newMaxFlashFeeRate;
+        optimalWithdrawalRate = newOptimalWithdrawalRate;
+        withdrawUtilizationKink = newWithdrawUtilizationKink;
+
+        emit WithdrawFeeParamsChanged(
+            newMaxFlashFeeRate,
+            newOptimalWithdrawalRate,
+            newWithdrawUtilizationKink
+        );
+    }
+
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
@@ -288,6 +352,8 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     }
 
     function setTreasuryAddress(address newTreasury) external onlyOwner {
+        if (newTreasury == address(0)) revert NullParams();
+
         emit TreasuryUpdated(newTreasury);
         treasuryAddress = newTreasury;
     }
@@ -295,6 +361,7 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
+        if (newTargetCapacity == 0) revert NullParams();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
