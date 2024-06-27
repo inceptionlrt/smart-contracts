@@ -54,8 +54,12 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
 
         name = vaultName;
         inceptionToken = _inceptionToken;
-
+        /// TODO
+        treasuryAddress = msg.sender;
         minAmount = 100;
+
+        targetCapacity = 1;
+        protocolFee = 50 * 1e8;
 
         /// @dev deposit bonus
         depositUtilizationKink = 25 * 1e8;
@@ -66,9 +70,6 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         withdrawUtilizationKink = 25 * 1e8;
         maxFlashFeeRate = 3 * 1e8;
         optimalWithdrawalRate = 0.5 * 1e8;
-
-        /// TODO
-        treasuryAddress = msg.sender;
     }
 
     /*//////////////////////////////

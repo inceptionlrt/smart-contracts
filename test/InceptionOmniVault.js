@@ -57,13 +57,6 @@ describe("Inception omni vault", function() {
       console.log(`Initial ratio:\t\t${ratio.format()}`);
     })
 
-    // TODO: remove if getTotalDeposited is not needed anymore
-    // it("Initial total deposited", async function() {
-    //   const initialDeposit = await omniVault.getTotalDeposited();
-    //   console.log(`Initial deposited:\t${initialDeposit.format()}`);
-    //   expect(initialDeposit).to.be.eq(0n);
-    // })
-
     it("Deposit to vault", async function() {
       freeBalance = randomBI(19);
       deposited = TARGET + freeBalance;
@@ -82,7 +75,6 @@ describe("Inception omni vault", function() {
       expect(await iToken.balanceOf(staker1.address)).to.be.closeTo(expectedShares, 1n);
       expect(await omniVault.totalAssets()).to.be.eq(deposited);
       expect(await omniVault.getFlashCapacity()).to.be.eq(deposited);
-      // expect(await omniVault.getTotalDeposited()).to.be.eq(deposited);
       expect(await omniVault.ratio()).to.be.eq(e18);
     })
 
@@ -92,7 +84,6 @@ describe("Inception omni vault", function() {
       const receiver = staker2;
       const receiverBalanceBefore = await ethers.provider.getBalance(receiver);
       const treasuryBalanceBefore = await ethers.provider.getBalance(owner);
-      // const totalDepositedBefore = await omniVault.getTotalDeposited();
       const totalAssetsBefore = await omniVault.totalAssets();
       const flashCapacityBefore = await omniVault.getFlashCapacity();
       console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
@@ -121,14 +112,12 @@ describe("Inception omni vault", function() {
       const senderBalanceAfter = await ethers.provider.getBalance(staker1);
       const receiverBalanceAfter = await ethers.provider.getBalance(receiver);
       const treasuryBalanceAfter = await ethers.provider.getBalance(owner);
-      // const totalDepositedAfter = await omniVault.getTotalDeposited();
       const totalAssetsAfter = await omniVault.totalAssets();
       const flashCapacityAfter = await omniVault.getFlashCapacity();
       console.log(`Shares balance diff:\t${(sharesBefore - sharesAfter).format()}`);
       console.log(`Sender balance diff:\t${(senderBalanceBefore - senderBalanceAfter).format()}`);
       console.log(`Receiver balance diff:\t${(receiverBalanceAfter - receiverBalanceBefore).format()}`);
       console.log(`Treasury balance diff:\t${(treasuryBalanceAfter - treasuryBalanceBefore).format()}`);
-      // console.log(`Total deposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
       console.log(`Total assets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
       console.log(`Flash capacity diff:\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
       console.log(`Fee collected:\t\t\t${collectedFees.format()}`);
@@ -137,7 +126,6 @@ describe("Inception omni vault", function() {
       expect(senderBalanceBefore - senderBalanceAfter).to.be.closeTo(txFee, 1n);
       expect(receiverBalanceAfter - receiverBalanceBefore).to.be.closeTo(amount - expectedFee, 1n);
       expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 1n);
-      // expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, 1n);
       expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, 1n);
       expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, 1n);
     });
@@ -636,7 +624,6 @@ describe("Inception omni vault", function() {
         const sharesBefore = await iToken.balanceOf(staker1);
         const assetBalanceBefore = await ethers.provider.getBalance(receiver);
         const treasuryBalanceBefore = await ethers.provider.getBalance(treasury);
-        // const totalDepositedBefore = await omniVault.getTotalDeposited();
         const totalAssetsBefore = await omniVault.totalAssets();
         const flashCapacityBefore = await omniVault.getFlashCapacity();
         console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
@@ -662,12 +649,10 @@ describe("Inception omni vault", function() {
         const sharesAfter = await iToken.balanceOf(staker1);
         const assetBalanceAfter = await ethers.provider.getBalance(receiver);
         const treasuryBalanceAfter = await ethers.provider.getBalance(treasury);
-        // const totalDepositedAfter = await omniVault.getTotalDeposited();
         const totalAssetsAfter = await omniVault.totalAssets();
         const flashCapacityAfter = await omniVault.getFlashCapacity();
         console.log(`Shares diff:\t\t\t${(sharesBefore - sharesAfter).format()}`);
         console.log(`Receiver balance diff:\t${(assetBalanceAfter - assetBalanceBefore).format()}`);
-        // console.log(`Total deposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
         console.log(`TotalAssets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
         console.log(`Flash capacity diff:\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
 
@@ -675,7 +660,6 @@ describe("Inception omni vault", function() {
         expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee - txFee, 1n);
         expect(actualFee).to.be.closeTo(expectedFee, 1n);
         expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 1n);
-        // expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
         expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, 1n);
         expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, 1n);
       });
