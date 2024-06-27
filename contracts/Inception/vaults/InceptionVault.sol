@@ -410,7 +410,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function ratio() public view returns (uint256) {
-        if (IERC20(address(inceptionToken)).totalSupply() == 0) return 1e18;
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
