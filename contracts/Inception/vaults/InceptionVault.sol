@@ -6,7 +6,6 @@ import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconP
 import {IOwnable} from "../../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../../interfaces/IInceptionToken.sol";
-import {IRebalanceStrategy} from "../../interfaces/IRebalanceStrategy.sol";
 import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../../interfaces/IInceptionRatioFeed.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
@@ -36,7 +35,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
-    uint64 public protocolFee;
     address public treasury;
     IInceptionRatioFeed public ratioFeed;
 
@@ -49,6 +47,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     uint64 public maxFlashFeeRate;
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
+    uint64 public protocolFee;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -65,8 +64,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         inceptionToken = _inceptionToken;
 
         minAmount = 100;
-
-        /// @notice TODO
 
         protocolFee = 50 * 1e8;
 
@@ -105,7 +102,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function deposit(
         uint256 amount,
         address receiver
-    ) public nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -114,7 +111,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 amount,
         address receiver,
         bytes32 code
-    ) public nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
         return _deposit(amount, msg.sender, receiver);
     }
@@ -209,6 +206,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (receiver == address(0)) revert NullParams();
 
         if (targetCapacity == 0) revert InceptionOnPause();
+        if (treasury == address(0)) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -242,7 +240,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
 
-    function redeem(address receiver) public whenNotPaused nonReentrant {
+    function redeem(address receiver) external whenNotPaused nonReentrant {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
@@ -302,6 +300,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         uint256 fee = calculateFlashWithdrawFee(amount);
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
+        if (protocolWithdrawalFee == 0) revert ZeroFlashWithdrawFee();
+
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
@@ -432,13 +432,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return total + strategy.userUnderlyingView(address(this));
     }
 
-    function getDelegatedTo(address elOperator) public view returns (uint256) {
+    function getDelegatedTo(
+        address elOperator
+    ) external view returns (uint256) {
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
 
     function getPendingWithdrawalOf(
         address claimer
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return _claimerWithdrawals[claimer].amount;
     }
 
@@ -458,14 +460,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return true;
     }
 
-    function maxDeposit(address /*receiver*/) public view returns (uint256) {
+    function maxDeposit(address /*receiver*/) external view returns (uint256) {
         (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
         return maxPerDeposit;
     }
 
     function maxRedeem(
         address account
-    ) public view returns (uint256 maxShares) {
+    ) external view returns (uint256 maxShares) {
         return
             convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
     }
@@ -476,7 +478,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function convertToShares(
         uint256 assets
-    ) public view returns (uint256 shares) {
+    ) external view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
