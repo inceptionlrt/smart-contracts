@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../assets-handler/InceptionOmniAssetHandler.sol";
+import "../assets-handler/InceptionERC20OmniAssetHandler.sol";
 
 import "../../interfaces/IOwnable.sol";
 import "../../interfaces/IInceptionOmniVault.sol";
@@ -14,8 +14,8 @@ import "../../interfaces/IInceptionRatioFeed.sol";
 
 
 /// @author The InceptionLRT team
-/// @title The InceptionOmniVault contract
-contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
+/// @title The InceptionERC20OmniVault contract
+contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -48,10 +48,11 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
 
     function __InceptionOmniVault_init(
         string memory vaultName,
-        IInceptionToken _inceptionToken
+        IInceptionToken _inceptionToken,
+        IERC20 wrappedAsset
     ) internal {
         __Ownable_init();
-        __InceptionOmniAssetsHandler_init();
+        __InceptionERC20OmniAssetsHandler_init(wrappedAsset);
 
         name = vaultName;
         inceptionToken = _inceptionToken;
@@ -90,9 +91,10 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
     /// @dev Mints Inception tokens in accordance with the current ratio.
     /// @dev Issues the tokens to the specified receiver address.
     function deposit(
+        uint256 amount,
         address receiver
-    ) public payable nonReentrant whenNotPaused returns (uint256) {
-        return _deposit(msg.value, msg.sender, receiver);
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        return _deposit(amount, msg.sender, receiver);
     }
 
     function _deposit(
@@ -106,10 +108,11 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         // approximately by -2 wei
 
         __beforeDeposit(receiver, amount);
+        uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             uint256 capacity = getFlashCapacity();
-            depositBonus = _calculateDepositBonus(amount, capacity - amount);
+            depositBonus = _calculateDepositBonus(amount, capacity);
             if (depositBonus > depositBonusAmount) {
                 depositBonus = depositBonusAmount;
                 depositBonusAmount = 0;
@@ -118,6 +121,10 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
             }
             emit DepositBonus(depositBonus);
         }
+
+        // get the amount from the sender
+        _transferAssetFrom(sender, amount);
+        amount = totalAssets() - depositedBefore;
 
         uint256 iShares = Convert.multiplyAndDivideFloor(
             amount + depositBonus,
