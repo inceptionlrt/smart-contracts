@@ -28,6 +28,8 @@ interface IInceptionOmniVault {
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
 
+    event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
+
     event TreasuryUpdated(address newTresury);
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);

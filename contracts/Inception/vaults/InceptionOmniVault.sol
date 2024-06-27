@@ -341,6 +341,14 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         );
     }
 
+    function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
+        if (newProtocolFee >= MAX_PERCENT)
+            revert ParameterExceedsLimits(newProtocolFee);
+
+        emit ProtocolFeeChanged(protocolFee, newProtocolFee);
+        protocolFee = newProtocolFee;
+    }
+
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
