@@ -16,19 +16,22 @@ const calculateRatio = async (vault, token) => {
 
   let denominator;
   if (totalDeposited < totalAmountToWithdraw) {
-    denominator = 0;
+    denominator = 0n;
   } else {
     denominator = totalDeposited - totalAmountToWithdraw;
   }
 
-  if (denominator == 0 || totalSupply == 0) {
+  if (denominator === 0n || totalSupply === 0n) {
     const ratio = e18;
-    console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+    // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
     return ratio;
   }
 
   const ratio = (totalSupply * e18) / denominator;
-  console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+  if ((totalSupply * e18) % denominator !== 0n) {
+    return ratio + 1n;
+  }
+  // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
   return ratio;
 };
 

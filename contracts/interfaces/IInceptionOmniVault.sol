@@ -44,7 +44,17 @@ interface IInceptionOmniVault {
 
     event DepositBonus(uint256 amount);
 
-    event FlashWithdrawFee(uint256 amount);
+    event DepositBonusParamsChanged(
+        uint256 newMaxBonusRate,
+        uint256 newOptimalBonusRate,
+        uint256 newDepositUtilizationKink
+    );
+
+    event WithdrawFeeParamsChanged(
+        uint256 newMaxFlashFeeRate,
+        uint256 newOptimalWithdrawalRate,
+        uint256 newWithdrawUtilizationKink
+    );
 
     function ratio() external view returns (uint256);
 }
