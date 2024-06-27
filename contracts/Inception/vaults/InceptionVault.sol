@@ -121,11 +121,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address sender,
         address receiver
     ) internal returns (uint256) {
-        uint256 currentRatio = ratio();
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
-
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
@@ -144,11 +142,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
 
-        uint256 iShares = Convert.multiplyAndDivideFloor(
-            amount + depositBonus,
-            currentRatio,
-            1e18
-        );
+        uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
 
@@ -477,7 +471,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function convertToShares(
         uint256 assets
-    ) external view returns (uint256 shares) {
+    ) public view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
