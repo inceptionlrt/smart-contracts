@@ -1,6 +1,7 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
+require("hardhat-contract-sizer");
 
 require("./tasks/get-free-balances");
 require("./tasks/get-inception-vaults");

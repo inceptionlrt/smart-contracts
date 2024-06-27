@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionAssetsHandler, IERC20, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
+import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
 import {IStrategyManager, IStrategy} from "../../interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
@@ -46,7 +46,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
-    /// !!!!! TODO !!!!!
     /// @dev constants are not stored in the storage
     uint256[50 - 13] private __reserver;
 
@@ -64,10 +63,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
         // approve spending by strategyManager
-        require(
-            _asset.approve(address(strategyManager), type(uint256).max),
-            "EigenLayerHandler: approve failed"
-        );
+        if (!_asset.approve(address(strategyManager), type(uint256).max))
+            revert ApproveError();
     }
 
     /*//////////////////////////////
@@ -101,21 +98,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(restaker, amount);
     }
 
-    function depositAssetIntoStrategyFromVault(
-        uint256 amount
-    ) external nonReentrant onlyOperator {
-        _beforeDepositAssetIntoStrategy(amount);
-
-        strategyManager.depositIntoStrategy(strategy, _asset, amount);
-
-        emit DepositedToEL(address(this), amount);
-    }
-
-    /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategyFromVault(uint256 amount) internal {
-        strategyManager.depositIntoStrategy(strategy, _asset, amount);
-    }
-
     /// @dev delegates assets held in the strategy to the EL operator.
     function _delegateToOperator(
         address restaker,
@@ -127,18 +109,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
-        );
-    }
-
-    function _delegateToOperatorFromVault(
-        address elOperator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) internal {
-        delegationManager.delegateTo(
-            elOperator,
-            approverSignatureAndExpiry,
-            approverSalt
         );
     }
 

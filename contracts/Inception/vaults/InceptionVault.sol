@@ -11,8 +11,6 @@ import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../../interfaces/IInceptionRatioFeed.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
-import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
-
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
@@ -36,22 +34,21 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
      */
 
     /// @dev 100%
-    uint256 public constant MAX_PERCENT = 100 * 1e4;
+    uint64 public constant MAX_PERCENT = 100 * 1e8;
 
+    uint64 public protocolFee;
     address public treasury;
     IInceptionRatioFeed public ratioFeed;
 
-    uint32 public utilizationKink;
+    /// @dev deposit bonus
+    uint64 public maxBonusRate;
+    uint64 public optimalBonusRate;
+    uint64 public depositUtilizationKink;
 
-    uint32 public maxBonusRate;
-    uint32 public optimalBonusPercent;
-    uint32 public optimalBonusRate;
-    uint32 public depositBonusSlope;
-
-    uint32 public maxFlashFeeRate;
-    uint32 public optimalWithdrawalRate;
-    uint32 public flashWithdrawalSlope;
-    uint32 public protocolFee;
+    /// @dev flash withdrawal fee
+    uint64 public maxFlashFeeRate;
+    uint64 public optimalWithdrawalRate;
+    uint64 public withdrawUtilizationKink;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -71,19 +68,17 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         /// @notice TODO
 
-        utilizationKink = 25 * 1e4;
+        protocolFee = 50 * 1e8;
 
         /// @dev deposit bonus
-        maxBonusRate = 15 * 1e3;
-        optimalBonusRate = 25 * 1e2;
-        depositBonusSlope = 5 * 1e4;
+        depositUtilizationKink = 25 * 1e8;
+        maxBonusRate = 15 * 1e7;
+        optimalBonusRate = 25 * 1e6;
 
         /// @dev withdrawal fee
-        maxFlashFeeRate = 30 * 1e3;
-        optimalWithdrawalRate = 5 * 1e3;
-        flashWithdrawalSlope = 1e5;
-
-        protocolFee = 50 * 1e4;
+        withdrawUtilizationKink = 25 * 1e8;
+        maxFlashFeeRate = 30 * 1e7;
+        optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
     }
@@ -95,6 +90,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
+
+        if (targetCapacity == 0) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -203,25 +200,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit DelegatedTo(restaker, elOperator);
     }
 
-    function delegateToOperatorFromVault(
-        address elOperator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) external nonReentrant whenNotPaused onlyOperator {
-        if (elOperator == address(0)) revert NullParams();
-
-        if (delegationManager.delegatedTo(address(this)) != address(0))
-            revert AlreadyDelegated();
-
-        _delegateToOperatorFromVault(
-            elOperator,
-            approverSalt,
-            approverSignatureAndExpiry
-        );
-
-        emit DelegatedTo(address(this), elOperator);
-    }
-
     /*///////////////////////////////////////
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
@@ -230,6 +208,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (iShares == 0) revert NullParams();
         if (receiver == address(0)) revert NullParams();
 
+        if (targetCapacity == 0) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
@@ -242,7 +221,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ) external whenNotPaused nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
-        uint256 amount = Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
+        uint256 amount = convertToAssets(iShares);
         if (amount < minAmount) revert LowerMinAmount(minAmount);
 
         // burn Inception token in view of the current ratio
@@ -276,7 +255,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 redeemedAmount;
         for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
-            Withdrawal memory request = claimerWithdrawalsQueue[withdrawalNum];
+            Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
             uint256 amount = request.amount;
             // update the genRequest and the global state
             genRequest.amount -= amount;
@@ -315,16 +294,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 amount = convertToAssets(iShares);
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
-        /// TODO
-        if (amount > getFlashCapacity()) revert InsufficientCapacity(0);
+        if (amount > getFlashCapacity())
+            revert InsufficientCapacity(getFlashCapacity());
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        uint256 fee = calculateFlashUnstakeFee(amount);
-        /// TODO
-        amount -= fee;
+        uint256 fee = calculateFlashWithdrawFee(amount);
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
+        amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasury
@@ -343,16 +321,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             InceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (targetCapacity * utilizationKink) / MAX_PERCENT,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                depositBonusSlope,
                 targetCapacity
             );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashUnstakeFee(
+    function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
@@ -362,10 +339,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (targetCapacity * utilizationKink) / MAX_PERCENT,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                flashWithdrawalSlope,
                 targetCapacity
             );
     }
@@ -375,9 +351,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////////////////////////////*/
 
     function _deployNewStub() internal returns (address) {
-        if (_stakerImplementation == address(0)) {
-            revert ImplementationNotSet();
-        }
+        if (_stakerImplementation == address(0)) revert ImplementationNotSet();
         // deploy new beacon proxy and do init call
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
@@ -436,6 +410,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function ratio() public view returns (uint256) {
+        if (IERC20(address(inceptionToken)).totalSupply() == 0) return 1e18;
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
@@ -515,17 +490,59 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    // function setFlashVaultParams(
-    //     uint256 newDepositBonusSlope,
-    //     uint256 newWithdrawalFeeSlope,
-    //     uint256 newTargetCapacity
-    // ) external onlyOwner {
-    //     depositBonusSlope = newDepositBonusSlope;
+    function setDepositBonusParams(
+        uint64 newMaxBonusRate,
+        uint64 newOptimalBonusRate,
+        uint64 newDepositUtilizationKink
+    ) external onlyOwner {
+        if (newMaxBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxBonusRate);
+        if (newOptimalBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalBonusRate);
+        if (newDepositUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newDepositUtilizationKink);
 
-    //     flashWithdrawalSlope = newWithdrawalFeeSlope;
+        maxBonusRate = newMaxBonusRate;
+        optimalBonusRate = newOptimalBonusRate;
+        depositUtilizationKink = newDepositUtilizationKink;
 
-    //     targetCapacity = newTargetCapacity;
-    // }
+        emit DepositBonusParamsChanged(
+            newMaxBonusRate,
+            newOptimalBonusRate,
+            newDepositUtilizationKink
+        );
+    }
+
+    function setFlashWithdrawFeeParams(
+        uint64 newMaxFlashFeeRate,
+        uint64 newOptimalWithdrawalRate,
+        uint64 newWithdrawUtilizationKink
+    ) external onlyOwner {
+        if (newMaxFlashFeeRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxFlashFeeRate);
+        if (newOptimalWithdrawalRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+        if (newWithdrawUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+
+        maxFlashFeeRate = newMaxFlashFeeRate;
+        optimalWithdrawalRate = newOptimalWithdrawalRate;
+        withdrawUtilizationKink = newWithdrawUtilizationKink;
+
+        emit WithdrawFeeParamsChanged(
+            newMaxFlashFeeRate,
+            newOptimalWithdrawalRate,
+            newWithdrawUtilizationKink
+        );
+    }
+
+    function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
+        if (newProtocolFee >= MAX_PERCENT)
+            revert ParameterExceedsLimits(newProtocolFee);
+
+        emit ProtocolFeeChanged(protocolFee, newProtocolFee);
+        protocolFee = newProtocolFee;
+    }
 
     function setTreasuryAddress(address newTreasury) external onlyOwner {
         if (newTreasury == address(0)) revert NullParams();
