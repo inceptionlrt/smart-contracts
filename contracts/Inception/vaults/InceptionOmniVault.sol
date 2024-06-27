@@ -172,12 +172,13 @@ contract InceptionOmniVault is IInceptionOmniVault, InceptionOmniAssetsHandler {
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashUnstakeFee(amount);
-
+        //TODO sync with original vault
         amount -= fee;
-        depositBonusAmount += fee / 2;
+        uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
+        depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasuryAddress
-        _transferAssetTo(treasuryAddress, fee / 2);
+        _transferAssetTo(treasuryAddress, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
