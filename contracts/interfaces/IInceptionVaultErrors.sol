@@ -38,8 +38,6 @@ interface IInceptionVaultErrors {
 
     error LowerMinAmount(uint256 minAmount);
 
-    error ZeroFlashWithdrawFee();
-
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);

@@ -294,7 +294,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         uint256 fee = calculateFlashWithdrawFee(amount);
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
-        if (protocolWithdrawalFee == 0) revert ZeroFlashWithdrawFee();
 
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
