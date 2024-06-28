@@ -1,6 +1,7 @@
 const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 const minDelay = 10n;
 
@@ -54,20 +55,20 @@ describe("InceptionTimeLock", function () {
     });
 
     it("add tx to queue with min offset", async () => {
-      /*
-        address target,
-        uint256 value,
-        bytes calldata data,
-        bytes32 predecessor,
-        bytes32 salt,
-        uint256 delay
-       */
-      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay];
-      id = await timelock.hashOperation(...txArgs.slice(0, 5));
-      tx = await timelock.connect(proposer).schedule(...txArgs);
+      txArgs = {
+        target: account1.address,
+        value: "1000",
+        data: "0x",
+        predecessor: ethers.encodeBytes32String(""),
+        salt: ethers.encodeBytes32String(""),
+        delay: minDelay
+      };
+
+      id = await timelock.hashOperation(...Object.values(txArgs).slice(0, 5));
+      tx = await timelock.connect(proposer).schedule(...Object.values(txArgs));
       expect(tx)
         .to.emit(timelock, "CallScheduled")
-        .withArgs(...txArgs, id);
+        .withArgs(id, 0n, txArgs.target, txArgs.value, txArgs.data, txArgs.predecessor, txArgs.delay);
       creationTime = BigInt(await time.latest());
     });
 
@@ -78,15 +79,13 @@ describe("InceptionTimeLock", function () {
     });
 
     it("execute instantly :: period not passed", async () => {
-      await expect(timelock.connect(executor).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
-        "TimelockController: operation is not ready"
-      );
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
+        .to.be.revertedWith("TimelockController: operation is not ready");
     });
 
     it("execute by not an owner instantly :: not owner", async () => {
-      await expect(timelock.connect(account1).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
-        /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/
-      );
+      await expect(timelock.connect(account1).execute(...Object.values(txArgs).slice(0, 5)))
+        .to.be.revertedWith(/AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/);
     });
 
     it("get timestamp by args", async () => {
@@ -100,14 +99,13 @@ describe("InceptionTimeLock", function () {
 
     it("execute before timelock is funded :: underlying transaction reverted", async () => {
       // fund the contract to execute tx
-      await expect(timelock.connect(executor).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
-        "TimelockController: underlying transaction reverted"
-      );
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
+        .to.be.revertedWith("TimelockController: underlying transaction reverted");
     });
 
     it("execute by not an owner when ready:: not owner", async () => {
-      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs[1] });
-      await expect(timelock.connect(account1).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
+      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs.value });
+      await expect(timelock.connect(account1).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
         /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/
       );
     });
@@ -115,21 +113,20 @@ describe("InceptionTimeLock", function () {
     it("execute when delay passed :: success", async () => {
       const balanceBefore = await ethers.provider.getBalance(account1.address);
       console.log(`Balance before: ${balanceBefore}`);
-      expect(await timelock.connect(executor).execute(...txArgs.slice(0, 5)))
+      expect(await timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
         .to.emit(timelock, "CallExecuted")
-        .withArgs(...txArgs);
+        .withArgs(anyValue, 0n, txArgs.target, txArgs.value, txArgs.data);
       expect(await timelock.isOperationDone(id)).to.be.true;
       const balanceAfter = await ethers.provider.getBalance(account1.address);
       console.log(`Balance after: ${balanceAfter}`);
-      expect(balanceAfter - balanceBefore).to.be.eq(txArgs[1]);
+      expect(balanceAfter - balanceBefore).to.be.eq(txArgs.value);
       expect(await ethers.provider.getBalance(timelockAddress)).to.be.eq(0);
     });
 
     it("repeat execution :: not ready", async () => {
-      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs[1] });
-      await expect(timelock.connect(executor).execute(...txArgs.slice(0, 5))).to.be.revertedWith(
-        "TimelockController: operation is not ready"
-      );
+      await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs.value });
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
+        .to.be.revertedWith("TimelockController: operation is not ready");
     });
   });
 });
