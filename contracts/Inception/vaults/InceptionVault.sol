@@ -293,6 +293,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
+        if (fee == 0) revert ZeroFlashWithdrawFee();
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
 
         amount -= fee;
