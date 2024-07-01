@@ -35,8 +35,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
-    address public treasury;
     IInceptionRatioFeed public ratioFeed;
+    address public treasury;
+    uint64 public protocolFee;
 
     /// @dev deposit bonus
     uint64 public maxBonusRate;
@@ -47,7 +48,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     uint64 public maxFlashFeeRate;
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
-    uint64 public protocolFee;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -188,7 +188,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
                 approverSignatureAndExpiry
             );
 
-        emit DelegatedTo(restaker, elOperator);
+        emit DelegatedTo(restaker, elOperator, amount);
     }
 
     /*///////////////////////////////////////

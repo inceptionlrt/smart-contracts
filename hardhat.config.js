@@ -20,6 +20,12 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545/",
     },
+    holesky: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY_TESTNET}`],
+      url: `${process.env.RPC_URL_HOLESKY}`,
+      chainId: 17000,
+      gas: 8000000,
+    },
     mainnet: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_ETHEREUM}`,
