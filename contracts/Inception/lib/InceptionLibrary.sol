@@ -55,15 +55,6 @@ library InceptionLibrary {
         uint256 maxFlashWithdrawalFeeRate,
         uint256 targetCapacity
     ) external pure returns (uint256 fee) {
-        /// @dev the utilization rate is greater 1, [ :100] %
-        if (amount > 0 && capacity > targetCapacity) {
-            uint256 replenished = amount;
-            if (capacity - amount < targetCapacity)
-                replenished = capacity - targetCapacity;
-
-            amount -= replenished;
-            capacity -= replenished;
-        }
         /// @dev the utilization rate is in the range [100:25] %
         if (amount > 0 && capacity > optimalCapacity) {
             uint256 replenished = amount;
@@ -73,6 +64,7 @@ library InceptionLibrary {
             fee += (replenished * optimaFeeRate) / MAX_PERCENT;
             amount -= replenished;
             capacity -= replenished;
+            if (fee == 0) ++fee;
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
@@ -82,6 +74,8 @@ library InceptionLibrary {
                 (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
+            if (fee == 0) ++fee;
         }
+        if (fee == 0) ++fee;
     }
 }

@@ -40,14 +40,6 @@ interface IInceptionVault {
 
     event RedeemedRequests(uint256[] withdrawals);
 
-    event WithdrawalQueued(
-        address depositor,
-        uint96 nonce,
-        address withdrawer,
-        address delegatedAddress,
-        bytes32 withdrawalRoot
-    );
-
     event OperatorChanged(address prevValue, address newValue);
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
@@ -67,8 +59,6 @@ interface IInceptionVault {
     event ReferralCode(bytes32 indexed code);
 
     event DepositBonus(uint256 amount);
-
-    event UtilizationKinkChanged(uint256 prevValue, uint256 newValue);
 
     event DepositBonusParamsChanged(
         uint256 newMaxBonusRate,
