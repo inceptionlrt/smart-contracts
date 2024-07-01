@@ -575,7 +575,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("iVault setters", function () {
+    describe("Setters", function () {
       beforeEach(async function () {
         await snapshot.restore();
       });
