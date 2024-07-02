@@ -198,7 +198,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             receiveAsTokens[i] = true;
         }
 
-        uint256 availableBalace = getFreeBalance();
+        uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount;
         if (restaker == address(this)) {
@@ -228,7 +228,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             _pendingWithdrawalAmount = 0;
         }
 
-        _updateEpoch(availableBalace + withdrawnAmount);
+        _updateEpoch(availableBalance + withdrawnAmount);
     }
 
     function _claimCompletedWithdrawalsForVault(
