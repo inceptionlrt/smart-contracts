@@ -550,11 +550,12 @@ describe("Inception omni vault", function() {
   })
 
   describe("Flash withdraw", function() {
-    let TARGET, ratio;
+    let TARGET, MAX_PERCENT, ratio;
     beforeEach(async function() {
       await snapshot.restore();
       TARGET = toWei(10);
       await omniVault.setTargetFlashCapacity(TARGET);
+      MAX_PERCENT = await omniVault.MAX_PERCENT();
     })
 
     const args = [
@@ -606,6 +607,13 @@ describe("Inception omni vault", function() {
         amount: async () => (await omniVault.getFlashCapacity()) / 2n,
         receiver: () => staker2,
       },
+      {
+        name: "after protocol fee has been changed",
+        poolCapacity: () => TARGET,
+        amount: async () => await omniVault.getFlashCapacity(),
+        receiver: () => staker1,
+        protocolFee: () => BigInt(25*10**8),
+      }
     ];
 
     args.forEach(function (arg) {
@@ -615,7 +623,12 @@ describe("Inception omni vault", function() {
         //Deposit
         const predepositAmount = arg.poolCapacity();
         await omniVault.connect(staker1).deposit(staker1.address, {value: predepositAmount});
-
+        //Set protocol fee
+        let protocolFee = await omniVault.protocolFee();
+        if(arg.protocolFee){
+          protocolFee = arg.protocolFee();
+          await omniVault.setProtocolFee(protocolFee);
+        }
         //flashWithdraw
         const ratioBefore = await omniVault.ratio();
         console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
@@ -659,8 +672,10 @@ describe("Inception omni vault", function() {
         expect(sharesBefore - sharesAfter).to.be.eq(shares);
         expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee - txFee, 1n);
         expect(actualFee).to.be.closeTo(expectedFee, 1n);
-        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 1n);
-        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, 1n);
+        const toDepositBonus = expectedFee * (MAX_PERCENT - protocolFee)/MAX_PERCENT;
+        const toTreasury = expectedFee * protocolFee/MAX_PERCENT;
+        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(toTreasury, 1n);
+        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - toDepositBonus, 1n);
         expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, 1n);
       });
     });
@@ -996,6 +1011,26 @@ describe("Inception omni vault", function() {
     it("setTargetFlashCapacity(): reverts when sets to 0", async function () {
       await expect(omniVault.setTargetFlashCapacity(0n))
         .to.be.revertedWithCustomError(omniVault, "NullParams");
+    });
+
+    it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
+      const prevValue = await omniVault.protocolFee();
+      const newValue = randomBI(10);
+      await expect(omniVault.setProtocolFee(newValue))
+        .to.emit(omniVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
+      expect(await omniVault.protocolFee()).to.be.eq(newValue);
+    });
+
+    it("setProtocolFee(): reverts when > MAX_PERCENT", async function () {
+      const newValue = (await omniVault.MAX_PERCENT()) + 1n;
+      await expect(omniVault.setProtocolFee(newValue))
+        .to.be.revertedWithCustomError(omniVault, "ParameterExceedsLimits").withArgs(newValue);
+    });
+
+    it("setProtocolFee(): reverts when caller is not an owner", async function () {
+      const newValue = randomBI(10);
+      await expect(omniVault.connect(staker1).setProtocolFee(newValue))
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("setName(): only owner can", async function () {
