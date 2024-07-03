@@ -944,6 +944,28 @@ describe("Inception erc20 omni vault", function() {
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
+    it("setProtocolFee(): only owner can", async function() {
+      const protocolFee = await omniVault.protocolFee();
+      const newProtocolFee = randomBI(9);
+      await expect(omniVault.setProtocolFee(newProtocolFee))
+        .to.emit(omniVault, "ProtocolFeeChanged")
+        .withArgs(protocolFee, newProtocolFee);
+      expect(await omniVault.protocolFee()).to.be.eq(newProtocolFee);
+    });
+
+    it("setProtocolFee(): reverts when >= MAX_PERCENT", async function() {
+      const MAX_PERCENT = await omniVault.MAX_PERCENT();
+      await expect(omniVault.setProtocolFee(MAX_PERCENT))
+        .to.be.revertedWithCustomError(omniVault, "ParameterExceedsLimits")
+        .withArgs(MAX_PERCENT);
+    });
+
+    it("setProtocolFee(): reverts when called by not an owner", async function() {
+      const newProtocolFee = randomBI(9);
+      await expect(omniVault.connect(staker1).setProtocolFee(newProtocolFee))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
     it("setRatioFeed(): only owner can", async function() {
       const ratioFeed = await omniVault.ratioFeed();
       const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
