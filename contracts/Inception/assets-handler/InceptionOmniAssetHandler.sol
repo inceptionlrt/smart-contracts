@@ -66,7 +66,7 @@ contract InceptionOmniAssetsHandler is
     function setBridge(
         address newBridge
     ) external onlyOwner {
-        if (newBridge == 0) revert NullParams();
+        if (address(newBridge) == address(0)) revert NullParams();
         bridge = newBridge;
     }
 

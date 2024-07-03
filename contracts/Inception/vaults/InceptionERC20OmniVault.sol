@@ -46,7 +46,7 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
     uint256 public optimalWithdrawalRate;
     uint256 public withdrawUtilizationKink;
 
-    function __InceptionOmniVault_init(
+    function __InceptionERC20OmniVault_init(
         string memory vaultName,
         IInceptionToken _inceptionToken,
         IERC20 wrappedAsset
