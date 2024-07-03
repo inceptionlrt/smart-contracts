@@ -127,10 +127,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        if (depositBonusAmount > 0) {
+        uint256 availableBonusAmount = depositBonusAmount;
+        if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
-            if (depositBonus > depositBonusAmount) {
-                depositBonus = depositBonusAmount;
+            if (depositBonus > availableBonusAmount) {
+                depositBonus = availableBonusAmount;
                 depositBonusAmount = 0;
             } else {
                 depositBonusAmount -= depositBonus;
@@ -286,8 +287,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 amount = convertToAssets(iShares);
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
-        if (amount > getFlashCapacity())
-            revert InsufficientCapacity(getFlashCapacity());
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
