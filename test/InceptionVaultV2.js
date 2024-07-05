@@ -116,6 +116,8 @@ const initVault = async (a) => {
   // 6. Inception library
   console.log("- InceptionLibrary");
   const iLibrary = await ethers.deployContract("InceptionLibrary");
+  await iLibrary.waitForDeployment();
+
   // 7. Inception vault
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
