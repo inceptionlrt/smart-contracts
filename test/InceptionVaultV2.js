@@ -131,6 +131,7 @@ const initVault = async (a) => {
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addELOperator(nodeOperators[0]);
   await iToken.setVault(iVault.address);
+  /// in % (100 * e18 == 100 %)
   await iVault.setTargetFlashCapacity(1n);
   console.log(`... iVault initialization completed ....`);
 
