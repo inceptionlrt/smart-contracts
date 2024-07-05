@@ -116,11 +116,19 @@ const initVault = async (a) => {
   // 6. Inception library
   console.log("- InceptionLibrary");
   const iLibrary = await ethers.deployContract("InceptionLibrary");
+  await iLibrary.waitForDeployment();
+
   // 7. Inception vault
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
-  const iVault = await iVaultFactory.deploy();
-  await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
+  const iVault = await upgrades.deployProxy(
+    iVaultFactory,
+    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy],
+    {
+      unsafeAllowLinkedLibraries: true,
+    }
+  );
+
   iVault.address = await iVault.getAddress();
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
@@ -132,7 +140,7 @@ const initVault = async (a) => {
   await iVault.addELOperator(nodeOperators[0]);
   await iToken.setVault(iVault.address);
   /// in % (100 * e18 == 100 %)
-  await iVault.setTargetFlashCapacity(1n);
+  await iVault.setTargetFlashCapacity(5e18);
   console.log(`... iVault initialization completed ....`);
 
   iVault.withdrawFromELAndClaim = async function (nodeOperator, amount) {
