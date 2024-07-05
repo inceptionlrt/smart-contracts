@@ -314,10 +314,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             InceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                targetCapacity
+                _getTargetCapacity()
             );
     }
 
@@ -332,10 +332,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                targetCapacity
+                _getTargetCapacity()
             );
     }
 
@@ -404,24 +404,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
-    }
-
-    /// @dev returns the total deposited into asset strategy
-    function getTotalDeposited() public view returns (uint256) {
-        return
-            getTotalDelegated() +
-            totalAssets() +
-            _pendingWithdrawalAmount -
-            depositBonusAmount;
-    }
-
-    function getTotalDelegated() public view returns (uint256 total) {
-        uint256 stakersNum = restakers.length;
-        for (uint256 i = 0; i < stakersNum; ++i) {
-            if (restakers[i] == address(0)) continue;
-            total += strategy.userUnderlyingView(restakers[i]);
-        }
-        return total + strategy.userUnderlyingView(address(this));
     }
 
     function getDelegatedTo(

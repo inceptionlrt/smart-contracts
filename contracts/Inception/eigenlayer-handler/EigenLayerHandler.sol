@@ -46,6 +46,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
+    uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
+
     /// @dev constants are not stored in the storage
     uint256[50 - 13] private __reserver;
 
@@ -299,6 +301,31 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// GET functions //////
     ////////////////////////*/
 
+    /// @dev returns the total deposited into asset strategy
+    function getTotalDeposited() public view returns (uint256) {
+        return
+            getTotalDelegated() +
+            totalAssets() +
+            _pendingWithdrawalAmount -
+            depositBonusAmount;
+    }
+
+    function getTotalDelegated() public view returns (uint256 total) {
+        uint256 stakersNum = restakers.length;
+        for (uint256 i = 0; i < stakersNum; ++i) {
+            if (restakers[i] == address(0)) continue;
+            total += strategy.userUnderlyingView(restakers[i]);
+        }
+        return total + strategy.userUnderlyingView(address(this));
+    }
+
+    function getFreeBalance() public view returns (uint256 total) {
+        return
+            getFlashCapacity() < _getTargetCapacity()
+                ? 0
+                : getFlashCapacity() - _getTargetCapacity();
+    }
+
     function getPendingWithdrawalAmountFromEL()
         public
         view
@@ -311,11 +338,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return totalAssets() - redeemReservedAmount - depositBonusAmount;
     }
 
-    function getFreeBalance() public view returns (uint256 total) {
-        return
-            getFlashCapacity() < targetCapacity
-                ? 0
-                : getFlashCapacity() - targetCapacity;
+    function _getTargetCapacity() internal view returns (uint256) {
+        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
     }
 
     /*//////////////////////////
