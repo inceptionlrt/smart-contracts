@@ -119,8 +119,10 @@ const initVault = async (a) => {
   // 7. Inception vault
   console.log("- iVault");
   const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
-  const iVault = await iVaultFactory.deploy();
-  await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
+  const iVault = await upgrades.deployProxy(
+    iVaultFactory,
+    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy],
+    {unsafeAllowLinkedLibraries: true});
   iVault.address = await iVault.getAddress();
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
