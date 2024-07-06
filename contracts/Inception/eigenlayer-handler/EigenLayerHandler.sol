@@ -44,6 +44,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     address[] public restakers;
 
     uint256 public depositBonusAmount;
+
+    /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
     uint256 public targetCapacity;
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
