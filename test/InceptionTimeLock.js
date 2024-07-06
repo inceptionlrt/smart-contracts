@@ -43,15 +43,31 @@ describe("InceptionTimeLock", function () {
     });
 
     it("add tx to queue by not a proposer :: reverted", async () => {
-      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay];
+      txArgs = [
+        account1.address,
+        "1000",
+        "0x",
+        ethers.encodeBytes32String(""),
+        ethers.encodeBytes32String(""),
+        minDelay,
+      ];
       await expect(timelock.connect(account1).schedule(...txArgs)).to.be.revertedWith(
-        /AccessControl: account 0x.{40} is missing role 0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1/
+        /AccessControl: account 0x.{40} is missing role 0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1/,
       );
     });
 
     it("add tx with less than min offset", async () => {
-      txArgs = [account1.address, "1000", "0x", ethers.encodeBytes32String(""), ethers.encodeBytes32String(""), minDelay - 1n];
-      await expect(timelock.connect(proposer).schedule(...txArgs)).to.be.revertedWith("TimelockController: insufficient delay");
+      txArgs = [
+        account1.address,
+        "1000",
+        "0x",
+        ethers.encodeBytes32String(""),
+        ethers.encodeBytes32String(""),
+        minDelay - 1n,
+      ];
+      await expect(timelock.connect(proposer).schedule(...txArgs)).to.be.revertedWith(
+        "TimelockController: insufficient delay",
+      );
     });
 
     it("add tx to queue with min offset", async () => {
@@ -61,7 +77,7 @@ describe("InceptionTimeLock", function () {
         data: "0x",
         predecessor: ethers.encodeBytes32String(""),
         salt: ethers.encodeBytes32String(""),
-        delay: minDelay
+        delay: minDelay,
       };
 
       id = await timelock.hashOperation(...Object.values(txArgs).slice(0, 5));
@@ -79,13 +95,15 @@ describe("InceptionTimeLock", function () {
     });
 
     it("execute instantly :: period not passed", async () => {
-      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
-        .to.be.revertedWith("TimelockController: operation is not ready");
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
+        "TimelockController: operation is not ready",
+      );
     });
 
     it("execute by not an owner instantly :: not owner", async () => {
-      await expect(timelock.connect(account1).execute(...Object.values(txArgs).slice(0, 5)))
-        .to.be.revertedWith(/AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/);
+      await expect(timelock.connect(account1).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
+        /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/,
+      );
     });
 
     it("get timestamp by args", async () => {
@@ -99,14 +117,15 @@ describe("InceptionTimeLock", function () {
 
     it("execute before timelock is funded :: underlying transaction reverted", async () => {
       // fund the contract to execute tx
-      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
-        .to.be.revertedWith("TimelockController: underlying transaction reverted");
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
+        "TimelockController: underlying transaction reverted",
+      );
     });
 
     it("execute by not an owner when ready:: not owner", async () => {
       await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs.value });
       await expect(timelock.connect(account1).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
-        /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/
+        /AccessControl: account 0x.{40} is missing role 0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63/,
       );
     });
 
@@ -125,8 +144,9 @@ describe("InceptionTimeLock", function () {
 
     it("repeat execution :: not ready", async () => {
       await owner.sendTransaction({ from: owner.address, to: timelockAddress, value: txArgs.value });
-      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5)))
-        .to.be.revertedWith("TimelockController: operation is not ready");
+      await expect(timelock.connect(executor).execute(...Object.values(txArgs).slice(0, 5))).to.be.revertedWith(
+        "TimelockController: operation is not ready",
+      );
     });
   });
 });

@@ -78,7 +78,9 @@ const nodeOperators = [
 const minWithdrawalDelayBlocks = 10;
 const nodeOperatorToRestaker = new Map();
 const forcedWithdrawals = [];
-const initVault = async (a) => {
+let MAX_TARGET_PERCENT;
+
+const initVault = async a => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
   console.log("... Initialization of Inception ....");
@@ -120,15 +122,14 @@ const initVault = async (a) => {
 
   // 7. Inception vault
   console.log("- iVault");
-  const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, { libraries: { InceptionLibrary: await iLibrary.getAddress() } });
+  const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, {
+    libraries: { InceptionLibrary: await iLibrary.getAddress() },
+  });
   const iVault = await upgrades.deployProxy(
     iVaultFactory,
     [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy],
-    {
-      unsafeAllowLinkedLibraries: true,
-    }
+    { unsafeAllowLinkedLibraries: true },
   );
-
   iVault.address = await iVault.getAddress();
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
@@ -139,8 +140,9 @@ const initVault = async (a) => {
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addELOperator(nodeOperators[0]);
   await iToken.setVault(iVault.address);
-  /// in % (100 * e18 == 100 %)
-  await iVault.setTargetFlashCapacity(5e18);
+  MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
+  // in % (100 * e18 == 100 %)
+  await iVault.setTargetFlashCapacity(1n);
   console.log(`... iVault initialization completed ....`);
 
   iVault.withdrawFromELAndClaim = async function (nodeOperator, amount) {
@@ -159,7 +161,18 @@ const initVault = async (a) => {
     await this.connect(iVaultOperator).claimCompletedWithdrawals(restaker, [withdrawalData]);
   };
 
-  return [iToken, iVault, ratioFeed, asset, assetPool, strategy, iVaultOperator, restakerImp, delegationManager, iLibrary];
+  return [
+    iToken,
+    iVault,
+    ratioFeed,
+    asset,
+    assetPool,
+    strategy,
+    iVaultOperator,
+    restakerImp,
+    delegationManager,
+    iLibrary,
+  ];
 };
 
 assets.forEach(function (a) {
@@ -188,9 +201,18 @@ assets.forEach(function (a) {
         },
       ]);
 
-      [iToken, iVault, ratioFeed, asset, assetPool, strategy, iVaultOperator, restakerImp, delegationManager, iLibrary] = await initVault(
-        a
-      );
+      [
+        iToken,
+        iVault,
+        ratioFeed,
+        asset,
+        assetPool,
+        strategy,
+        iVaultOperator,
+        restakerImp,
+        delegationManager,
+        iLibrary,
+      ] = await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
 
@@ -234,7 +256,7 @@ assets.forEach(function (a) {
         const expectedShares = (deposited * e18) / (await iVault.ratio());
         const tx = await iVault.connect(staker).deposit(deposited, staker.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
+        const events = receipt.logs?.filter(e => e.eventName === "Deposit");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(staker.address);
@@ -251,7 +273,9 @@ assets.forEach(function (a) {
 
       it("Delegate partially", async function () {
         const amount = (await iVault.totalAssets()) / 2n;
-        await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         const delegatedTotal = await iVault.getTotalDelegated();
         const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
         expect(delegatedTotal).to.be.closeTo(amount, transactErr);
@@ -261,7 +285,9 @@ assets.forEach(function (a) {
 
       it("Delegate all", async function () {
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         const delegatedTotal = await iVault.getTotalDelegated();
         const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
         expect(delegatedTotal).to.be.closeTo(deposited, transactErr);
@@ -286,7 +312,7 @@ assets.forEach(function (a) {
         console.log(`Asset value:\t\t\t\t\t${assetValue.format()}`);
         const tx = await iVault.connect(staker).withdraw(shares, staker2.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Withdraw");
+        const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -320,7 +346,9 @@ assets.forEach(function (a) {
         await iVault.withdrawFromELAndClaim(nodeOperators[0], amount);
         extra = 0n;
         if (!(await iVault.isAbleToRedeem(staker2.address))[0]) {
-          console.log(`--- Going to change target flash capacity and transfer 1000 wei${a.assetName} to iVault to supply withdrawals ---`);
+          console.log(
+            `--- Going to change target flash capacity and transfer 1000 wei${a.assetName} to iVault to supply withdrawals ---`,
+          );
           await asset.connect(staker3).transfer(iVault.address, 1000n);
           extra += 1000n;
           await iVault.connect(staker3).updateEpoch();
@@ -351,7 +379,7 @@ assets.forEach(function (a) {
 
         const tx = await iVault.connect(iVaultOperator).redeem(staker2.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Redeem");
+        const events = receipt.logs?.filter(e => e.eventName === "Redeem");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(iVaultOperator.address);
         expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -375,11 +403,11 @@ assets.forEach(function (a) {
     });
 
     describe("Base flow with flash withdraw", function () {
-      let TARGET, deposited, freeBalance, depositFees;
+      let targetCapacity, deposited, freeBalance, depositFees;
       before(async function () {
         await snapshot.restore();
-        TARGET = toWei(15);
-        await iVault.setTargetFlashCapacity(TARGET);
+        targetCapacity = e18;
+        await iVault.setTargetFlashCapacity(targetCapacity); //1%
       });
 
       it("Initial ratio is 1e18", async function () {
@@ -393,18 +421,18 @@ assets.forEach(function (a) {
       });
 
       it("Deposit to Vault", async function () {
-        freeBalance = toWei(5);
-        deposited = TARGET + freeBalance;
+        deposited = toWei(10);
+        freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
         const expectedShares = (deposited * e18) / (await iVault.ratio());
         const tx = await iVault.connect(staker).deposit(deposited, staker.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
+        const events = receipt.logs?.filter(e => e.eventName === "Deposit");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(staker.address);
         expect(events[0].args["amount"]).to.be.closeTo(deposited, transactErr);
         expect(events[0].args["iShares"]).to.be.closeTo(expectedShares, transactErr);
-        expect(receipt.logs.find((l) => l.eventName === "DepositBonus")).to.be.undefined;
+        expect(receipt.logs.find(l => l.eventName === "DepositBonus")).to.be.undefined;
         console.log(`Ratio after: ${await iVault.ratio()}`);
 
         expect(await iToken.balanceOf(staker.address)).to.be.closeTo(expectedShares, transactErr);
@@ -418,22 +446,31 @@ assets.forEach(function (a) {
 
       it("Delegate freeBalance", async function () {
         const totalDepositedBefore = await iVault.getTotalDeposited();
+        const expectedFlashCapacity = (deposited * targetCapacity) / MAX_TARGET_PERCENT;
 
         const amount = await iVault.getFreeBalance();
-        await expect(iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]))
+        await expect(
+          iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
+        )
           .to.emit(iVault, "DelegatedTo")
-          .withArgs((stakerAddress) => {
-            expect(stakerAddress).to.be.properAddress;
-            expect(stakerAddress).to.be.not.eq(ethers.ZeroAddress);
-            return true;
-          }, nodeOperators[0]);
+          .withArgs(
+            stakerAddress => {
+              expect(stakerAddress).to.be.properAddress;
+              expect(stakerAddress).to.be.not.eq(ethers.ZeroAddress);
+              return true;
+            },
+            nodeOperators[0],
+            amount,
+          );
         const delegatedTotal = await iVault.getTotalDelegated();
         const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
-        expect(totalDepositedBefore).to.be.eq(await iVault.getTotalDeposited());
+        expect(totalDepositedBefore).to.be.closeTo(await iVault.getTotalDeposited(), 1n);
         expect(delegatedTotal).to.be.closeTo(amount, transactErr);
         expect(delegatedTo).to.be.closeTo(amount, transactErr);
         expect(await iVault.getFreeBalance()).to.be.closeTo(0n, 1n);
-        expect(await iVault.getFlashCapacity()).to.be.closeTo(TARGET, 1n);
+        expect(await iVault.getFlashCapacity()).to.be.closeTo(expectedFlashCapacity, 1n);
         expect(await iVault.ratio()).closeTo(e18, 1n);
       });
 
@@ -466,7 +503,7 @@ assets.forEach(function (a) {
 
         let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address);
         const receipt = await tx.wait();
-        const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
         expect(withdrawEvent.length).to.be.eq(1);
         expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
         expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -505,7 +542,7 @@ assets.forEach(function (a) {
         console.log(`Asset value:\t\t\t\t\t${assetValue.format()}`);
         const tx = await iVault.connect(staker).withdraw(shares, staker2.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Withdraw");
+        const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(staker.address);
         expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -565,7 +602,7 @@ assets.forEach(function (a) {
 
         const tx = await iVault.connect(iVaultOperator).redeem(staker2.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "Redeem");
+        const events = receipt.logs?.filter(e => e.eventName === "Redeem");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["sender"]).to.be.eq(iVaultOperator.address);
         expect(events[0].args["receiver"]).to.be.eq(staker2.address);
@@ -596,7 +633,9 @@ assets.forEach(function (a) {
       it("setTreasuryAddress(): only owner can", async function () {
         const treasury = await iVault.treasury();
         const newTreasury = ethers.Wallet.createRandom().address;
-        await expect(iVault.setTreasuryAddress(newTreasury)).to.emit(iVault, "TreasuryChanged").withArgs(treasury, newTreasury);
+        await expect(iVault.setTreasuryAddress(newTreasury))
+          .to.emit(iVault, "TreasuryChanged")
+          .withArgs(treasury, newTreasury);
         expect(await iVault.treasury()).to.be.eq(newTreasury);
       });
 
@@ -605,21 +644,25 @@ assets.forEach(function (a) {
       });
 
       it("setTreasuryAddress(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setTreasuryAddress(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setTreasuryAddress(staker2.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("setOperator(): only owner can", async function () {
         const newOperator = staker2;
         const tx = await iVault.setOperator(newOperator.address);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "OperatorChanged");
+        const events = receipt.logs?.filter(e => e.eventName === "OperatorChanged");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["prevValue"]).to.be.eq(iVaultOperator.address);
         expect(events[0].args["newValue"]).to.be.eq(newOperator.address);
 
         await iVault.connect(staker).deposit(toWei(2), staker.address);
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(newOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(newOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
       it("setOperator(): reverts when set to zero address", async function () {
@@ -627,50 +670,67 @@ assets.forEach(function (a) {
       });
 
       it("setOperator(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("addELOperator(): only owner can", async function () {
         const newELOperator = nodeOperators[1];
         const tx = await iVault.addELOperator(newELOperator);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "ELOperatorAdded");
+        const events = receipt.logs?.filter(e => e.eventName === "ELOperatorAdded");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["newELOperator"]).to.be.eq(newELOperator);
       });
 
       it("addELOperator(): reverts when caller is not an owner", async function () {
-        await expect(iVault.connect(iVaultOperator).addELOperator(nodeOperators[0])).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(iVaultOperator).addELOperator(nodeOperators[0])).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("addELOperator(): reverts when address is not a staker-operator", async function () {
-        await expect(iVault.addELOperator(randomAddress())).to.be.revertedWithCustomError(iVault, "NotEigenLayerOperator");
+        await expect(iVault.addELOperator(randomAddress())).to.be.revertedWithCustomError(
+          iVault,
+          "NotEigenLayerOperator",
+        );
       });
 
       it("addELOperator(): reverts when address is zero address", async function () {
-        await expect(iVault.addELOperator(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NotEigenLayerOperator");
+        await expect(iVault.addELOperator(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+          iVault,
+          "NotEigenLayerOperator",
+        );
       });
 
       it("addELOperator(): reverts when address has been added already", async function () {
-        await expect(iVault.addELOperator(nodeOperators[0])).to.be.revertedWithCustomError(iVault, "EigenLayerOperatorAlreadyExists");
+        await expect(iVault.addELOperator(nodeOperators[0])).to.be.revertedWithCustomError(
+          iVault,
+          "EigenLayerOperatorAlreadyExists",
+        );
       });
 
       it("setDelegationManager(): immutable", async function () {
         const newManager = ethers.Wallet.createRandom().address;
         await expect(iVault.connect(deployer).setDelegationManager(newManager)).to.be.revertedWithCustomError(
           iVault,
-          "DelegationManagerImmutable"
+          "DelegationManagerImmutable",
         );
       });
 
       it("setDelegationManager(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setDelegationManager(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setDelegationManager(staker2.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("setRatioFeed(): only owner can", async function () {
         const ratioFeed = await iVault.ratioFeed();
         const newRatioFeed = ethers.Wallet.createRandom().address;
-        await expect(iVault.setRatioFeed(newRatioFeed)).to.emit(iVault, "RatioFeedChanged").withArgs(ratioFeed, newRatioFeed);
+        await expect(iVault.setRatioFeed(newRatioFeed))
+          .to.emit(iVault, "RatioFeedChanged")
+          .withArgs(ratioFeed, newRatioFeed);
         expect(await iVault.ratioFeed()).to.be.eq(newRatioFeed);
       });
 
@@ -680,7 +740,9 @@ assets.forEach(function (a) {
 
       it("setRatioFeed(): reverts when caller is not an owner", async function () {
         const newRatioFeed = ethers.Wallet.createRandom().address;
-        await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("setMinAmount(): only owner can", async function () {
@@ -688,7 +750,7 @@ assets.forEach(function (a) {
         const newMinAmount = randomBI(3);
         const tx = await iVault.setMinAmount(newMinAmount);
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "MinAmountChanged");
+        const events = receipt.logs?.filter(e => e.eventName === "MinAmountChanged");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["prevValue"]).to.be.eq(prevValue);
         expect(events[0].args["newValue"]).to.be.eq(newMinAmount);
@@ -696,7 +758,9 @@ assets.forEach(function (a) {
       });
 
       it("setMinAmount(): another address can not", async function () {
-        await expect(iVault.connect(staker).setMinAmount(randomBI(3))).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setMinAmount(randomBI(3))).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("setName(): only owner can", async function () {
@@ -752,7 +816,7 @@ assets.forEach(function (a) {
         const newRestakeImp = await ethers.deployContract("InceptionRestaker");
         const tx = await iVault.upgradeTo(await newRestakeImp.getAddress());
         const receipt = await tx.wait();
-        const events = receipt.logs?.filter((e) => e.eventName === "ImplementationUpgraded");
+        const events = receipt.logs?.filter(e => e.eventName === "ImplementationUpgraded");
         expect(events.length).to.be.eq(1);
         expect(events[0].args["prevValue"]).to.be.eq(await restakerImp.getAddress());
         expect(events[0].args["newValue"]).to.be.eq(await newRestakeImp.getAddress());
@@ -765,7 +829,7 @@ assets.forEach(function (a) {
       it("upgradeTo(): reverts when caller is not an operator", async function () {
         const newRestakeImp = await ethers.deployContract("InceptionRestaker");
         await expect(iVault.connect(staker).upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWith(
-          "Ownable: caller is not the owner"
+          "Ownable: caller is not the owner",
         );
       });
 
@@ -787,29 +851,37 @@ assets.forEach(function (a) {
 
       it("setTargetFlashCapacity(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(18);
-        await expect(iVault.connect(staker).setTargetFlashCapacity(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setTargetFlashCapacity(newValue)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
         const prevValue = await iVault.protocolFee();
         const newValue = randomBI(10);
-        await expect(iVault.setProtocolFee(newValue)).to.emit(iVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
+        await expect(iVault.setProtocolFee(newValue))
+          .to.emit(iVault, "ProtocolFeeChanged")
+          .withArgs(prevValue, newValue);
         expect(await iVault.protocolFee()).to.be.eq(newValue);
       });
 
       it("setProtocolFee(): reverts when > MAX_PERCENT", async function () {
         const newValue = (await iVault.MAX_PERCENT()) + 1n;
-        await expect(iVault.setProtocolFee(newValue)).to.be.revertedWithCustomError(iVault, "ParameterExceedsLimits").withArgs(newValue);
+        await expect(iVault.setProtocolFee(newValue))
+          .to.be.revertedWithCustomError(iVault, "ParameterExceedsLimits")
+          .withArgs(newValue);
       });
 
       it("setProtocolFee(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(10);
-        await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
     });
 
     describe("Deposit bonus params setter and calculation", function () {
-      let TARGET, MAX_PERCENT, localSnapshot;
+      let targetCapacityPercent, MAX_PERCENT, localSnapshot;
       before(async function () {
         MAX_PERCENT = await iVault.MAX_PERCENT();
       });
@@ -872,48 +944,47 @@ assets.forEach(function (a) {
       const amounts = [
         {
           name: "min amount from 0",
-          flashCapacity: () => 0n,
+          flashCapacity: targetCapacity => 0n,
           amount: async () => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
         },
         {
           name: "1 wei from 0",
-          flashCapacity: () => 0n,
+          flashCapacity: targetCapacity => 0n,
           amount: async () => 1n,
         },
         {
           name: "from 0 to 25% of TARGET",
-          flashCapacity: () => 0n,
-          amount: async () => (TARGET * 25n) / 100n,
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => (targetCapacityPercent * 25n) / 100n,
         },
         {
           name: "from 0 to 25% + 1wei of TARGET",
-          flashCapacity: () => 0n,
-          amount: async () => (TARGET * 25n) / 100n,
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => (targetCapacityPercent * 25n) / 100n,
         },
         {
           name: "from 25% to 100% of TARGET",
-          flashCapacity: () => (TARGET * 25n) / 100n,
-          amount: async () => (TARGET * 75n) / 100n,
+          flashCapacity: targetCapacity => (targetCapacity * 25n) / 100n,
+          amount: async () => (targetCapacityPercent * 75n) / 100n,
         },
         {
           name: "from 0% to 100% of TARGET",
-          flashCapacity: () => 0n,
-          amount: async () => TARGET,
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => targetCapacityPercent,
         },
         {
           name: "from 0% to 200% of TARGET",
-          flashCapacity: () => 0n,
-          amount: async () => TARGET * 2n,
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => targetCapacityPercent * 2n,
         },
       ];
 
       args.forEach(function (arg) {
         it(`setDepositBonusParams: ${arg.name}`, async function () {
           await snapshot.restore();
-          TARGET = e18;
-          await iVault.connect(deployer).setTargetFlashCapacity(TARGET);
-
-          await expect(iVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink))
+          await expect(
+            iVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
+          )
             .to.emit(iVault, "DepositBonusParamsChanged")
             .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
 
@@ -926,24 +997,35 @@ assets.forEach(function (a) {
         amounts.forEach(function (amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function () {
             await localSnapshot.restore();
-            let flashCapacity = amount.flashCapacity();
-            if (flashCapacity > 0n) {
-              await iVault.connect(staker).deposit(flashCapacity, staker.address);
-            }
+            const deposited = toWei(100);
+            targetCapacityPercent = e18;
+            const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
+            await iVault.connect(staker).deposit(deposited, staker.address);
+            let flashCapacity = amount.flashCapacity(targetCapacity);
+            await iVault
+              .connect(iVaultOperator)
+              .delegateToOperator(deposited - flashCapacity - 1n, nodeOperators[0], ethers.ZeroHash, [
+                ethers.ZeroHash,
+                0,
+              ]);
+            await iVault.connect(deployer).setTargetFlashCapacity(targetCapacityPercent); //1%
+            console.log(`Flash capacity:\t\t${await iVault.getFlashCapacity()}`);
+
             let _amount = await amount.amount();
             let depositBonus = 0n;
             while (_amount > 0n) {
               for (const feeFunc of depositBonusSegment) {
-                const utilization = (flashCapacity * MAX_PERCENT) / TARGET;
+                const utilization = (flashCapacity * MAX_PERCENT) / targetCapacity;
                 const fromUtilization = await feeFunc.fromUtilization();
                 const toUtilization = await feeFunc.toUtilization();
                 if (_amount > 0n && fromUtilization <= utilization && utilization < toUtilization) {
                   const fromPercent = await feeFunc.fromPercent();
                   const toPercent = await feeFunc.toPercent();
-                  const upperBound = (toUtilization * TARGET) / MAX_PERCENT;
+                  const upperBound = (toUtilization * targetCapacityPercent) / MAX_PERCENT;
                   const replenished = upperBound > flashCapacity + _amount ? _amount : upperBound - flashCapacity;
                   const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
-                  const bonusPercent = fromPercent + (slope * (flashCapacity + replenished / 2n)) / TARGET;
+                  const bonusPercent =
+                    fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacityPercent;
                   const bonus = (replenished * bonusPercent) / MAX_PERCENT;
                   console.log(`Replenished:\t\t\t${replenished.format()}`);
                   console.log(`Bonus percent:\t\t\t${bonusPercent.format()}`);
@@ -988,20 +1070,26 @@ assets.forEach(function (a) {
       invalidArgs.forEach(function (arg) {
         it(`setDepositBonusParams reverts when ${arg.name}`, async function () {
           await expect(
-            iVault.setDepositBonusParams(arg.newMaxBonusRate(), arg.newOptimalBonusRate(), arg.newDepositUtilizationKink())
+            iVault.setDepositBonusParams(
+              arg.newMaxBonusRate(),
+              arg.newOptimalBonusRate(),
+              arg.newDepositUtilizationKink(),
+            ),
           ).to.be.revertedWithCustomError(iVault, arg.customError);
         });
       });
 
       it("setDepositBonusParams reverts when caller is not an owner", async function () {
         await expect(
-          iVault.connect(staker).setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
+          iVault
+            .connect(staker)
+            .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
 
     describe("Withdraw fee params setter and calculation", function () {
-      let TARGET, MAX_PERCENT, localSnapshot;
+      let targetCapacityPercent, MAX_PERCENT, localSnapshot;
       before(async function () {
         MAX_PERCENT = await iVault.MAX_PERCENT();
       });
@@ -1058,37 +1146,37 @@ assets.forEach(function (a) {
       const amounts = [
         {
           name: "from 200% to 0% of TARGET",
-          flashCapacity: () => TARGET * 2n,
+          flashCapacity: targetCapacity => targetCapacity * 2n,
           amount: async () => await iVault.getFlashCapacity(),
         },
         {
           name: "from 100% to 0% of TARGET",
-          flashCapacity: () => TARGET,
+          flashCapacity: targetCapacity => targetCapacity,
           amount: async () => await iVault.getFlashCapacity(),
         },
         {
           name: "1 wei from 100%",
-          flashCapacity: () => TARGET,
+          flashCapacity: targetCapacity => targetCapacity,
           amount: async () => 1n,
         },
         {
           name: "min amount from 100%",
-          flashCapacity: () => TARGET,
+          flashCapacity: targetCapacity => targetCapacity,
           amount: async () => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
         },
         {
           name: "from 100% to 25% of TARGET",
-          flashCapacity: () => TARGET,
-          amount: async () => (TARGET * 75n) / 100n,
+          flashCapacity: targetCapacity => targetCapacity,
+          amount: async () => (targetCapacityPercent * 75n) / 100n,
         },
         {
           name: "from 100% to 25% - 1wei of TARGET",
-          flashCapacity: () => TARGET,
-          amount: async () => (TARGET * 75n) / 100n + 1n,
+          flashCapacity: targetCapacity => targetCapacity,
+          amount: async () => (targetCapacityPercent * 75n) / 100n + 1n,
         },
         {
           name: "from 25% to 0% of TARGET",
-          flashCapacity: () => (TARGET * 25n) / 100n,
+          flashCapacity: targetCapacity => (targetCapacity * 25n) / 100n,
           amount: async () => await iVault.getFlashCapacity(),
         },
       ];
@@ -1096,11 +1184,12 @@ assets.forEach(function (a) {
       args.forEach(function (arg) {
         it(`setFlashWithdrawFeeParams: ${arg.name}`, async function () {
           await snapshot.restore();
-          TARGET = e18;
-          await iVault.connect(deployer).setTargetFlashCapacity(TARGET);
-
           await expect(
-            iVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink)
+            iVault.setFlashWithdrawFeeParams(
+              arg.newMaxFlashFeeRate,
+              arg.newOptimalWithdrawalRate,
+              arg.newWithdrawUtilizationKink,
+            ),
           )
             .to.emit(iVault, "WithdrawFeeParamsChanged")
             .withArgs(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink);
@@ -1114,26 +1203,36 @@ assets.forEach(function (a) {
         amounts.forEach(function (amount) {
           it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
             await localSnapshot.restore();
-            if (amount.flashCapacity() > 0n) {
-              await iVault.connect(staker).deposit(amount.flashCapacity(), staker.address);
-            }
-            let flashCapacity = await iVault.getFlashCapacity();
-            console.log(`flash capacity: ${flashCapacity.format()}`);
+            const deposited = toWei(100);
+            targetCapacityPercent = e18;
+            const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
+            await iVault.connect(staker).deposit(deposited, staker.address);
+            let flashCapacity = amount.flashCapacity(targetCapacity);
+            await iVault
+              .connect(iVaultOperator)
+              .delegateToOperator(deposited - flashCapacity - 1n, nodeOperators[0], ethers.ZeroHash, [
+                ethers.ZeroHash,
+                0,
+              ]);
+            await iVault.connect(deployer).setTargetFlashCapacity(targetCapacityPercent); //1%
+            console.log(`Flash capacity:\t\t\t${await iVault.getFlashCapacity()}`);
+
             let _amount = await amount.amount();
             let withdrawFee = 0n;
-            while (_amount > 0n) {
+            while (_amount > 1n) {
               for (const feeFunc of withdrawFeeSegment) {
-                const utilization = (flashCapacity * MAX_PERCENT) / TARGET;
+                const utilization = (flashCapacity * MAX_PERCENT) / targetCapacity;
                 const fromUtilization = await feeFunc.fromUtilization();
                 const toUtilization = await feeFunc.toUtilization();
                 if (_amount > 0n && fromUtilization < utilization && utilization <= toUtilization) {
                   console.log(`Utilization:\t\t\t${utilization.format()}`);
                   const fromPercent = await feeFunc.fromPercent();
                   const toPercent = await feeFunc.toPercent();
-                  const lowerBound = (fromUtilization * TARGET) / MAX_PERCENT;
+                  const lowerBound = (fromUtilization * targetCapacityPercent) / MAX_PERCENT;
                   const replenished = lowerBound > flashCapacity - _amount ? flashCapacity - lowerBound : _amount;
                   const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
-                  const withdrawFeePercent = fromPercent + (slope * (flashCapacity - replenished / 2n)) / TARGET;
+                  const withdrawFeePercent =
+                    fromPercent + (slope * (flashCapacity - replenished / 2n)) / targetCapacityPercent;
                   const fee = (replenished * withdrawFeePercent) / MAX_PERCENT;
                   console.log(`Replenished:\t\t\t${replenished.format()}`);
                   console.log(`Fee percent:\t\t\t${withdrawFeePercent.format()}`);
@@ -1179,7 +1278,11 @@ assets.forEach(function (a) {
       invalidArgs.forEach(function (arg) {
         it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function () {
           await expect(
-            iVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate(), arg.newOptimalWithdrawalRate(), arg.newWithdrawUtilizationKink())
+            iVault.setFlashWithdrawFeeParams(
+              arg.newMaxFlashFeeRate(),
+              arg.newOptimalWithdrawalRate(),
+              arg.newWithdrawUtilizationKink(),
+            ),
           ).to.be.revertedWithCustomError(iVault, arg.customError);
         });
       });
@@ -1195,7 +1298,9 @@ assets.forEach(function (a) {
 
       it("setFlashWithdrawFeeParams reverts when caller is not an owner", async function () {
         await expect(
-          iVault.connect(staker).setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
+          iVault
+            .connect(staker)
+            .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
@@ -1206,13 +1311,17 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when not an owner mints", async function () {
-        await expect(iToken.connect(staker).mint(staker.address, toWei(1))).to.be.revertedWith("InceptionToken: only vault allowed");
+        await expect(iToken.connect(staker).mint(staker.address, toWei(1))).to.be.revertedWith(
+          "InceptionToken: only vault allowed",
+        );
       });
 
       it("Reverts: when not an owner burns", async function () {
         const amount = toWei(1);
         await iVault.connect(staker).deposit(amount, staker.address);
-        await expect(iToken.connect(staker).burn(staker.address, toWei(1) / 2n)).to.be.revertedWith("InceptionToken: only vault allowed");
+        await expect(iToken.connect(staker).burn(staker.address, toWei(1) / 2n)).to.be.revertedWith(
+          "InceptionToken: only vault allowed",
+        );
       });
 
       it("setVault(): only owner can", async function () {
@@ -1223,7 +1332,9 @@ assets.forEach(function (a) {
       });
 
       it("setVault(): another address can not", async function () {
-        await expect(iToken.connect(staker).setVault(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iToken.connect(staker).setVault(staker2.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
       });
 
       it("pause(): only owner can", async function () {
@@ -1244,14 +1355,14 @@ assets.forEach(function (a) {
       it("Reverts: deposit to iVault when iToken is paused", async function () {
         await iToken.pause();
         await expect(iVault.connect(staker).deposit(toWei(1), staker.address)).to.be.revertedWith(
-          "InceptionToken: token transfer while paused"
+          "InceptionToken: token transfer while paused",
         );
       });
 
       it("Reverts: deposit to iVault when iToken is paused", async function () {
         await iToken.pause();
         await expect(iVault.connect(staker).deposit(toWei(1), staker.address)).to.be.revertedWith(
-          "InceptionToken: token transfer while paused"
+          "InceptionToken: token transfer while paused",
         );
       });
 
@@ -1290,14 +1401,19 @@ assets.forEach(function (a) {
         iVaultMock = staker2;
         trusteeManager = staker3;
         const factory = await ethers.getContractFactory("InceptionRestaker", iVaultMock);
-        restaker = await upgrades.deployProxy(factory, [a.delegationManager, a.strategyManager, a.assetStrategy, trusteeManager.address]);
+        restaker = await upgrades.deployProxy(factory, [
+          a.delegationManager,
+          a.strategyManager,
+          a.assetStrategy,
+          trusteeManager.address,
+        ]);
       });
 
       it("depositAssetIntoStrategy: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
         await expect(restaker.connect(staker).depositAssetIntoStrategy(amount)).to.be.revertedWith(
-          "InceptionRestaker: only vault or trustee manager"
+          "InceptionRestaker: only vault or trustee manager",
         );
       });
 
@@ -1309,7 +1425,9 @@ assets.forEach(function (a) {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
         await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
-        await restaker.connect(trusteeManager).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await restaker
+          .connect(trusteeManager)
+          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         expect(await restaker.getOperatorAddress()).to.be.eq(nodeOperators[0]);
       });
 
@@ -1319,7 +1437,7 @@ assets.forEach(function (a) {
         await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
 
         await expect(
-          restaker.connect(staker).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0])
+          restaker.connect(staker).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWith("InceptionRestaker: only vault or trustee manager");
       });
 
@@ -1329,7 +1447,9 @@ assets.forEach(function (a) {
         await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
 
         await expect(
-          restaker.connect(trusteeManager).delegateToOperator(ethers.ZeroAddress, ethers.ZeroHash, [ethers.ZeroHash, 0])
+          restaker
+            .connect(trusteeManager)
+            .delegateToOperator(ethers.ZeroAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWithCustomError(restaker, "NullParams");
       });
 
@@ -1340,7 +1460,7 @@ assets.forEach(function (a) {
 
         const unknownOperator = ethers.Wallet.createRandom().address;
         await expect(
-          restaker.connect(trusteeManager).delegateToOperator(unknownOperator, ethers.ZeroHash, [ethers.ZeroHash, 0])
+          restaker.connect(trusteeManager).delegateToOperator(unknownOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWith("DelegationManager._delegate: operator is not registered in EigenLayer");
       });
 
@@ -1348,10 +1468,12 @@ assets.forEach(function (a) {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
         await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
-        await restaker.connect(trusteeManager).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await restaker
+          .connect(trusteeManager)
+          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
         await expect(restaker.connect(staker).withdrawFromEL(amount / 2n)).to.be.revertedWith(
-          "InceptionRestaker: only vault or trustee manager"
+          "InceptionRestaker: only vault or trustee manager",
         );
       });
 
@@ -1394,15 +1516,15 @@ assets.forEach(function (a) {
           // await asset.connect(staker3).approve(await iVault.getAddress(), e18);
           await iVault.connect(staker3).deposit(e18, staker3.address);
           const amount = await iVault.totalAssets();
-          await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          await iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
           await addRewardsToStrategy(a.assetStrategy, e18, staker3);
           const ratio = await calculateRatio(iVault, iToken);
           await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
         } catch (e) {
           console.warn("Deposit to strategy failed");
         }
-        TARGET = 1000n;
-        await iVault.setTargetFlashCapacity(TARGET);
         ratio = await iVault.ratio();
         console.log(`Initial ratio: ${ratio.format()}`);
       });
@@ -1471,7 +1593,7 @@ assets.forEach(function (a) {
 
           const tx = await iVault.connect(staker).deposit(amount, receiver);
           const receipt = await tx.wait();
-          const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
+          const events = receipt.logs?.filter(e => e.eventName === "Deposit");
           expect(events.length).to.be.eq(1);
           expect(events[0].args["sender"]).to.be.eq(staker.address);
           expect(events[0].args["receiver"]).to.be.eq(receiver);
@@ -1502,7 +1624,7 @@ assets.forEach(function (a) {
             .connect(iVaultOperator)
             .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
           const receipt = await tx.wait();
-          const events = receipt.logs?.filter((e) => e.eventName === "DelegatedTo");
+          const events = receipt.logs?.filter(e => e.eventName === "DelegatedTo");
           expect(events.length).to.be.eq(1);
           expect(events[0].args["stakerAddress"]).to.be.not.eq(ethers.ZeroAddress);
           expect(events[0].args["stakerAddress"]).to.be.properAddress;
@@ -1516,7 +1638,7 @@ assets.forEach(function (a) {
 
           expect(delegatedAfter - delegatedBefore).to.be.closeTo(amount, transactErr);
           expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-          expect(totalAssetsAfter).to.be.closeTo(TARGET, transactErr);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
         });
       });
 
@@ -1549,7 +1671,10 @@ assets.forEach(function (a) {
           const amount = await arg.amount();
           const receiver = arg.receiver();
           if (arg.isCustom) {
-            await expect(iVault.connect(staker).deposit(amount, receiver)).to.be.revertedWithCustomError(iVault, arg.error);
+            await expect(iVault.connect(staker).deposit(amount, receiver)).to.be.revertedWithCustomError(
+              iVault,
+              arg.error,
+            );
           } else {
             await expect(iVault.connect(staker).deposit(amount, receiver)).to.be.revertedWith(arg.error);
           }
@@ -1559,7 +1684,9 @@ assets.forEach(function (a) {
       it("Reverts: deposit when iVault is paused", async function () {
         await iVault.pause();
         const depositAmount = randomBI(19);
-        await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWith(
+          "Pausable: paused",
+        );
         await iVault.unpause();
       });
 
@@ -1567,8 +1694,19 @@ assets.forEach(function (a) {
         await iVault.pause();
         const depositAmount = randomBI(19);
         const code = ethers.encodeBytes32String(randomAddress().slice(0, 8));
-        await expect(iVault.connect(staker).depositWithReferral(depositAmount, staker, code)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).depositWithReferral(depositAmount, staker, code)).to.be.revertedWith(
+          "Pausable: paused",
+        );
         await iVault.unpause();
+      });
+
+      it("Reverts: deposit when targetCapacity is not set", async function () {
+        await iVault.setTargetFlashCapacity(0n);
+        const depositAmount = randomBI(19);
+        await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "InceptionOnPause",
+        );
       });
 
       const convertSharesArgs = [
@@ -1596,108 +1734,74 @@ assets.forEach(function (a) {
     });
 
     describe("Deposit with bonus for replenish", function () {
-      let ratio;
-
       const states = [
         {
-          name: "there is no bonus and nothing delegated to EL",
+          name: "deposit bonus = 0",
           withBonus: false,
-          delegatedBefore: false,
         },
         {
-          name: "bonus is available and nothing delegated to EL",
+          name: "deposit bonus > 0",
           withBonus: true,
-          delegatedBefore: false,
-        },
-        {
-          name: "bonus is available and some amount delegated to EL",
-          withBonus: true,
-          delegatedBefore: true,
         },
       ];
 
       const amounts = [
         {
           name: "for the first time",
-          predepositAmount: () => 0n,
-          amount: () => randomBIMax(TARGET / 4n) + TARGET / 4n,
+          predepositAmount: targetCapacity => 0n,
+          amount: targetCapacity => randomBIMax(targetCapacity / 4n) + targetCapacity / 4n,
           receiver: () => staker.address,
         },
         {
           name: "more",
-          predepositAmount: () => TARGET / 3n,
-          amount: () => randomBIMax(TARGET / 3n),
+          predepositAmount: targetCapacity => targetCapacity / 3n,
+          amount: targetCapacity => randomBIMax(targetCapacity / 3n),
           receiver: () => staker.address,
         },
         {
           name: "up to target cap",
-          predepositAmount: () => TARGET / 10n,
-          amount: () => (TARGET * 9n) / 10n,
+          predepositAmount: targetCapacity => targetCapacity / 10n,
+          amount: targetCapacity => (targetCapacity * 9n) / 10n,
           receiver: () => staker.address,
         },
         {
           name: "all rewards",
-          predepositAmount: () => 0n,
-          amount: () => TARGET,
+          predepositAmount: targetCapacity => 0n,
+          amount: targetCapacity => targetCapacity,
           receiver: () => staker.address,
         },
         {
           name: "up to target cap and above",
-          predepositAmount: () => TARGET / 10n,
-          amount: () => TARGET,
+          predepositAmount: targetCapacity => targetCapacity / 10n,
+          amount: targetCapacity => targetCapacity,
           receiver: () => staker.address,
         },
         {
           name: "above target cap",
-          predepositAmount: () => TARGET,
-          amount: () => randomBI(19),
+          predepositAmount: targetCapacity => targetCapacity,
+          amount: targetCapacity => randomBI(19),
           receiver: () => staker.address,
         },
       ];
 
       states.forEach(function (state) {
         let localSnapshot;
-        let totalBonus = 0n;
+        const targetCapacityPercent = e18;
+        const targetCapacity = e18;
         it(`---Prepare state: ${state.name}`, async function () {
           await snapshot.restore();
-          ratio = await iVault.ratio();
-          TARGET = toWei(15);
-          await iVault.setTargetFlashCapacity(TARGET);
+          const deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
           if (state.withBonus) {
-            await iVault.connect(staker3).deposit(TARGET / 3n, staker3.address);
+            await iVault.setTargetFlashCapacity(targetCapacityPercent);
+            await iVault.connect(staker3).deposit(toWei(1.5), staker3.address);
             const balanceOf = await iToken.balanceOf(staker3.address);
-            const tx = await iVault.connect(staker3).flashWithdraw(balanceOf, staker3.address);
-            const rec = await tx.wait();
-            const collectedFee = rec.logs.find((l) => l.eventName === "FlashWithdraw")?.args.fee || 0n;
-            totalBonus += collectedFee / 2n;
-          }
-          console.log(`EL balance:\t\t\t${(await iVault.getTotalDelegated()).format()}`);
-          console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
-          console.log(`Flash pool:\t\t\t${(await iVault.getFlashCapacity()).format()}`);
-          console.log(`Available bonus:\t${totalBonus.format()}`);
-
-          if (state.delegatedBefore) {
-            //Delegate
-            await iVault.connect(staker3).deposit(TARGET + e18, staker3.address);
-            const freeBalance = await iVault.getFreeBalance();
-            console.log(`Free capacity: ${freeBalance}`);
-            await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-            await addRewardsToStrategy(a.assetStrategy, e18, staker3);
-            const calculatedRatio = await calculateRatio(iVault, iToken);
-            await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
-            //flash withdrawal the rest
-            const shares = await iVault.convertToShares(TARGET);
-            let tx = await iVault.connect(staker3).flashWithdraw(shares, staker3.address);
-            let rec = await tx.wait();
-            totalBonus += rec.logs.find((l) => l.eventName === "FlashWithdraw").args.fee || 0n;
+            await iVault.connect(staker3).flashWithdraw(balanceOf, staker3.address);
+            await iVault.setTargetFlashCapacity(1n);
           }
 
-          console.log(`EL balance:\t\t\t${(await iVault.getTotalDelegated()).format()}`);
+          await iVault.connect(staker3).deposit(deposited, staker3.address);
           console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
-          console.log(`Flash pool:\t\t\t${(await iVault.getFlashCapacity()).format()}`);
-          console.log(`Available bonus:\t${totalBonus.format()}`);
-          console.log(`Initial ratio:\t${(await iVault.ratio()).format()}`);
-          expect(await iVault.getFlashCapacity()).to.be.closeTo(0n, a.transactErr);
+          console.log(`Deposit bonus:\t\t${(await iVault.depositBonusAmount()).format()}`);
           localSnapshot = await helpers.takeSnapshot();
         });
 
@@ -1708,56 +1812,53 @@ assets.forEach(function (a) {
             } else {
               expect(false).to.be.true("Can not restore local snapshot");
             }
+
+            const flashCapacityBefore = arg.predepositAmount(targetCapacity);
+            const freeBalance = await iVault.getFreeBalance();
+            await iVault
+              .connect(iVaultOperator)
+              .delegateToOperator(freeBalance - flashCapacityBefore, nodeOperators[0], ethers.ZeroHash, [
+                ethers.ZeroHash,
+                0,
+              ]);
+            await iVault.setTargetFlashCapacity(targetCapacityPercent);
+            await addRewardsToStrategy(a.assetStrategy, e18, staker3);
+            const calculatedRatio = await calculateRatio(iVault, iToken);
+            await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+
             const ratioBefore = await iVault.ratio();
-
-            //Deposit 1st time
-            let availableBonus = totalBonus;
-            const predepositAmount = arg.predepositAmount();
-            let flashCapacityBefore = predepositAmount;
+            let availableBonus = await iVault.depositBonusAmount();
             const receiver = arg.receiver();
-            if (predepositAmount > 0n) {
-              const calculatedPredepositBonus = await iVault.calculateDepositBonus(predepositAmount);
-              const expectedPredepositBonus = availableBonus > calculatedPredepositBonus ? calculatedPredepositBonus : availableBonus;
-              availableBonus -= expectedPredepositBonus;
-              flashCapacityBefore += expectedPredepositBonus;
-              let tx = await iVault.connect(staker).deposit(predepositAmount, receiver);
-              let rec = await tx.wait();
-              let bonus = rec.logs.find((l) => l.eventName === "DepositBonus")?.args.amount || 0n;
-              console.log(`Predeposit expected bonus:\t${expectedPredepositBonus.format()}`);
-              console.log(`Predeposit actual bonus:\t${bonus.format()}`);
-              console.log(`Bonus left:\t\t\t\t${availableBonus.format()}`);
-              expect(await iVault.getFlashCapacity()).to.be.closeTo(flashCapacityBefore, a.transactErr);
-            }
-            console.log(`Ratio after predeposit:\t${(await iVault.ratio()).format()}`);
-            console.log("--------------------------------");
-
             const stakerSharesBefore = await iToken.balanceOf(receiver);
             const totalDepositedBefore = await iVault.getTotalDeposited();
             const totalAssetsBefore = await iVault.totalAssets();
-            console.log(`Target:\t\t\t\t${TARGET.format()}`);
+            console.log(`Target capacity:\t\t${targetCapacity.format()}`);
             console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
 
-            const amount = await arg.amount();
-            console.log(`amount: ${amount.format()}`);
+            const amount = await arg.amount(targetCapacity);
+            console.log(`Amount:\t\t\t\t\t${amount.format()}`);
             const calculatedBonus = await iVault.calculateDepositBonus(amount);
-            console.log(`calculatedBonus:\t\t${calculatedBonus.format()}`);
-            console.log(`available bonus:\t\t${availableBonus.format()}`);
+            console.log(`Calculated bonus:\t\t${calculatedBonus.format()}`);
+            console.log(`Available bonus:\t\t${availableBonus.format()}`);
             const expectedBonus = calculatedBonus <= availableBonus ? calculatedBonus : availableBonus;
             availableBonus -= expectedBonus;
-            console.log(`Expected bonus:\t\t${expectedBonus.format()}`);
+            console.log(`Expected bonus:\t\t\t${expectedBonus.format()}`);
             const convertedShares = await iVault.convertToShares(amount + expectedBonus);
             const expectedShares = ((amount + expectedBonus) * (await iVault.ratio())) / e18;
 
             const tx = await iVault.connect(staker).deposit(amount, receiver);
             const receipt = await tx.wait();
-            const depositEvent = receipt.logs?.filter((e) => e.eventName === "Deposit");
+            const depositEvent = receipt.logs?.filter(e => e.eventName === "Deposit");
             expect(depositEvent.length).to.be.eq(1);
             expect(depositEvent[0].args["sender"]).to.be.eq(staker.address);
             expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
             expect(depositEvent[0].args["amount"]).to.be.closeTo(amount, transactErr);
             expect(depositEvent[0].args["iShares"] - expectedShares).to.be.closeTo(0, transactErr);
             //DepositBonus event
-            expect(receipt.logs.find((l) => l.eventName === "DepositBonus")?.args.amount || 0n).to.be.closeTo(expectedBonus, transactErr);
+            expect(receipt.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n).to.be.closeTo(
+              expectedBonus,
+              transactErr,
+            );
 
             const stakerSharesAfter = await iToken.balanceOf(receiver);
             const totalDepositedAfter = await iVault.getTotalDeposited();
@@ -1787,7 +1888,9 @@ assets.forEach(function (a) {
         await asset.connect(staker3).approve(await iVault.getAddress(), e18);
         await iVault.connect(staker3).deposit(e18, staker3.address);
         firstDeposit = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(firstDeposit, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(firstDeposit, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         await addRewardsToStrategy(a.assetStrategy, toWei(0.001), staker3);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -1798,25 +1901,26 @@ assets.forEach(function (a) {
       const args2 = [
         {
           name: "random amounts ~ e18",
-          depositAmount: async (TARGET) => toWei(1),
+          depositAmount: async () => toWei(1),
         },
         {
           name: "amounts which are close to min",
-          depositAmount: async (TARGET) => (await iVault.minAmount()) + TARGET + 1n,
+          depositAmount: async () => (await iVault.minAmount()) + 1n,
         },
       ];
 
       args2.forEach(function (arg) {
         it(`Deposit and delegate ${arg.name} many times`, async function () {
-          const TARGET = 1000n;
-          await iVault.setTargetFlashCapacity(TARGET);
+          await iVault.setTargetFlashCapacity(1n);
           let totalDelegated = 0n;
           const count = 10;
           for (let i = 0; i < count; i++) {
-            const deposited = await arg.depositAmount(TARGET);
+            const deposited = await arg.depositAmount();
             await iVault.connect(staker).deposit(deposited, staker.address);
             const delegated = await iVault.getFreeBalance();
-            await iVault.connect(iVaultOperator).delegateToOperator(delegated, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+            await iVault
+              .connect(iVaultOperator)
+              .delegateToOperator(delegated, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
             totalDelegated += deposited;
           }
@@ -1841,9 +1945,9 @@ assets.forEach(function (a) {
 
           expect(balanceAfter - balanceExpected).to.be.closeTo(0, err);
           expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
-          expect(totalDelegatedAfter + TARGET - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
           expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
-          expect(totalAssetsAfter).to.be.closeTo(TARGET, transactErr);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
           expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
         });
       });
@@ -1861,8 +1965,7 @@ assets.forEach(function (a) {
 
       args3.forEach(function (arg) {
         it(`Deposit many times and delegate once ${arg.name}`, async function () {
-          const TARGET = 1000n;
-          await iVault.setTargetFlashCapacity(TARGET);
+          await iVault.setTargetFlashCapacity(1n);
           let totalDeposited = 0n;
           const count = 10;
           for (let i = 0; i < count; i++) {
@@ -1872,7 +1975,9 @@ assets.forEach(function (a) {
             totalDeposited += deposited;
           }
           const totalDelegated = await iVault.getFreeBalance();
-          await iVault.connect(iVaultOperator).delegateToOperator(totalDelegated, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          await iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(totalDelegated, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
           console.log(`Final ratio:\t${await iVault.ratio()}`);
           console.log(`Total deposited:\t${totalDeposited.format()}`);
           console.log(`Total delegated:\t${totalDelegated.format()}`);
@@ -1891,10 +1996,10 @@ assets.forEach(function (a) {
           console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
           console.log(`Total assets after: ${totalAssetsAfter.format()}`);
 
-          expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(TARGET, err);
-          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
-          expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(TARGET, err);
-          expect(totalAssetsAfter).to.be.closeTo(TARGET, transactErr);
+          expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0n, err);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
           expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
         });
       });
@@ -1903,21 +2008,20 @@ assets.forEach(function (a) {
         {
           name: "to the different operators",
           count: 20,
-          stakerOperator: (i) => nodeOperators[i % nodeOperators.length],
+          stakerOperator: i => nodeOperators[i % nodeOperators.length],
         },
         {
           name: "to the same operator",
           count: 10,
-          stakerOperator: (i) => nodeOperators[0],
+          stakerOperator: i => nodeOperators[0],
         },
       ];
 
       args4.forEach(function (arg) {
         it(`Delegate many times ${arg.name}`, async function () {
-          const TARGET = 1000_000n;
-          await iVault.setTargetFlashCapacity(TARGET);
+          await iVault.setTargetFlashCapacity(1n);
           //Deposit by 2 stakers
-          const totalDelegated = toWei(60) + TARGET;
+          const totalDelegated = toWei(60);
           await iVault.connect(staker).deposit(totalDelegated / 2n, staker.address);
           await iVault.connect(staker2).deposit(totalDelegated / 2n, staker2.address);
           const deployedStakers = [nodeOperators[0]];
@@ -1938,7 +2042,7 @@ assets.forEach(function (a) {
               .connect(iVaultOperator)
               .delegateToOperator(amount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]);
             const receipt = await tx.wait();
-            let events = receipt.logs?.filter((e) => {
+            let events = receipt.logs?.filter(e => {
               return e.eventName === "DelegatedTo";
             });
             expect(events.length).to.be.eq(1);
@@ -1948,14 +2052,14 @@ assets.forEach(function (a) {
 
             //Check that RestakerDeployed event was emitted on the first delegation
             if (isFirstDelegation) {
-              let events = receipt.logs?.filter((e) => {
+              let events = receipt.logs?.filter(e => {
                 return e.eventName === "RestakerDeployed";
               });
               expect(events.length).to.be.eq(1);
               expect(events[0].args["restaker"]).to.be.not.eq(ethers.ZeroAddress);
               expect(events[0].args["restaker"]).to.be.properAddress;
             } else {
-              expect(receipt.logs.map((e) => e.event)).to.not.include("RestakerDeployed");
+              expect(receipt.logs.map(e => e.event)).to.not.include("RestakerDeployed");
             }
             const taAfter = await iVault.totalAssets();
             expect(taBefore - taAfter).to.be.closeTo(amount, transactErr);
@@ -1977,9 +2081,9 @@ assets.forEach(function (a) {
           console.log(`Total assets after: ${totalAssetsAfter.format()}`);
 
           expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
-          expect(totalDelegatedAfter + TARGET - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
           expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
-          expect(totalAssetsAfter).to.be.closeTo(TARGET, transactErr);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
           expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
         });
       });
@@ -2004,7 +2108,7 @@ assets.forEach(function (a) {
         {
           name: "amount is greater than free balance",
           deposited: toWei(10),
-          TARGET: toWei(1),
+          targetCapacityPercent: e18,
           amount: async () => (await iVault.getFreeBalance()) + 1n,
           stakerOperator: async () => nodeOperators[0],
           operator: () => iVaultOperator,
@@ -2042,8 +2146,8 @@ assets.forEach(function (a) {
 
       invalidArgs.forEach(function (arg) {
         it(`Reverts when: delegate ${arg.name}`, async function () {
-          if (arg.TARGET) {
-            await iVault.setTargetFlashCapacity(arg.TARGET);
+          if (arg.targetCapacityPercent) {
+            await iVault.setTargetFlashCapacity(arg.targetCapacityPercent);
           }
           await asset.connect(staker3).approve(await iVault.getAddress(), arg.deposited);
           await iVault.connect(staker3).deposit(arg.deposited, staker3.address);
@@ -2054,15 +2158,22 @@ assets.forEach(function (a) {
 
           if (arg.isCustom) {
             await expect(
-              iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0])
+              iVault
+                .connect(operator)
+                .delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
             ).to.be.revertedWithCustomError(iVault, arg.error);
           } else if (arg.error) {
             await expect(
-              iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0])
+              iVault
+                .connect(operator)
+                .delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
             ).to.be.revertedWith(arg.error);
           } else {
-            await expect(iVault.connect(operator).delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]))
-              .to.be.reverted;
+            await expect(
+              iVault
+                .connect(operator)
+                .delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
+            ).to.be.reverted;
           }
         });
       });
@@ -2078,7 +2189,7 @@ assets.forEach(function (a) {
         const code = ethers.encodeBytes32String(randomAddress().slice(0, 8));
         const tx = await iVault.connect(staker2).depositWithReferral(amount, receiver, code);
         const receipt = await tx.wait();
-        let events = receipt.logs?.filter((e) => {
+        let events = receipt.logs?.filter(e => {
           return e.eventName === "Deposit";
         });
         expect(events.length).to.be.eq(1);
@@ -2087,7 +2198,7 @@ assets.forEach(function (a) {
         expect(events[0].args["amount"]).to.be.closeTo(amount, transactErr);
         expect(events[0].args["iShares"] - expectedShares).to.be.closeTo(0, transactErr);
         //Code event
-        events = receipt.logs?.filter((e) => {
+        events = receipt.logs?.filter(e => {
           return e.eventName === "ReferralCode";
         });
         expect(events.length).to.be.eq(1);
@@ -2110,7 +2221,9 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(amount, staker.address);
         await iVault.pause();
         await expect(
-          iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0])
+          iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWith("Pausable: paused");
         await iVault.unpause();
       });
@@ -2119,8 +2232,11 @@ assets.forEach(function (a) {
         const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, {
           libraries: { InceptionLibrary: await iLibrary.getAddress() },
         });
-        const iVault = await iVaultFactory.deploy();
-        await iVault.initialize(a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy);
+        const iVault = await upgrades.deployProxy(
+          iVaultFactory,
+          [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy],
+          { unsafeAllowLinkedLibraries: true },
+        );
         await iVault.setDelegationManager(a.delegationManager);
         await iVault.setRatioFeed(ratioFeed.address);
         await iVault.addELOperator(nodeOperators[0]);
@@ -2132,7 +2248,9 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(amount, staker.address);
         const freeBalance = await iVault.getFreeBalance();
         await expect(
-          iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0])
+          iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWithCustomError(iVault, "ImplementationNotSet");
       });
     });
@@ -2144,7 +2262,9 @@ assets.forEach(function (a) {
         await snapshot.restore();
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         const freeBalanace = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(freeBalanace, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(freeBalanace, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         await addRewardsToStrategy(a.assetStrategy, e18, staker3);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -2158,62 +2278,62 @@ assets.forEach(function (a) {
       const testData = [
         {
           name: "random e18",
-          amount: async (shares) => 724399519262012598n,
+          amount: async shares => 724399519262012598n,
           receiver: () => staker.address,
         },
         {
           name: "999999999999999999",
-          amount: async (shares) => 999999999999999999n,
+          amount: async shares => 999999999999999999n,
           receiver: () => staker2.address,
         },
         {
           name: "888888888888888888",
-          amount: async (shares) => 888888888888888888n,
+          amount: async shares => 888888888888888888n,
           receiver: () => staker2.address,
         },
         {
           name: "777777777777777777",
-          amount: async (shares) => 777777777777777777n,
+          amount: async shares => 777777777777777777n,
           receiver: () => staker2.address,
         },
         {
           name: "666666666666666666",
-          amount: async (shares) => 666666666666666666n,
+          amount: async shares => 666666666666666666n,
           receiver: () => staker2.address,
         },
         {
           name: "555555555555555555",
-          amount: async (shares) => 555555555555555555n,
+          amount: async shares => 555555555555555555n,
           receiver: () => staker2.address,
         },
         {
           name: "444444444444444444",
-          amount: async (shares) => 444444444444444444n,
+          amount: async shares => 444444444444444444n,
           receiver: () => staker2.address,
         },
         {
           name: "333333333333333333",
-          amount: async (shares) => 333333333333333333n,
+          amount: async shares => 333333333333333333n,
           receiver: () => staker2.address,
         },
         {
           name: "222222222222222222",
-          amount: async (shares) => 222222222222222222n,
+          amount: async shares => 222222222222222222n,
           receiver: () => staker2.address,
         },
         {
           name: "111111111111111111",
-          amount: async (shares) => 111111111111111111n,
+          amount: async shares => 111111111111111111n,
           receiver: () => staker2.address,
         },
         {
           name: "min amount",
-          amount: async (shares) => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
+          amount: async shares => (await iVault.convertToAssets(await iVault.minAmount())) + 1n,
           receiver: () => staker2.address,
         },
         {
           name: "all",
-          amount: async (shares) => shares,
+          amount: async shares => shares,
           receiver: () => staker2.address,
         },
       ];
@@ -2229,7 +2349,7 @@ assets.forEach(function (a) {
 
           const tx = await iVault.connect(staker).withdraw(amount, test.receiver());
           const receipt = await tx.wait();
-          const events = receipt.logs?.filter((e) => e.eventName === "Withdraw");
+          const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
           expect(events.length).to.be.eq(1);
           expect(events[0].args["sender"]).to.be.eq(staker.address);
           expect(events[0].args["receiver"]).to.be.eq(test.receiver());
@@ -2238,7 +2358,10 @@ assets.forEach(function (a) {
           expect(events[0].args["iShares"]).to.be.eq(amount);
 
           expect(balanceBefore - (await iToken.balanceOf(staker.address))).to.be.eq(amount);
-          expect((await iVault.getPendingWithdrawalOf(test.receiver())) - stakerPWBefore).to.be.closeTo(assetValue, transactErr);
+          expect((await iVault.getPendingWithdrawalOf(test.receiver())) - stakerPWBefore).to.be.closeTo(
+            assetValue,
+            transactErr,
+          );
           expect((await iVault.totalAmountToWithdraw()) - totalPWBefore).to.be.closeTo(assetValue, transactErr);
           expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
           expect(await iVault.ratio()).to.be.closeTo(ratioBefore, ratioErr);
@@ -2251,7 +2374,9 @@ assets.forEach(function (a) {
         await snapshot.restore();
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         const freeBalance = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         await addRewardsToStrategy(a.assetStrategy, toWei(0.001), staker3);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -2293,7 +2418,10 @@ assets.forEach(function (a) {
           const amount = await test.amount();
           const receiver = test.receiver();
           if (test.isCustom) {
-            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWithCustomError(iVault, test.error);
+            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWithCustomError(
+              iVault,
+              test.error,
+            );
           } else {
             await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWith(test.error);
           }
@@ -2322,63 +2450,78 @@ assets.forEach(function (a) {
       it("Reverts: withdraw when iVault is paused", async function () {
         await iVault.pause();
         await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWith("Pausable: paused");
+        await iVault.unpause();
+      });
+
+      it("Reverts: withdraw when target capacity is not set", async function () {
+        await iVault.setTargetFlashCapacity(0n);
+        await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "InceptionOnPause",
+        );
+        await iVault.setTargetFlashCapacity(1n);
       });
     });
 
     describe("Flash withdraw with fee", function () {
+      const targetCapacityPercent = e18;
+      const targetCapacity = e18;
+      let deposited = 0n;
       beforeEach(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
-        await iVault.connect(staker3).deposit(toWei(10), staker.address);
+        deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
+        await iVault.connect(staker3).deposit(deposited, staker.address);
         const freeBalance = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         await addRewardsToStrategy(a.assetStrategy, e18, staker3);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
-        TARGET = toWei(15);
-        await iVault.setTargetFlashCapacity(TARGET);
+        await iVault.setTargetFlashCapacity(targetCapacityPercent);
       });
 
       const args = [
         {
           name: "part of the free balance when pool capacity > TARGET",
-          poolCapacity: () => TARGET + e18,
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
           amount: async () => (await iVault.getFreeBalance()) / 2n,
           receiver: () => staker,
         },
         {
           name: "all of the free balance when pool capacity > TARGET",
-          poolCapacity: () => TARGET + e18,
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
           amount: async () => await iVault.getFreeBalance(),
           receiver: () => staker,
         },
         {
           name: "all when pool capacity > TARGET",
-          poolCapacity: () => TARGET + e18,
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
           amount: async () => await iVault.getFlashCapacity(),
           receiver: () => staker,
         },
         {
           name: "partially when pool capacity = TARGET",
-          poolCapacity: () => TARGET,
+          poolCapacity: targetCapacityPercent => targetCapacityPercent,
           amount: async () => (await iVault.getFlashCapacity()) / 2n,
           receiver: () => staker,
         },
         {
           name: "all when pool capacity = TARGET",
-          poolCapacity: () => TARGET,
+          poolCapacity: targetCapacityPercent => targetCapacityPercent,
           amount: async () => await iVault.getFlashCapacity(),
           receiver: () => staker,
         },
         {
           name: "partially when pool capacity < TARGET",
-          poolCapacity: () => (TARGET * 3n) / 4n,
+          poolCapacity: targetCapacityPercent => (targetCapacityPercent * 3n) / 4n,
           amount: async () => (await iVault.getFlashCapacity()) / 2n,
           receiver: () => staker,
         },
         {
           name: "all when pool capacity < TARGET",
-          poolCapacity: () => (TARGET * 3n) / 4n,
+          poolCapacity: targetCapacityPercent => (targetCapacityPercent * 3n) / 4n,
           amount: async () => await iVault.getFlashCapacity(),
           receiver: () => staker,
         },
@@ -2386,9 +2529,10 @@ assets.forEach(function (a) {
 
       args.forEach(function (arg) {
         it(`flashWithdraw: ${arg.name}`, async function () {
-          //Deposit
-          const predepositAmount = arg.poolCapacity();
-          await iVault.connect(staker).deposit(predepositAmount, staker.address);
+          //Undelegate from EL
+          const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
+          const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
+          await iVault.withdrawFromELAndClaim(nodeOperators[0], undelegateAmount);
 
           //flashWithdraw
           const ratioBefore = await iVault.ratio();
@@ -2405,14 +2549,14 @@ assets.forEach(function (a) {
           console.log(`freeBalanceBefore:\t\t${freeBalanceBefore.format()}`);
 
           const amount = await arg.amount();
-          const shares = await iVault.convertToShares(amount);
+          const shares = await iVault.convertToShares(amount + 1n); //+1 to compensate rounding after converting from shares to amount
           const receiver = await arg.receiver();
           const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
           console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
           let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address);
           const receipt = await tx.wait();
-          const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
+          const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
           expect(withdrawEvent.length).to.be.eq(1);
           expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
           expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -2463,23 +2607,34 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(e18, staker.address);
         await iVault.pause();
         const amount = await iVault.getFlashCapacity();
-        await expect(iVault.connect(staker).flashWithdraw(amount, staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).flashWithdraw(amount, staker.address)).to.be.revertedWith(
+          "Pausable: paused",
+        );
       });
     });
 
     describe("UndelegateFrom: request withdrawal assets staked by restaker", function () {
-      let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
-      let TARGET;
+      let ratio,
+        ratioDiff,
+        depositedAmount,
+        assets1,
+        assets2,
+        withdrawalData1,
+        withdrawalData2,
+        withdrawalAssets,
+        shares1,
+        shares2;
       before(async function () {
         await snapshot.restore();
-        TARGET = 1000_000n;
-        await iVault.setTargetFlashCapacity(TARGET);
-        await new Promise((r) => setTimeout(r, 2000));
+        await iVault.setTargetFlashCapacity(1n);
+        await new Promise(r => setTimeout(r, 2000));
         //Deposit and delegate to default stakerOperator
         depositedAmount = randomBI(19);
         await iVault.connect(staker).deposit(depositedAmount, staker.address);
         const freeBalance = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
       it("Operator can undelegateFrom stakerOperator", async function () {
@@ -2494,7 +2649,7 @@ assets.forEach(function (a) {
 
         const tx = await iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], assets1);
         const receipt = await tx.wait();
-        const startWithdrawal = receipt.logs?.filter((e) => e.eventName === "StartWithdrawal");
+        const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
         expect(startWithdrawal.length).to.be.eq(1);
         const WithdrawalQueuedEvent = startWithdrawal[0].args;
         withdrawalData1 = [
@@ -2510,7 +2665,7 @@ assets.forEach(function (a) {
         const ratioAfter = await iVault.ratio();
 
         expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets1, transactErr);
-        expect(await iVault.totalAssets()).to.be.closeTo(TARGET, transactErr);
+        expect(await iVault.totalAssets()).to.be.lte(transactErr);
         const pendingWithdrawalsELAfter = await iVault.getPendingWithdrawalAmountFromEL();
         console.log(`EL's pending withdrawals:\t\t${pendingWithdrawalsELAfter.format()}`);
         expect(pendingWithdrawalsELAfter - pendingWithdrawalsELBefore).to.be.closeTo(shares1, transactErr);
@@ -2537,7 +2692,7 @@ assets.forEach(function (a) {
         const ratioBeforeUndelegate = await iVault.ratio();
         const tx = await iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], assets2);
         const receipt = await tx.wait();
-        const startWithdrawal = receipt.logs?.filter((e) => e.eventName === "StartWithdrawal");
+        const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
         expect(startWithdrawal.length).to.be.eq(1);
         const WithdrawalQueuedEvent = startWithdrawal[0].args;
         withdrawalData2 = [
@@ -2553,7 +2708,7 @@ assets.forEach(function (a) {
         const ratioAfter = await iVault.ratio();
 
         expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets2, transactErr);
-        expect(await iVault.totalAssets()).to.be.closeTo(TARGET, transactErr);
+        expect(await iVault.totalAssets()).to.be.lte(transactErr);
         expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
         const totalPWAfter = await iVault.getPendingWithdrawalAmountFromEL();
         expect(totalPWAfter - totalPWBefore).to.be.closeTo(shares2, transactErr);
@@ -2573,7 +2728,7 @@ assets.forEach(function (a) {
         console.log(`Pending withdrawal staker2:\t${(await iVault.getPendingWithdrawalOf(staker2.address)).format()}`);
         console.log(`Total pending withdrawal:\t${totalPWAfter.format()}`);
 
-        expect((await iVault.totalAssets()) - assets2).to.be.closeTo(TARGET, transactErr);
+        expect((await iVault.totalAssets()) - assets2).to.be.lte(transactErr);
         expect(totalPWAfter - shares1).to.be.closeTo(0, transactErr);
       });
 
@@ -2599,7 +2754,9 @@ assets.forEach(function (a) {
       it("Reverts: when delegating pending withdrawals back to EL", async function () {
         const totalAssets = await iVault.totalAssets();
         await expect(
-          iVault.connect(iVaultOperator).delegateToOperator(totalAssets, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0])
+          iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(totalAssets, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWithCustomError(iVault, "InsufficientCapacity");
       });
 
@@ -2609,7 +2766,9 @@ assets.forEach(function (a) {
         const staker2PWAfter = await iVault.getPendingWithdrawalOf(staker2.address);
         const part = (totalAssets - stakerPWAfter - staker2PWAfter) / 2n;
         const totalDelegatedBefore = await iVault.getTotalDelegated();
-        await iVault.connect(iVaultOperator).delegateToOperator(part, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(part, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         const totalDelegatedAfter = await iVault.getTotalDelegated();
 
         expect(totalDelegatedAfter - totalDelegatedBefore).to.be.closeTo(part, transactErr);
@@ -2619,9 +2778,11 @@ assets.forEach(function (a) {
         const totalAssets = await iVault.totalAssets();
         const stakerPWAfter = await iVault.getPendingWithdrawalOf(staker.address);
         const staker2PWAfter = await iVault.getPendingWithdrawalOf(staker2.address);
-        const leftover = totalAssets - TARGET - stakerPWAfter - staker2PWAfter;
+        const leftover = totalAssets - stakerPWAfter - staker2PWAfter;
         const totalDelegatedBefore = await iVault.getTotalDelegated();
-        await iVault.connect(iVaultOperator).delegateToOperator(leftover, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(leftover, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
         const totalDelegatedAfter = await iVault.getTotalDelegated();
         expect(totalDelegatedAfter - totalDelegatedBefore).to.be.closeTo(leftover, transactErr);
@@ -2653,15 +2814,26 @@ assets.forEach(function (a) {
     });
 
     describe.skip("UndelegateVault: request withdrawal assets staked by iVault", function () {
-      let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
+      let ratio,
+        ratioDiff,
+        depositedAmount,
+        assets1,
+        assets2,
+        withdrawalData1,
+        withdrawalData2,
+        withdrawalAssets,
+        shares1,
+        shares2;
       before(async function () {
         await snapshot.restore();
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         //Deposit and delegate to default stakerOperator
         depositedAmount = randomBI(19);
         await iVault.connect(staker).deposit(depositedAmount, staker.address);
         await iVault.connect(iVaultOperator).depositAssetIntoStrategyFromVault(await iVault.getFreeBalance());
-        await iVault.connect(iVaultOperator).delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
       it("Operator can undelegate for iVault", async function () {
@@ -2676,7 +2848,7 @@ assets.forEach(function (a) {
 
         const tx = await iVault.connect(iVaultOperator).undelegateVault(assets1);
         const receipt = await tx.wait();
-        const startWithdrawal = receipt.logs?.filter((e) => e.eventName === "StartWithdrawal");
+        const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
         expect(startWithdrawal.length).to.be.eq(1);
         const WithdrawalQueuedEvent = startWithdrawal[0].args;
         withdrawalData1 = [
@@ -2719,7 +2891,7 @@ assets.forEach(function (a) {
         const ratioBeforeUndelegate = await iVault.ratio();
         const tx = await iVault.connect(iVaultOperator).undelegateVault(assets2);
         const receipt = await tx.wait();
-        const startWithdrawal = receipt.logs?.filter((e) => e.eventName === "StartWithdrawal");
+        const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
         expect(startWithdrawal.length).to.be.eq(1);
         const WithdrawalQueuedEvent = startWithdrawal[0].args;
         withdrawalData2 = [
@@ -2785,7 +2957,7 @@ assets.forEach(function (a) {
 
       before(async function () {
         await snapshot.restore();
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         for (const operatorAddress of nodeOperators.slice(1)) {
           await iVault.addELOperator(operatorAddress); //Add default operator
         }
@@ -2804,7 +2976,9 @@ assets.forEach(function (a) {
         for (const operatorAddress of nodeOperators) {
           const ta = await iVault.totalAssets();
           const amount = ta / BigInt(nodeOperators.length - i);
-          await iVault.connect(iVaultOperator).delegateToOperator(amount, operatorAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          await iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, operatorAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]);
           expect(await iVault.getDelegatedTo(operatorAddress)).to.be.closeTo(amount, transactErr);
         }
       });
@@ -2850,11 +3024,20 @@ assets.forEach(function (a) {
     });
 
     describe("Force undelegate by node operator", function () {
-      let ratio, ratioDiff, depositedAmount, assets1, assets2, withdrawalData1, withdrawalData2, withdrawalAssets, shares1, shares2;
+      let ratio,
+        ratioDiff,
+        depositedAmount,
+        assets1,
+        assets2,
+        withdrawalData1,
+        withdrawalData2,
+        withdrawalAssets,
+        shares1,
+        shares2;
       let nodeOperator, restaker, delegatedNodeOperator1;
       before(async function () {
         await snapshot.restore();
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         forcedWithdrawals.length = 0;
         await iVault.addELOperator(nodeOperators[1]);
         //Deposit and delegate to default stakerOperator
@@ -2865,7 +3048,9 @@ assets.forEach(function (a) {
         await iVault
           .connect(iVaultOperator)
           .delegateToOperator(delegatedNodeOperator1, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-        await iVault.connect(iVaultOperator).delegateToOperator(totalAssets / 4n, nodeOperators[1], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(totalAssets / 4n, nodeOperators[1], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
       it("Node operator makes force undelegate", async function () {
@@ -2883,7 +3068,7 @@ assets.forEach(function (a) {
         console.log(`Total delegated ${await iVault.getTotalDelegated()}`);
         console.log(`Shares after ${await delegationManager.operatorShares(nodeOperators[0], a.assetStrategy)}`);
 
-        const withdrawalQueued = receipt.logs?.filter((e) => e.eventName === "WithdrawalQueued");
+        const withdrawalQueued = receipt.logs?.filter(e => e.eventName === "WithdrawalQueued");
         expect(withdrawalQueued.length).to.be.eq(1);
         const WithdrawalQueuedEvent = withdrawalQueued[0].args.toObject();
         withdrawalData1 = [
@@ -2900,20 +3085,22 @@ assets.forEach(function (a) {
       it("Deposits paused", async function () {
         await expect(iVault.connect(staker).deposit(randomBI(18), staker.address)).to.be.revertedWithCustomError(
           iVault,
-          "InceptionOnPause"
+          "InceptionOnPause",
         );
       });
 
       it("Withdrawals paused", async function () {
         const shares = await iToken.balanceOf(staker.address);
-        await expect(iVault.connect(staker).withdraw(shares, staker.address)).to.be.revertedWithCustomError(iVault, "InceptionOnPause");
+        await expect(iVault.connect(staker).withdraw(shares, staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "InceptionOnPause",
+        );
       });
 
       it("forceUndelegateRecovery: only iVault operator can", async function () {
-        await expect(iVault.connect(staker).forceUndelegateRecovery(delegatedNodeOperator1, restaker)).to.be.revertedWithCustomError(
-          iVault,
-          "OnlyOperatorAllowed"
-        );
+        await expect(
+          iVault.connect(staker).forceUndelegateRecovery(delegatedNodeOperator1, restaker),
+        ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
       });
 
       it("Fix ratio with forceUndelegateRecovery", async function () {
@@ -2950,7 +3137,9 @@ assets.forEach(function (a) {
         await snapshot.restore();
         await iVault.connect(staker).deposit(randomBI(19), staker.address);
         const freeBalance = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         console.log(`Delegated amount: \t${freeBalance.format()}`);
       });
 
@@ -3005,12 +3194,13 @@ assets.forEach(function (a) {
           const nodeOperator = await arg.nodeOperator();
           console.log(`Undelegate amount: \t${amount.format()}`);
           if (arg.isCustom) {
-            await expect(iVault.connect(arg.operator()).undelegateFrom(nodeOperator, amount)).to.be.revertedWithCustomError(
-              iVault,
-              arg.error
-            );
+            await expect(
+              iVault.connect(arg.operator()).undelegateFrom(nodeOperator, amount),
+            ).to.be.revertedWithCustomError(iVault, arg.error);
           } else {
-            await expect(iVault.connect(arg.operator()).undelegateFrom(nodeOperator, amount)).to.be.revertedWith(arg.error);
+            await expect(iVault.connect(arg.operator()).undelegateFrom(nodeOperator, amount)).to.be.revertedWith(
+              arg.error,
+            );
           }
         });
       });
@@ -3018,7 +3208,9 @@ assets.forEach(function (a) {
       it("Reverts: undelegate when iVault is paused", async function () {
         const amount = randomBI(18);
         await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount)).to.be.revertedWith(
+          "Pausable: paused",
+        );
         await iVault.unpause();
       });
     });
@@ -3029,7 +3221,9 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(randomBI(19), staker.address);
         const amount = await iVault.totalAssets();
         await iVault.connect(iVaultOperator).depositAssetIntoStrategyFromVault(amount);
-        await iVault.connect(iVaultOperator).delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperatorFromVault(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         console.log(`Delegated amount: \t${amount.format()}`);
       });
 
@@ -3054,7 +3248,10 @@ assets.forEach(function (a) {
           const amount = await arg.amount();
           console.log(`Undelegate amount: \t${amount.format()}`);
           if (arg.isCustom) {
-            await expect(iVault.connect(arg.operator()).undelegateVault(amount)).to.be.revertedWithCustomError(iVault, arg.error);
+            await expect(iVault.connect(arg.operator()).undelegateVault(amount)).to.be.revertedWithCustomError(
+              iVault,
+              arg.error,
+            );
           } else {
             await expect(iVault.connect(arg.operator()).undelegateVault(amount)).to.be.revertedWith(arg.error);
           }
@@ -3076,14 +3273,16 @@ assets.forEach(function (a) {
 
       before(async function () {
         await snapshot.restore();
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         stakers = [staker, staker2];
         //Deposit and delegate
         for (const s of stakers) {
           await iVault.connect(s).deposit(randomBI(19), s.address);
         }
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         ratio = await iVault.ratio();
         console.log(`Ratio ${ratio.toString()}`);
       });
@@ -3183,10 +3382,14 @@ assets.forEach(function (a) {
         for (const s of stakers) {
           console.log(`iToken balance staker${stakerCounter} before:\t\t${await iToken.balanceOf(s.address)}`);
           console.log(`iVault assets before:\t\t\t\t${(await iVault.totalAssets()).format()}`);
-          console.log(`Pending withdrawal staker${stakerCounter} before:\t${(await iVault.getPendingWithdrawalOf(s.address)).format()}`);
+          console.log(
+            `Pending withdrawal staker${stakerCounter} before:\t${(await iVault.getPendingWithdrawalOf(s.address)).format()}`,
+          );
           console.log(`### Staker${stakerCounter} redeems`);
           await iVault.redeem(s.address);
-          console.log(`Pending withdrawal staker${stakerCounter} after:\t${(await iVault.getPendingWithdrawalOf(s.address)).format()}`);
+          console.log(
+            `Pending withdrawal staker${stakerCounter} after:\t${(await iVault.getPendingWithdrawalOf(s.address)).format()}`,
+          );
           console.log(`Ratio: ${await iVault.ratio()}`);
           stakerCounter++;
         }
@@ -3199,20 +3402,23 @@ assets.forEach(function (a) {
 
       before(async function () {
         await snapshot.restore();
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 2000));
         ratio = await iVault.ratio();
 
         //Deposit and withdraw
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         delegatedAmount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(delegatedAmount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(delegatedAmount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
         //Withdraw 10 times
         withdrawalCount = 12;
         for (let i = 0; i < withdrawalCount; i++) {
           await iVault.connect(staker).withdraw(randomBI(18), staker.address);
         }
-        withdrawalAmount = (await iVault.getPendingWithdrawalOf(staker.address)) + BigInt(withdrawalCount) * transactErr * 2n;
+        withdrawalAmount =
+          (await iVault.getPendingWithdrawalOf(staker.address)) + BigInt(withdrawalCount) * transactErr * 2n;
         console.log(`Pending withdrawals: ${withdrawalAmount}`);
 
         const tx = await iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], withdrawalAmount);
@@ -3227,12 +3433,16 @@ assets.forEach(function (a) {
 
       it("Reverts: when iVault is paused", async function () {
         await iVault.pause();
-        await expect(iVault.claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith(
+          "Pausable: paused",
+        );
       });
 
       it("Reverts: when claim without delay", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith(
-          "DelegationManager._completeQueuedWithdrawal: minWithdrawalDelayBlocks period has not yet passed"
+        await expect(
+          iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]),
+        ).to.be.revertedWith(
+          "DelegationManager._completeQueuedWithdrawal: minWithdrawalDelayBlocks period has not yet passed",
         );
       });
 
@@ -3258,9 +3468,9 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when claim the 2nd time", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith(
-          "DelegationManager._completeQueuedWithdrawal: action is not in queue"
-        );
+        await expect(
+          iVault.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]),
+        ).to.be.revertedWith("DelegationManager._completeQueuedWithdrawal: action is not in queue");
       });
     });
 
@@ -3278,7 +3488,9 @@ assets.forEach(function (a) {
         //Deposit and withdraw
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         delegatedAmount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(delegatedAmount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(delegatedAmount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
         //Withdraw and undelegate 10 times
         withdrawalCount = 10;
@@ -3294,7 +3506,8 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: node operator does not match", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals(ethers.Wallet.createRandom().address, wDatas)).to.be.reverted;
+        await expect(iVault.connect(staker).claimCompletedWithdrawals(ethers.Wallet.createRandom().address, wDatas)).to
+          .be.reverted;
       });
 
       it("Successful claim from EL", async function () {
@@ -3305,7 +3518,10 @@ assets.forEach(function (a) {
         console.log(`iVault assets after: ${await iVault.totalAssets()}`);
         console.log(`Epoch after: ${await iVault.epoch()}`);
 
-        expect(await iVault.getPendingWithdrawalOf(staker.address)).to.be.closeTo(withdrawalAmount, transactErr * BigInt(withdrawalCount));
+        expect(await iVault.getPendingWithdrawalOf(staker.address)).to.be.closeTo(
+          withdrawalAmount,
+          transactErr * BigInt(withdrawalCount),
+        );
         expect(await iVault.totalAssets()).to.be.closeTo(withdrawalAmount, transactErr * BigInt(withdrawalCount));
         expect(await iVault.epoch()).to.be.eq(epochBefore + BigInt(withdrawalCount));
         expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
@@ -3314,15 +3530,15 @@ assets.forEach(function (a) {
 
     describe("Redeem: retrieves assets after they were taken from EL", function () {
       let ratio, stakerAmount, staker2Amount, stakerUnstakeAmount, staker2UnstakeAmount, firstDeposit;
-      let TARGET;
       before(async function () {
         await snapshot.restore();
         await asset.connect(staker3).approve(await iVault.getAddress(), e18);
         await iVault.connect(staker3).deposit(e18, staker3.address);
         firstDeposit = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(firstDeposit, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-        TARGET = 1000_000n;
-        await iVault.setTargetFlashCapacity(TARGET);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(firstDeposit, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault.setTargetFlashCapacity(1n);
         ratio = await iVault.ratio();
       });
 
@@ -3360,7 +3576,10 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when redeems the same epoch", async function () {
-        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWithCustomError(iVault, "IsNotAbleToRedeem");
+        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "IsNotAbleToRedeem",
+        );
       });
 
       it("updateEpoch without available does not affect pending withdrawals", async function () {
@@ -3410,7 +3629,10 @@ assets.forEach(function (a) {
       });
 
       it("Reverts: when staker2 redeems out of turn", async function () {
-        await expect(iVault.connect(iVaultOperator).redeem(staker2.address)).to.be.revertedWithCustomError(iVault, "IsNotAbleToRedeem");
+        await expect(iVault.connect(iVaultOperator).redeem(staker2.address)).to.be.revertedWithCustomError(
+          iVault,
+          "IsNotAbleToRedeem",
+        );
       });
 
       it("New withdrawal is going to the end of the queue", async function () {
@@ -3448,8 +3670,8 @@ assets.forEach(function (a) {
       it("Deposit and update epoch to cover pending wwls", async function () {
         const totalPWBefore = await iVault.totalAmountToWithdraw();
         const redeemReserveBefore = await iVault.redeemReservedAmount();
-        console.log(`Total pending wwls: ${totalPWBefore.format()}`);
-        console.log(`Redeem reserver before: ${redeemReserveBefore.format()}`);
+        console.log(`Total pending wwls:\t\t${totalPWBefore.format()}`);
+        console.log(`Redeem reserve before:\t${redeemReserveBefore.format()}`);
 
         const amount = totalPWBefore - redeemReserveBefore + 100n;
         await asset.connect(staker3).approve(await iVault.getAddress(), amount);
@@ -3457,7 +3679,7 @@ assets.forEach(function (a) {
         await iVault.connect(iVaultOperator).updateEpoch();
 
         const redeemReserveAfter = await iVault.redeemReservedAmount();
-        console.log(`Redeem reserver after: ${redeemReserveAfter.format()}`);
+        console.log(`Redeem reserve after:\t${redeemReserveAfter.format()}`);
         expect(redeemReserveAfter).to.be.closeTo(totalPWBefore, transactErr * 4n);
 
         const ableRedeem = await iVault.isAbleToRedeem(staker.address);
@@ -3482,7 +3704,7 @@ assets.forEach(function (a) {
 
         expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
           stakerUnstakeAmountAssetValue,
-          transactErr * 3n
+          transactErr * 3n,
         );
         expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 3n);
         console.log(`Ratio: ${await iVault.ratio()}`);
@@ -3501,7 +3723,7 @@ assets.forEach(function (a) {
         const stakerUnstakeAmountAssetValue = await iVault.convertToAssets(staker2UnstakeAmount);
         expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
           stakerUnstakeAmountAssetValue,
-          transactErr * 2n
+          transactErr * 2n,
         );
         expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2n);
         console.log(`Ratio: ${await iVault.ratio()}`);
@@ -3519,7 +3741,9 @@ assets.forEach(function (a) {
         await snapshot.restore();
         await iVault.connect(staker).deposit("9292557565124725653", staker.address);
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
       });
 
       const count = 3;
@@ -3574,7 +3798,9 @@ assets.forEach(function (a) {
           const totalDepositedBefore = await iVault.getTotalDeposited();
 
           const amount = await iVault.getFreeBalance();
-          await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          await iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
           const totalDepositedAfter = await iVault.getTotalDeposited();
 
           console.log(`Total assets: ${await iVault.totalAssets()}`);
@@ -3620,7 +3846,9 @@ assets.forEach(function (a) {
         console.log(`Staker desposited:\t${staker1Amount.format()}`);
         console.log(`Staker2 deposited:\t${staker2Amount.format()}`);
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await iVault
+          .connect(iVaultOperator)
+          .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         console.log(`Ratio after delegation:\t${await iVault.ratio()}`);
       });
 
@@ -3670,7 +3898,9 @@ assets.forEach(function (a) {
       it("Stakers are able to redeem", async function () {
         expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.true;
 
-        console.log(`--- Going to change target flash capacity and transfer 1000 wei${a.assetName} to iVault to supply withdrawals ---`);
+        console.log(
+          `--- Going to change target flash capacity and transfer 1000 wei${a.assetName} to iVault to supply withdrawals ---`,
+        );
         await iVault.setTargetFlashCapacity(1n);
         await asset.connect(staker3).transfer(iVault.address, 1000n);
         await iVault.connect(staker3).updateEpoch();
@@ -3690,7 +3920,7 @@ assets.forEach(function (a) {
 
         expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
           stakerBalanceAfter - stakerBalanceBefore,
-          transactErr
+          transactErr,
         );
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
@@ -3708,7 +3938,7 @@ assets.forEach(function (a) {
 
         expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
           stakerBalanceAfter - stakerBalanceBefore,
-          transactErr
+          transactErr,
         );
         console.log(`Ratio: ${await iVault.ratio()}`);
       });
@@ -3746,13 +3976,19 @@ assets.forEach(function (a) {
         expect(ratioAfter).to.be.lt(ratioBefore);
       });
 
-      const testData = [{ amount: "1000000000000000000" }, { amount: "1000000000000000000" }, { amount: "1000000000000000000" }];
+      const testData = [
+        { amount: "1000000000000000000" },
+        { amount: "1000000000000000000" },
+        { amount: "1000000000000000000" },
+      ];
 
       testData.forEach(function (test) {
         it(`Ratio declines when the strategy rewards are growing: ${test.amount}`, async function () {
           const amount = await iVault.totalAssets();
           if (amount > 10n) {
-            await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+            await iVault
+              .connect(iVaultOperator)
+              .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
           }
           const ratioBefore = await iVault.ratio();
           await addRewardsToStrategy(a.assetStrategy, test.amount, staker2);
