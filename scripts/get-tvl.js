@@ -24,7 +24,7 @@ const getTotalDeposited = async (vaultName, vaultAddress) => {
   console.log(
     `TVL for ${vaultName}: ${totalDelegated.toString()} -> ${totalDelegatedInETH.toString()} in ETH | RATE: ${
       (totalDelegated * BigInt(1e18)) / totalDelegatedInETH
-    }`
+    }`,
   );
 
   return totalDelegatedInETH;
@@ -85,7 +85,7 @@ const getWayToCalculate = async (vaultName, amount) => {
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(error => {
     console.error(error);
     process.exit(1);
   });
