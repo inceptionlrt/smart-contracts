@@ -9,13 +9,9 @@ const InVault_E1 = "0x36B429439AB227fAB170A4dFb3321741c8815e55";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Address of the Contract to be upgraded:", address);
   console.log("Upgrading with the account:", deployer.address);
 
-  const libFactory = await ethers.getContractFactory("InceptionLibrary");
-  const lib = await libFactory.deploy();
-  await lib.waitForDeployment();
-  const libAddress = await lib.getAddress();
+  const libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
   console.log("InceptionLibrary deployed to:", libAddress);
 
   await upgradeInceptionVault(libAddress, "flash_withdrawal", InVault_E2, "InVault_E2");
@@ -38,12 +34,14 @@ const upgradeInceptionVault = async (libAddress, upgradeName, address, vaultImpl
 
   const proxyAdmin = await upgrades.erc1967.getAdminAddress(address);
   const provider = await deployer.provider.getNetwork();
-  new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider).addOzUpgrade(proxyAdmin, address, impl).save();
+  new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider)
+    .addOzUpgrade(proxyAdmin, address, impl)
+    .save();
 };
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(error => {
     console.error(error);
     process.exit(1);
   });
