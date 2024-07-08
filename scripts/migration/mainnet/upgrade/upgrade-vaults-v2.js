@@ -7,8 +7,10 @@ const InVault_E2 = "0x814CC6B8fd2555845541FB843f37418b05977d8d";
 // InankrEthVault - "InVault_E1"
 const InVault_E1 = "0x36B429439AB227fAB170A4dFb3321741c8815e55";
 
+let deployer;
+
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  [deployer] = await ethers.getSigners();
   console.log("Upgrading with the account:", deployer.address);
 
   const libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
