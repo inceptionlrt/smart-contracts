@@ -5,7 +5,7 @@ async function readJsonFiles(dirPath) {
   const vaults = new Map();
   try {
     const files = await fs.readdir(dirPath);
-    const jsonFiles = files.filter((file) => path.extname(file).toLowerCase() === ".json");
+    const jsonFiles = files.filter(file => path.extname(file).toLowerCase() === ".json");
 
     for (const file of jsonFiles) {
       const filePath = path.join(dirPath, file);

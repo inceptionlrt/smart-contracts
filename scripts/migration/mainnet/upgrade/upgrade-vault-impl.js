@@ -27,24 +27,31 @@ const upgradeVaultImpl = async (vaultAddress, newImpl) => {
   const proxyAdmin = await ethers.getContractAt("ProxyAdminMock", proxyAdminAddress);
   const transaction = await proxyAdmin.upgradeTo.populateTransaction(vaultAddress, newImpl);
 
-  const res = await timelock.schedule(transaction.to, transaction.value || "0", transaction.data, ethers.ZeroHash, ethers.ZeroHash, delay);
+  const res = await timelock.schedule(
+    transaction.to,
+    transaction.value || "0",
+    transaction.data,
+    ethers.ZeroHash,
+    ethers.ZeroHash,
+    delay,
+  );
   await res.wait();
   console.log(`SHEDULED TX for ${vaultAddress}`);
 };
 
-const getNewImplFor = async (newImpl) => {
+const getNewImplFor = async newImpl => {
   switch (newImpl) {
     case "InVault_E2":
-      return "0xbbf7fc7036b60d1e88913bd583dc5e39957f9f17";
+      return "0x4fbF33A215861e2BFe01C90760Ad5C58921dEF36";
     case "InVault_E1":
-      return "0x540529f2cf6b0ce1cd39c65815487afd54b61c2f";
+      return "0x6bb087367a5d2F5ac35a25AD69d97a3FBF663495";
   }
   return "";
 };
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(error => {
     console.error(error);
     process.exit(1);
   });

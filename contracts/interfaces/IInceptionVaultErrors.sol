@@ -12,9 +12,15 @@ interface IInceptionVaultErrors {
 
     error InconsistentData();
 
+    error ApproveError();
+
     error NullParams();
 
-    error WithdrawFutile();
+    error ParameterExceedsLimits(uint256 param);
+
+    error NotContract();
+
+    error DepositInconsistentResultedState();
 
     error OperatorNotRegistered();
 
@@ -22,17 +28,27 @@ interface IInceptionVaultErrors {
 
     error ImplementationNotSet();
 
-    error NotEigenLayerOperator();
-
-    error EigenLayerOperatorAlreadyExists();
+    error OnlyOperatorAllowed();
 
     error AlreadyDelegated();
 
     error DelegationManagerImmutable();
+
+    error IsNotAbleToRedeem();
+
+    error LowerMinAmount(uint256 minAmount);
+
+    error ZeroFlashWithdrawFee();
 
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
 
     error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
+
+    /// EigenLayer Operators
+
+    error NotEigenLayerOperator();
+
+    error EigenLayerOperatorAlreadyExists();
 }

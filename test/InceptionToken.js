@@ -54,16 +54,20 @@ describe("Inception token", function () {
     });
 
     it("mint && burn are paused", async function () {
-      await expect(iToken.connect(owner).mint(staker1.address, e18)).to.be.revertedWith("InceptionToken: token transfer while paused");
-      await expect(iToken.connect(owner).burn(staker1.address, e18)).to.be.revertedWith("InceptionToken: token transfer while paused");
+      await expect(iToken.connect(owner).mint(staker1.address, e18)).to.be.revertedWith(
+        "InceptionToken: token transfer while paused",
+      );
+      await expect(iToken.connect(owner).burn(staker1.address, e18)).to.be.revertedWith(
+        "InceptionToken: token transfer while paused",
+      );
     });
 
     it("transfer && transferFrom are paused", async function () {
       await expect(iToken.connect(staker1).transfer(staker1.address, amount)).to.be.revertedWith(
-        "InceptionToken: token transfer while paused"
+        "InceptionToken: token transfer while paused",
       );
       await expect(iToken.connect(staker2).transferFrom(staker1.address, staker2.address, amount)).to.be.revertedWith(
-        "InceptionToken: token transfer while paused"
+        "InceptionToken: token transfer while paused",
       );
     });
 

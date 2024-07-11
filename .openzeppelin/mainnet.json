@@ -3142,9 +3142,9 @@
         "namespaces": {}
       }
     },
-    "5e7d65c5ece61365548e1a2dcbfc2a61fb7776dde23c7a8a6e1327f293df4094": {
-      "address": "0xfe20C64f064c54FA126c651DED20A085013cD0Eb",
-      "txHash": "0xbe2b1b0f5513d2b5d747dbf7ccfbe1fa247c17319a88f3d6db6f2050629ffd6c",
+    "237f53d3e2ce35b655890b29ec49cdf3b7eaa98fa00d33ef2f36fe933ae1d9d9": {
+      "address": "0xFe6a0D38c1eec9524bEE74de47CD0b9edcEC1a81",
+      "txHash": "0x9a0834c36d373eab00a10010dc0546e1704030432ec3cd4489b847933828ce15",
       "layout": {
         "solcVersion": "0.8.20",
         "storage": [
@@ -3241,7 +3241,7 @@
             "label": "strategyManager",
             "offset": 0,
             "slot": "251",
-            "type": "t_contract(IStrategyManager)6048",
+            "type": "t_contract(IStrategyManager)5905",
             "contract": "EigenLayerHandler",
             "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:16"
           },
@@ -3249,7 +3249,7 @@
             "label": "strategy",
             "offset": 0,
             "slot": "252",
-            "type": "t_contract(IStrategy)5847",
+            "type": "t_contract(IStrategy)5704",
             "contract": "EigenLayerHandler",
             "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:17"
           },
@@ -3289,7 +3289,7 @@
             "label": "delegationManager",
             "offset": 0,
             "slot": "257",
-            "type": "t_contract(IDelegationManager)5380",
+            "type": "t_contract(IDelegationManager)5237",
             "contract": "EigenLayerHandler",
             "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:32"
           },
@@ -3297,7 +3297,7 @@
             "label": "claimerWithdrawalsQueue",
             "offset": 0,
             "slot": "258",
-            "type": "t_array(t_struct(Withdrawal)5391_storage)dyn_storage",
+            "type": "t_array(t_struct(Withdrawal)5248_storage)dyn_storage",
             "contract": "EigenLayerHandler",
             "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:34"
           },
@@ -3337,7 +3337,7 @@
             "label": "inceptionToken",
             "offset": 0,
             "slot": "301",
-            "type": "t_contract(IInceptionToken)5554",
+            "type": "t_contract(IInceptionToken)5411",
             "contract": "InceptionVault",
             "src": "contracts/Inception/vaults/InceptionVault.sol:19"
           },
@@ -3353,7 +3353,7 @@
             "label": "_claimerWithdrawals",
             "offset": 0,
             "slot": "303",
-            "type": "t_mapping(t_address,t_struct(Withdrawal)5391_storage)",
+            "type": "t_mapping(t_address,t_struct(Withdrawal)5248_storage)",
             "contract": "InceptionVault",
             "src": "contracts/Inception/vaults/InceptionVault.sol:24"
           },
@@ -3383,7 +3383,7 @@
             "label": "address[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(Withdrawal)5391_storage)dyn_storage": {
+          "t_array(t_struct(Withdrawal)5248_storage)dyn_storage": {
             "label": "struct IEigenLayerHandler.Withdrawal[]",
             "numberOfBytes": "32"
           },
@@ -3403,7 +3403,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IDelegationManager)5380": {
+          "t_contract(IDelegationManager)5237": {
             "label": "contract IDelegationManager",
             "numberOfBytes": "20"
           },
@@ -3411,15 +3411,15 @@
             "label": "contract IERC20",
             "numberOfBytes": "20"
           },
-          "t_contract(IInceptionToken)5554": {
+          "t_contract(IInceptionToken)5411": {
             "label": "contract IInceptionToken",
             "numberOfBytes": "20"
           },
-          "t_contract(IStrategy)5847": {
+          "t_contract(IStrategy)5704": {
             "label": "contract IStrategy",
             "numberOfBytes": "20"
           },
-          "t_contract(IStrategyManager)6048": {
+          "t_contract(IStrategyManager)5905": {
             "label": "contract IStrategyManager",
             "numberOfBytes": "20"
           },
@@ -3427,7 +3427,7 @@
             "label": "mapping(address => address)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_struct(Withdrawal)5391_storage)": {
+          "t_mapping(t_address,t_struct(Withdrawal)5248_storage)": {
             "label": "mapping(address => struct IEigenLayerHandler.Withdrawal)",
             "numberOfBytes": "32"
           },
@@ -3435,7 +3435,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Withdrawal)5391_storage": {
+          "t_struct(Withdrawal)5248_storage": {
             "label": "struct IEigenLayerHandler.Withdrawal",
             "members": [
               {
@@ -3462,6 +3462,1706 @@
           "t_uint256": {
             "label": "uint256",
             "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "7521eca6aadfa1460b3af10ea94dc548deb3f27a72453edfa2eb322b3c048177": {
+      "address": "0x51Ffd2c933A83EFB9562736D4C6C69cDb3E036E7",
+      "txHash": "0x7696bb131795d35e0c43edc231c1466a6355cdec88ed2d777941b12a37fd16c4",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20)3897",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:27"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:29"
+          },
+          {
+            "label": "strategyManager",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_contract(IStrategyManager)11266",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:16"
+          },
+          {
+            "label": "strategy",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_contract(IStrategy)11065",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:17"
+          },
+          {
+            "label": "epoch",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:19"
+          },
+          {
+            "label": "_operator",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_address",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:22"
+          },
+          {
+            "label": "totalAmountToWithdraw",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:26"
+          },
+          {
+            "label": "_pendingWithdrawalAmount",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:30"
+          },
+          {
+            "label": "delegationManager",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_contract(IDelegationManager)10527",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:32"
+          },
+          {
+            "label": "claimerWithdrawalsQueue",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_array(t_struct(Withdrawal)10548_storage)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:34"
+          },
+          {
+            "label": "redeemReservedAmount",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:40"
+          },
+          {
+            "label": "_operatorRestakers",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_mapping(t_address,t_address)",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:43"
+          },
+          {
+            "label": "restakers",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:44"
+          },
+          {
+            "label": "depositBonusAmount",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:46"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:47"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_array(t_uint256)37_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:50"
+          },
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "301",
+            "type": "t_contract(IInceptionToken)10720",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:18"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_uint256",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:21"
+          },
+          {
+            "label": "_claimerWithdrawals",
+            "offset": 0,
+            "slot": "303",
+            "type": "t_mapping(t_address,t_struct(Withdrawal)10548_storage)",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:23"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "304",
+            "type": "t_string_storage",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:26"
+          },
+          {
+            "label": "_stakerImplementation",
+            "offset": 0,
+            "slot": "305",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:29"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "306",
+            "type": "t_contract(IInceptionRatioFeed)10613",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:38"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "307",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:39"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 20,
+            "slot": "307",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:40"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 0,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:43"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 8,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:44"
+          },
+          {
+            "label": "depositUtilizationKink",
+            "offset": 16,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:45"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 24,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:48"
+          },
+          {
+            "label": "optimalWithdrawalRate",
+            "offset": 0,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:49"
+          },
+          {
+            "label": "withdrawUtilizationKink",
+            "offset": 8,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:50"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Withdrawal)10548_storage)dyn_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)37_storage": {
+            "label": "uint256[37]",
+            "numberOfBytes": "1184"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegationManager)10527": {
+            "label": "contract IDelegationManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)3897": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionRatioFeed)10613": {
+            "label": "contract IInceptionRatioFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionToken)10720": {
+            "label": "contract IInceptionToken",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategy)11065": {
+            "label": "contract IStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategyManager)11266": {
+            "label": "contract IStrategyManager",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_address)": {
+            "label": "mapping(address => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Withdrawal)10548_storage)": {
+            "label": "mapping(address => struct IEigenLayerHandler.Withdrawal)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Withdrawal)10548_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal",
+            "members": [
+              {
+                "label": "epoch",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "8b3c34da6e669b2b36617006f854496972fc4b4dcb311cff748d1426b88e2a33": {
+      "address": "0x5198Be473482E8f1F96C587933296FA8a14b725E",
+      "txHash": "0x204731eb0017d441af5793f664e8813272d2b919b7ca22ccf48da5dbcbb536b2",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20)3897",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:27"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:29"
+          },
+          {
+            "label": "strategyManager",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_contract(IStrategyManager)11266",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:16"
+          },
+          {
+            "label": "strategy",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_contract(IStrategy)11065",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:17"
+          },
+          {
+            "label": "epoch",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:19"
+          },
+          {
+            "label": "_operator",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_address",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:22"
+          },
+          {
+            "label": "totalAmountToWithdraw",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:26"
+          },
+          {
+            "label": "_pendingWithdrawalAmount",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:30"
+          },
+          {
+            "label": "delegationManager",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_contract(IDelegationManager)10527",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:32"
+          },
+          {
+            "label": "claimerWithdrawalsQueue",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_array(t_struct(Withdrawal)10548_storage)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:34"
+          },
+          {
+            "label": "redeemReservedAmount",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:40"
+          },
+          {
+            "label": "_operatorRestakers",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_mapping(t_address,t_address)",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:43"
+          },
+          {
+            "label": "restakers",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:44"
+          },
+          {
+            "label": "depositBonusAmount",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:46"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:47"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_array(t_uint256)37_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:50"
+          },
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "301",
+            "type": "t_contract(IInceptionToken)10720",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:18"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_uint256",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:21"
+          },
+          {
+            "label": "_claimerWithdrawals",
+            "offset": 0,
+            "slot": "303",
+            "type": "t_mapping(t_address,t_struct(Withdrawal)10548_storage)",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:23"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "304",
+            "type": "t_string_storage",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:26"
+          },
+          {
+            "label": "_stakerImplementation",
+            "offset": 0,
+            "slot": "305",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:29"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "306",
+            "type": "t_contract(IInceptionRatioFeed)10613",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:38"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "307",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:39"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 20,
+            "slot": "307",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:40"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 0,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:43"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 8,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:44"
+          },
+          {
+            "label": "depositUtilizationKink",
+            "offset": 16,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:45"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 24,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:48"
+          },
+          {
+            "label": "optimalWithdrawalRate",
+            "offset": 0,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:49"
+          },
+          {
+            "label": "withdrawUtilizationKink",
+            "offset": 8,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:50"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Withdrawal)10548_storage)dyn_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)37_storage": {
+            "label": "uint256[37]",
+            "numberOfBytes": "1184"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegationManager)10527": {
+            "label": "contract IDelegationManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)3897": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionRatioFeed)10613": {
+            "label": "contract IInceptionRatioFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionToken)10720": {
+            "label": "contract IInceptionToken",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategy)11065": {
+            "label": "contract IStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategyManager)11266": {
+            "label": "contract IStrategyManager",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_address)": {
+            "label": "mapping(address => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Withdrawal)10548_storage)": {
+            "label": "mapping(address => struct IEigenLayerHandler.Withdrawal)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Withdrawal)10548_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal",
+            "members": [
+              {
+                "label": "epoch",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "fa1b41f2deb7852e11fee503d1bf979181f81287ba98f77c2a524ee9c895eef0": {
+      "address": "0x4fbF33A215861e2BFe01C90760Ad5C58921dEF36",
+      "txHash": "0xcec02a5f7dbe072d27d685a277822034c0c879e6e30ff7a418aeeb86c61c1a8b",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20)1436",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:27"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:29"
+          },
+          {
+            "label": "strategyManager",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_contract(IStrategyManager)6419",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:16"
+          },
+          {
+            "label": "strategy",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_contract(IStrategy)6218",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:17"
+          },
+          {
+            "label": "epoch",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:19"
+          },
+          {
+            "label": "_operator",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_address",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:22"
+          },
+          {
+            "label": "totalAmountToWithdraw",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:26"
+          },
+          {
+            "label": "_pendingWithdrawalAmount",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:30"
+          },
+          {
+            "label": "delegationManager",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_contract(IDelegationManager)5726",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:32"
+          },
+          {
+            "label": "claimerWithdrawalsQueue",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_array(t_struct(Withdrawal)5737_storage)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:34"
+          },
+          {
+            "label": "redeemReservedAmount",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:40"
+          },
+          {
+            "label": "_operatorRestakers",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_mapping(t_address,t_address)",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:43"
+          },
+          {
+            "label": "restakers",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:44"
+          },
+          {
+            "label": "depositBonusAmount",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:46"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:49"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_array(t_uint256)37_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:54"
+          },
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "301",
+            "type": "t_contract(IInceptionToken)5909",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:18"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_uint256",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:21"
+          },
+          {
+            "label": "_claimerWithdrawals",
+            "offset": 0,
+            "slot": "303",
+            "type": "t_mapping(t_address,t_struct(Withdrawal)5737_storage)",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:23"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "304",
+            "type": "t_string_storage",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:26"
+          },
+          {
+            "label": "_stakerImplementation",
+            "offset": 0,
+            "slot": "305",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:29"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "306",
+            "type": "t_contract(IInceptionRatioFeed)5802",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:38"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "307",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:39"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 20,
+            "slot": "307",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:40"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 0,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:43"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 8,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:44"
+          },
+          {
+            "label": "depositUtilizationKink",
+            "offset": 16,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:45"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 24,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:48"
+          },
+          {
+            "label": "optimalWithdrawalRate",
+            "offset": 0,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:49"
+          },
+          {
+            "label": "withdrawUtilizationKink",
+            "offset": 8,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:50"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Withdrawal)5737_storage)dyn_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)37_storage": {
+            "label": "uint256[37]",
+            "numberOfBytes": "1184"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegationManager)5726": {
+            "label": "contract IDelegationManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)1436": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionRatioFeed)5802": {
+            "label": "contract IInceptionRatioFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionToken)5909": {
+            "label": "contract IInceptionToken",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategy)6218": {
+            "label": "contract IStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategyManager)6419": {
+            "label": "contract IStrategyManager",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_address)": {
+            "label": "mapping(address => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Withdrawal)5737_storage)": {
+            "label": "mapping(address => struct IEigenLayerHandler.Withdrawal)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Withdrawal)5737_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal",
+            "members": [
+              {
+                "label": "epoch",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "e26d77e9f8a6ae90f36621ed482b19029c8d48967b0833d2127915d345c2f53b": {
+      "address": "0x6bb087367a5d2F5ac35a25AD69d97a3FBF663495",
+      "txHash": "0xec1ec756c8d14838c71ba8f57405c8d2cae6cb6d70c144a25156063a1b425b7d",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20)1436",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:27"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "InceptionAssetsHandler",
+            "src": "contracts/Inception/assets-handler/InceptionAssetsHandler.sol:29"
+          },
+          {
+            "label": "strategyManager",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_contract(IStrategyManager)6419",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:16"
+          },
+          {
+            "label": "strategy",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_contract(IStrategy)6218",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:17"
+          },
+          {
+            "label": "epoch",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:19"
+          },
+          {
+            "label": "_operator",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_address",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:22"
+          },
+          {
+            "label": "totalAmountToWithdraw",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:26"
+          },
+          {
+            "label": "_pendingWithdrawalAmount",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:30"
+          },
+          {
+            "label": "delegationManager",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_contract(IDelegationManager)5726",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:32"
+          },
+          {
+            "label": "claimerWithdrawalsQueue",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_array(t_struct(Withdrawal)5737_storage)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:34"
+          },
+          {
+            "label": "redeemReservedAmount",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:40"
+          },
+          {
+            "label": "_operatorRestakers",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_mapping(t_address,t_address)",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:43"
+          },
+          {
+            "label": "restakers",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:44"
+          },
+          {
+            "label": "depositBonusAmount",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:46"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_uint256",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:49"
+          },
+          {
+            "label": "__reserver",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_array(t_uint256)37_storage",
+            "contract": "EigenLayerHandler",
+            "src": "contracts/Inception/eigenlayer-handler/EigenLayerHandler.sol:54"
+          },
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "301",
+            "type": "t_contract(IInceptionToken)5909",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:18"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "302",
+            "type": "t_uint256",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:21"
+          },
+          {
+            "label": "_claimerWithdrawals",
+            "offset": 0,
+            "slot": "303",
+            "type": "t_mapping(t_address,t_struct(Withdrawal)5737_storage)",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:23"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "304",
+            "type": "t_string_storage",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:26"
+          },
+          {
+            "label": "_stakerImplementation",
+            "offset": 0,
+            "slot": "305",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:29"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "306",
+            "type": "t_contract(IInceptionRatioFeed)5802",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:38"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "307",
+            "type": "t_address",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:39"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 20,
+            "slot": "307",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:40"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 0,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:43"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 8,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:44"
+          },
+          {
+            "label": "depositUtilizationKink",
+            "offset": 16,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:45"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 24,
+            "slot": "308",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:48"
+          },
+          {
+            "label": "optimalWithdrawalRate",
+            "offset": 0,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:49"
+          },
+          {
+            "label": "withdrawUtilizationKink",
+            "offset": 8,
+            "slot": "309",
+            "type": "t_uint64",
+            "contract": "InceptionVault",
+            "src": "contracts/Inception/vaults/InceptionVault.sol:50"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Withdrawal)5737_storage)dyn_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)37_storage": {
+            "label": "uint256[37]",
+            "numberOfBytes": "1184"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegationManager)5726": {
+            "label": "contract IDelegationManager",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)1436": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionRatioFeed)5802": {
+            "label": "contract IInceptionRatioFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionToken)5909": {
+            "label": "contract IInceptionToken",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategy)6218": {
+            "label": "contract IStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategyManager)6419": {
+            "label": "contract IStrategyManager",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_address)": {
+            "label": "mapping(address => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Withdrawal)5737_storage)": {
+            "label": "mapping(address => struct IEigenLayerHandler.Withdrawal)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Withdrawal)5737_storage": {
+            "label": "struct IEigenLayerHandler.Withdrawal",
+            "members": [
+              {
+                "label": "epoch",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
           },
           "t_uint8": {
             "label": "uint8",

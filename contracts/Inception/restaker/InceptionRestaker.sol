@@ -65,7 +65,7 @@ contract InceptionRestaker is
         _trusteeManager = trusteeManager;
         _vault = msg.sender;
 
-        // approve spending by stategyManager
+        // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
     }
 

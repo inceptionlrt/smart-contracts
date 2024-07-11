@@ -3,7 +3,7 @@ const { readJsonFiles } = require("./utils");
 
 task("deploy-rate-provider", "Deploys a new RateProvider for a vault")
   .addParam("vault", "The name of the vault")
-  .setAction(async (taskArgs) => {
+  .setAction(async taskArgs => {
     const inputVaultName = taskArgs["vault"];
     const vaults = await readJsonFiles(addressesPath);
     for (const [vaultName, vaultData] of vaults) {
