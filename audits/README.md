@@ -7,5 +7,5 @@ This folder consists of the audit reports performed on Inception Vaults smart co
 | Audit Purpose                           | Scope                                                   | Firm     | Date       |
 | --------------------------------------- | ------------------------------------------------------- | -------- | ---------- |
 | Release of V1, M1 EigenLayer contracts  | All contracts are located in the `contracts/Inception/` | Veridise | 12.01.2024 |
-| Release of V2, M2 EigenLayer contracts  | All contracts are located in the `contracts/Inception/` | Halborn  | 5.01.2024  |
-| Release of the Flash withdrawal feature | All contracts are located in the `contracts/Inception/` | Halborn  | 24.06.2024 |
+| Release of V2, M2 EigenLayer contracts  | All contracts are located in the `contracts/Inception/` | Halborn  | 01.05.2024  |
+| Release of the Flash withdrawal feature | All contracts are located in the `contracts/Inception/` | Halborn  | 28.06.2024 |
