@@ -195,8 +195,8 @@ assets.forEach(function (a) {
       await network.provider.send("hardhat_reset", [
         {
           forking: {
-            jsonRpcUrl: a.url ? a.url : config.networks.hardhat.forking.url,
-            blockNumber: a.blockNumber ? a.blockNumber : config.networks.hardhat.forking.blockNumber,
+            jsonRpcUrl: a.url ? a.url : config.default.networks.hardhat.forking.url,
+            blockNumber: a.blockNumber ? a.blockNumber : config.default.networks.hardhat.forking.blockNumber,
           },
         },
       ]);
