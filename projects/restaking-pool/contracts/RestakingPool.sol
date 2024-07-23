@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import { Configurable } from "./Configurable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {Configurable} from "./Configurable.sol";
 
 import "./interfaces/IEigenPod.sol";
-import { ICToken } from "./interfaces/ICToken.sol";
-import { IRestaker } from "./restaker/IRestaker.sol";
-import { IDelegationManager } from "./interfaces/IDelegationManager.sol";
-import { IProtocolConfig } from "./interfaces/IProtocolConfig.sol";
-import { IRestakingPool } from "./interfaces/IRestakingPool.sol";
-import { ISignatureUtils } from "./interfaces/ISignatureUtils.sol";
+import {ICToken} from "./interfaces/ICToken.sol";
+import {IRestaker} from "./restaker/IRestaker.sol";
+import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
+import {IProtocolConfig} from "./interfaces/IProtocolConfig.sol";
+import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
+import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 
-import { InceptionLibrary } from "./libraries/InceptionLibrary.sol";
+import {InceptionLibrary} from "./libraries/InceptionLibrary.sol";
 
 /**
  * @title General contract where stakes and unstakes of inETH happens.
@@ -151,7 +151,8 @@ contract RestakingPool is
         uint256 amount = msg.value;
         if (targetCapacity == 0) revert TargetCapacityNotSet();
         if (amount < getMinStake()) revert PoolStakeAmLessThanMin();
-        if (amount > availableToStake()) revert PoolStakeAmGreaterThanAvailable();
+        if (amount > availableToStake())
+            revert PoolStakeAmGreaterThanAvailable();
 
         uint256 stakeBonus;
         if (stakeBonusAmount > 0) {
@@ -200,9 +201,8 @@ contract RestakingPool is
             pubkeysLen != deposit_data_roots.length
         ) revert PoolWrongInputLength();
 
-        if (address(this).balance < 32 ether * pubkeysLen +  _getTargetCapacity())
-                revert PoolInsufficientBalance();
-
+        if (getFreeBalance() < 32 ether * pubkeysLen)
+            revert PoolInsufficientBalance();
 
         IEigenPodManager restaker = IEigenPodManager(
             _getRestakerOrRevert(provider)
@@ -234,7 +234,8 @@ contract RestakingPool is
         ICToken token = config().getCToken();
         uint256 amount = token.convertToAmount(shares);
         if (amount < getMinUnstake()) revert PoolUnstakeAmLessThanMin();
-        if (amount > getFlashCapacity()) revert InsufficientCapacity(getFlashCapacity());
+        if (amount > getFlashCapacity())
+            revert InsufficientCapacity(getFlashCapacity());
 
         uint256 fee = calculateFlashUnstakeFee(amount);
         if (fee == 0) revert PoolZeroAmount();
@@ -372,14 +373,14 @@ contract RestakingPool is
         uint256 amount = claimableOf(claimer);
         if (amount == 0) revert PoolZeroAmount();
 
-        if (address(this).balance < getTotalClaimable()) revert PoolInsufficientBalance();
+        if (address(this).balance < getTotalClaimable())
+            revert PoolInsufficientBalance();
 
         _totalClaimable -= amount;
         _claimable[claimer] = 0;
 
         bool result = _sendValue(claimer, amount, false);
         if (!result) revert PoolFailedInnerCall();
-
 
         emit UnstakeClaimed(claimer, _msgSender(), amount);
     }
@@ -498,7 +499,8 @@ contract RestakingPool is
     }
 
     function _getTargetCapacity() internal view returns (uint256) {
-        return (targetCapacity * config().getCToken().totalAssets()) / MAX_PERCENT;
+        return
+            (targetCapacity * config().getCToken().totalAssets()) / MAX_PERCENT;
     }
 
     /**
@@ -546,7 +548,7 @@ contract RestakingPool is
     }
 
     /**
-     * @notice Get free to {batchDeposit}/{distributeUnstakes} balance.
+     * @notice Get pending to calculate ratio.
      */
     function getPending() public view returns (uint256) {
         uint256 balance = address(this).balance;
@@ -560,6 +562,9 @@ contract RestakingPool is
         }
     }
 
+    /**
+     * @notice Get free to {batchDeposit}/{distributeUnstakes} balance.
+     */
     function getFreeBalance() public view returns (uint256) {
         uint256 pending = getPending();
         uint256 targetCap = _getTargetCapacity();
@@ -567,7 +572,7 @@ contract RestakingPool is
         if (targetCap > pending) {
             return 0;
         } else {
-            return pending - targetCapacity;
+            return pending - targetCap;
         }
     }
 
@@ -674,9 +679,7 @@ contract RestakingPool is
      * @param amount The amount for which the stake bonus is to be calculated.
      * @return The calculated stake bonus.
      */
-    function calculateStakeBonus(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateStakeBonus(uint256 amount) public view returns (uint256) {
         return _calculateStakeBonus(getFlashCapacity(), amount);
     }
 

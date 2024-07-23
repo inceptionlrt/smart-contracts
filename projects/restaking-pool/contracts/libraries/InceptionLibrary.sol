@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-
 /**
  * @dev It serves two primary functions:
  * 1. Flash vault-related logic for the calculation of deposit bonuses and withdrawal fees.
