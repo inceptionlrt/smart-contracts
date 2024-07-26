@@ -84,7 +84,7 @@ contract MellowRestaker is
         uint256 deadline,
         uint256 requestDeadline,
         bool closeProvious
-    ) external override {
+    ) external onlyTrustee override {
         uint256[] memory minAmounts = new uint256[](2);
         minAmounts[0] = minAmount;
         minAmounts[1] = 0;
