@@ -50,5 +50,9 @@ interface IInceptionVaultErrors {
 
     error NotEigenLayerOperator();
 
-    error EigenLayerOperatorAlreadyExists();
+    error NotMellowVault();
+
+    error OperatorAlreadyExists();
+
+    error BadMellowWithdrawRequest();
 }

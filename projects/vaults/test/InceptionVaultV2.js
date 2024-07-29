@@ -295,6 +295,17 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).lte(e18);
       });
 
+      it("Delegate all to Mellow", async function () {
+        const amount = await iVault.getFreeBalance();
+
+        const tx = await iVault.connect(iVaultOperator).depositMellow(amount);
+        const receipt = await tx.wait();
+
+        const depositedEvent = receipt.events.find(event => event.event === 'DepositedToMellow');
+        expect(depositedEvent).to.not.be.undefined;
+        expect(depositedEvent.args[1]).to.equal(amount);
+      });
+
       it("Update asset ratio", async function () {
         await addRewardsToStrategy(a.assetStrategy, e18, staker3);
         const ratio = await calculateRatio(iVault, iToken);

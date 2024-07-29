@@ -22,7 +22,14 @@ interface IEigenLayerHandler {
         uint256 nonce
     );
 
+    event StartMellowWithdrawal(
+        address indexed stakerAddress,
+        uint256 shares
+    );
+
     event DepositedToEL(address indexed stakerAddress, uint256 amount);
+
+    event DepositedToMellow(address indexed stakerAddress, uint256 amount, uint256 lpAmount);
 
     event DelegatedTo(
         address indexed stakerAddress,

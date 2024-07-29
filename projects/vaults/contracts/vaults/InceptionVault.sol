@@ -8,6 +8,9 @@ import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
+import "../interfaces/IMellowDepositWrapper.sol";
+import "../interfaces/IMellowVault.sol";
+import "../interfaces/IMellowRestaker.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
 /// @author The InceptionLRT team
@@ -27,6 +30,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev Factory variables
     address private _stakerImplementation;
+    address private _mellowStakerImplementation;
 
     /**
      *  @dev Flash withdrawal params
@@ -54,10 +58,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IStrategy _assetStrategy,
+        address _mellowDepositWrapper,
+        address _mellowVault
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy);
+        __EigenLayerHandler_init(_strategyManager, _assetStrategy, IMellowDepositWrapper(_mellowDepositWrapper), IMellowVault(_mellowVault));
 
         name = vaultName;
         _operator = operatorAddress;
@@ -190,6 +196,24 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             );
 
         emit DelegatedTo(restaker, elOperator, amount);
+    }
+
+
+    function depositMellow(
+        uint256 amount
+    ) external nonReentrant whenNotPaused onlyOperator {
+        // try to find a restaker for the specific EL operator
+        address restaker = _operatorRestakers[address(mellowVault)];
+        if (restaker == address(0)) revert OperatorNotRegistered();
+
+        if (restaker == _MOCK_ADDRESS) {
+            // deploy a new restaker
+            restaker = _deployNewMellowStub();
+            _operatorRestakers[address(mellowVault)] = restaker;
+            mellowRestakers.push(restaker);
+        }
+
+        _depositAssetIntoMellow(restaker, amount);
     }
 
     /*///////////////////////////////////////
@@ -351,6 +375,25 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             delegationManager,
             strategyManager,
             strategy,
+            _operator
+        );
+        address deployedAddress = address(new BeaconProxy(address(this), data));
+
+        IOwnable asOwnable = IOwnable(deployedAddress);
+        asOwnable.transferOwnership(owner());
+
+        emit RestakerDeployed(deployedAddress);
+        return deployedAddress;
+    }
+
+    function _deployNewMellowStub() internal returns (address) {
+        if (_mellowStakerImplementation == address(0)) revert ImplementationNotSet();
+        // deploy new beacon proxy and do init call
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,address,address)",
+            mellowDepositWrapper,
+            mellowVault,
+            _asset,
             _operator
         );
         address deployedAddress = address(new BeaconProxy(address(this), data));
@@ -558,10 +601,20 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             revert NotEigenLayerOperator();
 
         if (_operatorRestakers[newELOperator] != address(0))
-            revert EigenLayerOperatorAlreadyExists();
+            revert OperatorAlreadyExists();
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
         emit ELOperatorAdded(newELOperator);
+    }
+
+    function addMellowOperator(address newOperator) external onlyOwner {
+        if (newOperator != address(mellowVault))
+            revert NotMellowVault();
+
+        if (_operatorRestakers[newOperator] != address(0))
+            revert OperatorAlreadyExists();
+
+        _operatorRestakers[newOperator] = _MOCK_ADDRESS;
     }
 
     /*///////////////////////////////
