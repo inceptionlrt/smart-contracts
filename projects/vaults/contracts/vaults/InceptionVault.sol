@@ -8,8 +8,6 @@ import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../interfaces/IMellowDepositWrapper.sol";
-import "../interfaces/IMellowVault.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
 /// @author The InceptionLRT team
@@ -57,12 +55,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
-        // address _mellowDepositWrapper,
-        // address _mellowVault
+        IStrategy _assetStrategy // address _mellowDepositWrapper, // address _mellowVault
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy, IMellowDepositWrapper(address(0)), IMellowVault(address(0)));
+        __EigenLayerHandler_init(
+            _strategyManager,
+            _assetStrategy,
+            IMellowDepositWrapper(address(0)),
+            IMellowRestaker(address(0))
+        );
 
         name = vaultName;
         _operator = operatorAddress;
@@ -171,7 +172,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         address restaker = _getRestaker(elOperator);
         if (elOperator == address(mellowVault)) {
-            _depositAssetIntoMellow(restaker, amount);
+            _depositAssetIntoMellow(amount);
             return;
         }
 
@@ -198,24 +199,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             );
 
         emit DelegatedTo(restaker, elOperator, amount);
-    }
-
-
-    function depositMellow(
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        // try to find a restaker for the specific EL operator
-        address restaker = _operatorRestakers[address(mellowVault)];
-        if (restaker == address(0)) revert OperatorNotRegistered();
-
-        if (restaker == _MOCK_ADDRESS) {
-            // deploy a new restaker
-            restaker = _deployNewMellowStub();
-            _operatorRestakers[address(mellowVault)] = restaker;
-            mellowRestakers.push(restaker);
-        }
-
-        _depositAssetIntoMellow(restaker, amount);
     }
 
     /*///////////////////////////////////////
@@ -388,25 +371,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return deployedAddress;
     }
 
-    function _deployNewMellowStub() internal returns (address) {
-        if (_mellowStakerImplementation == address(0)) revert ImplementationNotSet();
-        // deploy new beacon proxy and do init call
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
-            mellowDepositWrapper,
-            mellowVault,
-            _asset,
-            _operator
-        );
-        address deployedAddress = address(new BeaconProxy(address(this), data));
-
-        IOwnable asOwnable = IOwnable(deployedAddress);
-        asOwnable.transferOwnership(owner());
-
-        emit RestakerDeployed(deployedAddress);
-        return deployedAddress;
-    }
-
     function implementation() external view returns (address) {
         return _stakerImplementation;
     }
@@ -511,51 +475,51 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setDepositBonusParams(
-        uint64 newMaxBonusRate,
-        uint64 newOptimalBonusRate,
-        uint64 newDepositUtilizationKink
-    ) external onlyOwner {
-        if (newMaxBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-        if (newOptimalBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalBonusRate);
-        if (newDepositUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newDepositUtilizationKink);
+    // function setDepositBonusParams(
+    //     uint64 newMaxBonusRate,
+    //     uint64 newOptimalBonusRate,
+    //     uint64 newDepositUtilizationKink
+    // ) external onlyOwner {
+    //     if (newMaxBonusRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newMaxBonusRate);
+    //     if (newOptimalBonusRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newOptimalBonusRate);
+    //     if (newDepositUtilizationKink > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newDepositUtilizationKink);
 
-        maxBonusRate = newMaxBonusRate;
-        optimalBonusRate = newOptimalBonusRate;
-        depositUtilizationKink = newDepositUtilizationKink;
+    //     maxBonusRate = newMaxBonusRate;
+    //     optimalBonusRate = newOptimalBonusRate;
+    //     depositUtilizationKink = newDepositUtilizationKink;
 
-        emit DepositBonusParamsChanged(
-            newMaxBonusRate,
-            newOptimalBonusRate,
-            newDepositUtilizationKink
-        );
-    }
+    //     emit DepositBonusParamsChanged(
+    //         newMaxBonusRate,
+    //         newOptimalBonusRate,
+    //         newDepositUtilizationKink
+    //     );
+    // }
 
-    function setFlashWithdrawFeeParams(
-        uint64 newMaxFlashFeeRate,
-        uint64 newOptimalWithdrawalRate,
-        uint64 newWithdrawUtilizationKink
-    ) external onlyOwner {
-        if (newMaxFlashFeeRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxFlashFeeRate);
-        if (newOptimalWithdrawalRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
-        if (newWithdrawUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+    // function setFlashWithdrawFeeParams(
+    //     uint64 newMaxFlashFeeRate,
+    //     uint64 newOptimalWithdrawalRate,
+    //     uint64 newWithdrawUtilizationKink
+    // ) external onlyOwner {
+    //     if (newMaxFlashFeeRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newMaxFlashFeeRate);
+    //     if (newOptimalWithdrawalRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+    //     if (newWithdrawUtilizationKink > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newWithdrawUtilizationKink);
 
-        maxFlashFeeRate = newMaxFlashFeeRate;
-        optimalWithdrawalRate = newOptimalWithdrawalRate;
-        withdrawUtilizationKink = newWithdrawUtilizationKink;
+    //     maxFlashFeeRate = newMaxFlashFeeRate;
+    //     optimalWithdrawalRate = newOptimalWithdrawalRate;
+    //     withdrawUtilizationKink = newWithdrawUtilizationKink;
 
-        emit WithdrawFeeParamsChanged(
-            newMaxFlashFeeRate,
-            newOptimalWithdrawalRate,
-            newWithdrawUtilizationKink
-        );
-    }
+    //     emit WithdrawFeeParamsChanged(
+    //         newMaxFlashFeeRate,
+    //         newOptimalWithdrawalRate,
+    //         newWithdrawUtilizationKink
+    //     );
+    // }
 
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
