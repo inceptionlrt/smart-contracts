@@ -24,7 +24,7 @@ interface IEigenLayerHandler {
 
     event StartMellowWithdrawal(
         address indexed stakerAddress,
-        uint256 shares
+        uint256 amount
     );
 
     event DepositedToEL(address indexed stakerAddress, uint256 amount);

@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Arrays.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
+import "./IMellowVaultConfigurator.sol";
 /**
  * @title IVault
  * @notice Interface defining core methods, constants, and errors for vault contracts.
@@ -45,7 +47,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
  *      Upon calling removeToken, it is checked that the underlyingTvl function for the specified token returns a zero value. Otherwise, the function reverts with a NonZeroValue error.
  *      It is important to note that there is no such check when calling removeTvlModule, so when updating parameters, sequential execution of a transaction to remove the old and add the new tvlModule is implied.
  */
-interface IMellowVault is IERC20 {
+abstract contract IMellowVault is IERC20 {
     /// @dev Errors
     error Deadline();
     error InvalidState();
@@ -57,6 +59,8 @@ interface IMellowVault is IERC20 {
     error InsufficientAmount();
     error LimitOverflow();
     error AlreadyAdded();
+
+    IMellowVaultConfigurator public configurator;
 
     /// @notice Struct representing a user's withdrawal request.
     struct WithdrawalRequest {
@@ -82,26 +86,27 @@ interface IMellowVault is IERC20 {
     }
 
     /// @notice 2^96, used for fixed-point arithmetic
-    function Q96() external view returns (uint256);
+    function Q96() external view virtual returns (uint256);
 
     /// @notice Multiplier of 1e9
-    function D9() external view returns (uint256);
+    function D9() external view virtual returns (uint256);
 
     /// @notice Returns the withdrawal request of a given user.
     /// @param user The address of the user.
     /// @return request The withdrawal request associated with the user.
     function withdrawalRequest(
         address user
-    ) external view returns (WithdrawalRequest memory request);
+    ) external view virtual returns (WithdrawalRequest memory request);
 
     /// @return count The number of users with pending withdrawal requests.
-    function pendingWithdrawersCount() external view returns (uint256 count);
+    function pendingWithdrawersCount() external view virtual returns (uint256 count);
 
     /// @notice Returns an array of addresses with pending withdrawal requests.
     /// @return users An array of addresses with pending withdrawal requests.
     function pendingWithdrawers()
         external
         view
+        virtual
         returns (address[] memory users);
 
     /// @notice Returns an array of addresses with pending withdrawal requests.
@@ -111,24 +116,25 @@ interface IMellowVault is IERC20 {
     function pendingWithdrawers(
         uint256 limit,
         uint256 offset
-    ) external view returns (address[] memory users);
+    ) external view virtual returns (address[] memory users);
 
     /// @notice Returns an array of underlying tokens of the vault.
     /// @return underlyinigTokens_ An array of underlying token addresses.
     function underlyingTokens()
         external
         view
+        virtual
         returns (address[] memory underlyinigTokens_);
 
     /// @notice Checks if a token is an underlying token of the vault.
     /// @return isUnderlyingToken_ true if the token is an underlying token of the vault.
     function isUnderlyingToken(
         address token
-    ) external view returns (bool isUnderlyingToken_);
+    ) external view virtual returns (bool isUnderlyingToken_);
 
     /// @notice Returns an array of addresses of all TVL modules.
     /// @return tvlModules_ An array of TVL module addresses.
-    function tvlModules() external view returns (address[] memory tvlModules_);
+    function tvlModules() external view virtual returns (address[] memory tvlModules_);
 
     /// @notice Calculates and returns the total value locked (TVL) of the underlying tokens.
     /// @return tokens An array of underlying token addresses.
@@ -136,6 +142,7 @@ interface IMellowVault is IERC20 {
     function underlyingTvl()
         external
         view
+        virtual
         returns (address[] memory tokens, uint256[] memory amounts);
 
     /// @notice Calculates and returns the base TVL (Total Value Locked) across all tokens in the vault.
@@ -144,27 +151,28 @@ interface IMellowVault is IERC20 {
     function baseTvl()
         external
         view
+        virtual
         returns (address[] memory tokens, uint256[] memory amounts);
 
     /// @notice Adds a new token to the list of underlying tokens in the vault.
     /// @dev Only accessible by an admin.
     /// @param token The address of the token to add.
-    function addToken(address token) external;
+    function addToken(address token) external virtual;
 
     /// @notice Removes a token from the list of underlying tokens in the vault.
     /// @dev Only accessible by an admin.
     /// @param token The address of the token to remove.
-    function removeToken(address token) external;
+    function removeToken(address token) external virtual;
 
     /// @notice Adds a new TVL module to the vault.
     /// @dev Only accessible by an admin.
     /// @param module The address of the TVL module to add.
-    function addTvlModule(address module) external;
+    function addTvlModule(address module) external virtual;
 
     /// @notice Removes an existing TVL module from the vault.
     /// @dev Only accessible by an admin.
     /// @param module The address of the TVL module to remove.
-    function removeTvlModule(address module) external;
+    function removeTvlModule(address module) external virtual;
 
     /// @notice Performs an external call to a given address with specified data.
     /// @dev Only operators or admins should call this function. Checks access permissions.
@@ -176,7 +184,7 @@ interface IMellowVault is IERC20 {
     function externalCall(
         address to,
         bytes calldata data
-    ) external returns (bool success, bytes memory response);
+    ) external virtual returns (bool success, bytes memory response);
 
     /// @notice Executes a delegate call to a specified address with given data.
     /// @dev Only operators or admins should call this function. Checks access permissions.
@@ -188,7 +196,7 @@ interface IMellowVault is IERC20 {
     function delegateCall(
         address to,
         bytes calldata data
-    ) external returns (bool success, bytes memory response);
+    ) external virtual returns (bool success, bytes memory response);
 
     /// @notice Deposits specified amounts of tokens into the vault in exchange for LP tokens.
     /// @dev Only accessible when deposits are unlocked.
@@ -205,7 +213,7 @@ interface IMellowVault is IERC20 {
         uint256 minLpAmount,
         uint256 deadline,
         uint256 referralCode
-    ) external returns (uint256[] memory actualAmounts, uint256 lpAmount);
+    ) external virtual returns (uint256[] memory actualAmounts, uint256 lpAmount);
 
     /// @notice Handles emergency withdrawals, proportionally withdrawing all tokens in the system (not just the underlying).
     /// @dev Transfers tokens based on the user's share of lpAmount / totalSupply.
@@ -215,10 +223,10 @@ interface IMellowVault is IERC20 {
     function emergencyWithdraw(
         uint256[] memory minAmounts,
         uint256 deadline
-    ) external returns (uint256[] memory actualAmounts);
+    ) external virtual returns (uint256[] memory actualAmounts);
 
     /// @notice Cancels a pending withdrawal request.
-    function cancelWithdrawalRequest() external;
+    function cancelWithdrawalRequest() external virtual;
 
     /// @notice Registers a new withdrawal request, optionally closing previous requests.
     /// @param to The address to receive the withdrawn tokens.
@@ -234,7 +242,7 @@ interface IMellowVault is IERC20 {
         uint256 deadline,
         uint256 requestDeadline,
         bool closePrevious
-    ) external;
+    ) external virtual;
 
     /// @notice Analyzes a withdrawal request based on the current vault state.
     /// @param s The current state stack to use for analysis.
@@ -248,6 +256,7 @@ interface IMellowVault is IERC20 {
     )
         external
         pure
+        virtual
         returns (
             bool processingPossible,
             bool withdrawalPossible,
@@ -259,6 +268,7 @@ interface IMellowVault is IERC20 {
     function calculateStack()
         external
         view
+        virtual
         returns (ProcessWithdrawalsStack memory s);
 
     /// @notice Processes multiple withdrawal requests by fulfilling eligible withdrawals.
@@ -266,7 +276,7 @@ interface IMellowVault is IERC20 {
     /// @return statuses An array indicating the status of each user's withdrawal request.
     function processWithdrawals(
         address[] memory users
-    ) external returns (bool[] memory statuses);
+    ) external virtual returns (bool[] memory statuses);
 
     /**
      * @notice Emitted when a token is added to the vault.

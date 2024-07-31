@@ -22,9 +22,10 @@ contract InVault_E2 is InceptionVault {
             operatorAddress,
             _strategyManager,
             _inceptionToken,
-            _assetStrategy,
-            address(0),
-            address(0)
+            _assetStrategy
+            // _assetStrategy,
+            // address(0),
+            // address(0)
         );
     }
 

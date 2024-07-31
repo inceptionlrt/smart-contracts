@@ -53,6 +53,4 @@ interface IInceptionVaultErrors {
     error NotMellowVault();
 
     error OperatorAlreadyExists();
-
-    error BadMellowWithdrawRequest();
 }

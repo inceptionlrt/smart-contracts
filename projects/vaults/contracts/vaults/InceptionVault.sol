@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
@@ -10,7 +10,6 @@ import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
 import "../interfaces/IMellowDepositWrapper.sol";
 import "../interfaces/IMellowVault.sol";
-import "../interfaces/IMellowRestaker.sol";
 import "../eigenlayer-handler/EigenLayerHandler.sol";
 
 /// @author The InceptionLRT team
@@ -58,12 +57,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy,
-        address _mellowDepositWrapper,
-        address _mellowVault
+        IStrategy _assetStrategy
+        // address _mellowDepositWrapper,
+        // address _mellowVault
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy, IMellowDepositWrapper(_mellowDepositWrapper), IMellowVault(_mellowVault));
+        __EigenLayerHandler_init(_strategyManager, _assetStrategy, IMellowDepositWrapper(address(0)), IMellowVault(address(0)));
 
         name = vaultName;
         _operator = operatorAddress;
@@ -170,11 +169,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ) external nonReentrant whenNotPaused onlyOperator {
         if (elOperator == address(0)) revert NullParams();
 
-        _beforeDepositAssetIntoStrategy(amount);
+        address restaker = _getRestaker(elOperator);
+        // if (elOperator == address(mellowVault)) {
+        //     _depositAssetIntoMellow(restaker, amount);
+        //     return;
+        // }
 
         // try to find a restaker for the specific EL operator
-        address restaker = _operatorRestakers[elOperator];
-        if (restaker == address(0)) revert OperatorNotRegistered();
+        _beforeDepositAssetIntoStrategy(amount);
 
         bool delegate = false;
         if (restaker == _MOCK_ADDRESS) {
@@ -607,15 +609,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit ELOperatorAdded(newELOperator);
     }
 
-    function addMellowOperator(address newOperator) external onlyOwner {
-        if (newOperator != address(mellowVault))
-            revert NotMellowVault();
-
-        if (_operatorRestakers[newOperator] != address(0))
-            revert OperatorAlreadyExists();
-
-        _operatorRestakers[newOperator] = _MOCK_ADDRESS;
-    }
+    // function setMellowOperator() external onlyOwner {
+    //     _operatorRestakers[address(mellowVault)] = _MOCK_ADDRESS;
+    // }
 
     /*///////////////////////////////
     ////// Pausable functions //////
