@@ -142,6 +142,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address restaker = _getRestaker(elOperatorAddress);
+        if (restaker == _MOCK_ADDRESS) revert NullParams();
         if (elOperatorAddress == address(mellowRestaker)) {
             amount = mellowRestaker.withdrawMellow(amount, true);
             _pendingWithdrawalAmount += amount;
@@ -410,7 +411,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ) internal view returns (address restaker) {
         restaker = _operatorRestakers[operator];
         if (restaker == address(0)) revert OperatorNotRegistered();
-        if (restaker == _MOCK_ADDRESS) revert NullParams();
     }
 
     /*//////////////////////////
