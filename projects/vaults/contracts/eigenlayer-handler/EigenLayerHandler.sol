@@ -54,8 +54,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IMellowDepositWrapper public mellowDepositWrapper;
-    IMellowRestaker public mellowVault;
+    IMellowRestaker public mellowRestaker;
 
     //// TODO
     /// @dev constants are not stored in the storage
@@ -69,13 +68,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function __EigenLayerHandler_init(
         IStrategyManager _strategyManager,
         IStrategy _assetStrategy,
-        IMellowDepositWrapper _mellowDepositWrapper,
-        IMellowRestaker _mellowVault
+        IMellowRestaker _mellowRestaker
     ) internal onlyInitializing {
         strategyManager = _strategyManager;
         strategy = _assetStrategy;
-        mellowDepositWrapper = _mellowDepositWrapper;
-        mellowVault = _mellowVault;
+        mellowRestaker = _mellowRestaker;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
         // approve spending by strategyManager
@@ -115,8 +112,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     }
 
     function _depositAssetIntoMellow(uint256 amount) internal {
-        _asset.approve(address(mellowVault), amount);
-        mellowVault.delegateMellow(amount, 0, block.timestamp);
+        _asset.approve(address(mellowRestaker), amount);
+        mellowRestaker.delegateMellow(amount, 0, block.timestamp);
         // emit DepositedToMellow(restaker, amount, lpAmount);
     }
 
@@ -145,8 +142,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address restaker = _getRestaker(elOperatorAddress);
-        if (elOperatorAddress == address(mellowVault)) {
-            amount = mellowVault.withdrawMellow(amount, true);
+        if (elOperatorAddress == address(mellowRestaker)) {
+            amount = mellowRestaker.withdrawMellow(amount, true);
             _pendingWithdrawalAmount += amount;
             emit StartMellowWithdrawal(restaker, amount);
             return;
@@ -163,7 +160,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount,
         bool closePrev
     ) external whenNotPaused nonReentrant onlyOperator {
-        address restaker = _getRestaker(address(mellowVault));
+        address restaker = _getRestaker(address(mellowRestaker));
 
         amount = IMellowRestaker(restaker).withdrawMellow(amount, closePrev);
 
@@ -245,8 +242,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount;
-        if (restaker == address(mellowVault)) {
-            withdrawnAmount = mellowVault.claimMellowWithdrawalCallback(amount);
+        if (restaker == address(mellowRestaker)) {
+            withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback(amount);
         } else if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,

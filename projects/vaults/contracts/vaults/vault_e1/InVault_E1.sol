@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {InceptionVault, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault.sol";
+import "../../interfaces/IMellowRestaker.sol";
 
 /// @author The InceptionLRT team
 contract InVault_E1 is InceptionVault {
@@ -15,17 +16,16 @@ contract InVault_E1 is InceptionVault {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IStrategy _assetStrategy,
+        IMellowRestaker _mellowRestaker
     ) external initializer {
         __InceptionVault_init(
             vaultName,
             operatorAddress,
             _strategyManager,
             _inceptionToken,
-            _assetStrategy
-            // _assetStrategy,
-            // address(0),
-            // address(0)
+            _assetStrategy,
+            _mellowRestaker
         );
     }
 

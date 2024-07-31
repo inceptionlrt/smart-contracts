@@ -80,6 +80,14 @@ const nodeOperatorToRestaker = new Map();
 const forcedWithdrawals = [];
 let MAX_TARGET_PERCENT;
 
+const [
+  mellowWrapperAddress,
+  mellowVaultAddress
+] = [
+    "0x41A1FBEa7Ace3C3a6B66a73e96E5ED07CDB2A34d",
+    "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"
+  ]
+
 const initVault = async a => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -103,6 +111,11 @@ const initVault = async a => {
   console.log("- Restaker implementation");
   const restakerImp = await ethers.deployContract("InceptionRestaker");
   restakerImp.address = await restakerImp.getAddress();
+
+  console.log("- Mellow restaker");
+  const mellowRestaker = await ethers.deployContract("MellowRestaker");
+  mellowRestaker.initialize(mellowWrapperAddress, mellowVaultAddress, iToken.address, a.iVaultOperator)
+  const mellowRestakerAddress = await mellowRestaker.getAddress()
   // 4. Delegation manager
   console.log("- Delegation manager");
   const delegationManager = await ethers.getContractAt("IDelegationManager", a.delegationManager);
@@ -127,7 +140,7 @@ const initVault = async a => {
   });
   const iVault = await upgrades.deployProxy(
     iVaultFactory,
-    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy],
+    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy, mellowRestakerAddress],
     { unsafeAllowLinkedLibraries: true },
   );
   iVault.address = await iVault.getAddress();

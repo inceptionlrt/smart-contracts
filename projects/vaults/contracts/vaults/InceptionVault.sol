@@ -27,7 +27,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev Factory variables
     address private _stakerImplementation;
-    address private _mellowStakerImplementation;
 
     /**
      *  @dev Flash withdrawal params
@@ -55,14 +54,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy // address _mellowDepositWrapper, // address _mellowVault
+        IStrategy _assetStrategy,
+        IMellowRestaker _mellowRestaker
     ) internal {
         __Ownable_init();
         __EigenLayerHandler_init(
             _strategyManager,
             _assetStrategy,
-            IMellowDepositWrapper(address(0)),
-            IMellowRestaker(address(0))
+            _mellowRestaker
         );
 
         name = vaultName;
@@ -171,7 +170,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (elOperator == address(0)) revert NullParams();
 
         address restaker = _getRestaker(elOperator);
-        if (elOperator == address(mellowVault)) {
+        if (elOperator == address(mellowRestaker)) {
             _depositAssetIntoMellow(amount);
             return;
         }
@@ -574,7 +573,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function setMellowOperator() external onlyOwner {
-        _operatorRestakers[address(mellowVault)] = _MOCK_ADDRESS;
+        _operatorRestakers[address(mellowRestaker)] = _MOCK_ADDRESS;
     }
 
     /*///////////////////////////////
