@@ -115,16 +115,16 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(restaker, amount);
     }
 
-    // function _depositAssetIntoMellow(
-    //     address restaker,
-    //     uint256 amount
-    // ) internal {
-    //     _asset.approve(restaker, amount);
-    //     uint256 lpAmount = IMellowRestaker(restaker).delegateMellow(amount, 0, block.timestamp);
-    //
-    //     emit DepositedToMellow(restaker, amount, lpAmount);
-    // }
-    //
+    function _depositAssetIntoMellow(
+        address restaker,
+        uint256 amount
+    ) internal {
+        _asset.approve(restaker, amount);
+        uint256 lpAmount = IMellowRestaker(restaker).delegateMellow(amount, 0, block.timestamp);
+
+        emit DepositedToMellow(restaker, amount, lpAmount);
+    }
+
     /// @dev delegates assets held in the strategy to the EL operator.
     function _delegateToOperator(
         address restaker,
@@ -150,15 +150,15 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         address restaker = _getRestaker(elOperatorAddress);
-        // if (elOperatorAddress == address(mellowVault)) {
-        //     amount = IMellowRestaker(restaker).withdrawMellow(amount, true);
-        //     _pendingWithdrawalAmount += amount;
-        //     emit StartMellowWithdrawal(
-        //         restaker,
-        //         amount
-        //     );
-        //     return;
-        // }
+        if (elOperatorAddress == address(mellowVault)) {
+            amount = IMellowRestaker(restaker).withdrawMellow(amount, true);
+            _pendingWithdrawalAmount += amount;
+            emit StartMellowWithdrawal(
+                restaker,
+                amount
+            );
+            return;
+        }
 
         IInceptionRestaker(restaker).withdrawFromEL(_undelegate(amount, restaker));
     }
@@ -169,31 +169,15 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount,
         bool closePrev
     ) external whenNotPaused nonReentrant onlyOperator {
-        address restaker = _operatorRestakers[address(mellowVault)];
-        if (restaker == address(0)) revert OperatorNotRegistered();
-        if (restaker == _MOCK_ADDRESS) revert NullParams();
+        address restaker = _getRestaker(address(mellowVault));
 
-        //TODO: precise lpAmount withdraw
-        uint256 lpAmount = mellowVault.balanceOf(restaker);
-        IMellowRestaker(restaker).withdrawMellow(lpAmount, amount, block.timestamp + 15 days, block.timestamp + 15 days, closePrev);
+        amount = IMellowRestaker(restaker).withdrawMellow(amount, closePrev);
 
-        (
-            bool isProcessingPossible,
-            bool isWithdrawalPossible,
-            uint256[] memory expectedAmounts
-        ) = mellowVault.analyzeRequest(
-          mellowVault.calculateStack(),
-          mellowVault.withdrawalRequest(restaker)
-        );
-
-        if (!isProcessingPossible)
-            revert BadMellowWithdrawRequest();
-
-        _pendingWithdrawalAmount += expectedAmounts[0];
+        _pendingWithdrawalAmount += amount;
 
         emit StartMellowWithdrawal(
             restaker,
-            lpAmount
+            amount
         );
     }
 
@@ -321,26 +305,26 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return withdrawnAmount;
     }
 
-    /// @dev claims completed withdrawals from Mellow, if they exist
-    // function claimCompletedMellowWithdrawal(
-    //     uint256 amount
-    // ) public whenNotPaused nonReentrant {
-    //     address restaker = _getRestaker(address(mellowVault));
-    //
-    //     uint256 availableBalance = getFreeBalance();
-    //     uint256 withdrawnAmount = IMellowRestaker(restaker).claimMellowWithdrawalCallback(amount);
-    //     emit WithdrawalClaimed(withdrawnAmount);
-    //
-    //     _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
-    //         ? 0
-    //         : _pendingWithdrawalAmount - withdrawnAmount;
-    //
-    //     if (_pendingWithdrawalAmount < 7) {
-    //         _pendingWithdrawalAmount = 0;
-    //     }
-    //
-    //     _updateEpoch(availableBalance + withdrawnAmount);
-    // }
+    // @dev claims completed withdrawals from Mellow, if they exist
+    function claimCompletedMellowWithdrawal(
+        uint256 amount
+    ) public whenNotPaused nonReentrant {
+        address restaker = _getRestaker(address(mellowVault));
+
+        uint256 availableBalance = getFreeBalance();
+        uint256 withdrawnAmount = IMellowRestaker(restaker).claimMellowWithdrawalCallback(amount);
+        emit WithdrawalClaimed(withdrawnAmount);
+
+        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
+            ? 0
+            : _pendingWithdrawalAmount - withdrawnAmount;
+
+        if (_pendingWithdrawalAmount < 7) {
+            _pendingWithdrawalAmount = 0;
+        }
+
+        _updateEpoch(availableBalance + withdrawnAmount);
+    }
 
     function updateEpoch() external whenNotPaused {
         _updateEpoch(getFreeBalance());

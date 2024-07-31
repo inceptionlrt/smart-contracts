@@ -99,7 +99,7 @@ contract MellowRestaker is
         mellowVault.registerWithdrawal(address(this), lpAmount, minAmounts, block.timestamp + 15 days, block.timestamp + 15 days, closeProvious);
 
         (
-              bool isProcessingPossible,
+            bool isProcessingPossible,
             bool isWithdrawalPossible,
             uint256[] memory expectedAmounts
         ) = mellowVault.analyzeRequest(

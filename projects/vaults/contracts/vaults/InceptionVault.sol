@@ -170,10 +170,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (elOperator == address(0)) revert NullParams();
 
         address restaker = _getRestaker(elOperator);
-        // if (elOperator == address(mellowVault)) {
-        //     _depositAssetIntoMellow(restaker, amount);
-        //     return;
-        // }
+        if (elOperator == address(mellowVault)) {
+            _depositAssetIntoMellow(restaker, amount);
+            return;
+        }
 
         // try to find a restaker for the specific EL operator
         _beforeDepositAssetIntoStrategy(amount);
@@ -609,9 +609,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         emit ELOperatorAdded(newELOperator);
     }
 
-    // function setMellowOperator() external onlyOwner {
-    //     _operatorRestakers[address(mellowVault)] = _MOCK_ADDRESS;
-    // }
+    function setMellowOperator() external onlyOwner {
+        _operatorRestakers[address(mellowVault)] = _MOCK_ADDRESS;
+    }
 
     /*///////////////////////////////
     ////// Pausable functions //////
