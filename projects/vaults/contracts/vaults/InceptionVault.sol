@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
@@ -27,6 +27,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev Factory variables
     address private _stakerImplementation;
+    address private _mellowStakerImplementation;
 
     /**
      *  @dev Flash withdrawal params
@@ -54,10 +55,15 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IStrategy _assetStrategy // address _mellowDepositWrapper, // address _mellowVault
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy);
+        __EigenLayerHandler_init(
+            _strategyManager,
+            _assetStrategy,
+            IMellowDepositWrapper(address(0)),
+            IMellowRestaker(address(0))
+        );
 
         name = vaultName;
         _operator = operatorAddress;
@@ -164,11 +170,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ) external nonReentrant whenNotPaused onlyOperator {
         if (elOperator == address(0)) revert NullParams();
 
-        _beforeDepositAssetIntoStrategy(amount);
+        address restaker = _getRestaker(elOperator);
+        if (elOperator == address(mellowVault)) {
+            _depositAssetIntoMellow(amount);
+            return;
+        }
 
         // try to find a restaker for the specific EL operator
-        address restaker = _operatorRestakers[elOperator];
-        if (restaker == address(0)) revert OperatorNotRegistered();
+        _beforeDepositAssetIntoStrategy(amount);
 
         bool delegate = false;
         if (restaker == _MOCK_ADDRESS) {
@@ -466,51 +475,51 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setDepositBonusParams(
-        uint64 newMaxBonusRate,
-        uint64 newOptimalBonusRate,
-        uint64 newDepositUtilizationKink
-    ) external onlyOwner {
-        if (newMaxBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-        if (newOptimalBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalBonusRate);
-        if (newDepositUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newDepositUtilizationKink);
+    // function setDepositBonusParams(
+    //     uint64 newMaxBonusRate,
+    //     uint64 newOptimalBonusRate,
+    //     uint64 newDepositUtilizationKink
+    // ) external onlyOwner {
+    //     if (newMaxBonusRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newMaxBonusRate);
+    //     if (newOptimalBonusRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newOptimalBonusRate);
+    //     if (newDepositUtilizationKink > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newDepositUtilizationKink);
 
-        maxBonusRate = newMaxBonusRate;
-        optimalBonusRate = newOptimalBonusRate;
-        depositUtilizationKink = newDepositUtilizationKink;
+    //     maxBonusRate = newMaxBonusRate;
+    //     optimalBonusRate = newOptimalBonusRate;
+    //     depositUtilizationKink = newDepositUtilizationKink;
 
-        emit DepositBonusParamsChanged(
-            newMaxBonusRate,
-            newOptimalBonusRate,
-            newDepositUtilizationKink
-        );
-    }
+    //     emit DepositBonusParamsChanged(
+    //         newMaxBonusRate,
+    //         newOptimalBonusRate,
+    //         newDepositUtilizationKink
+    //     );
+    // }
 
-    function setFlashWithdrawFeeParams(
-        uint64 newMaxFlashFeeRate,
-        uint64 newOptimalWithdrawalRate,
-        uint64 newWithdrawUtilizationKink
-    ) external onlyOwner {
-        if (newMaxFlashFeeRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxFlashFeeRate);
-        if (newOptimalWithdrawalRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
-        if (newWithdrawUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+    // function setFlashWithdrawFeeParams(
+    //     uint64 newMaxFlashFeeRate,
+    //     uint64 newOptimalWithdrawalRate,
+    //     uint64 newWithdrawUtilizationKink
+    // ) external onlyOwner {
+    //     if (newMaxFlashFeeRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newMaxFlashFeeRate);
+    //     if (newOptimalWithdrawalRate > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+    //     if (newWithdrawUtilizationKink > MAX_PERCENT)
+    //         revert ParameterExceedsLimits(newWithdrawUtilizationKink);
 
-        maxFlashFeeRate = newMaxFlashFeeRate;
-        optimalWithdrawalRate = newOptimalWithdrawalRate;
-        withdrawUtilizationKink = newWithdrawUtilizationKink;
+    //     maxFlashFeeRate = newMaxFlashFeeRate;
+    //     optimalWithdrawalRate = newOptimalWithdrawalRate;
+    //     withdrawUtilizationKink = newWithdrawUtilizationKink;
 
-        emit WithdrawFeeParamsChanged(
-            newMaxFlashFeeRate,
-            newOptimalWithdrawalRate,
-            newWithdrawUtilizationKink
-        );
-    }
+    //     emit WithdrawFeeParamsChanged(
+    //         newMaxFlashFeeRate,
+    //         newOptimalWithdrawalRate,
+    //         newWithdrawUtilizationKink
+    //     );
+    // }
 
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
@@ -558,10 +567,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             revert NotEigenLayerOperator();
 
         if (_operatorRestakers[newELOperator] != address(0))
-            revert EigenLayerOperatorAlreadyExists();
+            revert OperatorAlreadyExists();
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
         emit ELOperatorAdded(newELOperator);
+    }
+
+    function setMellowOperator() external onlyOwner {
+        _operatorRestakers[address(mellowVault)] = _MOCK_ADDRESS;
     }
 
     /*///////////////////////////////

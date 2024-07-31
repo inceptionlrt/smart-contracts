@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/math/Math.sol";
+
 import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
 import {IStrategyManager, IStrategy} from "../interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
 import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
+import "../interfaces/IMellowDepositWrapper.sol";
+import "../interfaces/IMellowRestaker.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -50,8 +54,12 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
+    IMellowDepositWrapper public mellowDepositWrapper;
+    IMellowRestaker public mellowVault;
+
+    //// TODO
     /// @dev constants are not stored in the storage
-    uint256[50 - 13] private __reserver;
+    uint256[50 - 16] private __reserver;
 
     modifier onlyOperator() {
         if (msg.sender != _operator) revert OnlyOperatorAllowed();
@@ -60,10 +68,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     function __EigenLayerHandler_init(
         IStrategyManager _strategyManager,
-        IStrategy _assetStrategy
+        IStrategy _assetStrategy,
+        IMellowDepositWrapper _mellowDepositWrapper,
+        IMellowRestaker _mellowVault
     ) internal onlyInitializing {
         strategyManager = _strategyManager;
         strategy = _assetStrategy;
+        mellowDepositWrapper = _mellowDepositWrapper;
+        mellowVault = _mellowVault;
 
         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
         // approve spending by strategyManager
@@ -102,6 +114,12 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(restaker, amount);
     }
 
+    function _depositAssetIntoMellow(uint256 amount) internal {
+        _asset.approve(address(mellowVault), amount);
+        mellowVault.delegateMellow(amount, 0, block.timestamp);
+        // emit DepositedToMellow(restaker, amount, lpAmount);
+    }
+
     /// @dev delegates assets held in the strategy to the EL operator.
     function _delegateToOperator(
         address restaker,
@@ -126,38 +144,59 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address elOperatorAddress,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address staker = _operatorRestakers[elOperatorAddress];
-        if (staker == address(0)) revert OperatorNotRegistered();
-        if (staker == _MOCK_ADDRESS) revert NullParams();
+        address restaker = _getRestaker(elOperatorAddress);
+        if (elOperatorAddress == address(mellowVault)) {
+            amount = mellowVault.withdrawMellow(amount, true);
+            _pendingWithdrawalAmount += amount;
+            emit StartMellowWithdrawal(restaker, amount);
+            return;
+        }
 
-        IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
+        IInceptionRestaker(restaker).withdrawFromEL(
+            _undelegate(amount, restaker)
+        );
     }
 
-    /// @dev performs creating a withdrawal request from EigenLayer
+    /// @dev registers a withdrawal request from Mellow
     /// @dev requires a specific amount to withdraw
-    function undelegateVault(
-        uint256 amount
+    function withdrawFromMellow(
+        uint256 amount,
+        bool closePrev
     ) external whenNotPaused nonReentrant onlyOperator {
-        address staker = address(this);
+        address restaker = _getRestaker(address(mellowVault));
 
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
+        amount = IMellowRestaker(restaker).withdrawMellow(amount, closePrev);
 
-        sharesToWithdraw[0] = _undelegate(amount, staker);
-        strategies[0] = strategy;
-        IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
+        _pendingWithdrawalAmount += amount;
 
-        /// @notice from Vault
-        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
-            strategies: strategies,
-            shares: sharesToWithdraw,
-            withdrawer: address(this)
-        });
-        delegationManager.queueWithdrawals(withdrawals);
+        emit StartMellowWithdrawal(restaker, amount);
     }
+
+    // /// @dev performs creating a withdrawal request from EigenLayer
+    // /// @dev requires a specific amount to withdraw
+    // function undelegateVault(
+    //     uint256 amount
+    // ) external whenNotPaused nonReentrant onlyOperator {
+    //     address staker = address(this);
+
+    //     uint256[] memory sharesToWithdraw = new uint256[](1);
+    //     IStrategy[] memory strategies = new IStrategy[](1);
+
+    //     sharesToWithdraw[0] = _undelegate(amount, staker);
+    //     strategies[0] = strategy;
+    //     IDelegationManager.QueuedWithdrawalParams[]
+    //         memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+    //             1
+    //         );
+
+    //     /// @notice from Vault
+    //     withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
+    //         strategies: strategies,
+    //         shares: sharesToWithdraw,
+    //         withdrawer: address(this)
+    //     });
+    //     delegationManager.queueWithdrawals(withdrawals);
+    // }
 
     function _undelegate(
         uint256 amount,
@@ -189,6 +228,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev claims completed withdrawals from EigenLayer, if they exist
     function claimCompletedWithdrawals(
         address restaker,
+        uint256 amount,
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public whenNotPaused nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
@@ -205,7 +245,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount;
-        if (restaker == address(this)) {
+        if (restaker == address(mellowVault)) {
+            withdrawnAmount = mellowVault.claimMellowWithdrawalCallback(amount);
+        } else if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
@@ -256,6 +298,28 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         return withdrawnAmount;
     }
+
+    // /// @dev claims completed withdrawals from Mellow, if they exist
+    // function claimCompletedMellowWithdrawals(
+    //     uint256 amount
+    // ) public whenNotPaused nonReentrant {
+    //     address restaker = _getRestaker(address(mellowVault));
+
+    //     uint256 availableBalance = getFreeBalance();
+    //     uint256 withdrawnAmount = IMellowRestaker(restaker)
+    //         .claimMellowWithdrawalCallback(amount);
+    //     emit WithdrawalClaimed(withdrawnAmount);
+
+    //     _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
+    //         ? 0
+    //         : _pendingWithdrawalAmount - withdrawnAmount;
+
+    //     if (_pendingWithdrawalAmount < 7) {
+    //         _pendingWithdrawalAmount = 0;
+    //     }
+
+    //     _updateEpoch(availableBalance + withdrawnAmount);
+    // }
 
     function updateEpoch() external whenNotPaused {
         _updateEpoch(getFreeBalance());
@@ -342,6 +406,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     function _getTargetCapacity() internal view returns (uint256) {
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
+    }
+
+    function _getRestaker(
+        address operator
+    ) internal view returns (address restaker) {
+        restaker = _operatorRestakers[operator];
+        if (restaker == address(0)) revert OperatorNotRegistered();
+        if (restaker == _MOCK_ADDRESS) revert NullParams();
     }
 
     /*//////////////////////////
