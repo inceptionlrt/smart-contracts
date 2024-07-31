@@ -169,12 +169,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ) external nonReentrant whenNotPaused onlyOperator {
         if (elOperator == address(0)) revert NullParams();
 
-        address restaker = _getRestaker(elOperator);
         if (elOperator == address(mellowRestaker)) {
             _depositAssetIntoMellow(amount);
             return;
         }
 
+        address restaker = _getRestaker(elOperator);
         // try to find a restaker for the specific EL operator
         _beforeDepositAssetIntoStrategy(amount);
 
