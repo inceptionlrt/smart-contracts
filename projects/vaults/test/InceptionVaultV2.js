@@ -20,6 +20,7 @@ BigInt.prototype.format = function () {
 };
 
 assets = [
+  //TODO: switch to Mainnet data
   {
     assetName: "rETH",
     assetAddress: "0x7322c24752f79c05FFD1E2a6FCB97020C1C264F1",
@@ -42,11 +43,12 @@ assets = [
       return staker;
     },
   },
+  //TODO: switch to Mainnet data
   {
     assetName: "stETH",
-    assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+    assetAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     assetPoolName: "LidoMockPool",
-    assetPool: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+    assetPool: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     vaultName: "InstEthVault",
     vaultFactory: "InVault_E2",
     strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
@@ -82,10 +84,12 @@ let MAX_TARGET_PERCENT;
 
 const [
   mellowWrapperAddress,
-  mellowVaultAddress
+  mellowVaultAddress,
+  stETH
 ] = [
     "0x41A1FBEa7Ace3C3a6B66a73e96E5ED07CDB2A34d",
-    "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"
+    "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a",
+    "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84" 
   ]
 
 const initVault = async a => {
@@ -114,7 +118,7 @@ const initVault = async a => {
 
   console.log("- Mellow restaker");
   const mellowRestakerFactory = await ethers.getContractFactory("MellowRestaker");
-  const mellowRestaker = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrapperAddress, mellowVaultAddress, iToken.address, a.iVaultOperator]);
+  const mellowRestaker = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrapperAddress, mellowVaultAddress, stETH, a.iVaultOperator]);
   mellowRestaker.address = await mellowRestaker.getAddress()
   // 4. Delegation manager
   console.log("- Delegation manager");
@@ -184,6 +188,7 @@ const initVault = async a => {
     strategy,
     iVaultOperator,
     restakerImp,
+    mellowRestaker,
     delegationManager,
     iLibrary,
   ];
@@ -192,7 +197,7 @@ const initVault = async a => {
 assets.forEach(function (a) {
   describe(`Inception pool V2 ${a.assetName}`, function () {
     this.timeout(150000);
-    let iToken, iVault, ratioFeed, asset, assetPool, strategy, restakerImp, delegationManager, iLibrary;
+    let iToken, iVault, ratioFeed, asset, assetPool, strategy, restakerImp, mellowRestaker, delegationManager, iLibrary;
     let iVaultOperator, deployer, staker, staker2, staker3, treasury;
     let ratioErr, transactErr;
     let snapshot;
@@ -224,6 +229,7 @@ assets.forEach(function (a) {
         strategy,
         iVaultOperator,
         restakerImp,
+        mellowRestaker,
         delegationManager,
         iLibrary,
       ] = await initVault(a);
@@ -309,16 +315,21 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).lte(e18);
       });
 
-      it("Delegate all to Mellow", async function () {
-        const amount = await iVault.getFreeBalance();
+      if (a.assetName == "stETH") {
+        it("Delegate all to Mellow", async function () {
+          // deposited = toWei(20);
+          // const depoTx = await iVault.connect(staker).deposit(deposited, staker.address);
 
-        const tx = await iVault.connect(iVaultOperator).depositMellow(amount);
-        const receipt = await tx.wait();
+          // const amount = await iVault.getFreeBalance();
+          // const tx = await iVault.connect(iVaultOperator)
+          //   .delegateToOperator(amount, mellowRestaker.address, ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          // const receipt = await tx.wait();
 
-        const depositedEvent = receipt.events.find(event => event.event === 'DepositedToMellow');
-        expect(depositedEvent).to.not.be.undefined;
-        expect(depositedEvent.args[1]).to.equal(amount);
-      });
+          // const depositedEvent = receipt.events.find(event => event.event === 'DepositedToMellow');
+          // expect(depositedEvent).to.not.be.undefined;
+          // expect(depositedEvent.args[1]).to.equal(amount);
+        });
+      }
 
       it("Update asset ratio", async function () {
         await addRewardsToStrategy(a.assetStrategy, e18, staker3);

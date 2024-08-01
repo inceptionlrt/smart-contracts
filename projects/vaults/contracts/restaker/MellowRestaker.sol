@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import "hardhat/console.sol";
+
 import "../vaults/InceptionVault.sol";
 import "../interfaces/InceptionRestakerErrors.sol";
 import "../interfaces/IDelegationManager.sol";
@@ -71,9 +73,6 @@ contract MellowRestaker is
         mellowVault = _mellowVault;
         _asset = asset;
         _trusteeManager = trusteeManager;
-
-        // approve spending by deposit wrapper
-        _asset.approve(address(mellowDepositWrapper), type(uint256).max);
     }
 
     function delegateMellow(
