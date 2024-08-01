@@ -71,7 +71,6 @@ contract MellowRestaker is
         mellowVault = _mellowVault;
         _asset = asset;
         _trusteeManager = trusteeManager;
-        _vault = msg.sender;
 
         // approve spending by deposit wrapper
         _asset.approve(address(mellowDepositWrapper), type(uint256).max);
@@ -191,5 +190,9 @@ contract MellowRestaker is
           revert NotEnoughBalance();
 
         IWSteth(wsteth).unwrap(amount);
+    }
+
+    function setVault(address vault) external onlyOwner {
+        _vault = vault;
     }
 }

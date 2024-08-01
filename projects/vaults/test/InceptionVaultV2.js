@@ -113,9 +113,9 @@ const initVault = async a => {
   restakerImp.address = await restakerImp.getAddress();
 
   console.log("- Mellow restaker");
-  const mellowRestaker = await ethers.deployContract("MellowRestaker");
-  mellowRestaker.initialize(mellowWrapperAddress, mellowVaultAddress, iToken.address, a.iVaultOperator)
-  const mellowRestakerAddress = await mellowRestaker.getAddress()
+  const mellowRestakerFactory = await ethers.getContractFactory("MellowRestaker");
+  const mellowRestaker = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrapperAddress, mellowVaultAddress, iToken.address, a.iVaultOperator]);
+  mellowRestaker.address = await mellowRestaker.getAddress()
   // 4. Delegation manager
   console.log("- Delegation manager");
   const delegationManager = await ethers.getContractAt("IDelegationManager", a.delegationManager);
@@ -140,7 +140,7 @@ const initVault = async a => {
   });
   const iVault = await upgrades.deployProxy(
     iVaultFactory,
-    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy, mellowRestakerAddress],
+    [a.vaultName, a.iVaultOperator, a.strategyManager, iToken.address, a.assetStrategy, mellowRestaker.address],
     { unsafeAllowLinkedLibraries: true },
   );
   iVault.address = await iVault.getAddress();
@@ -152,6 +152,7 @@ const initVault = async a => {
   await iVault.upgradeTo(restakerImp.address);
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addELOperator(nodeOperators[0]);
+  await mellowRestaker.setVault(iVault.address);
   await iToken.setVault(iVault.address);
   MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
   // in % (100 * e18 == 100 %)
