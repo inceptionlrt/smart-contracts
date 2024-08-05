@@ -22,4 +22,4 @@ npx hardhat run ./scripts/rate-provider.ts --network {network_name}
 
 ## Contract Addresses:
 
-- [RateProviders]:(https://docs.inceptionlrt.com/contracts/addresses/rateprovider)
+- [RateProviders](https://docs.inceptionlrt.com/contracts/addresses/rateprovider)
