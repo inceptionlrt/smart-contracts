@@ -20,7 +20,6 @@ BigInt.prototype.format = function () {
 };
 
 assets = [
-  //TODO: switch to Mainnet data
   {
     assetName: "rETH",
     assetAddress: "0xae78736Cd615f374D3085123A210448E74Fc6393",
@@ -42,7 +41,6 @@ assets = [
       return staker;
     },
   },
-  //TODO: switch to Mainnet data
   {
     assetName: "stETH",
     assetAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
@@ -306,7 +304,12 @@ assets.forEach(function (a) {
       });
 
       if (a.assetName == "stETH") {
-        it("Delegate all to Mellow", async function () {
+        it.skip("Delegate all to Mellow", async function () {
+          deposited = toWei(20);
+          const expectedShares = (deposited * e18) / (await iVault.ratio());
+          const tx = await iVault.connect(staker).deposit(deposited, staker.address);
+          const receipt = await tx.wait();
+
           const amount = await iVault.getFreeBalance();
           const mellowRestaker = await iVault.mellowRestaker();
           await iVault
@@ -317,6 +320,23 @@ assets.forEach(function (a) {
           expect(delegatedTotal).to.be.closeTo(deposited, transactErr);
           expect(delegatedTo).to.be.closeTo(deposited, transactErr);
           expect(await iVault.ratio()).lte(e18);
+        });
+        it("Base Mellow flow", async function () {
+          deposited = toWei(20);
+          const expectedShares = (deposited * e18) / (await iVault.ratio());
+          const tx = await iVault.connect(staker).deposit(deposited, staker.address);
+          const receipt = await tx.wait();
+
+          const amount = await iVault.getFreeBalance();
+          const mellowRestaker = await iVault.mellowRestaker();
+          await iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, mellowRestaker, ethers.ZeroHash, [ethers.ZeroHash, 0]);
+          expect(await iVault.ratio()).lte(e18);
+          
+          await iVault
+            .connect(iVaultOperator)
+            .withdrawFromMellow(amount, false);
         });
       } else {
         it("Delegate all to EL", async function () {

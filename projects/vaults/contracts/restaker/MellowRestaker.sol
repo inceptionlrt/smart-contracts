@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";
 
@@ -35,6 +36,8 @@ contract MellowRestaker is
     IMellowRestaker,
     InceptionRestakerErrors
 {
+    using SafeERC20 for IERC20;
+
     IERC20 internal _asset;
     address internal _trusteeManager;
     address internal _vault;
@@ -83,16 +86,18 @@ contract MellowRestaker is
         // transfer from the vault
         _asset.transferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
-        return mellowDepositWrapper.deposit(address(this), address(_asset), amount, minLpAmount, deadline, 0);
+        IERC20(_asset).safeIncreaseAllowance(address(mellowDepositWrapper), amount);
+        return mellowDepositWrapper.deposit(address(this), address(_asset), amount, minLpAmount, deadline);
     }
 
     function withdrawMellow(
         uint256 amount,
         bool closeProvious
     ) external onlyTrustee override returns (uint256){
+        amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = _amountToLpAmount(amount);
-        uint256[] memory minAmounts = new uint256[](2);
-        minAmounts[0] = amount;
+        uint256[] memory minAmounts = new uint256[](1);
+        minAmounts[0] = amount - 2; // dust
 
         mellowVault.registerWithdrawal(address(this), lpAmount, minAmounts, block.timestamp + 15 days, block.timestamp + 15 days, closeProvious);
 
@@ -183,12 +188,10 @@ contract MellowRestaker is
         lpAmount = FullMath.mulDiv(depositValue, totalSupply, totalValue);
     }
 
-    function _wstethToSteth(uint256 amount) private {
-        uint256 wstethBalance = IERC20(wsteth).balanceOf(address(this));
-        if (wstethBalance < amount) 
-          revert NotEnoughBalance();
-
-        IWSteth(wsteth).unwrap(amount);
+    function _wstethToSteth(uint256 amount) private returns (uint256) {
+        IERC20(wsteth).safeIncreaseAllowance(wsteth, amount);
+        IWSteth(wsteth).wrap(amount);
+        return IERC20(_asset).balanceOf(address(this));
     }
 
     function setVault(address vault) external onlyOwner {

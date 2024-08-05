@@ -161,13 +161,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 amount,
         bool closePrev
     ) external whenNotPaused nonReentrant onlyOperator {
-        address restaker = _getRestaker(address(mellowRestaker));
-
-        amount = IMellowRestaker(restaker).withdrawMellow(amount, closePrev);
+        amount = mellowRestaker.withdrawMellow(amount, closePrev);
 
         _pendingWithdrawalAmount += amount;
 
-        emit StartMellowWithdrawal(restaker, amount);
+        // emit StartMellowWithdrawal(address(mellowRestaker), amount);
     }
 
     // /// @dev performs creating a withdrawal request from EigenLayer
