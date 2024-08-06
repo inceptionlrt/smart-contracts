@@ -1,1 +1,0 @@
-[{"inputs":[{"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"timestampToBlockRoot","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"}]
