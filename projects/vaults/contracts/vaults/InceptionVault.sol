@@ -417,6 +417,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function getDelegatedTo(
         address elOperator
     ) external view returns (uint256) {
+        if (elOperator == address(mellowRestaker)) {
+            return mellowRestaker.getDeposited();
+        }
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
 
