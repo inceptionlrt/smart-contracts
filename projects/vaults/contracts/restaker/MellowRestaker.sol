@@ -20,7 +20,6 @@ import "../interfaces/IWSteth.sol";
 import "../interfaces/IMellowVaultConfigurator.sol";
 import "../lib/FullMath.sol";
 
-
 import "../interfaces/mellow/IMellowPriceOracle.sol";
 import "../interfaces/mellow/IMellowRatiosOracle.sol";
 
@@ -86,37 +85,55 @@ contract MellowRestaker is
         // transfer from the vault
         _asset.transferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
-        IERC20(_asset).safeIncreaseAllowance(address(mellowDepositWrapper), amount);
-        return mellowDepositWrapper.deposit(address(this), address(_asset), amount, minLpAmount, deadline);
+        IERC20(_asset).safeIncreaseAllowance(
+            address(mellowDepositWrapper),
+            amount
+        );
+        return
+            mellowDepositWrapper.deposit(
+                address(this),
+                address(_asset),
+                amount,
+                minLpAmount,
+                deadline
+            );
     }
 
     function withdrawMellow(
         uint256 amount,
         bool closeProvious
-    ) external onlyTrustee override returns (uint256){
+    ) external override onlyTrustee returns (uint256) {
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = _amountToLpAmount(amount);
         uint256[] memory minAmounts = new uint256[](1);
         minAmounts[0] = amount - 2; // dust
 
-        mellowVault.registerWithdrawal(address(this), lpAmount, minAmounts, block.timestamp + 15 days, block.timestamp + 15 days, closeProvious);
+        mellowVault.registerWithdrawal(
+            address(this),
+            lpAmount,
+            minAmounts,
+            block.timestamp + 15 days,
+            block.timestamp + 15 days,
+            closeProvious
+        );
 
         (
             bool isProcessingPossible,
             bool isWithdrawalPossible,
             uint256[] memory expectedAmounts
         ) = mellowVault.analyzeRequest(
-          mellowVault.calculateStack(),
-          mellowVault.withdrawalRequest(address(this))
-        );
+                mellowVault.calculateStack(),
+                mellowVault.withdrawalRequest(address(this))
+            );
 
-        if (!isProcessingPossible)
-            revert BadMellowWithdrawRequest();
+        if (!isProcessingPossible) revert BadMellowWithdrawRequest();
 
         return expectedAmounts[0];
     }
 
-    function claimMellowWithdrawalCallback(uint256 amount) external onlyTrustee returns (uint256) {
+    function claimMellowWithdrawalCallback(
+        uint256 amount
+    ) external onlyTrustee returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(_vault));
 
         _wstethToSteth(amount);
@@ -128,38 +145,44 @@ contract MellowRestaker is
         return withdrawnAmount;
     }
 
-    function pendingMellowRequest() external view override returns (IMellowVault.WithdrawalRequest memory) {
-      return mellowVault.withdrawalRequest(address(this));
+    function pendingMellowRequest()
+        external
+        view
+        override
+        returns (IMellowVault.WithdrawalRequest memory)
+    {
+        return mellowVault.withdrawalRequest(address(this));
+    }
+
+    function getDeposited() external view returns (uint256) {
+        return mellowVault.balanceOf(address(this));
     }
 
     function getVersion() external pure returns (uint256) {
         return 1;
     }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    function _amountToLpAmount(uint256 amount) private returns (uint256 lpAmount) {
+    function _amountToLpAmount(
+        uint256 amount
+    ) private returns (uint256 lpAmount) {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amount;
 
-        (
-            address[] memory tokens,
-            uint256[] memory totalAmounts
-        ) = mellowVault.underlyingTvl();
+        (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
+            .underlyingTvl();
 
-        uint128[] memory ratiosX96 = IMellowRatiosOracle(mellowVault.configurator().ratiosOracle())
-            .getTargetRatiosX96(address(mellowVault), true);
+        uint128[] memory ratiosX96 = IMellowRatiosOracle(
+            mellowVault.configurator().ratiosOracle()
+        ).getTargetRatiosX96(address(mellowVault), true);
 
         uint256 ratioX96 = type(uint256).max;
         for (uint256 i = 0; i < tokens.length; i++) {
             if (ratiosX96[i] == 0) continue;
-            uint256 ratioX96_ = FullMath.mulDiv(amounts[i], mellowVault.Q96(), ratiosX96[i]);
+            uint256 ratioX96_ = FullMath.mulDiv(
+                amounts[i],
+                mellowVault.Q96(),
+                ratiosX96[i]
+            );
             if (ratioX96_ < ratioX96) ratioX96 = ratioX96_;
         }
         if (ratioX96 == 0) revert ValueZero();
@@ -167,7 +190,9 @@ contract MellowRestaker is
         uint256 depositValue = 0;
         uint256 totalValue = 0;
         {
-            IMellowPriceOracle priceOracle = IMellowPriceOracle(mellowVault.configurator().priceOracle());
+            IMellowPriceOracle priceOracle = IMellowPriceOracle(
+                mellowVault.configurator().priceOracle()
+            );
             for (uint256 i = 0; i < tokens.length; i++) {
                 uint256 priceX96 = priceOracle.priceX96(
                     address(mellowVault),
@@ -175,12 +200,24 @@ contract MellowRestaker is
                 );
                 totalValue += totalAmounts[i] == 0
                     ? 0
-                    : FullMath.mulDivRoundingUp(totalAmounts[i], priceX96, mellowVault.Q96());
+                    : FullMath.mulDivRoundingUp(
+                        totalAmounts[i],
+                        priceX96,
+                        mellowVault.Q96()
+                    );
 
                 if (ratiosX96[i] == 0) continue;
 
-                amount = FullMath.mulDiv(ratioX96, ratiosX96[i], mellowVault.Q96());
-                depositValue += FullMath.mulDiv(amount, priceX96, mellowVault.Q96());
+                amount = FullMath.mulDiv(
+                    ratioX96,
+                    ratiosX96[i],
+                    mellowVault.Q96()
+                );
+                depositValue += FullMath.mulDiv(
+                    amount,
+                    priceX96,
+                    mellowVault.Q96()
+                );
             }
         }
 
@@ -196,5 +233,13 @@ contract MellowRestaker is
 
     function setVault(address vault) external onlyOwner {
         _vault = vault;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
