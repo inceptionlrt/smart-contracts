@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IMellowVault.sol";
 
 interface IMellowRestaker {
+    function getDeposited() external view returns (uint256);
 
     function delegateMellow(
         uint256 amount,
@@ -13,11 +14,18 @@ interface IMellowRestaker {
         uint256 deadline
     ) external returns (uint256 lpAmount);
 
-    function withdrawMellow(uint256 minLpAmount, bool closePrevious) external returns (uint256);
+    function withdrawMellow(
+        uint256 minLpAmount,
+        bool closePrevious
+    ) external returns (uint256);
 
-    function claimMellowWithdrawalCallback(uint256 amount) external returns (uint256);
+    function claimMellowWithdrawalCallback(
+        uint256 amount
+    ) external returns (uint256);
 
-    function pendingMellowRequest() external returns (IMellowVault.WithdrawalRequest memory);
+    function pendingMellowRequest()
+        external
+        returns (IMellowVault.WithdrawalRequest memory);
 
     error BadMellowWithdrawRequest();
 

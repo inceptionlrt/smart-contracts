@@ -55,10 +55,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
     IMellowRestaker public mellowRestaker;
+    uint256 public mellowDeposited;
 
     //// TODO
     /// @dev constants are not stored in the storage
-    uint256[50 - 16] private __reserver;
+    uint256[50 - 15] private __reserver;
 
     modifier onlyOperator() {
         if (msg.sender != _operator) revert OnlyOperatorAllowed();
@@ -141,14 +142,15 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address elOperatorAddress,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address restaker = _getRestaker(elOperatorAddress);
-        if (restaker == _MOCK_ADDRESS) revert NullParams();
         if (elOperatorAddress == address(mellowRestaker)) {
             amount = mellowRestaker.withdrawMellow(amount, true);
+            mellowDeposited -= amount;
             _pendingWithdrawalAmount += amount;
-            emit StartMellowWithdrawal(restaker, amount);
+            emit StartMellowWithdrawal(address(mellowRestaker), amount);
             return;
         }
+        address restaker = _getRestaker(elOperatorAddress);
+        if (restaker == _MOCK_ADDRESS) revert NullParams();
 
         IInceptionRestaker(restaker).withdrawFromEL(
             _undelegate(amount, restaker)
@@ -242,7 +244,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         uint256 withdrawnAmount;
         if (restaker == address(mellowRestaker)) {
-            withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback(amount);
+            withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback(
+                amount
+            );
         } else if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
@@ -378,7 +382,10 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             if (restakers[i] == address(0)) continue;
             total += strategy.userUnderlyingView(restakers[i]);
         }
-        return total + strategy.userUnderlyingView(address(this));
+        return
+            total +
+            strategy.userUnderlyingView(address(this)) +
+            mellowRestaker.getDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
