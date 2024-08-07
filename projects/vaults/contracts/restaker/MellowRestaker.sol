@@ -128,15 +128,16 @@ contract MellowRestaker is
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
 
-        return expectedAmounts[0];
+        return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
     }
 
     function claimMellowWithdrawalCallback(
         uint256 amount
     ) external onlyTrustee returns (uint256) {
+        amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 balanceBefore = _asset.balanceOf(address(_vault));
 
-        _wstethToSteth(amount);
+        amount = _unwrap(amount);
         if (!_asset.transfer(_vault, amount)) {
             revert TransferAssetFailed(address(_asset));
         }
@@ -155,7 +156,11 @@ contract MellowRestaker is
     }
 
     function getDeposited() external view returns (uint256) {
-        return mellowVault.balanceOf(address(this));
+        // IMellowVault.ProcessWithdrawalsStack memory s = mellowVault.calculateStack();
+        return IWSteth(wsteth).getStETHByWstETH(
+          // _lpAmountToAmount(mellowVault.balanceOf(address(this)), s.totalValue)
+          mellowVault.balanceOf(address(this))
+        );
     }
 
     function getVersion() external pure returns (uint256) {
@@ -225,9 +230,56 @@ contract MellowRestaker is
         lpAmount = FullMath.mulDiv(depositValue, totalSupply, totalValue);
     }
 
-    function _wstethToSteth(uint256 amount) private returns (uint256) {
-        IERC20(wsteth).safeIncreaseAllowance(wsteth, amount);
-        IWSteth(wsteth).wrap(amount);
+    function _lpAmountToAmount(
+        uint256 lpAmount,
+        uint256 totalValue
+    ) private view returns (uint256 amount) {
+        (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
+            .underlyingTvl();
+
+        uint128[] memory ratiosX96 = IMellowRatiosOracle(
+            mellowVault.configurator().ratiosOracle()
+        ).getTargetRatiosX96(address(mellowVault), true);
+
+        uint256 value = FullMath.mulDiv(
+            lpAmount,
+            totalValue,
+            mellowVault.totalSupply()
+        );
+
+        IMellowPriceOracle priceOracle = IMellowPriceOracle(
+            mellowVault.configurator().priceOracle()
+        );
+
+        uint256 totalAmountValueX96 = 0;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (ratiosX96[i] == 0) continue;
+            
+            uint256 priceX96 = priceOracle.priceX96(address(mellowVault), tokens[i]);
+            uint256 tokenValue = FullMath.mulDivRoundingUp(
+                totalAmounts[i],
+                priceX96,
+                mellowVault.Q96()
+            );
+            totalAmountValueX96 += tokenValue;
+        }
+
+        // Calculate the amount corresponding to the given lpAmount
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (ratiosX96[i] == 0) continue;
+
+            uint256 priceX96 = priceOracle.priceX96(address(mellowVault), tokens[i]);
+
+            uint256 amountValueX96 = FullMath.mulDiv(value, ratiosX96[i], totalAmountValueX96);
+
+            amount = FullMath.mulDiv(amountValueX96, mellowVault.Q96(), priceX96);
+        }
+        amount = FullMath.mulDiv(amount, 1, 1e6);
+        return amount;
+    }
+
+    function _unwrap(uint256 wrappedAmount) private returns (uint256 baseAmount) {
+        IWSteth(wsteth).unwrap(wrappedAmount);
         return IERC20(_asset).balanceOf(address(this));
     }
 
