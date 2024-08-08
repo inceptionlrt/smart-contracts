@@ -244,9 +244,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         uint256 withdrawnAmount;
         if (restaker == address(mellowRestaker)) {
-            withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback(
-                amount
-            );
+            withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback();
         } else if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,

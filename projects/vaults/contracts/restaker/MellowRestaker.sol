@@ -131,22 +131,14 @@ contract MellowRestaker is
         return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
     }
 
-    function claimMellowWithdrawalCallback(
-        uint256 amount
-    ) external onlyTrustee returns (uint256) {
-        amount = IWSteth(wsteth).getWstETHByStETH(amount);
-        uint256 balanceBefore = _asset.balanceOf(address(_vault));
-
-        uint256 wbal = IERC20(wsteth).balanceOf(address(this));
-        if (wbal < amount) revert NotEnoughBalance();
+    function claimMellowWithdrawalCallback() external onlyTrustee returns (uint256) {
+        uint256 amount = IERC20(wsteth).balanceOf(address(this));
 
         amount = _unwrap(amount);
         if (!_asset.transfer(_vault, amount)) {
             revert TransferAssetFailed(address(_asset));
         }
-        uint256 withdrawnAmount = _asset.balanceOf(address(_vault)) -
-            balanceBefore;
-        return withdrawnAmount;
+        return amount;
     }
 
     function pendingMellowRequest()

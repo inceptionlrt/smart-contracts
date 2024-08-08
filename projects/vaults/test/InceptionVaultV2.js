@@ -89,14 +89,12 @@ let MAX_TARGET_PERCENT;
 const [
   mellowWrapperAddress,
   mellowVaultAddress,
-  mellowBondStrategyAddress,
   mellowVaultOperatorAddress,
   stETH
 ] = [
     "0x41A1FBEa7Ace3C3a6B66a73e96E5ED07CDB2A34d",
     "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a",
-    "0xA0ea6d4fe369104eD4cc18951B95C3a43573C0F6",
-    "0x4a3c7F2470Aa00ebE6aE7cB1fAF95964b9de1eF4",
+    "0x9437B2a8cF3b69D782a61f9814baAbc172f72003",
     "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
   ]
 
@@ -177,11 +175,16 @@ const initVault = async a => {
     await this.connect(iVaultOperator).claimCompletedWithdrawals(restaker, amount, [withdrawalData]);
   };
 
-  const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mellowBondStrategyAddress]);
+  const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mellowVaultAddress]);
   mellowVaultOperatorMock.address = await mellowVaultOperatorMock.getAddress();
   await ethers.provider.send("hardhat_setCode", [
     mellowVaultOperatorAddress,
     await mellowVaultOperatorMock.getDeployedCode(),
+  ]);
+  await ethers.provider.send("hardhat_setStorageAt", [
+    mellowVaultOperatorAddress,
+    "0x0",
+    ethers.hexlify(ethers.zeroPadValue(mellowVaultAddress, 32))
   ]);
   const mellowVaultOperator = await ethers.getContractAt("OperatorMock", mellowVaultOperatorAddress);
 
