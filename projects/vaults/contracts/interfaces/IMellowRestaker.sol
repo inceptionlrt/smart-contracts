@@ -19,9 +19,7 @@ interface IMellowRestaker {
         bool closePrevious
     ) external returns (uint256);
 
-    function claimMellowWithdrawalCallback(
-        uint256 amount
-    ) external returns (uint256);
+    function claimMellowWithdrawalCallback() external returns (uint256);
 
     function pendingMellowRequest()
         external
