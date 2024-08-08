@@ -137,6 +137,9 @@ contract MellowRestaker is
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 balanceBefore = _asset.balanceOf(address(_vault));
 
+        uint256 wbal = IERC20(wsteth).balanceOf(address(this));
+        if (wbal < amount) revert NotEnoughBalance();
+
         amount = _unwrap(amount);
         if (!_asset.transfer(_vault, amount)) {
             revert TransferAssetFailed(address(_asset));
@@ -279,8 +282,6 @@ contract MellowRestaker is
     }
 
     function _unwrap(uint256 wrappedAmount) private returns (uint256 baseAmount) {
-        uint256 wbal = IERC20(wsteth).balanceOf(address(this));
-        if (wbal < wrappedAmount) revert NotEnoughBalance();
         IWSteth(wsteth).unwrap(wrappedAmount);
         return IERC20(_asset).balanceOf(address(this));
     }
