@@ -279,6 +279,8 @@ contract MellowRestaker is
     }
 
     function _unwrap(uint256 wrappedAmount) private returns (uint256 baseAmount) {
+        uint256 wbal = IWSteth(wsteth).balanceOf(this);
+        if (wbal < wrappedAmount) revert NotEnoughBalance();
         IWSteth(wsteth).unwrap(wrappedAmount);
         return IERC20(_asset).balanceOf(address(this));
     }
