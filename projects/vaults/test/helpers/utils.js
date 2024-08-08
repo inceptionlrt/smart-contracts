@@ -119,6 +119,7 @@ const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
+const e9 = 1000_000_000n;
 
 module.exports = {
   addRewardsToStrategy,
@@ -136,4 +137,5 @@ module.exports = {
   randomAddress,
   format,
   e18,
+  e9
 };
