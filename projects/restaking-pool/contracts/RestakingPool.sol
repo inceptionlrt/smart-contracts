@@ -393,28 +393,6 @@ contract RestakingPool is
     *******************************************************************************/
 
     /**
-     * @notice Will be called only once for each restaker, because it activates restaking.
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function activateRestaking(string memory provider) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).activateRestaking();
-    }
-
-    /**
-     * @notice withdraw not restaked ETH
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function withdrawBeforeRestaking(
-        string memory provider
-    ) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).withdrawBeforeRestaking();
-    }
-
-    /**
      * @notice Verify that validators has withdrawal credentials pointed to EigenPod
      */
     function verifyWithdrawalCredentials(
@@ -435,17 +413,6 @@ contract RestakingPool is
         );
     }
 
-    function withdrawNonBeaconChainETHBalanceWei(
-        string memory provider,
-        uint256 amountToWithdraw
-    ) external onlyOperator {
-        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
-        restaker.withdrawNonBeaconChainETHBalanceWei(
-            address(this),
-            amountToWithdraw
-        );
-    }
-
     function recoverTokens(
         string memory provider,
         IERC20[] memory tokenList,
@@ -457,6 +424,13 @@ contract RestakingPool is
             amountsToWithdraw,
             config().getOperator()
         );
+    }
+
+    function startWithdrawalCheckpoint(
+        string memory provider
+    ) external onlyOperator {
+        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
+        restaker.startCheckpoint(true);
     }
 
     function delegateTo(
