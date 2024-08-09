@@ -170,6 +170,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (elOperator == address(0)) revert NullParams();
 
         if (elOperator == address(mellowRestaker)) {
+            _beforeDeposit(amount);
             _depositAssetIntoMellow(amount);
             return;
         }
