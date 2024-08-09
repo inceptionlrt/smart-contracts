@@ -87,9 +87,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        if (amount > getFreeBalance())
-            revert InsufficientCapacity(totalAssets());
-
+        _beforeDeposit(amount);
         (uint256 maxPerDeposit, uint256 maxTotalDeposits) = strategy
             .getTVLLimits();
 
@@ -99,6 +97,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 currentBalance = _asset.balanceOf(address(strategy));
         if (currentBalance + amount > maxTotalDeposits)
             revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
+    }
+
+    function _beforeDeposit(uint256 amount) internal view {
+        if (amount > getFreeBalance())
+            revert InsufficientCapacity(totalAssets());
     }
 
     /// @dev deposits asset to the corresponding strategy
