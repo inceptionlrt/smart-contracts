@@ -120,6 +120,8 @@ const format = (bi) => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
 const e9 = 1000_000_000n;
+const zeroWithdrawalData =
+  [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroAddress, 0, 1, [ethers.ZeroAddress], [0]];
 
 module.exports = {
   addRewardsToStrategy,
@@ -137,5 +139,6 @@ module.exports = {
   randomAddress,
   format,
   e18,
-  e9
+  e9,
+  zeroWithdrawalData
 };
