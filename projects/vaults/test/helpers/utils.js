@@ -22,9 +22,8 @@ const calculateRatio = async (vault, token) => {
   }
 
   if (denominator === 0n || totalSupply === 0n) {
-    const ratio = e18;
-    // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
-    return ratio;
+    console.log("iToken supply is 0, so the ration is going to be 1e18");
+    return e18;
   }
 
   const ratio = (totalSupply * e18) / denominator;
