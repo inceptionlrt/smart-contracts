@@ -117,7 +117,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function _depositAssetIntoMellow(uint256 amount) internal {
         _asset.approve(address(mellowRestaker), amount);
         uint256 lpAmount = mellowRestaker.delegateMellow(amount, 0, block.timestamp);
-        emit DepositedToMellow(address(mellowRestaker), amount, lpAmount);
     }
 
     /// @dev delegates assets held in the strategy to the EL operator.

@@ -104,7 +104,7 @@ contract MellowRestaker is
         bool closePrevious
     ) external override onlyTrustee returns (uint256) {
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
-        uint256 lpAmount = _amountToLpAmount(amount);
+        uint256 lpAmount = amountToLpAmount(amount);
         uint256[] memory minAmounts = new uint256[](1);
         minAmounts[0] = amount - 5; // dust
 
@@ -171,9 +171,9 @@ contract MellowRestaker is
         return 1;
     }
 
-    function _amountToLpAmount(
+    function amountToLpAmount(
         uint256 amount
-    ) private returns (uint256 lpAmount) {
+    ) public view returns (uint256 lpAmount) {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amount;
 

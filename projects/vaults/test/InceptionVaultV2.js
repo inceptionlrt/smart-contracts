@@ -2300,12 +2300,11 @@ assets.forEach(function (a) {
               .connect(iVaultOperator)
               .delegateToOperator(amount, mellowRestaker.address, ethers.ZeroHash, [ethers.ZeroHash, 0]);
             const receipt = await tx.wait();
-            let events = receipt.logs?.filter(e => e.eventName === "DepositedToMellow");
-            const approxLpAmount = await wstEth.getWstETHByStETH(amount);
+            let events = receipt.logs?.filter(e => e.eventName === "DelegatedTo");
             expect(events.length).to.be.eq(1);
-            expect(events[0].args["stakerAddress"]).to.be.eq(mellowRestaker.address);
+            expect(events[0].args["stakerAddress"]).to.be.eq(ethers.ZeroAddress);
+            expect(events[0].args["operatorAddress"]).to.be.eq(mellowRestaker.address);
             expect(events[0].args["amount"]).to.be.eq(amount);
-            expect(events[0].args["lpAmount"]).to.be.closeTo(approxLpAmount, approxLpAmount / 100n);
             const taAfter = await iVault.totalAssets();
             expect(taBefore - taAfter).to.be.closeTo(amount, transactErr);
           }
