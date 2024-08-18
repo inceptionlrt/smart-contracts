@@ -35,8 +35,8 @@ export const CONFIG = {
     },
     hardhat: {
       forking: {
-        url: `${process.env.RPC_URL_HOLESKY}`,
-        blockNumber: 1442030,
+        url: `${process.env.HOLESKY_RRC}`,
+        blockNumber: 2124056,
       },
     },
   },

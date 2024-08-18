@@ -22,6 +22,8 @@ interface IEigenLayerHandler {
         uint256 nonce
     );
 
+    event StartMellowWithdrawal(address indexed stakerAddress, uint256 amount);
+
     event DepositedToEL(address indexed stakerAddress, uint256 amount);
 
     event DelegatedTo(

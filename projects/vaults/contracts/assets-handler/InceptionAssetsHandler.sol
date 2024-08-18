@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -12,6 +12,8 @@ import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
 import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
 
+import {InceptionFallbackHandler} from "../fallback-handler/InceptionFallbackHandler.sol";
+
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
 /// @dev Handles operations with the corresponding asset
@@ -20,13 +22,20 @@ contract InceptionAssetsHandler is
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
     IInceptionVaultErrors,
-    IInceptionAssetHandler
+    IInceptionAssetHandler,
+    InceptionFallbackHandler
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
 
-    uint256[49] private __reserver;
+    address public eigenLayerFacet;
+    address public userOperationFacet;
+    address public setterFacet;
+    address public mellowFacet;
+    address public symbioticFacet;
+
+    uint256[44] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
@@ -61,12 +70,6 @@ contract InceptionAssetsHandler is
     /// @notice Since a particular LST loses some wei on each transfer,
     /// this needs to be taken into account
     function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetReceivedAmount(
         uint256 amount
     ) internal view virtual returns (uint256) {
         return amount;

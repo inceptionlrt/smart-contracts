@@ -56,6 +56,8 @@ interface IInceptionVault {
 
     event TreasuryChanged(address prevValue, address newValue);
 
+    event MellowRestakerChanged(address prevValue, address newValue);
+
     event ReferralCode(bytes32 indexed code);
 
     event DepositBonus(uint256 amount);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
 import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
@@ -7,6 +7,10 @@ import {IStrategyManager, IStrategy} from "../interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
 import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
+import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
+import {ISymbioticRestaker} from "../interfaces/ISymbioticRestaker.sol";
+
+import "hardhat/console.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -50,8 +54,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
+    IMellowRestaker public mellowRestaker;
+    ISymbioticRestaker public symbioticRestaker;
+
     /// @dev constants are not stored in the storage
-    uint256[50 - 13] private __reserver;
+    uint256[50 - 15] private __reserver;
 
     modifier onlyOperator() {
         if (msg.sender != _operator) revert OnlyOperatorAllowed();
@@ -71,51 +78,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             revert ApproveError();
     }
 
-    /*//////////////////////////////
-    ////// Deposit functions //////
-    ////////////////////////////*/
-
-    /// @dev checks whether it's still possible to deposit into the strategy
-    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        if (amount > getFreeBalance())
-            revert InsufficientCapacity(totalAssets());
-
-        (uint256 maxPerDeposit, uint256 maxTotalDeposits) = strategy
-            .getTVLLimits();
-
-        if (amount > maxPerDeposit)
-            revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
-
-        uint256 currentBalance = _asset.balanceOf(address(strategy));
-        if (currentBalance + amount > maxTotalDeposits)
-            revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
-    }
-
-    /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategy(
-        address restaker,
-        uint256 amount
-    ) internal {
-        _asset.approve(restaker, amount);
-        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
-
-        emit DepositedToEL(restaker, amount);
-    }
-
-    /// @dev delegates assets held in the strategy to the EL operator.
-    function _delegateToOperator(
-        address restaker,
-        address elOperator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) internal {
-        IInceptionRestaker(restaker).delegateToOperator(
-            elOperator,
-            approverSalt,
-            approverSignatureAndExpiry
-        );
-    }
-
     /*/////////////////////////////////
     ////// Withdrawal functions //////
     ///////////////////////////////*/
@@ -126,11 +88,15 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address elOperatorAddress,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address staker = _operatorRestakers[elOperatorAddress];
-        if (staker == address(0)) revert OperatorNotRegistered();
-        if (staker == _MOCK_ADDRESS) revert NullParams();
+        _fallback(eigenLayerFacet);
+    }
 
-        IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
+    /// @dev performs creating a withdrawal request from EigenLayer
+    /// @dev requires a specific amount to withdraw
+    function undelegateMellow(
+        uint256 amount
+    ) external whenNotPaused nonReentrant onlyOperator {
+        _fallback(mellowFacet);
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
@@ -138,52 +104,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function undelegateVault(
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        address staker = address(this);
-
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
-
-        sharesToWithdraw[0] = _undelegate(amount, staker);
-        strategies[0] = strategy;
-        IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
-
-        /// @notice from Vault
-        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
-            strategies: strategies,
-            shares: sharesToWithdraw,
-            withdrawer: address(this)
-        });
-        delegationManager.queueWithdrawals(withdrawals);
-    }
-
-    function _undelegate(
-        uint256 amount,
-        address staker
-    ) internal returns (uint256) {
-        uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
-            staker,
-            strategy
-        );
-        uint256 shares = strategy.underlyingToSharesView(amount);
-        amount = strategy.sharesToUnderlyingView(shares);
-
-        // we need to withdraw the remaining dust from EigenLayer
-        if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
-
-        _pendingWithdrawalAmount += amount;
-        emit StartWithdrawal(
-            staker,
-            strategy,
-            shares,
-            uint32(block.number),
-            delegationManager.delegatedTo(staker),
-            nonce
-        );
-        return shares;
+        _fallback(eigenLayerFacet);
     }
 
     /// @dev claims completed withdrawals from EigenLayer, if they exist
@@ -191,70 +112,12 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public whenNotPaused nonReentrant {
-        uint256 withdrawalsNum = withdrawals.length;
-        IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
-        uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
-        bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
-
-        for (uint256 i = 0; i < withdrawalsNum; ++i) {
-            tokens[i] = new IERC20[](1);
-            tokens[i][0] = _asset;
-            receiveAsTokens[i] = true;
-        }
-
-        uint256 availableBalance = getFreeBalance();
-
-        uint256 withdrawnAmount;
-        if (restaker == address(this)) {
-            withdrawnAmount = _claimCompletedWithdrawalsForVault(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
-        } else {
-            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
-        }
-
-        emit WithdrawalClaimed(withdrawnAmount);
-
-        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
-            ? 0
-            : _pendingWithdrawalAmount - withdrawnAmount;
-
-        if (_pendingWithdrawalAmount < 7) {
-            _pendingWithdrawalAmount = 0;
-        }
-
-        _updateEpoch(availableBalance + withdrawnAmount);
+        _fallback(eigenLayerFacet);
     }
 
-    function _claimCompletedWithdrawalsForVault(
-        IDelegationManager.Withdrawal[] memory withdrawals,
-        IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
-        bool[] memory receiveAsTokens
-    ) internal returns (uint256) {
-        uint256 balanceBefore = _asset.balanceOf(address(this));
-
-        delegationManager.completeQueuedWithdrawals(
-            withdrawals,
-            tokens,
-            middlewareTimesIndexes,
-            receiveAsTokens
-        );
-
-        // send tokens to the vault
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
-            balanceBefore;
-
-        return withdrawnAmount;
+    /// @dev TODO
+    function claimMellowWithdrawals() public whenNotPaused nonReentrant {
+        _fallback(mellowFacet);
     }
 
     function updateEpoch() external whenNotPaused {
@@ -289,16 +152,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         }
     }
 
-    function _restakerExists(
-        address restakerAddress
-    ) internal view returns (bool) {
-        uint256 numOfRestakers = restakers.length;
-        for (uint256 i = 0; i < numOfRestakers; ++i) {
-            if (restakerAddress == restakers[i]) return true;
-        }
-        return false;
-    }
-
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
@@ -312,13 +165,30 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             depositBonusAmount;
     }
 
+    function getPendingWithdrawalAmountFromMellow()
+        public
+        view
+        returns (uint256)
+    {
+        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
+        uint256 claimableAmount = mellowRestaker.claimableAmount();
+        return pendingWithdrawal + claimableAmount;
+    }
+
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ++i) {
             if (restakers[i] == address(0)) continue;
             total += strategy.userUnderlyingView(restakers[i]);
         }
-        return total + strategy.userUnderlyingView(address(this));
+        console.log(
+            "===================================  mellowRestaker.getDeposited(): ",
+            mellowRestaker.getDeposited()
+        );
+        return
+            total +
+            strategy.userUnderlyingView(address(this)) +
+            mellowRestaker.getDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -351,21 +221,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function setDelegationManager(
         IDelegationManager newDelegationManager
     ) external onlyOwner {
-        if (address(delegationManager) != address(0))
-            revert DelegationManagerImmutable();
-
-        emit DelegationManagerChanged(
-            address(delegationManager),
-            address(newDelegationManager)
-        );
-        delegationManager = newDelegationManager;
+        _fallback(setterFacet);
     }
 
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
-        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
-        targetCapacity = newTargetCapacity;
+        _fallback(setterFacet);
     }
 
     function forceUndelegateRecovery(

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -87,7 +87,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
-
         if (targetCapacity == 0) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
@@ -102,8 +101,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function deposit(
         uint256 amount,
         address receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _deposit(amount, msg.sender, receiver);
+    ) external nonReentrant whenNotPaused {
+        // _fallback(userOperationFacet);
+        _deposit(amount, msg.sender, receiver);
     }
 
     /// @notice The deposit function but with a referral code
@@ -124,6 +124,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
+
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
@@ -162,48 +163,24 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (elOperator == address(0)) revert NullParams();
+        _fallback(eigenLayerFacet);
+    }
 
-        _beforeDepositAssetIntoStrategy(amount);
+    function delegateToMellow(
+        uint256 amount
+    ) external nonReentrant whenNotPaused onlyOperator {
+        _fallback(mellowFacet);
+    }
 
-        // try to find a restaker for the specific EL operator
-        address restaker = _operatorRestakers[elOperator];
-        if (restaker == address(0)) revert OperatorNotRegistered();
-
-        bool delegate = false;
-        if (restaker == _MOCK_ADDRESS) {
-            delegate = true;
-            // deploy a new restaker
-            restaker = _deployNewStub();
-            _operatorRestakers[elOperator] = restaker;
-            restakers.push(restaker);
-        }
-
-        _depositAssetIntoStrategy(restaker, amount);
-
-        if (delegate)
-            _delegateToOperator(
-                restaker,
-                elOperator,
-                approverSalt,
-                approverSignatureAndExpiry
-            );
-
-        emit DelegatedTo(restaker, elOperator, amount);
+    function delegateToSymbiotic(
+        uint256 amount
+    ) external nonReentrant whenNotPaused onlyOperator {
+        _fallback(symbioticFacet);
     }
 
     /*///////////////////////////////////////
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
-
-    function __beforeWithdraw(address receiver, uint256 iShares) internal view {
-        if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
-
-        if (targetCapacity == 0) revert InceptionOnPause();
-        if (treasury == address(0)) revert InceptionOnPause();
-        if (!_verifyDelegated()) revert InceptionOnPause();
-    }
 
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
@@ -212,62 +189,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 iShares,
         address receiver
     ) external whenNotPaused nonReentrant {
-        __beforeWithdraw(receiver, iShares);
-        address claimer = msg.sender;
-        uint256 amount = convertToAssets(iShares);
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
-
-        // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
-
-        // update global state and claimer's state
-        totalAmountToWithdraw += amount;
-        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
-        genRequest.amount += _getAssetReceivedAmount(amount);
-        claimerWithdrawalsQueue.push(
-            Withdrawal({
-                epoch: claimerWithdrawalsQueue.length,
-                receiver: receiver,
-                amount: _getAssetReceivedAmount(amount)
-            })
-        );
-
-        emit Withdraw(claimer, receiver, claimer, amount, iShares);
+        _fallback(userOperationFacet);
     }
 
-    function redeem(address receiver) external whenNotPaused nonReentrant {
-        (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
-            receiver
-        );
-        if (!isAble) revert IsNotAbleToRedeem();
-
-        uint256 numOfWithdrawals = availableWithdrawals.length;
-        uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
-
-        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
-        uint256 redeemedAmount;
-        for (uint256 i = 0; i < numOfWithdrawals; ++i) {
-            uint256 withdrawalNum = availableWithdrawals[i];
-            Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
-            uint256 amount = request.amount;
-            // update the genRequest and the global state
-            genRequest.amount -= amount;
-
-            totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
-            redeemReservedAmount -= amount;
-            redeemedAmount += amount;
-            redeemedWithdrawals[i] = withdrawalNum;
-
-            delete claimerWithdrawalsQueue[availableWithdrawals[i]];
-        }
-
-        // let's update the lowest epoch associated with the claimer
-        genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
-
-        _transferAssetTo(receiver, redeemedAmount);
-
-        emit RedeemedRequests(redeemedWithdrawals);
-        emit Redeem(msg.sender, receiver, redeemedAmount);
+    function redeem(address /*receiver*/) external whenNotPaused nonReentrant {
+        _fallback(userOperationFacet);
     }
 
     /*/////////////////////////////////////////////
@@ -281,29 +207,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint256 iShares,
         address receiver
     ) external whenNotPaused nonReentrant {
-        __beforeWithdraw(receiver, iShares);
-
-        address claimer = msg.sender;
-        uint256 amount = convertToAssets(iShares);
-
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
-
-        // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
-
-        uint256 fee = calculateFlashWithdrawFee(amount);
-        if (fee == 0) revert ZeroFlashWithdrawFee();
-        uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
-
-        amount -= fee;
-        depositBonusAmount += (fee - protocolWithdrawalFee);
-
-        /// @notice instant transfer fee to the treasury
-        _transferAssetTo(treasury, protocolWithdrawalFee);
-        /// @notice instant transfer amount to the receiver
-        _transferAssetTo(receiver, amount);
-
-        emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
+        _fallback(userOperationFacet);
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
@@ -342,25 +246,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
-
-    function _deployNewStub() internal returns (address) {
-        if (_stakerImplementation == address(0)) revert ImplementationNotSet();
-        // deploy new beacon proxy and do init call
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
-            delegationManager,
-            strategyManager,
-            strategy,
-            _operator
-        );
-        address deployedAddress = address(new BeaconProxy(address(this), data));
-
-        IOwnable asOwnable = IOwnable(deployedAddress);
-        asOwnable.transferOwnership(owner());
-
-        emit RestakerDeployed(deployedAddress);
-        return deployedAddress;
-    }
 
     function implementation() external view returns (address) {
         return _stakerImplementation;
@@ -409,6 +294,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function getDelegatedTo(
         address elOperator
     ) external view returns (uint256) {
+        if (elOperator == address(mellowRestaker)) {
+            return mellowRestaker.getDeposited();
+        }
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
 
@@ -471,22 +359,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint64 newOptimalBonusRate,
         uint64 newDepositUtilizationKink
     ) external onlyOwner {
-        if (newMaxBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxBonusRate);
-        if (newOptimalBonusRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalBonusRate);
-        if (newDepositUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newDepositUtilizationKink);
-
-        maxBonusRate = newMaxBonusRate;
-        optimalBonusRate = newOptimalBonusRate;
-        depositUtilizationKink = newDepositUtilizationKink;
-
-        emit DepositBonusParamsChanged(
-            newMaxBonusRate,
-            newOptimalBonusRate,
-            newDepositUtilizationKink
-        );
+        _fallback(setterFacet);
     }
 
     function setFlashWithdrawFeeParams(
@@ -494,74 +367,68 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         uint64 newOptimalWithdrawalRate,
         uint64 newWithdrawUtilizationKink
     ) external onlyOwner {
-        if (newMaxFlashFeeRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newMaxFlashFeeRate);
-        if (newOptimalWithdrawalRate > MAX_PERCENT)
-            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
-        if (newWithdrawUtilizationKink > MAX_PERCENT)
-            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
-
-        maxFlashFeeRate = newMaxFlashFeeRate;
-        optimalWithdrawalRate = newOptimalWithdrawalRate;
-        withdrawUtilizationKink = newWithdrawUtilizationKink;
-
-        emit WithdrawFeeParamsChanged(
-            newMaxFlashFeeRate,
-            newOptimalWithdrawalRate,
-            newWithdrawUtilizationKink
-        );
+        _fallback(setterFacet);
     }
 
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
-        if (newProtocolFee >= MAX_PERCENT)
-            revert ParameterExceedsLimits(newProtocolFee);
-
-        emit ProtocolFeeChanged(protocolFee, newProtocolFee);
-        protocolFee = newProtocolFee;
+        _fallback(setterFacet);
     }
 
     function setTreasuryAddress(address newTreasury) external onlyOwner {
-        if (newTreasury == address(0)) revert NullParams();
-
-        emit TreasuryChanged(treasury, newTreasury);
-        treasury = newTreasury;
+        _fallback(setterFacet);
     }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
-        if (address(newRatioFeed) == address(0)) revert NullParams();
-
-        emit RatioFeedChanged(address(ratioFeed), address(newRatioFeed));
-        ratioFeed = newRatioFeed;
+        console.log("setterFacet: ", setterFacet);
+        _fallback(setterFacet);
     }
 
     function setOperator(address newOperator) external onlyOwner {
-        if (newOperator == address(0)) revert NullParams();
+        _fallback(setterFacet);
+    }
 
-        emit OperatorChanged(_operator, newOperator);
-        _operator = newOperator;
+    function setMellowRestaker(
+        IMellowRestaker newMellowRestaker
+    ) external onlyOwner {
+        _fallback(setterFacet);
     }
 
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
-        emit MinAmountChanged(minAmount, newMinAmount);
-        minAmount = newMinAmount;
+        _fallback(setterFacet);
     }
 
     function setName(string memory newVaultName) external onlyOwner {
-        if (bytes(newVaultName).length == 0) revert NullParams();
-
-        emit NameChanged(name, newVaultName);
-        name = newVaultName;
+        _fallback(setterFacet);
     }
 
     function addELOperator(address newELOperator) external onlyOwner {
-        if (!delegationManager.isOperator(newELOperator))
-            revert NotEigenLayerOperator();
+        _fallback(setterFacet);
+    }
 
-        if (_operatorRestakers[newELOperator] != address(0))
-            revert EigenLayerOperatorAlreadyExists();
+    function _getAssetReceivedAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
+        return amount;
+    }
 
-        _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
-        emit ELOperatorAdded(newELOperator);
+    function setEigenLayerFacet(address newEigenLayerFacet) external {
+        eigenLayerFacet = newEigenLayerFacet;
+    }
+
+    function setUserOperationFacet(address newUserOperationFacet) external {
+        userOperationFacet = newUserOperationFacet;
+    }
+
+    function setSetterFacet(address newSetterFacet) external {
+        setterFacet = newSetterFacet;
+    }
+
+    function setMellowFacet(address newMellowFacet) external {
+        mellowFacet = newMellowFacet;
+    }
+
+    function setSymbioticFacet(address newSymbioticFacet) external {
+        symbioticFacet = newSymbioticFacet;
     }
 
     /*///////////////////////////////
