@@ -108,7 +108,7 @@ const randomBI = (length) => {
 const randomBIMax = (max) => {
   let random = 0n;
   if (max > 0n) {
-    random += BigInt(Math.random() * Number(max));
+    random += BigInt(Math.floor(Math.random() * Number(max)));
   }
   return random;
 };
