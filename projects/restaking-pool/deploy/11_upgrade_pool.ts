@@ -9,10 +9,28 @@ const func: DeployFunction = async function ({ deployments, network }) {
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
 
-  const newImpl = await upgrades.prepareUpgrade(
-    RestakingPool.address,
-    await ethers.getContractFactory("RestakingPool"),
-  );
+  /// 1. InceptionLibrary Deployment
+  let libAddress = "";
+  if (network.name === "mainnet") {
+    libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
+  } else {
+    const libFactory = await ethers.getContractFactory("InceptionLibrary");
+    const lib = await libFactory.deploy();
+    await lib.waitForDeployment();
+    libAddress = await lib.getAddress();
+  }
+  console.log("InceptionLibrary address:", libAddress);
+
+  /// 2. RestakingPool Upgrade
+  const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
+    libraries: {
+      InceptionLibrary: libAddress,
+    },
+  });
+
+  const newImpl = await upgrades.prepareUpgrade(RestakingPool.address, RestakingPoolFactory, {
+    unsafeAllowLinkedLibraries: true,
+  });
   console.log(`changing implementation from ${currentImpl} to ${newImpl}`);
   if (typeof newImpl !== "string") {
     console.log("returned receipt, schedule tx manually", newImpl);
