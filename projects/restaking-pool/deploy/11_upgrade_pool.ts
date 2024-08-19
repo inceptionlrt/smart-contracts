@@ -5,6 +5,8 @@ import { schedule } from "../scripts/deploy-helpers";
 const func: DeployFunction = async function ({ deployments, network }) {
   const { get } = deployments;
   const RestakingPool = await get("RestakingPool");
+  console.log("Restaking Pool address: ", RestakingPool.address);
+
   const restakinPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
@@ -14,12 +16,9 @@ const func: DeployFunction = async function ({ deployments, network }) {
   if (network.name === "mainnet") {
     libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
   } else {
-    const libFactory = await ethers.getContractFactory("InceptionLibrary");
-    const lib = await libFactory.deploy();
-    await lib.waitForDeployment();
-    libAddress = await lib.getAddress();
+    libAddress = "0x4db1487f376efe5116af8491ece85f52e7082ce8";
   }
-  console.log("InceptionLibrary address:", libAddress);
+  console.log("InceptionLibrary address(11):", libAddress);
 
   /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
@@ -27,7 +26,6 @@ const func: DeployFunction = async function ({ deployments, network }) {
       InceptionLibrary: libAddress,
     },
   });
-
   const newImpl = await upgrades.prepareUpgrade(RestakingPool.address, RestakingPoolFactory, {
     unsafeAllowLinkedLibraries: true,
   });
