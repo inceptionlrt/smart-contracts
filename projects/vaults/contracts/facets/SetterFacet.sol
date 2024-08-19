@@ -61,9 +61,10 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
     IMellowRestaker public mellowRestaker;
+    ISymbioticRestaker public symbioticRestaker;
 
     /// @dev constants are not stored in the storage
-    uint256[50 - 14] private __reserver;
+    uint256[50 - 15] private __reserver;
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -136,6 +137,20 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         emit IInceptionVault.MellowRestakerChanged(
             address(mellowRestaker),
             address(newMellowRestaker)
+        );
+    }
+
+    function setSymbioticRestaker(
+        ISymbioticRestaker newSymbioticRestaker
+    ) external {
+        if (address(newSymbioticRestaker) == address(0)) revert NullParams();
+
+        symbioticRestaker = newSymbioticRestaker;
+        _operatorRestakers[address(symbioticRestaker)] = _MOCK_ADDRESS;
+
+        emit IInceptionVault.MellowRestakerChanged(
+            address(symbioticRestaker),
+            address(newSymbioticRestaker)
         );
     }
 

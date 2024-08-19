@@ -16,6 +16,8 @@ import {FullMath} from "../lib/FullMath.sol";
 import {ISymbioticVault} from "../interfaces/symbiotic/ISymbioticVault.sol";
 import {ISymbioticRestaker} from "../interfaces/ISymbioticRestaker.sol";
 
+import "hardhat/console.sol";
+
 /// @author The InceptionLRT team
 /// @title The MellowRestaker Contract
 /// @dev Handles delegation and withdrawal requests within the Mellow protocol.
@@ -35,6 +37,8 @@ contract SymbioticRestaker is
     address internal _vault;
 
     ISymbioticVault public symbioticVault;
+
+    uint256 public currentEpoch;
 
     modifier onlyTrustee() {
         require(
@@ -67,17 +71,14 @@ contract SymbioticRestaker is
 
     function delegate(
         uint256 amount
-    ) external onlyTrustee returns (uint256 lpAmount) {
+    ) external onlyTrustee returns (uint256 resultAmount) {
         // transfer from the vault
-        // _asset.transferFrom(_vault, address(this), amount);
-        // // deposit the asset to the appropriate strategy
-        // IERC20(_asset).safeIncreaseAllowance(
-        //     address(mellowDepositWrapper),
-        //     amount
-        // );
-        //   _beforeDeposit(amount);
+        _asset.transferFrom(_vault, address(this), amount);
+        IERC20(_asset).safeIncreaseAllowance(address(symbioticVault), amount);
 
+        console.log("amount to deposit: ", amount);
         symbioticVault.deposit(address(this), amount);
+        console.log("deposited: ", this.getDeposited());
 
         // emit IEigenLayerHandler.DelegatedTo(
         //     address(0),
@@ -86,36 +87,32 @@ contract SymbioticRestaker is
         // );
     }
 
-    function withdraw(
-        uint256 amount,
-        bool closePrevious
-    ) external onlyTrustee returns (uint256) {
-        //  amount = IWSteth(wsteth).getWstETHByStETH(amount);
-        uint256 lpAmount = amountToLpAmount(amount);
-        uint256[] memory minAmounts = new uint256[](1);
-        minAmounts[0] = amount - 5; // dust
+    function undelegate(uint256 amount) external onlyTrustee {
+        if (pendingWithdrawalAmount() != 0) revert PendingWithdrawal();
 
-        //  return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
+        symbioticVault.withdraw(address(this), amount);
+
+        currentEpoch = symbioticVault.currentEpoch();
     }
 
-    // function pendingMellowRequest()
-    //     external
-    //     view
-    //     override
-    //     returns (IMellowVault.WithdrawalRequest memory)
-    // {
-    //     return mellowVault.withdrawalRequest(address(this));
-    // }
+    function claim() external onlyTrustee {
+        console.log("currentEpoch: ", currentEpoch);
+        console.log("currentEpoch: ", symbioticVault.currentEpoch());
 
-    function pendingWithdrawalAmount() external view returns (uint256) {
-        // IMellowVault.WithdrawalRequest memory request = mellowVault
-        //     .withdrawalRequest(address(this));
-        //  return lpAmountToAmount(request.lpAmount);
+        console.log("epochDuration: ", symbioticVault.epochDuration());
+        console.log("epochDurationInit: ", symbioticVault.epochDurationInit());
+        console.log("timestamp: ", block.timestamp);
+        console.log("pendingWithdrawalAmount: ", pendingWithdrawalAmount());
+
+        symbioticVault.claim(_vault, currentEpoch);
+    }
+
+    function pendingWithdrawalAmount() public view returns (uint256) {
+        return symbioticVault.withdrawalsOf(currentEpoch, address(this));
     }
 
     function getDeposited() external view returns (uint256) {
-        uint256 balance = symbioticVault.activeBalanceOf(address(this));
-        return lpAmountToAmount(balance);
+        return symbioticVault.activeBalanceOf(address(this));
     }
 
     function amountToLpAmount(

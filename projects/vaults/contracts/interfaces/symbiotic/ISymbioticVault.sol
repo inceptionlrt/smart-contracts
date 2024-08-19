@@ -137,6 +137,12 @@ interface ISymbioticVault {
      */
     event SetDepositorWhitelistStatus(address indexed account, bool status);
 
+    function currentEpoch() external view returns (uint256);
+
+    function epochDurationInit() external view returns (uint48);
+
+    function epochDuration() external view returns (uint48);
+
     /**
      * @notice Get a total amount of the collateral that can be slashed.
      * @return total amount of the slashable collateral

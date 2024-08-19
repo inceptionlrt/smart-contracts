@@ -6,9 +6,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./mellow/IMellowVault.sol";
 
 interface ISymbioticRestaker {
+    error PendingWithdrawal();
+
     function getDeposited() external view returns (uint256);
 
     function delegate(uint256 amount) external returns (uint256 lpAmount);
+
+    function undelegate(uint256 amount) external;
+
+    function claim() external;
 
     // function withdraw(
     //     uint256 minLpAmount,

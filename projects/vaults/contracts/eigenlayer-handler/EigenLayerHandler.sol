@@ -101,6 +101,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev performs creating a withdrawal request from EigenLayer
     /// @dev requires a specific amount to withdraw
+    function undelegateSymbiotic(
+        uint256 amount
+    ) external whenNotPaused nonReentrant onlyOperator {
+        _fallback(symbioticFacet);
+    }
+
+    /// @dev performs creating a withdrawal request from EigenLayer
+    /// @dev requires a specific amount to withdraw
     function undelegateVault(
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
@@ -118,6 +126,11 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev TODO
     function claimMellowWithdrawals() public whenNotPaused nonReentrant {
         _fallback(mellowFacet);
+    }
+
+    /// @dev TODO
+    function claimSymbiotic() external whenNotPaused nonReentrant onlyOperator {
+        _fallback(symbioticFacet);
     }
 
     function updateEpoch() external whenNotPaused {
@@ -181,14 +194,12 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             if (restakers[i] == address(0)) continue;
             total += strategy.userUnderlyingView(restakers[i]);
         }
-        console.log(
-            "===================================  mellowRestaker.getDeposited(): ",
-            mellowRestaker.getDeposited()
-        );
-        return
-            total +
-            strategy.userUnderlyingView(address(this)) +
-            mellowRestaker.getDeposited();
+        // console.log(
+        //     "===================================  mellowRestaker.getDeposited(): ",
+        //     mellowRestaker.getDeposited()
+        // );
+        return total + strategy.userUnderlyingView(address(this));
+        // mellowRestaker.getDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {

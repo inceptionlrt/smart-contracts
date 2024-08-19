@@ -114,7 +114,7 @@ contract SymbioticFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
 
     function delegateToSymbiotic(uint256 amount) external nonReentrant {
         _beforeDeposit(amount);
-
+        _asset.approve(address(symbioticRestaker), amount);
         symbioticRestaker.delegate(amount);
 
         emit IEigenLayerHandler.DelegatedTo(
@@ -124,31 +124,28 @@ contract SymbioticFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         );
     }
 
-    function undelegateMellow(uint256 amount) external nonReentrant {
-        amount = mellowRestaker.withdrawMellow(amount, true);
-        emit IEigenLayerHandler.StartMellowWithdrawal(
-            address(mellowRestaker),
-            amount
-        );
-        return;
+    function undelegateSymbiotic(uint256 amount) external nonReentrant {
+        symbioticRestaker.undelegate(amount);
     }
 
-    function claimMellowWithdrawals() external {
+    function claimSymbiotic() external {
         uint256 availableBalance = getFreeBalance();
-        uint256 withdrawnAmount = mellowRestaker
-            .claimMellowWithdrawalCallback();
 
-        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
-            ? 0
-            : _pendingWithdrawalAmount - withdrawnAmount;
+        symbioticRestaker.claim();
 
-        if (_pendingWithdrawalAmount < 7) {
-            _pendingWithdrawalAmount = 0;
-        }
+        console.log("claimed: ", getFreeBalance() - availableBalance);
 
-        emit IEigenLayerHandler.WithdrawalClaimed(withdrawnAmount);
+        // _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
+        //     ? 0
+        //     : _pendingWithdrawalAmount - withdrawnAmount;
 
-        _updateEpoch(availableBalance + withdrawnAmount);
+        // if (_pendingWithdrawalAmount < 7) {
+        //     _pendingWithdrawalAmount = 0;
+        // }
+
+        // emit IEigenLayerHandler.WithdrawalClaimed(withdrawnAmount);
+
+        // _updateEpoch(availableBalance + withdrawnAmount);
     }
 
     function _updateEpoch(uint256 availableBalance) internal {

@@ -101,16 +101,7 @@ contract MellowFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
-    address owner;
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not owner");
-        _;
-    }
-
-    constructor() {
-        owner = msg.sender;
-    }
+    constructor() {}
 
     function _beforeDeposit(uint256 amount) internal view {
         if (amount > getFreeBalance())
@@ -119,7 +110,12 @@ contract MellowFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
 
     function delegateToMellow(uint256 amount) external nonReentrant {
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount);
+        _asset.approve(address(mellowRestaker), amount);
+        uint256 lpAmount = mellowRestaker.delegateMellow(
+            amount,
+            0,
+            block.timestamp
+        );
 
         emit IEigenLayerHandler.DelegatedTo(
             address(0),
@@ -209,14 +205,5 @@ contract MellowFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
             total += strategy.userUnderlyingView(restakers[i]);
         }
         return total + strategy.userUnderlyingView(address(this));
-    }
-
-    function _depositAssetIntoMellow(uint256 amount) internal {
-        _asset.approve(address(mellowRestaker), amount);
-        uint256 lpAmount = mellowRestaker.delegateMellow(
-            amount,
-            0,
-            block.timestamp
-        );
     }
 }

@@ -393,6 +393,12 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _fallback(setterFacet);
     }
 
+    function setSymbioticRestaker(
+        IMellowRestaker newMellowRestaker
+    ) external onlyOwner {
+        _fallback(setterFacet);
+    }
+
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         _fallback(setterFacet);
     }
