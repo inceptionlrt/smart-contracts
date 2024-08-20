@@ -90,20 +90,11 @@ contract SymbioticRestaker is
     function undelegate(uint256 amount) external onlyTrustee {
         if (pendingWithdrawalAmount() != 0) revert PendingWithdrawal();
 
+        currentEpoch = symbioticVault.currentEpoch() + 1;
         symbioticVault.withdraw(address(this), amount);
-
-        currentEpoch = symbioticVault.currentEpoch();
     }
 
     function claim() external onlyTrustee {
-        console.log("currentEpoch: ", currentEpoch);
-        console.log("currentEpoch: ", symbioticVault.currentEpoch());
-
-        console.log("epochDuration: ", symbioticVault.epochDuration());
-        console.log("epochDurationInit: ", symbioticVault.epochDurationInit());
-        console.log("timestamp: ", block.timestamp);
-        console.log("pendingWithdrawalAmount: ", pendingWithdrawalAmount());
-
         symbioticVault.claim(_vault, currentEpoch);
     }
 

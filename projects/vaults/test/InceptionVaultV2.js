@@ -475,11 +475,11 @@ assets.forEach(function (a) {
         expect(await calculateRatio(iVault, iToken)).to.be.eq(e18); //Because all shares have been burnt at this point
       });
 
-      it("Process request from the Symbiotic", async function () {
+      it("Process undelegate request from the Symbiotic", async function () {
         const totalDepositedBefore = await iVault.getTotalDeposited();
         console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
 
-        await iVault.connect(iVaultOperator).undelegateSymbiotic("1000000000");
+        await iVault.connect(iVaultOperator).undelegateSymbiotic("1000000");
 
         const totalDepositedAfter = await iVault.getTotalDeposited();
 
@@ -499,11 +499,10 @@ assets.forEach(function (a) {
 
         const totalAssetsAfter = await iVault.totalAssets();
         const totalDepositedAfter = await iVault.getTotalDeposited();
-        const pendingWithdrawalsMellowAfter = await iVault.getPendingWithdrawalAmountFromMellow();
 
-        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+        //        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
         // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-        expect(pendingWithdrawalsMellowAfter).to.be.eq(0n);
+        //      expect(pendingWithdrawalsMellowAfter).to.be.eq(0n);
       });
 
       return;

@@ -143,6 +143,10 @@ interface ISymbioticVault {
 
     function epochDuration() external view returns (uint48);
 
+    function withdrawalShares(uint256 epoch) external view returns (uint256);
+
+    function withdrawals(uint256 epoch) external view returns (uint256);
+
     /**
      * @notice Get a total amount of the collateral that can be slashed.
      * @return total amount of the slashable collateral
