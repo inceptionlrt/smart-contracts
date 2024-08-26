@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../interfaces/InceptionRestakerErrors.sol";
-import "../interfaces/IDelegationManager.sol";
-import "../interfaces/IInceptionRestaker.sol";
-import "../interfaces/IStrategy.sol";
-import "../interfaces/IStrategyManager.sol";
+import {InceptionRestakerErrors} from "../interfaces/InceptionRestakerErrors.sol";
+import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
+import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
+import {IStrategy} from "../interfaces/IStrategy.sol";
+import {IStrategyManager} from "../interfaces/IStrategyManager.sol";
+import {IRewardsCoordinator} from "../interfaces/IRewardsCoordinator.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionRestaker Contract
@@ -32,6 +33,7 @@ contract InceptionRestaker is
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
+    IRewardsCoordinator internal _rewardCoordinator;
 
     modifier onlyTrustee() {
         require(
@@ -141,6 +143,19 @@ contract InceptionRestaker is
 
     function getOperatorAddress() public view returns (address) {
         return _delegationManager.delegatedTo(address(this));
+    }
+
+    function setRewardCoordinator(
+        IRewardsCoordinator newRewardCoordinator
+    ) external onlyOwner {
+        newRewardCoordinator.setClaimerFor(owner());
+
+        emit RewardCoordinatorChanged(
+            address(_rewardCoordinator),
+            address(newRewardCoordinator)
+        );
+
+        _rewardCoordinator = newRewardCoordinator;
     }
 
     function getVersion() external pure returns (uint256) {

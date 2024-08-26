@@ -446,6 +446,35 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
     }
 
+    /*////////////////////////////////////
+    //////////// Add Rewards ////////////
+    //////////////////////////////////*/
+
+    /// @dev addRewards ...
+    function addRewards(
+        uint256 amount,
+        uint256 unlockPeriod
+    ) external onlyOperator {
+        _transferAssetFrom(_operator, amount);
+        /// @dev verify whether the prev timeline is over
+        if (currentRewards > 0) {
+            uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+            //uint256 totalDays = rewardsTimeline / 1 days;
+            if (dayNum < rewardsTimeline) require(false, "");
+        }
+        currentRewards = amount;
+        startTimeline = block.timestamp;
+
+        emit RewardsAdded(amount, unlockPeriod);
+    }
+
+    /// @dev setRewardsTimeline ...
+    /// @dev newTimelineInDays is measured in days
+    function setRewardsTimeline(uint256 newTimelineInDays) external onlyOwner {
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInDays);
+        rewardsTimeline = newTimelineInDays;
+    }
+
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
