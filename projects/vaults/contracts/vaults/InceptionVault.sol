@@ -128,7 +128,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
+
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
@@ -143,8 +143,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         }
 
         // get the amount from the sender
-        _transferAssetFrom(sender, amount);
-        amount = totalAssets() - depositedBefore;
+        amount = _transferAssetFrom(sender, amount);
 
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
@@ -455,7 +454,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev addRewards ...
     function addRewards(uint256 amount) external onlyOperator {
-        _transferAssetFrom(_operator, amount);
+        amount = _transferAssetFrom(_operator, amount);
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;
