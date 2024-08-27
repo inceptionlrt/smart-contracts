@@ -133,31 +133,31 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
     }
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
-    function undelegateVault(
-        uint256 amount
-    ) external whenNotPaused nonReentrant onlyOperator {
-        address staker = address(this);
+    // /// @dev performs creating a withdrawal request from EigenLayer
+    // /// @dev requires a specific amount to withdraw
+    // function undelegateVault(
+    //     uint256 amount
+    // ) external whenNotPaused nonReentrant onlyOperator {
+    //     address staker = address(this);
 
-        uint256[] memory sharesToWithdraw = new uint256[](1);
-        IStrategy[] memory strategies = new IStrategy[](1);
+    //     uint256[] memory sharesToWithdraw = new uint256[](1);
+    //     IStrategy[] memory strategies = new IStrategy[](1);
 
-        sharesToWithdraw[0] = _undelegate(amount, staker);
-        strategies[0] = strategy;
-        IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
+    //     sharesToWithdraw[0] = _undelegate(amount, staker);
+    //     strategies[0] = strategy;
+    //     IDelegationManager.QueuedWithdrawalParams[]
+    //         memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+    //             1
+    //         );
 
-        /// @notice from Vault
-        withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
-            strategies: strategies,
-            shares: sharesToWithdraw,
-            withdrawer: address(this)
-        });
-        delegationManager.queueWithdrawals(withdrawals);
-    }
+    //     /// @notice from Vault
+    //     withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
+    //         strategies: strategies,
+    //         shares: sharesToWithdraw,
+    //         withdrawer: address(this)
+    //     });
+    //     delegationManager.queueWithdrawals(withdrawals);
+    // }
 
     function _undelegate(
         uint256 amount,

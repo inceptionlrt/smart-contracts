@@ -78,6 +78,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
+
+        /// rewards logic
+        rewardsTimeline = 7 days;
     }
 
     /*//////////////////////////////
@@ -451,21 +454,18 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     //////////////////////////////////*/
 
     /// @dev addRewards ...
-    function addRewards(
-        uint256 amount,
-        uint256 unlockPeriod
-    ) external onlyOperator {
+    function addRewards(uint256 amount) external onlyOperator {
         _transferAssetFrom(_operator, amount);
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
+            uint256 totalDays = rewardsTimeline / 1 days;
             uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
-            //uint256 totalDays = rewardsTimeline / 1 days;
-            if (dayNum < rewardsTimeline) require(false, "");
+            if (dayNum < totalDays) revert TimelineNotOver();
         }
         currentRewards = amount;
         startTimeline = block.timestamp;
 
-        emit RewardsAdded(amount, unlockPeriod);
+        emit RewardsAdded(amount, startTimeline);
     }
 
     /// @dev setRewardsTimeline ...

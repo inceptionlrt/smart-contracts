@@ -76,7 +76,7 @@ interface IInceptionVault {
 
     event RewardsTimelineChanged(uint256 prevValue, uint256 newValue);
 
-    event RewardsAdded(uint256 amount, uint256 unlockPeriod);
+    event RewardsAdded(uint256 amount, uint256 startTimeline);
 
     function inceptionToken() external view returns (IInceptionToken);
 
