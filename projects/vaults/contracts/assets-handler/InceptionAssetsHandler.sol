@@ -56,7 +56,7 @@ contract InceptionAssetsHandler is
         uint256 totalDays = rewardsTimeline / 1 days;
         if (dayNum > totalDays) return _asset.balanceOf(address(this));
 
-        uint256 reservedRewards = (currentRewards / rewardsTimeline) *
+        uint256 reservedRewards = (currentRewards / totalDays) *
             (totalDays - dayNum);
 
         return (_asset.balanceOf(address(this)) - reservedRewards);
