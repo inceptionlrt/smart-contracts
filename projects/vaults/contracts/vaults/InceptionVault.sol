@@ -471,6 +471,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev setRewardsTimeline ...
     /// @dev newTimelineInDays is measured in days
     function setRewardsTimeline(uint256 newTimelineInDays) external onlyOwner {
+        if (newTimelineInDays < 1 days) revert InconsistentData();
+
         emit RewardsTimelineChanged(rewardsTimeline, newTimelineInDays);
         rewardsTimeline = newTimelineInDays;
     }
