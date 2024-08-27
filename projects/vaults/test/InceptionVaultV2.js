@@ -14,6 +14,7 @@ const {
   randomBIMax,
   randomAddress,
   e18,
+  day
 } = require("./helpers/utils.js");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
@@ -878,6 +879,30 @@ assets.forEach(function (a) {
           "Ownable: caller is not the owner",
         );
       });
+
+      it("setRewardsTimeline(): only owner can", async function () {
+        const prevValue = await iVault.rewardsTimeline();
+        const newValue = randomBI(2) * day;
+        await expect(iVault.connect(deployer).setRewardsTimeline(newValue))
+          .to.emit(iVault, "RewardsTimelineChanged")
+          .withArgs(prevValue, newValue);
+
+        expect(prevValue).to.be.eq(day * 7n); //default value is 7d
+        expect(await iVault.rewardsTimeline()).to.be.eq(newValue);
+      })
+
+      it("setRewardsTimeline(): reverts when < 1 day", async function () {
+        await expect(iVault.connect(deployer).setRewardsTimeline(day - 1n))
+          .to.be.revertedWithCustomError(iVault, "InconsistentData");
+      })
+
+      it("setRewardsTimeline(): reverts when caller is not an owner", async function () {
+        const newValue = randomBI(6);
+        await expect(iVault.connect(staker).setRewardsTimeline(newValue)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
     });
 
     describe("Deposit bonus params setter and calculation", function () {
@@ -3828,6 +3853,119 @@ assets.forEach(function (a) {
         console.log(`Total deposited: ${await iVault.getTotalDeposited()}`);
       });
     });
+
+    describe("addRewards: gradually adds amount to the iVault", function () {
+      const totalDays = 7n;
+      let totalRewardsAmount;
+      before(async function () {
+        await snapshot.restore();
+        await asset.connect(staker3).transfer(iVaultOperator.address, 10n * e18);
+        const operatorBalance = await asset.balanceOf(iVaultOperator.address);
+        await asset.connect(iVaultOperator).approve(iVault.address, operatorBalance);
+        await iVault.connect(deployer).setRewardsTimeline(totalDays * 86400n);
+      });
+
+      it("addRewards when there are no other rewards have been added", async function () {
+        const operatorBalanceBefore = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceBefore = await asset.balanceOf(iVault.address);
+        const totalAssetsBefore = await iVault.totalAssets();
+
+        const latestBlock = await ethers.provider.getBlock('latest');
+        const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBI(2);
+        await helpers.time.setNextBlockTimestamp(nextBlockTimestamp);
+
+        totalRewardsAmount = randomBI(17);
+        console.log("Amount:", totalRewardsAmount.format());
+        await expect(iVault.connect(iVaultOperator).addRewards(totalRewardsAmount))
+          .to.emit(iVault, "RewardsAdded")
+          .withArgs((amount) => {
+            expect(amount).to.be.closeTo(totalRewardsAmount, transactErr)
+            return true;
+          }, nextBlockTimestamp);
+
+        const operatorBalanceAfter = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceAfter = await asset.balanceOf(iVault.address);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+        console.log("iVault balance diff:", (iVaultBalanceAfter - iVaultBalanceBefore).format());
+        console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+        expect(operatorBalanceBefore - operatorBalanceAfter).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(iVaultBalanceAfter - iVaultBalanceBefore).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(0n, totalDays);
+      })
+
+      it("Can not add more rewards until the end of timeline", async function () {
+        const amount = randomBI(17);
+        await expect(iVault.connect(iVaultOperator).addRewards(amount))
+          .to.revertedWithCustomError(iVault, "TimelineNotOver");
+      })
+
+      it("Stake some amount", async function() {
+        await iVault.connect(staker).deposit(10n * e18, staker.address);
+      })
+
+      it("Check total assets every day", async function () {
+        let startTimeline = await iVault.startTimeline();
+        let latestBlock;
+        let daysPassed;
+        do {
+          const totalAssetsBefore = await iVault.totalAssets();
+          await helpers.time.increase(day);
+          latestBlock = await ethers.provider.getBlock('latest');
+          const currentTime = BigInt(latestBlock.timestamp);
+          daysPassed = (currentTime - startTimeline) / day;
+
+          const totalAssetsAfter = await iVault.totalAssets();
+          console.log("Total assets increased by:", (totalAssetsAfter - totalAssetsBefore).format());
+          console.log("Ratio:", await calculateRatio(iVault, iToken));
+          expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(totalRewardsAmount / totalDays, totalDays);
+
+        } while (daysPassed < totalDays)
+
+        console.log("Total assets after:\t\t", (await iVault.totalAssets()).format());
+        console.log("iVault balance after:\t", (await asset.balanceOf(iVault.address)).format());
+      })
+
+      it("Total assets does not change on a next day after timeline passed", async function() {
+        const totalAssetsBefore = await iVault.totalAssets();
+        await helpers.time.increase(day);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Total assets increased by:", (totalAssetsAfter - totalAssetsBefore).format());
+        expect(totalAssetsAfter).to.be.eq(totalAssetsBefore);
+      })
+
+      it("New rewards can be added", async function() {
+        const operatorBalanceBefore = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceBefore = await asset.balanceOf(iVault.address);
+        const totalAssetsBefore = await iVault.totalAssets();
+
+        const latestBlock = await ethers.provider.getBlock('latest');
+        const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBI(2);
+        await helpers.time.setNextBlockTimestamp(nextBlockTimestamp);
+
+        totalRewardsAmount = randomBI(17);
+        console.log("Amount:", totalRewardsAmount.format());
+        await expect(iVault.connect(iVaultOperator).addRewards(totalRewardsAmount))
+          .to.emit(iVault, "RewardsAdded")
+          .withArgs((amount) => {
+            expect(amount).to.be.closeTo(totalRewardsAmount, transactErr)
+            return true;
+          }, nextBlockTimestamp);
+
+        const operatorBalanceAfter = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceAfter = await asset.balanceOf(iVault.address);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+        console.log("iVault balance diff:", (iVaultBalanceAfter - iVaultBalanceBefore).format());
+        console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+        expect(operatorBalanceBefore - operatorBalanceAfter).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(iVaultBalanceAfter - iVaultBalanceBefore).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(0n, totalDays);
+      })
+    })
 
     describe("Redeem all after asset ratio changed", function () {
       let staker1UnstakeAmount, staker2UnstakeAmount, withdrawRatio;

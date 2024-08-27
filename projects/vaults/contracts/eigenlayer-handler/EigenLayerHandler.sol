@@ -91,17 +91,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
     }
 
-    /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategy(
-        address restaker,
-        uint256 amount
-    ) internal {
-        _asset.approve(restaker, amount);
-        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
-
-        emit DepositedToEL(restaker, amount);
-    }
-
     /// @dev delegates assets held in the strategy to the EL operator.
     function _delegateToOperator(
         address restaker,

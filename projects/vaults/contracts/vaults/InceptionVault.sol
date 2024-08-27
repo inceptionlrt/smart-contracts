@@ -181,7 +181,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
             restakers.push(restaker);
         }
 
-        _depositAssetIntoStrategy(restaker, amount);
+        _asset.approve(restaker, amount);
+        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
+
+        emit DepositedToEL(restaker, amount);
 
         if (delegate)
             _delegateToOperator(
@@ -454,26 +457,25 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     /// @dev addRewards ...
     function addRewards(uint256 amount) external onlyOperator {
-        amount = _transferAssetFrom(_operator, amount);
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;
             uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
             if (dayNum < totalDays) revert TimelineNotOver();
         }
-        currentRewards = amount;
+        currentRewards = _transferAssetFrom(_operator, amount);
         startTimeline = block.timestamp;
 
         emit RewardsAdded(amount, startTimeline);
     }
 
     /// @dev setRewardsTimeline ...
-    /// @dev newTimelineInDays is measured in days
-    function setRewardsTimeline(uint256 newTimelineInDays) external onlyOwner {
-        if (newTimelineInDays < 1 days) revert InconsistentData();
+    /// @dev newTimelineInDays is measured in seconds
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOwner {
+        if (newTimelineInSeconds < 1 days) revert InconsistentData();
 
-        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInDays);
-        rewardsTimeline = newTimelineInDays;
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
+        rewardsTimeline = newTimelineInSeconds;
     }
 
     /*//////////////////////////////
