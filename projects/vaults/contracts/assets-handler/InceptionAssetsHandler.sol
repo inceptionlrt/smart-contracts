@@ -66,12 +66,12 @@ contract InceptionAssetsHandler is
         address staker,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 depositedBefore = totalAssets();
+        uint256 depositedBefore = _asset.balanceOf(address(this));
 
         if (!_asset.transferFrom(staker, address(this), amount))
             revert TransferAssetFromFailed(address(_asset));
 
-        return totalAssets() - depositedBefore;
+        return _asset.balanceOf(address(this)) - depositedBefore;
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
