@@ -427,10 +427,11 @@ contract RestakingPool is
     }
 
     function startWithdrawalCheckpoint(
-        string memory provider
+        string memory provider,
+        bool revertIfNoBalance
     ) external onlyOperator {
         IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
-        restaker.startCheckpoint(true);
+        restaker.startCheckpoint(revertIfNoBalance);
     }
 
     function delegateTo(
