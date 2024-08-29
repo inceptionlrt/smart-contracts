@@ -414,14 +414,6 @@ contract RestakingPool is
         );
     }
 
-    function queueWithdrawals(
-        string memory provider,
-        IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams
-    ) external onlyOperator {
-        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
-        restaker.queueWithdrawals(queuedWithdrawalParams);
-    }
-
     function recoverTokens(
         string memory provider,
         IERC20[] memory tokenList,
@@ -464,6 +456,30 @@ contract RestakingPool is
             _getRestakerOrRevert(provider)
         );
         restaker.undelegate(address(restaker));
+    }
+
+    function queueWithdrawals(
+        string memory provider,
+        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
+    ) external onlyOperator {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.queueWithdrawals(withdrawals);
+    }
+
+    function completeWithdrawals(
+        string memory provider,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] memory tokens,
+        uint256[] memory middlewareTimesIndexes,
+        bool[] memory receiveAsTokens
+    ) external onlyOperator {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.completeWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
     }
 
     /*******************************************************************************

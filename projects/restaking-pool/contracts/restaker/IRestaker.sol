@@ -13,8 +13,17 @@ interface IRestaker {
     event Claimed(address indexed recipient, uint256 amount);
 
     function initialize(address owner, IRestakerFacets facets) external;
+
     function __claim() external;
-    function queueWithdrawals(IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams)
-        external
-        returns (bytes32[] memory);
+
+    function queueWithdrawals(
+        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
+    ) external returns (bytes32[] memory);
+
+    function completeWithdrawals(
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] memory tokens,
+        uint256[] memory middlewareTimesIndexes,
+        bool[] memory receiveAsTokens
+    ) external;
 }

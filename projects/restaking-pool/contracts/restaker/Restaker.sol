@@ -59,12 +59,24 @@ contract Restaker is OwnableUpgradeable, IRestaker {
         }
     }
 
-    function queueWithdrawals(IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams)
-        external
-        onlyOwner
-        returns (bytes32[] memory)
-    {
-        return _facets.getDelegationManager().queueWithdrawals(queuedWithdrawalParams);
+    function queueWithdrawals(
+        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
+    ) external onlyOwner returns (bytes32[] memory) {
+        return _facets.getDelegationManager().queueWithdrawals(withdrawals);
+    }
+
+    function completeWithdrawals(
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] memory tokens,
+        uint256[] memory middlewareTimesIndexes,
+        bool[] memory receiveAsTokens
+    ) external onlyOwner {
+        _facets.getDelegationManager().completeQueuedWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
     }
 
     /**
