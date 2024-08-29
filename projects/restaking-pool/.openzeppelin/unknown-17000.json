@@ -2375,6 +2375,343 @@
           ]
         }
       }
+    },
+    "340cc07b23b8948b351a17bdc25f2b09dad1dae9ca577608e82feca7a55b2704": {
+      "address": "0x2C1170E6CD8a6AAD96F177f25B2DF8aC7669669A",
+      "txHash": "0x0d07acb41e3d7bb394b7ad6b2cf554b33bad50dc77a8b83c779b5890b9a6b19b",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "_config",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IProtocolConfig)8068",
+            "contract": "Configurable",
+            "src": "contracts/Configurable.sol:17"
+          },
+          {
+            "label": "__reserved",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "Configurable",
+            "src": "contracts/Configurable.sol:18"
+          },
+          {
+            "label": "_minStakeAmount",
+            "offset": 0,
+            "slot": "50",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:37"
+          },
+          {
+            "label": "_minUnstakeAmount",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:38"
+          },
+          {
+            "label": "_totalStaked",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:43"
+          },
+          {
+            "label": "_totalUnstaked",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:47"
+          },
+          {
+            "label": "_pendingGap",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:52"
+          },
+          {
+            "label": "_pendingUnstakes",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_array(t_struct(Unstake)8126_storage)dyn_storage",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:56"
+          },
+          {
+            "label": "_totalPendingUnstakes",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:60"
+          },
+          {
+            "label": "_totalUnstakesOf",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:61"
+          },
+          {
+            "label": "_distributeGasLimit",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_uint32",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:65"
+          },
+          {
+            "label": "_totalClaimable",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:67"
+          },
+          {
+            "label": "_claimable",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:68"
+          },
+          {
+            "label": "_restakers",
+            "offset": 0,
+            "slot": "61",
+            "type": "t_mapping(t_bytes32,t_address)",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:73"
+          },
+          {
+            "label": "_maxTVL",
+            "offset": 0,
+            "slot": "62",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:78"
+          },
+          {
+            "label": "stakeBonusAmount",
+            "offset": 0,
+            "slot": "63",
+            "type": "t_uint256",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:83"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "64",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:85"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 8,
+            "slot": "64",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:86"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 16,
+            "slot": "64",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:87"
+          },
+          {
+            "label": "stakeUtilizationKink",
+            "offset": 24,
+            "slot": "64",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:88"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 0,
+            "slot": "65",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:90"
+          },
+          {
+            "label": "optimalUnstakeRate",
+            "offset": 8,
+            "slot": "65",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:91"
+          },
+          {
+            "label": "unstakeUtilizationKink",
+            "offset": 16,
+            "slot": "65",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:92"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 24,
+            "slot": "65",
+            "type": "t_uint64",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:93"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "66",
+            "type": "t_array(t_uint256)34_storage",
+            "contract": "RestakingPool",
+            "src": "contracts/RestakingPool.sol:100"
+          }
+        ],
+        "types": {
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)64_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)320_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_struct(Unstake)8126_storage)dyn_storage": {
+            "label": "struct IRestakingPool.Unstake[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)34_storage": {
+            "label": "uint256[34]",
+            "numberOfBytes": "1088"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IProtocolConfig)8068": {
+            "label": "contract IProtocolConfig",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_address)": {
+            "label": "mapping(bytes32 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Unstake)8126_storage": {
+            "label": "struct IRestakingPool.Unstake",
+            "members": [
+              {
+                "label": "recipient",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }
