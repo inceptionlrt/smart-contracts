@@ -5,6 +5,9 @@ import "../interfaces/IDelegationManager.sol";
 import "hardhat/console.sol";
 
 contract DelegationManagerMock is IDelegationManager {
+
+    function beaconChainETHStrategy() external view returns (IStrategy) {}
+
     function delegateTo(
         address operator,
         SignatureWithExpiry memory approverSignatureAndExpiry,
@@ -44,10 +47,6 @@ contract DelegationManagerMock is IDelegationManager {
     function operatorDetails(
         address operator
     ) external view override returns (OperatorDetails memory) {}
-
-    function earningsReceiver(
-        address operator
-    ) external view override returns (address) {}
 
     function delegationApprover(
         address operator
@@ -125,11 +124,6 @@ contract DelegationManagerMock is IDelegationManager {
     function calculateWithdrawalRoot(
         Withdrawal memory withdrawal
     ) external pure override returns (bytes32) {}
-
-    function migrateQueuedWithdrawals(
-        IStrategyManager.DeprecatedStruct_QueuedWithdrawal[]
-            memory withdrawalsToQueue
-    ) external override {}
 
     function registerAsOperator(
         OperatorDetails calldata registeringOperatorDetails,

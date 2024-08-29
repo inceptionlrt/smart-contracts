@@ -14,4 +14,7 @@ interface IRestaker {
 
     function initialize(address owner, IRestakerFacets facets) external;
     function __claim() external;
+    function queueWithdrawals(IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams)
+        external
+        returns (bytes32[] memory);
 }

@@ -11,6 +11,7 @@ import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
 import {IProtocolConfig} from "./interfaces/IProtocolConfig.sol";
 import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
+import {IRestaker} from "./restaker/IRestaker.sol";
 
 import {InceptionLibrary} from "./libraries/InceptionLibrary.sol";
 
@@ -411,6 +412,14 @@ contract RestakingPool is
             validatorFieldsProofs,
             validatorFields
         );
+    }
+
+    function queueWithdrawals(
+        string memory provider,
+        IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams
+    ) external onlyOperator {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.queueWithdrawals(queuedWithdrawalParams);
     }
 
     function recoverTokens(

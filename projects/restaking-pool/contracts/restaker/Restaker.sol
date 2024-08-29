@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interfaces/IEigenPodManager.sol";
+import "../interfaces/IDelegationManager.sol";
 import "./IRestaker.sol";
 import "./IRestakerFacets.sol";
 
@@ -56,6 +57,14 @@ contract Restaker is OwnableUpgradeable, IRestaker {
             }
             emit Claimed(recipient, amount);
         }
+    }
+
+    function queueWithdrawals(IDelegationManager.QueuedWithdrawalParams[] calldata queuedWithdrawalParams)
+        external
+        onlyOwner
+        returns (bytes32[] memory)
+    {
+        return _facets.getDelegationManager().queueWithdrawals(queuedWithdrawalParams);
     }
 
     /**
