@@ -59,26 +59,6 @@ contract Restaker is OwnableUpgradeable, IRestaker {
         }
     }
 
-    function queueWithdrawals(
-        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
-    ) external onlyOwner returns (bytes32[] memory) {
-        return _facets.getDelegationManager().queueWithdrawals(withdrawals);
-    }
-
-    function completeWithdrawals(
-        IDelegationManager.Withdrawal[] calldata withdrawals,
-        IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
-        bool[] memory receiveAsTokens
-    ) external onlyOwner {
-        _facets.getDelegationManager().completeQueuedWithdrawals(
-            withdrawals,
-            tokens,
-            middlewareTimesIndexes,
-            receiveAsTokens
-        );
-    }
-
     /**
      *
      * @dev Mix of OpenZeppelin proxy {_delegate()} method and ERC-2535 with {call} instead of {delegatecall}.

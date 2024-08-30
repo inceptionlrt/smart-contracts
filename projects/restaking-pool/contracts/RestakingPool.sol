@@ -462,7 +462,9 @@ contract RestakingPool is
         string memory provider,
         IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
     ) external onlyOperator {
-        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
         restaker.queueWithdrawals(withdrawals);
     }
 
@@ -473,8 +475,10 @@ contract RestakingPool is
         uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) external onlyOperator {
-        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
-        restaker.completeWithdrawals(
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
+        restaker.completeQueuedWithdrawals(
             withdrawals,
             tokens,
             middlewareTimesIndexes,
