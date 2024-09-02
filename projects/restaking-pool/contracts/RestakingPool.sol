@@ -11,7 +11,6 @@ import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
 import {IProtocolConfig} from "./interfaces/IProtocolConfig.sol";
 import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
-import {IRestaker} from "./restaker/IRestaker.sol";
 
 import {InceptionLibrary} from "./libraries/InceptionLibrary.sol";
 
