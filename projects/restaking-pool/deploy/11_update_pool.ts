@@ -6,10 +6,14 @@ const func: DeployFunction = async function ({ deployments, network }) {
   const { get } = deployments;
   const RestakingPool = await get("RestakingPool");
   console.log("Restaking Pool address: ", RestakingPool.address);
+  const [deployer] = await ethers.getSigners();
 
   const restakinPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
+
+  console.log(`deployer address: ${deployer.address}`);
+  console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
 
   /// 1. InceptionLibrary Deployment
   let libAddress = "";
