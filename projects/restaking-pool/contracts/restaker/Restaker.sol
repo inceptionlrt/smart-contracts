@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interfaces/IEigenPodManager.sol";
+import "../interfaces/IDelegationManager.sol";
 import "./IRestaker.sol";
 import "./IRestakerFacets.sol";
 
