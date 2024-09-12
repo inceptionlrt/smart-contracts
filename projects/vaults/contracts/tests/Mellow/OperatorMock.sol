@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IDefaultBondStrategy} from "../../interfaces/mellow/IDefaultBondStrategy.sol";
+import {IDefaultBondStrategy} from "../../interfaces/symbiotic-vault/mellow-core/IDefaultBondStrategy.sol";
 
 contract OperatorMock {
     address public mellowVault;

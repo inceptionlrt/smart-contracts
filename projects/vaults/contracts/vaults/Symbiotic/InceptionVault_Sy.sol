@@ -3,17 +3,18 @@ pragma solidity ^0.8.23;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../../interfaces/IInceptionRatioFeed.sol";
-import "../../eigenlayer-handler/EigenLayerHandler.sol";
+import {IOwnable} from "../../interfaces/common/IOwnable.sol";
+import {IInceptionVault_SY} from "../../interfaces/symbiotic-vault/IInceptionVault_SY.sol";
+import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
+
+import "../../handlers/symbiotic-handler/SymbioticHandler.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionVault contract
+/// @title The InceptionVault_SY contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault is IInceptionVault, EigenLayerHandler {
+contract InceptionVault_SY is IInceptionVault_SY, SymbioticHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -52,12 +53,10 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
-        IStrategyManager _strategyManager,
-        IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IInceptionToken _inceptionToken
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy);
+        __SymbioticHandler_init();
 
         name = vaultName;
         _operator = operatorAddress;
@@ -88,7 +87,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -166,18 +164,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _fallback(eigenLayerFacet);
     }
 
-    function delegateToMellow(
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        _fallback(mellowFacet);
-    }
-
-    function delegateToSymbiotic(
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        _fallback(symbioticFacet);
-    }
-
     /*///////////////////////////////////////
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
@@ -247,19 +233,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function implementation() external view returns (address) {
-        return _stakerImplementation;
-    }
-
-    function upgradeTo(
-        address newImplementation
-    ) external whenNotPaused onlyOwner {
-        if (!Address.isContract(newImplementation)) revert NotContract();
-
-        emit ImplementationUpgraded(_stakerImplementation, newImplementation);
-        _stakerImplementation = newImplementation;
-    }
-
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool able, uint256[] memory) {
@@ -291,13 +264,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(
-        address elOperator
-    ) external view returns (uint256) {
-        if (elOperator == address(mellowRestaker)) {
-            return mellowRestaker.getDeposited();
-        }
-        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
+    function getDelegated() external view returns (uint256) {
+        return mellowRestaker.getDeposited();
     }
 
     function getPendingWithdrawalOf(
@@ -306,25 +274,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return _claimerWithdrawals[claimer].amount;
     }
 
-    function _verifyDelegated() internal view returns (bool) {
-        for (uint256 i = 0; i < restakers.length; i++) {
-            if (restakers[i] == address(0)) {
-                continue;
-            }
-            if (!delegationManager.isDelegated(restakers[i])) return false;
-        }
-
-        if (
-            strategy.userUnderlyingView(address(this)) > 0 &&
-            !delegationManager.isDelegated(address(this))
-        ) return false;
-
-        return true;
-    }
-
     function maxDeposit(address /*receiver*/) external view returns (uint256) {
-        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
-        return maxPerDeposit;
+        return type(uint256).max;
     }
 
     function maxRedeem(
@@ -388,13 +339,13 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function setMellowRestaker(
-        IMellowRestaker newMellowRestaker
+        IIMellowRestaker newMellowRestaker
     ) external onlyOwner {
         _fallback(setterFacet);
     }
 
     function setSymbioticRestaker(
-        IMellowRestaker newMellowRestaker
+        IIMellowRestaker newMellowRestaker
     ) external onlyOwner {
         _fallback(setterFacet);
     }

@@ -8,13 +8,11 @@ import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/intro
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {InceptionRestakerErrors} from "../interfaces/InceptionRestakerErrors.sol";
-import {IWSteth} from "../interfaces/IWSteth.sol";
+import {ISymbioticVault} from "../interfaces/symbiotic-vault/ISymbioticVault.sol";
+import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
 
+import {IWSteth} from "../interfaces/common/IWSteth.sol";
 import {FullMath} from "../lib/FullMath.sol";
-
-import {ISymbioticVault} from "../interfaces/symbiotic/ISymbioticVault.sol";
-import {ISymbioticRestaker} from "../interfaces/ISymbioticRestaker.sol";
 
 import "hardhat/console.sol";
 
@@ -22,13 +20,12 @@ import "hardhat/console.sol";
 /// @title The MellowRestaker Contract
 /// @dev Handles delegation and withdrawal requests within the Mellow protocol.
 /// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
-contract SymbioticRestaker is
+contract ISymbioticRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    InceptionRestakerErrors,
-    ISymbioticRestaker
+    IISymbioticRestaker
 {
     using SafeERC20 for IERC20;
 

@@ -3,17 +3,20 @@ pragma solidity ^0.8.23;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../../interfaces/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../../interfaces/IInceptionRatioFeed.sol";
-import "../../eigenlayer-handler/EigenLayerHandler.sol";
+import {IOwnable} from "../../interfaces/common/IOwnable.sol";
+import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
+
+import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
+
+import "hardhat/console.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault is IInceptionVault, EigenLayerHandler {
+contract InceptionVault_EL is IInceptionVault_EL, EigenLayerHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -166,18 +169,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         _fallback(eigenLayerFacet);
     }
 
-    function delegateToMellow(
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        _fallback(mellowFacet);
-    }
-
-    function delegateToSymbiotic(
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        _fallback(symbioticFacet);
-    }
-
     /*///////////////////////////////////////
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
@@ -294,9 +285,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function getDelegatedTo(
         address elOperator
     ) external view returns (uint256) {
-        if (elOperator == address(mellowRestaker)) {
-            return mellowRestaker.getDeposited();
-        }
         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
 
@@ -379,23 +367,14 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
-        console.log("setterFacet: ", setterFacet);
+        console.log(
+            "=========================== new ratioFeed: ",
+            newRatioFeed
+        );
         _fallback(setterFacet);
     }
 
     function setOperator(address newOperator) external onlyOwner {
-        _fallback(setterFacet);
-    }
-
-    function setMellowRestaker(
-        IMellowRestaker newMellowRestaker
-    ) external onlyOwner {
-        _fallback(setterFacet);
-    }
-
-    function setSymbioticRestaker(
-        IMellowRestaker newMellowRestaker
-    ) external onlyOwner {
         _fallback(setterFacet);
     }
 
@@ -427,14 +406,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
     function setSetterFacet(address newSetterFacet) external {
         setterFacet = newSetterFacet;
-    }
-
-    function setMellowFacet(address newMellowFacet) external {
-        mellowFacet = newMellowFacet;
-    }
-
-    function setSymbioticFacet(address newSymbioticFacet) external {
-        symbioticFacet = newSymbioticFacet;
     }
 
     /*///////////////////////////////

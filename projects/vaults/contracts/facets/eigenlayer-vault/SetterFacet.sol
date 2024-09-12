@@ -5,14 +5,19 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IOwnable} from "../../interfaces/common/IOwnable.sol";
+import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
+import {IIMellowRestaker} from "../../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+import {IISymbioticRestaker} from "../../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
+
+import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
+
+import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
 
 import "hardhat/console.sol";
 
@@ -60,8 +65,8 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IMellowRestaker public mellowRestaker;
-    ISymbioticRestaker public symbioticRestaker;
+    IIMellowRestaker public mellowRestaker;
+    IISymbioticRestaker public symbioticRestaker;
 
     /// @dev constants are not stored in the storage
     uint256[50 - 15] private __reserver;
@@ -117,38 +122,38 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         if (newProtocolFee >= MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
 
-        emit IInceptionVault.ProtocolFeeChanged(protocolFee, newProtocolFee);
+        emit IInceptionVault_EL.ProtocolFeeChanged(protocolFee, newProtocolFee);
         protocolFee = newProtocolFee;
     }
 
     function setTreasuryAddress(address newTreasury) external {
         if (newTreasury == address(0)) revert NullParams();
 
-        emit IInceptionVault.TreasuryChanged(treasury, newTreasury);
+        emit IInceptionVault_EL.TreasuryChanged(treasury, newTreasury);
         treasury = newTreasury;
     }
 
-    function setMellowRestaker(IMellowRestaker newMellowRestaker) external {
+    function setMellowRestaker(IIMellowRestaker newMellowRestaker) external {
         if (address(newMellowRestaker) == address(0)) revert NullParams();
 
         mellowRestaker = newMellowRestaker;
         _operatorRestakers[address(mellowRestaker)] = _MOCK_ADDRESS;
 
-        emit IInceptionVault.MellowRestakerChanged(
+        emit IInceptionVault_EL.MellowRestakerChanged(
             address(mellowRestaker),
             address(newMellowRestaker)
         );
     }
 
     function setSymbioticRestaker(
-        ISymbioticRestaker newSymbioticRestaker
+        IISymbioticRestaker newSymbioticRestaker
     ) external {
         if (address(newSymbioticRestaker) == address(0)) revert NullParams();
 
         symbioticRestaker = newSymbioticRestaker;
         _operatorRestakers[address(symbioticRestaker)] = _MOCK_ADDRESS;
 
-        emit IInceptionVault.MellowRestakerChanged(
+        emit IInceptionVault_EL.MellowRestakerChanged(
             address(symbioticRestaker),
             address(newSymbioticRestaker)
         );
@@ -157,7 +162,7 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
-        emit IInceptionVault.RatioFeedChanged(
+        emit IInceptionVault_EL.RatioFeedChanged(
             address(ratioFeed),
             address(newRatioFeed)
         );
@@ -167,19 +172,19 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
     function setOperator(address newOperator) external {
         if (newOperator == address(0)) revert NullParams();
 
-        emit IInceptionVault.OperatorChanged(_operator, newOperator);
+        emit IInceptionVault_EL.OperatorChanged(_operator, newOperator);
         _operator = newOperator;
     }
 
     function setMinAmount(uint256 newMinAmount) external {
-        emit IInceptionVault.MinAmountChanged(minAmount, newMinAmount);
+        emit IInceptionVault_EL.MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
     }
 
     function setName(string memory newVaultName) external {
         if (bytes(newVaultName).length == 0) revert NullParams();
 
-        emit IInceptionVault.NameChanged(name, newVaultName);
+        emit IInceptionVault_EL.NameChanged(name, newVaultName);
         name = newVaultName;
     }
 
@@ -191,7 +196,7 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
             revert EigenLayerOperatorAlreadyExists();
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
-        emit IInceptionVault.ELOperatorAdded(newELOperator);
+        emit IInceptionVault_EL.ELOperatorAdded(newELOperator);
     }
 
     function setDelegationManager(
@@ -231,7 +236,7 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         optimalBonusRate = newOptimalBonusRate;
         depositUtilizationKink = newDepositUtilizationKink;
 
-        emit IInceptionVault.DepositBonusParamsChanged(
+        emit IInceptionVault_EL.DepositBonusParamsChanged(
             newMaxBonusRate,
             newOptimalBonusRate,
             newDepositUtilizationKink
@@ -254,7 +259,7 @@ contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         optimalWithdrawalRate = newOptimalWithdrawalRate;
         withdrawUtilizationKink = newWithdrawUtilizationKink;
 
-        emit IInceptionVault.WithdrawFeeParamsChanged(
+        emit IInceptionVault_EL.WithdrawFeeParamsChanged(
             newMaxFlashFeeRate,
             newOptimalWithdrawalRate,
             newWithdrawUtilizationKink

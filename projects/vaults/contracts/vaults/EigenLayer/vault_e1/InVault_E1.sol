@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {InceptionVault, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault.sol";
+import {InceptionVault_EL, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault_EL.sol";
 
 /// @author The InceptionLRT team
-contract InVault_E1 is InceptionVault {
+contract InVault_E1 is InceptionVault_EL {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

@@ -172,11 +172,11 @@ const initVault = async (a) => {
   const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
   // 3. Staker implementation
   console.log("- Restaker implementation");
-  const restakerImp = await ethers.deployContract("InceptionRestaker");
+  const restakerImp = await ethers.deployContract("IEigenRestaker");
   restakerImp.address = await restakerImp.getAddress();
 
   console.log("- Mellow restaker");
-  const mellowRestakerFactory = await ethers.getContractFactory("MellowRestaker");
+  const mellowRestakerFactory = await ethers.getContractFactory("IMellowRestaker");
   mellowRestaker = await upgrades.deployProxy(mellowRestakerFactory, [
     mellowWrapperAddress,
     mellowVaultAddress,
@@ -186,7 +186,7 @@ const initVault = async (a) => {
   mellowRestaker.address = await mellowRestaker.getAddress();
 
   console.log("- Symbiotic restaker");
-  const symbioticRestakerFactory = await ethers.getContractFactory("SymbioticRestaker");
+  const symbioticRestakerFactory = await ethers.getContractFactory("ISymbioticRestaker");
   symbioticRestaker = await upgrades.deployProxy(symbioticRestakerFactory, [
     "0xE9387B4abA8073988b462Db204af0f343F181a0d",
     "0x7322c24752f79c05ffd1e2a6fcb97020c1c264f1",
@@ -322,7 +322,7 @@ const initVault = async (a) => {
 };
 
 assets.forEach(function (a) {
-  describe(`Inception pool V2 ${a.assetName}`, function () {
+  describe(`Inception Symbiotic Vault Symbitoi ${a.assetName}`, function () {
     this.timeout(150000);
     let iToken,
       iVault,

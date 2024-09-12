@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IInceptionToken.sol";
+import "../common/IInceptionToken.sol";
 
-interface IInceptionVault {
+interface IInceptionVault_SY {
     /*///////////////////
     ////// Events //////
     /////////////////*/

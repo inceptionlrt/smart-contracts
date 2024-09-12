@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import "./mellow/IMellowVault.sol";
-
-interface ISymbioticRestaker {
+interface IISymbioticRestaker {
     error PendingWithdrawal();
 
     function getDeposited() external view returns (uint256);

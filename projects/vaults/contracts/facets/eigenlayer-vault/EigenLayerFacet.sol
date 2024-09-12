@@ -5,15 +5,18 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
-import {IOwnable} from "../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IOwnable} from "../../interfaces/common/IOwnable.sol";
+import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
+import {IIEigenRestaker, IIEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+
+import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
+
+import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
 
 import "hardhat/console.sol";
 
@@ -126,7 +129,7 @@ contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        IInceptionRestaker(restaker).delegateToOperator(
+        IIEigenRestaker(restaker).delegateToOperator(
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
@@ -139,7 +142,7 @@ contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         uint256 amount
     ) internal {
         _asset.approve(restaker, amount);
-        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
+        IIEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
         emit IEigenLayerHandler.DepositedToEL(restaker, amount);
     }
@@ -178,7 +181,7 @@ contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-        IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
+        IIEigenRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
     }
 
     function _undelegate(
@@ -236,7 +239,7 @@ contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
+            withdrawnAmount = IIEigenRestaker(restaker).claimWithdrawals(
                 withdrawals,
                 tokens,
                 middlewareTimesIndexes,
@@ -378,7 +381,7 @@ contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
         /// TODO
         //asOwnable.transferOwnership(owner());
 
-        emit IInceptionVault.RestakerDeployed(deployedAddress);
+        emit IInceptionVault_EL.RestakerDeployed(deployedAddress);
         return deployedAddress;
     }
 

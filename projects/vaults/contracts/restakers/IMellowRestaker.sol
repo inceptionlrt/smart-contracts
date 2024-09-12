@@ -8,28 +8,30 @@ import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/intro
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {InceptionRestakerErrors} from "../interfaces/InceptionRestakerErrors.sol";
-import {IMellowDepositWrapper} from "../interfaces/mellow/IMellowDepositWrapper.sol";
-import {IMellowPriceOracle} from "../interfaces/mellow/IMellowPriceOracle.sol";
-import {IMellowRatiosOracle} from "../interfaces/mellow/IMellowRatiosOracle.sol";
-import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
-import {IMellowVault} from "../interfaces/mellow/IMellowVault.sol";
-import {IWSteth} from "../interfaces/IWSteth.sol";
+import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+
+import {IWSteth} from "../interfaces/common/IWSteth.sol";
+
+import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
+import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
+import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
+import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 
 import {FullMath} from "../lib/FullMath.sol";
 
 /// @author The InceptionLRT team
-/// @title The MellowRestaker Contract
+/// @title The IMellowRestaker Contract
 /// @dev Handles delegation and withdrawal requests within the Mellow protocol.
 /// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
-contract MellowRestaker is
+contract IMellowRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IMellowRestaker,
-    InceptionRestakerErrors
+    IIMellowRestaker
 {
+    error TransferAssetFailed(address assetAddress);
+
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
@@ -142,9 +144,9 @@ contract MellowRestaker is
         if (amount == 0) revert ValueZero();
 
         amount = _unwrap(amount);
-        if (!_asset.transfer(_vault, amount)) {
+        if (!_asset.transfer(_vault, amount))
             revert TransferAssetFailed(address(_asset));
-        }
+
         return amount;
     }
 

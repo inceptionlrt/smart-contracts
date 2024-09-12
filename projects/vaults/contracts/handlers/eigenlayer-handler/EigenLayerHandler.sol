@@ -3,14 +3,10 @@ pragma solidity ^0.8.23;
 
 import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
-import {IStrategyManager, IStrategy} from "../interfaces/IStrategyManager.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
-import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
-import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
-import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
-import {ISymbioticRestaker} from "../interfaces/ISymbioticRestaker.sol";
-
-import "hardhat/console.sol";
+import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IIEigenRestaker} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract
@@ -54,10 +50,9 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IMellowRestaker public mellowRestaker;
-    ISymbioticRestaker public symbioticRestaker;
-
+    /// TODO
     /// @dev constants are not stored in the storage
+    /// TODO
     uint256[50 - 15] private __reserver;
 
     modifier onlyOperator() {
@@ -93,22 +88,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev performs creating a withdrawal request from EigenLayer
     /// @dev requires a specific amount to withdraw
-    function undelegateMellow(
-        uint256 amount
-    ) external whenNotPaused nonReentrant onlyOperator {
-        _fallback(mellowFacet);
-    }
-
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
-    function undelegateSymbiotic(
-        uint256 amount
-    ) external whenNotPaused nonReentrant onlyOperator {
-        _fallback(symbioticFacet);
-    }
-
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
     function undelegateVault(
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
@@ -121,16 +100,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public whenNotPaused nonReentrant {
         _fallback(eigenLayerFacet);
-    }
-
-    /// @dev TODO
-    function claimMellowWithdrawals() public whenNotPaused nonReentrant {
-        _fallback(mellowFacet);
-    }
-
-    /// @dev TODO
-    function claimSymbiotic() external whenNotPaused nonReentrant onlyOperator {
-        _fallback(symbioticFacet);
     }
 
     function updateEpoch() external whenNotPaused {
@@ -178,28 +147,13 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             depositBonusAmount;
     }
 
-    function getPendingWithdrawalAmountFromMellow()
-        public
-        view
-        returns (uint256)
-    {
-        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
-        uint256 claimableAmount = mellowRestaker.claimableAmount();
-        return pendingWithdrawal + claimableAmount;
-    }
-
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ++i) {
             if (restakers[i] == address(0)) continue;
             total += strategy.userUnderlyingView(restakers[i]);
         }
-        // console.log(
-        //     "===================================  mellowRestaker.getDeposited(): ",
-        //     mellowRestaker.getDeposited()
-        // );
         return total + strategy.userUnderlyingView(address(this));
-        // mellowRestaker.getDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {

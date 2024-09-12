@@ -5,17 +5,19 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
-import {ISymbioticVault} from "../interfaces/symbiotic/ISymbioticVault.sol";
-import {ISymbioticRestaker} from "../interfaces/ISymbioticRestaker.sol";
-import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
+import {IEigenLayerHandler} from "../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IOwnable} from "../interfaces/common/IOwnable.sol";
+import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+import {IInceptionToken} from "../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../interfaces/common/IInceptionRatioFeed.sol";
 
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
 
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
+import "../handlers/eigenlayer-handler/EigenLayerHandler.sol";
+
+import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.sol";
 
 import "hardhat/console.sol";
 
@@ -63,8 +65,8 @@ contract SymbioticFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IMellowRestaker public mellowRestaker;
-    ISymbioticRestaker public symbioticRestaker;
+    IIMellowRestaker public mellowRestaker;
+    IISymbioticRestaker public symbioticRestaker;
 
     /// @dev constants are not stored in the storage
     uint256[50 - 14] private __reserver;

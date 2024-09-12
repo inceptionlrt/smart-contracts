@@ -1,29 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../interfaces/InceptionRestakerErrors.sol";
-import "../interfaces/IDelegationManager.sol";
-import "../interfaces/IInceptionRestaker.sol";
-import "../interfaces/IStrategy.sol";
-import "../interfaces/IStrategyManager.sol";
+import {IIEigenRestaker, IIEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
+import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionRestaker Contract
+/// @title The IEigenRestaker Contract
 /// @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
 /// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
-contract InceptionRestaker is
+contract IEigenRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IInceptionRestaker,
-    InceptionRestakerErrors
+    IIEigenRestaker,
+    IIEigenRestakerErrors
 {
     IERC20 internal _asset;
     address internal _trusteeManager;

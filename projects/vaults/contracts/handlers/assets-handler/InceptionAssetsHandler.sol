@@ -6,11 +6,11 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
+import {IInceptionAssetHandler} from "../../interfaces/common/IInceptionAssetHandler.sol";
+import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
 
-import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
-import {Convert} from "../lib/Convert.sol";
+import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
+import {Convert} from "../../lib/Convert.sol";
 
 import {InceptionFallbackHandler} from "../fallback-handler/InceptionFallbackHandler.sol";
 

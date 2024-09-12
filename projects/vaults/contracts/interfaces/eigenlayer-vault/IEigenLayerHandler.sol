@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IStrategyManager.sol";
+import "./eigen-core/IStrategyManager.sol";
 
 interface IEigenLayerHandler {
     /// @dev Epoch represents the period of the rebalancing process

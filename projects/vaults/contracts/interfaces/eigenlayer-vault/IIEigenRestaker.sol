@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IDelegationManager.sol";
+import "./eigen-core/IDelegationManager.sol";
 
-interface IInceptionRestaker {
+interface IIEigenRestakerErrors {
+    error TransferAssetFailed(address assetAddress);
+
+    error InconsistentData();
+
+    error WrongClaimWithdrawalParams();
+
+    error NullParams();
+}
+
+interface IIEigenRestaker {
     event StartWithdrawal(
         address indexed stakerAddress,
         bytes32 withdrawalRoot,

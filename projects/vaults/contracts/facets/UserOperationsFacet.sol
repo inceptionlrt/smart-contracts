@@ -5,14 +5,16 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../interfaces/IOwnable.sol";
-import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
-import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {IEigenLayerHandler} from "../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IOwnable} from "../interfaces/common/IOwnable.sol";
+import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+import {IInceptionToken} from "../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../interfaces/common/IInceptionRatioFeed.sol";
 
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
+import "../handlers/eigenlayer-handler/EigenLayerHandler.sol";
+
+import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.sol";
 
 import "hardhat/console.sol";
 
@@ -197,7 +199,7 @@ contract UserOperationsFacet is
             })
         );
 
-        emit IInceptionVault.Withdraw(
+        emit IInceptionVault_EL.Withdraw(
             claimer,
             receiver,
             claimer,
@@ -232,7 +234,7 @@ contract UserOperationsFacet is
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
-        emit IInceptionVault.FlashWithdraw(
+        emit IInceptionVault_EL.FlashWithdraw(
             claimer,
             receiver,
             claimer,
@@ -276,8 +278,8 @@ contract UserOperationsFacet is
 
         _transferAssetTo(receiver, redeemedAmount);
 
-        emit IInceptionVault.RedeemedRequests(redeemedWithdrawals);
-        emit IInceptionVault.Redeem(msg.sender, receiver, redeemedAmount);
+        emit IInceptionVault_EL.RedeemedRequests(redeemedWithdrawals);
+        emit IInceptionVault_EL.Redeem(msg.sender, receiver, redeemedAmount);
     }
 
     function isAbleToRedeem(
