@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -49,7 +49,7 @@ contract InceptionAirdrop is
     }
 
     /// @dev users can claim their airdrop
-    function claimAirdrop() external {
+    function claimAirdrop() external whenNotPaused {
         if (claimed[msg.sender]) revert AirdropAlreadyClaimed();
 
         uint256 amount = airdropBalances[msg.sender];
@@ -74,6 +74,7 @@ contract InceptionAirdrop is
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
             uint256 newBalance = newBalances[i];
+            claimed[recipient] = false;
 
             emit AirdropUpdated(
                 recipient,
@@ -99,6 +100,14 @@ contract InceptionAirdrop is
 
     function withdrawTokens(uint256 amount) external onlyOwner {
         if (!token.transfer(msg.sender, amount)) revert TokenTransferFailed();
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /// @dev selfBalance returns the current balance of the Airdrop pool (this contract)
