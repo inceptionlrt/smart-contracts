@@ -18,7 +18,7 @@ const config: HardhatUserConfig = {
       gas: 8000000,
     }, sepolia: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY_TESTNET}`],
-      url: `${process.env.RPC_URL_ETHEREUM}`,
+      url: `${process.env.RPC_URL_SEPOLIA}`,
       chainId: 11155111,
       gas: 8000000,
     }
