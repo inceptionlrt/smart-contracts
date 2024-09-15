@@ -40,6 +40,7 @@ contract InceptionAirdrop is
         IERC20 _token
     ) external initializer {
         __Ownable_init(initialOwner);
+        __Pausable_init();
 
         token = _token;
         emit TokenChanged(address(0), address(_token));
@@ -74,16 +75,14 @@ contract InceptionAirdrop is
         );
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            address recipient = recipients[i];
-            uint256 newBalance = newBalances[i];
-            claimed[recipient] = false;
+            claimed[recipients[i]] = false;
 
             emit AirdropUpdated(
-                recipient,
-                airdropBalances[recipient],
-                newBalance
+                recipients[i],
+                airdropBalances[recipients[i]],
+                newBalances[i]
             );
-            airdropBalances[recipient] = newBalance;
+            airdropBalances[recipients[i]] = newBalances[i];
         }
     }
 
