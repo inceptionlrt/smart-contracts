@@ -30,7 +30,7 @@ contract InceptionAirdrop is
     mapping(address => bool) public claimed;
 
     modifier onlyOperator() {
-        if (msg.sender != operator) revert OnlyOperatorAllowed();
+        require(msg.sender == operator, OnlyOperatorAllowed());
         _;
     }
 
@@ -50,15 +50,15 @@ contract InceptionAirdrop is
 
     /// @dev users can claim their airdrop
     function claimAirdrop() external whenNotPaused {
-        if (claimed[msg.sender]) revert AirdropAlreadyClaimed();
+        require(!claimed[msg.sender], AirdropAlreadyClaimed());
 
         uint256 amount = airdropBalances[msg.sender];
-        if (amount == 0) revert NoAirdropAvailable();
+        require(amount != 0, NoAirdropAvailable());
 
         claimed[msg.sender] = true;
 
         // Transfer the tokens to the user
-        if (!token.transfer(msg.sender, amount)) revert TokenTransferFailed();
+        require(token.transfer(msg.sender, amount), TokenTransferFailed());
 
         emit AirdropClaimed(msg.sender, amount);
     }
@@ -68,8 +68,10 @@ contract InceptionAirdrop is
         address[] calldata recipients,
         uint256[] calldata newBalances
     ) external onlyOwner {
-        if (recipients.length != newBalances.length)
-            revert ArrayLengthsMismatch();
+        require(
+            recipients.length == newBalances.length,
+            ArrayLengthsMismatch()
+        );
 
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
@@ -89,7 +91,7 @@ contract InceptionAirdrop is
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external onlyOperator {
-        if (recipients.length != amounts.length) revert ArrayLengthsMismatch();
+        require(recipients.length == amounts.length, ArrayLengthsMismatch());
 
         for (uint256 i = 0; i < recipients.length; i++) {
             if (airdropBalances[recipients[i]] == 0) {
@@ -99,7 +101,7 @@ contract InceptionAirdrop is
     }
 
     function withdrawTokens(uint256 amount) external onlyOwner {
-        if (!token.transfer(msg.sender, amount)) revert TokenTransferFailed();
+        require(token.transfer(msg.sender, amount), TokenTransferFailed());
     }
 
     function pause() external onlyOwner {
