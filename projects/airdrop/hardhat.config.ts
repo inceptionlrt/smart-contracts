@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_HOLESKY}`,
       chainId: 17000,
-      gas: 8000000,
+      gas: 80000000,
     }
   },
   solidity: {
@@ -33,7 +33,15 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
     },
+  }, etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY
   },
+  sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true
+  }
+
 };
 
 export default config;

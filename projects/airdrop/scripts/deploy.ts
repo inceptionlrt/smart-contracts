@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network, run } from "hardhat";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -20,19 +20,42 @@ async function main() {
 
     // Deploy the InceptionAirdrop contract
     const InceptionAirdropFactory = await ethers.getContractFactory("InceptionAirdrop");
-    const inceptionAirdrop = await InceptionAirdropFactory.deploy();
+    const inceptionAirdrop = await InceptionAirdropFactory.deploy({
+        gasLimit: 1_000_000,
+    });
     await inceptionAirdrop.waitForDeployment();
-    console.log(`InceptionAirdrop deployed at: ${await inceptionAirdrop.getAddress()}`);
+    const inceptionAirdropAddress = await inceptionAirdrop.getAddress();
+    console.log(`InceptionAirdrop deployed at: ${inceptionAirdropAddress}`);
 
-    // Initialize the contract with owner, operator and token
     const tx = await inceptionAirdrop.initialize(deployer.address, operatorAddress, tokenAddress);
     await tx.wait();
     console.log(`InceptionAirdrop initialized with owner: ${deployer.address}, operator: ${operatorAddress}, token: ${tokenAddress}`);
 
-    // Fetch the final balance of the deployer using native BigInt
+    // Only attempt to verify if the network supports verification
+    const supportedChains = [1, 4, 5, 42, 56, 137, 17000];
+
+    const networkData = await ethers.provider.getNetwork();
+    const chainId = Number(networkData.chainId);
+
+    if (supportedChains.includes(chainId) && process.env.ETHERSCAN_API_KEY) {
+        console.log("Verifying contract on Etherscan...");
+        try {
+            await run("verify:verify", {
+                address: inceptionAirdropAddress,
+                constructorArguments: [],
+            });
+            console.log("Contract verified successfully!");
+        } catch (error) {
+            console.error("Verification failed:", error);
+        }
+    } else {
+        console.log(
+            `Skipping verification. Network with chain ID ${chainId} is not supported for verification.`
+        );
+    }
+
     const finalBalance = await ethers.provider.getBalance(deployer.address);
 
-    // Calculate and log the deployment cost in ETH
     const deploymentCost = initialBalance - finalBalance;
     console.log(`Deployment cost: ${ethers.formatEther(deploymentCost)} ETH`);
 }
