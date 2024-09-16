@@ -29,6 +29,13 @@ contract InceptionAirdrop is
     /// @dev Tracks which addresses have claimed their airdrop
     mapping(address => bool) public claimed;
 
+    error OnlyOperatorAllowed();
+    error AirdropAlreadyClaimed();
+    error NoAirdropAvailable();
+    error TokenTransferFailed();
+    error ArrayLengthsMismatch();
+    error NewOperatorZeroAddress();
+
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperatorAllowed());
         _;
@@ -47,6 +54,14 @@ contract InceptionAirdrop is
 
         operator = newOperator;
         emit OperatorChanged(address(0), newOperator);
+    }
+
+    /// @notice Allows the owner to change the operator address.
+    /// @param newOperator The new operator address.
+    function setOperator(address newOperator) external onlyOwner {
+        require(newOperator != address(0), NewOperatorZeroAddress());
+        emit OperatorChanged(operator, newOperator);
+        operator = newOperator;
     }
 
     /// @dev users can claim their airdrop

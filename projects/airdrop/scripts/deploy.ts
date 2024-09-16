@@ -5,6 +5,7 @@ dotenv.config();
 
 async function main() {
     const operatorAddress = process.env.OPERATOR_ADDRESS;
+    const multisigAddress = process.env.MULTISIG_ADDRESS;
     const tokenAddress = process.env.TOKEN_ADDRESS;
 
     if (!operatorAddress || !tokenAddress) {
@@ -18,7 +19,7 @@ async function main() {
     const initialBalance = await ethers.provider.getBalance(deployer.address);
 
     const InceptionAirdropFactory = await ethers.getContractFactory("InceptionAirdrop");
-    const inceptionAirdrop = await upgrades.deployProxy(InceptionAirdropFactory, [deployer.address, operatorAddress, tokenAddress], {
+    const inceptionAirdrop = await upgrades.deployProxy(InceptionAirdropFactory, [multisigAddress, operatorAddress, tokenAddress], {
         initializer: "initialize",
         kind: "transparent",
     });
