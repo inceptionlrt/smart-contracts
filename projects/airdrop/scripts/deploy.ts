@@ -17,11 +17,10 @@ async function main() {
 
     const initialBalance = await ethers.provider.getBalance(deployer.address);
 
-    // Deploy the InceptionAirdrop contract as an upgradeable contract
     const InceptionAirdropFactory = await ethers.getContractFactory("InceptionAirdrop");
     const inceptionAirdrop = await upgrades.deployProxy(InceptionAirdropFactory, [deployer.address, operatorAddress, tokenAddress], {
-        initializer: "initialize", // This ensures the proxy calls the `initialize` function
-        kind: "transparent", // Transparent proxy pattern is the default, but you can choose "uups" if needed
+        initializer: "initialize",
+        kind: "transparent",
     });
     await inceptionAirdrop.waitForDeployment();
     const inceptionAirdropAddress = await inceptionAirdrop.getAddress();
