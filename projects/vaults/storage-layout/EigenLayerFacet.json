@@ -1,0 +1,230 @@
+{
+  "storage": [
+    {
+      "astId": 10325,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_initialized",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_uint8"
+    },
+    {
+      "astId": 10328,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_initializing",
+      "offset": 1,
+      "slot": "0",
+      "type": "t_bool"
+    },
+    {
+      "astId": 1081,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_status",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 1150,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "__gap",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_array(t_uint256)49_storage"
+    },
+    {
+      "astId": 35,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "__assetHandlerGap",
+      "offset": 0,
+      "slot": "51",
+      "type": "t_array(t_uint256)150_storage"
+    },
+    {
+      "astId": 38,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_asset",
+      "offset": 0,
+      "slot": "201",
+      "type": "t_contract(IERC20)13263"
+    },
+    {
+      "astId": 42,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "__gap",
+      "offset": 0,
+      "slot": "202",
+      "type": "t_array(t_uint256)49_storage"
+    },
+    {
+      "astId": 45,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "strategyManager",
+      "offset": 0,
+      "slot": "251",
+      "type": "t_contract(IStrategyManager)11216"
+    },
+    {
+      "astId": 48,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "strategy",
+      "offset": 0,
+      "slot": "252",
+      "type": "t_contract(IStrategy)11310"
+    },
+    {
+      "astId": 50,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "epoch",
+      "offset": 0,
+      "slot": "253",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 53,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_operator",
+      "offset": 0,
+      "slot": "254",
+      "type": "t_address"
+    },
+    {
+      "astId": 56,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "totalAmountToWithdraw",
+      "offset": 0,
+      "slot": "255",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 59,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_pendingWithdrawalAmount",
+      "offset": 0,
+      "slot": "256",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 62,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "delegationManager",
+      "offset": 0,
+      "slot": "257",
+      "type": "t_contract(IDelegationManager)2233"
+    },
+    {
+      "astId": 66,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "claimerWithdrawalsQueue",
+      "offset": 0,
+      "slot": "258",
+      "type": "t_array(t_struct(Withdrawal)1800_storage)dyn_storage"
+    },
+    {
+      "astId": 72,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "redeemReservedAmount",
+      "offset": 0,
+      "slot": "259",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 77,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "_operatorRestakers",
+      "offset": 0,
+      "slot": "260",
+      "type": "t_mapping(t_address,t_address)"
+    },
+    {
+      "astId": 80,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "restakers",
+      "offset": 0,
+      "slot": "261",
+      "type": "t_array(t_address)dyn_storage"
+    },
+    {
+      "astId": 82,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "depositBonusAmount",
+      "offset": 0,
+      "slot": "262",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 85,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "targetCapacity",
+      "offset": 0,
+      "slot": "263",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 103,
+      "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+      "label": "__reserver",
+      "offset": 0,
+      "slot": "264",
+      "type": "t_array(t_uint256)37_storage"
+    }
+  ],
+  "types": {
+    "t_address": { "encoding": "inplace", "label": "address", "numberOfBytes": "20" },
+    "t_array(t_address)dyn_storage": { "base": "t_address", "encoding": "dynamic_array", "label": "address[]", "numberOfBytes": "32" },
+    "t_array(t_struct(Withdrawal)1800_storage)dyn_storage": {
+      "base": "t_struct(Withdrawal)1800_storage",
+      "encoding": "dynamic_array",
+      "label": "struct IEigenLayerHandler.Withdrawal[]",
+      "numberOfBytes": "32"
+    },
+    "t_array(t_uint256)150_storage": { "base": "t_uint256", "encoding": "inplace", "label": "uint256[150]", "numberOfBytes": "4800" },
+    "t_array(t_uint256)37_storage": { "base": "t_uint256", "encoding": "inplace", "label": "uint256[37]", "numberOfBytes": "1184" },
+    "t_array(t_uint256)49_storage": { "base": "t_uint256", "encoding": "inplace", "label": "uint256[49]", "numberOfBytes": "1568" },
+    "t_bool": { "encoding": "inplace", "label": "bool", "numberOfBytes": "1" },
+    "t_contract(IDelegationManager)2233": { "encoding": "inplace", "label": "contract IDelegationManager", "numberOfBytes": "20" },
+    "t_contract(IERC20)13263": { "encoding": "inplace", "label": "contract IERC20", "numberOfBytes": "20" },
+    "t_contract(IStrategy)11310": { "encoding": "inplace", "label": "contract IStrategy", "numberOfBytes": "20" },
+    "t_contract(IStrategyManager)11216": { "encoding": "inplace", "label": "contract IStrategyManager", "numberOfBytes": "20" },
+    "t_mapping(t_address,t_address)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => address)",
+      "numberOfBytes": "32",
+      "value": "t_address"
+    },
+    "t_struct(Withdrawal)1800_storage": {
+      "encoding": "inplace",
+      "label": "struct IEigenLayerHandler.Withdrawal",
+      "members": [
+        {
+          "astId": 1795,
+          "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+          "label": "epoch",
+          "offset": 0,
+          "slot": "0",
+          "type": "t_uint256"
+        },
+        {
+          "astId": 1797,
+          "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+          "label": "receiver",
+          "offset": 0,
+          "slot": "1",
+          "type": "t_address"
+        },
+        {
+          "astId": 1799,
+          "contract": "contracts/facets/eigenlayer-vault/EigenLayerFacet.sol:EigenLayerFacet",
+          "label": "amount",
+          "offset": 0,
+          "slot": "2",
+          "type": "t_uint256"
+        }
+      ],
+      "numberOfBytes": "96"
+    },
+    "t_uint256": { "encoding": "inplace", "label": "uint256", "numberOfBytes": "32" },
+    "t_uint8": { "encoding": "inplace", "label": "uint8", "numberOfBytes": "1" }
+  }
+}

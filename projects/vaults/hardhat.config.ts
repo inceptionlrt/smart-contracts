@@ -4,7 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
-// import "hardhat-storage-layout";
+import "hardhat-storage-layout";
 import "hardhat-tracer";
 
 // Hardhat tasks
@@ -15,7 +15,7 @@ import "./tasks/deposit-extra";
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   solidity: {
-    version: "0.8.24",
+    version: "0.8.23",
     settings: {
       optimizer: {
         enabled: true,

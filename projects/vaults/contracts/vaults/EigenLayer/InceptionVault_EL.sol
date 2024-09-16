@@ -11,12 +11,10 @@ import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.s
 
 import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
 
-import "hardhat/console.sol";
-
 /// @author The InceptionLRT team
-/// @title The InceptionVault contract
+/// @title The InceptionVault_EL contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault_EL is IInceptionVault_EL, EigenLayerHandler {
+contract InceptionVault_EL is EigenLayerHandler, IInceptionVault_EL {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -367,10 +365,6 @@ contract InceptionVault_EL is IInceptionVault_EL, EigenLayerHandler {
     }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
-        console.log(
-            "=========================== new ratioFeed: ",
-            newRatioFeed
-        );
         _fallback(setterFacet);
     }
 

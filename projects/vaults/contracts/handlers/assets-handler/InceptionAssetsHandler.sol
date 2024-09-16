@@ -29,13 +29,7 @@ contract InceptionAssetsHandler is
 
     IERC20 internal _asset;
 
-    address public eigenLayerFacet;
-    address public userOperationFacet;
-    address public setterFacet;
-    address public mellowFacet;
-    address public symbioticFacet;
-
-    uint256[44] private __reserver;
+    uint256[50 - 1] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress

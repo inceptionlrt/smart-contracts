@@ -174,7 +174,7 @@ const initVault = async (a) => {
 
   /// =========================== FACETS ===========================
 
-  const setterFacet = await ethers.deployContract("SetterFacet");
+  const setterFacet = await ethers.deployContract("EigenSetterFacet");
   await setterFacet.waitForDeployment();
   await iVault.setSetterFacet(await setterFacet.getAddress());
   console.log("setterFacet.getAddress(): ", await setterFacet.getAddress());

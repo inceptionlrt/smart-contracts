@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
-import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
+import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
+import {ISymbioticHandler} from "../../interfaces/symbiotic-vault/ISymbioticHandler.sol";
 import {IIMellowRestaker} from "../../interfaces/symbiotic-vault/IIMellowRestaker.sol";
 import {IISymbioticRestaker} from "../../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
 
@@ -13,7 +19,7 @@ import "hardhat/console.sol";
 /// @title The SymbioticHandler contract
 /// @dev Serves communication with external EigenLayer protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
+contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     uint256 public epoch;
 
     /// @dev inception operator
@@ -65,11 +71,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
             block.timestamp
         );
 
-        emit IEigenLayerHandler.DelegatedTo(
-            address(0),
-            address(mellowRestaker),
-            amount
-        );
+        emit DelegatedTo(address(0), address(mellowRestaker), amount);
         return;
     }
 
@@ -80,7 +82,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function undelegateMellow(
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        _fallback(mellowFacet);
+        //   _fallback(mellowFacet);
     }
 
     /// @dev TODO
@@ -97,7 +99,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
         //     _pendingWithdrawalAmount = 0;
         // }
 
-        emit IEigenLayerHandler.WithdrawalClaimed(withdrawnAmount);
+        emit WithdrawalClaimed(withdrawnAmount);
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }
@@ -107,11 +109,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
         _asset.approve(address(symbioticRestaker), amount);
         symbioticRestaker.delegate(amount);
 
-        emit IEigenLayerHandler.DelegatedTo(
-            address(0),
-            address(mellowRestaker),
-            amount
-        );
+        emit DelegatedTo(address(0), address(mellowRestaker), amount);
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
@@ -227,6 +225,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
-        _fallback(setterFacet);
+        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
+        targetCapacity = newTargetCapacity;
     }
 }

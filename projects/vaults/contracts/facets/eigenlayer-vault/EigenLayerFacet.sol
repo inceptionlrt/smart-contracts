@@ -5,6 +5,8 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
+import {BaseFacet} from "./BaseFacet.sol";
+
 import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
 import {IOwnable} from "../../interfaces/common/IOwnable.sol";
 import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
@@ -20,56 +22,11 @@ import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErro
 
 import "hardhat/console.sol";
 
-contract EigenLayerFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
-    uint256[150] private __assetHandlerGap;
-
-    IERC20 internal _asset;
-
-    uint256[49] private __gap;
-
-    IStrategyManager public strategyManager;
-    IStrategy public strategy;
-
-    uint256 public epoch;
-
-    /// @dev inception operator
-    address internal _operator;
-
-    /// @dev represents the pending amount to be redeemed by claimers,
-    /// @notice + amount to undelegate from EigenLayer
-    uint256 public totalAmountToWithdraw;
-
-    /// @dev represents the amount pending processing until it is claimed
-    /// @dev amount measured in asset
-    uint256 internal _pendingWithdrawalAmount;
-
-    IDelegationManager public delegationManager;
-
-    IEigenLayerHandler.Withdrawal[] public claimerWithdrawalsQueue;
-
-    address internal constant _MOCK_ADDRESS =
-        0x0000000000000000000000000012345000000000;
-
-    /// @dev heap reserved for the claimers
-    uint256 public redeemReservedAmount;
-
-    /// @dev EigenLayer operator -> inception staker
-    mapping(address => address) internal _operatorRestakers;
-    address[] public restakers;
-
-    uint256 public depositBonusAmount;
-
-    /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
-    uint256 public targetCapacity;
-
-    uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
-
-    /// @dev 100%
-    uint64 public constant MAX_PERCENT = 100 * 1e8;
-
-    /// @dev constants are not stored in the storage
-    uint256[50 - 13] private __reserver;
-
+contract EigenLayerFacet is
+    BaseFacet,
+    IEigenLayerHandler,
+    IInceptionVaultErrors
+{
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         if (amount > getFreeBalance())

@@ -21,7 +21,7 @@ import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErro
 
 import "hardhat/console.sol";
 
-contract SetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
+contract EigenSetterFacet is ReentrancyGuardUpgradeable, IInceptionVaultErrors {
     uint256[150] private __assetHandlerGap;
 
     IERC20 internal _asset;

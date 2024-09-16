@@ -50,10 +50,14 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
+    address public eigenLayerFacet;
+    address public userOperationFacet;
+    address public setterFacet;
+
     /// TODO
     /// @dev constants are not stored in the storage
     /// TODO
-    uint256[50 - 15] private __reserver;
+    uint256[50 - 16] private __reserver;
 
     modifier onlyOperator() {
         if (msg.sender != _operator) revert OnlyOperatorAllowed();
