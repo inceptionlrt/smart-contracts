@@ -9,6 +9,7 @@ const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   networks: {
     localhost: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY_TESTNET}`],
       url: "http://127.0.0.1:8545/"
     },
     ethereum: {
@@ -16,10 +17,10 @@ const config: HardhatUserConfig = {
       url: `${process.env.RPC_URL_ETHEREUM}`,
       chainId: 1,
       gas: 8000000,
-    }, sepolia: {
-      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY_TESTNET}`],
-      url: `${process.env.RPC_URL_SEPOLIA}`,
-      chainId: 11155111,
+    }, holesky: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+      url: `${process.env.RPC_URL_HOLESKY}`,
+      chainId: 17000,
       gas: 8000000,
     }
   },
