@@ -1,4 +1,4 @@
-import { ethers, network, run } from "hardhat";
+import { ethers, upgrades, network, run } from "hardhat";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -13,27 +13,22 @@ async function main() {
     }
 
     const [deployer] = await ethers.getSigners();
-
     console.log(`Deploying contracts with the account: ${deployer.address}`);
 
     const initialBalance = await ethers.provider.getBalance(deployer.address);
 
-    // Deploy the InceptionAirdrop contract
+    // Deploy the InceptionAirdrop contract as an upgradeable contract
     const InceptionAirdropFactory = await ethers.getContractFactory("InceptionAirdrop");
-    const inceptionAirdrop = await InceptionAirdropFactory.deploy({
-        gasLimit: 1_000_000,
+    const inceptionAirdrop = await upgrades.deployProxy(InceptionAirdropFactory, [deployer.address, operatorAddress, tokenAddress], {
+        initializer: "initialize", // This ensures the proxy calls the `initialize` function
+        kind: "transparent", // Transparent proxy pattern is the default, but you can choose "uups" if needed
     });
     await inceptionAirdrop.waitForDeployment();
     const inceptionAirdropAddress = await inceptionAirdrop.getAddress();
-    console.log(`InceptionAirdrop deployed at: ${inceptionAirdropAddress}`);
-
-    const tx = await inceptionAirdrop.initialize(deployer.address, operatorAddress, tokenAddress);
-    await tx.wait();
-    console.log(`InceptionAirdrop initialized with owner: ${deployer.address}, operator: ${operatorAddress}, token: ${tokenAddress}`);
+    console.log(`InceptionAirdrop (upgradeable) deployed at: ${inceptionAirdropAddress}`);
 
     // Only attempt to verify if the network supports verification
     const supportedChains = [1, 4, 5, 42, 56, 137, 17000];
-
     const networkData = await ethers.provider.getNetwork();
     const chainId = Number(networkData.chainId);
 
@@ -49,13 +44,10 @@ async function main() {
             console.error("Verification failed:", error);
         }
     } else {
-        console.log(
-            `Skipping verification. Network with chain ID ${chainId} is not supported for verification.`
-        );
+        console.log(`Skipping verification. Network with chain ID ${chainId} is not supported for verification.`);
     }
 
     const finalBalance = await ethers.provider.getBalance(deployer.address);
-
     const deploymentCost = initialBalance - finalBalance;
     console.log(`Deployment cost: ${ethers.formatEther(deploymentCost)} ETH`);
 }
