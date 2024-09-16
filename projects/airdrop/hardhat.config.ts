@@ -9,7 +9,6 @@ const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   networks: {
     localhost: {
-      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY_TESTNET}`],
       url: "http://127.0.0.1:8545/"
     },
     ethereum: {
@@ -37,8 +36,6 @@ const config: HardhatUserConfig = {
     apiKey: process.env.ETHERSCAN_API_KEY
   },
   sourcify: {
-    // Disabled by default
-    // Doesn't need an API key
     enabled: true
   }
 
