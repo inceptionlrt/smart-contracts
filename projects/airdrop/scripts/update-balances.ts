@@ -10,7 +10,7 @@ const BATCH_SIZE = 1000;
 
 async function main() {
     const airdropAddress = process.env.AIRDROP_ADDRESS;
-    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL_ETHEREUM);
     const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
     if (!airdropAddress || !provider || !wallet) {
