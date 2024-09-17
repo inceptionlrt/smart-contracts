@@ -16,6 +16,8 @@ interface IInceptionAirdrop {
 
     error ArrayLengthsMismatch();
 
+    error NewOperatorZeroAddress();
+
     /********************************************************
      ************************ Events ************************
      */

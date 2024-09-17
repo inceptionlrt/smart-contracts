@@ -29,13 +29,6 @@ contract InceptionAirdrop is
     /// @dev Tracks which addresses have claimed their airdrop
     mapping(address => bool) public claimed;
 
-    error OnlyOperatorAllowed();
-    error AirdropAlreadyClaimed();
-    error NoAirdropAvailable();
-    error TokenTransferFailed();
-    error ArrayLengthsMismatch();
-    error NewOperatorZeroAddress();
-
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperatorAllowed());
         _;
