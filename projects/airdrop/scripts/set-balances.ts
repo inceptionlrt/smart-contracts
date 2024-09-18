@@ -31,19 +31,11 @@ async function main(hre: HardhatRuntimeEnvironment) {
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-    // Check if the Airdrop contract exists at the specified address
-    const code = await provider.getCode(airdropAddress);
-    if (code === "0x") {
-        console.error(`Error: No contract found at address ${airdropAddress}`);
-        process.exit(1);
-    }
-
-    console.log(`Airdrop contract exists at ${airdropAddress}`);
-
     const inceptionAirdrop = new ethers.Contract(
         airdropAddress,
         [
-            "function setAirdropBalances(address[] recipients, uint256[] amounts) external",
+            "function updateAirdrop(address[] recipients, uint256[] newBalances) external",
+            "function airdropBalances(address) view returns (uint256)"
         ],
         wallet
     );
@@ -57,17 +49,18 @@ async function main(hre: HardhatRuntimeEnvironment) {
             .pipe(csvParser())
             .on("data", (row: { address: string; token_amount: string }) => {
                 try {
-                    const address = ethers.getAddress(row.address);
+                    const address = ethers.getAddress(row.address); // Validate address format
                     console.log(`Valid address: ${address}`);
 
-                    const amount = BigInt(row.token_amount);
+                    const amount = BigInt(row.token_amount); // Validate amount
                     console.log(`Valid amount: ${amount} wei for address ${address}`);
 
                     recipients.push(address);
                     newBalances.push(amount);
                 } catch (error) {
-                    const err = error as Error;
-                    console.error(`Invalid row in CSV: ${JSON.stringify(row)}`, err.message);
+                    console.error(`Invalid row in CSV: ${JSON.stringify(row)} - ${error.message}`);
+                    reject(new Error(`Invalid row in CSV: ${JSON.stringify(row)}`)); // Stop execution if an invalid row is found
+                    process.exit(1);
                 }
             })
             .on("end", () => {
@@ -85,6 +78,9 @@ async function main(hre: HardhatRuntimeEnvironment) {
         process.exit(1);
     }
 
+    let totalGasUsed = BigInt(0);  // Track total gas used across all batches
+    let totalGasCost = BigInt(0);  // Track total gas cost in wei
+
     // Batches
     let batchCount = 0;
     for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
@@ -98,14 +94,38 @@ async function main(hre: HardhatRuntimeEnvironment) {
         const balance = await provider.getBalance(wallet.address);
         console.log(`Deployer's balance before batch ${batchCount}: ${ethers.formatEther(balance)} ETH`);
 
+        // Send the transaction
         try {
-            const tx = await inceptionAirdrop.setAirdropBalances(batchRecipients, batchBalances);
-            await tx.wait();
+            const tx = await inceptionAirdrop.updateAirdrop(batchRecipients, batchBalances);
+            const receipt = await tx.wait();
+
             console.log(`Batch ${batchCount} airdrop updated successfully 👍`);
+
+            // Calculate gas used and cost for this transaction
+            const gasUsed = receipt.gasUsed;
+            const gasPrice = tx.gasPrice ? BigInt(tx.gasPrice.toString()) : BigInt(0);
+            const gasCost = gasUsed * gasPrice;
+
+            console.log(`Gas used for batch ${batchCount}: ${gasUsed.toString()}`);
+            console.log(`Gas cost for batch ${batchCount}: ${ethers.formatEther(gasCost)} ETH`);
+
+            totalGasUsed += gasUsed;
+            totalGasCost += gasCost;
+
+            // Check the airdrop balance for each recipient after the transaction
+            for (const recipient of batchRecipients) {
+                const updatedBalance = await inceptionAirdrop.airdropBalances(recipient);
+                console.log(`Updated airdrop balance for ${recipient}: ${ethers.formatUnits(updatedBalance, 18)} tokens`);
+            }
         } catch (error) {
             console.error(`Error updating airdrop for batch 👎 ${batchCount}:`, error);
+            process.exit(1); // Exit if the transaction fails
         }
     }
+
+    // Output total gas usage and cost
+    console.log(`Total gas used: ${totalGasUsed.toString()}`);
+    console.log(`Total gas cost: ${ethers.formatEther(totalGasCost)} ETH`);
 }
 
 main(hre)
