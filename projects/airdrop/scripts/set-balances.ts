@@ -43,7 +43,7 @@ async function main(hre: HardhatRuntimeEnvironment) {
     const inceptionAirdrop = new ethers.Contract(
         airdropAddress,
         [
-            "function updateAirdrop(address[] recipients, uint256[] newBalances) external",
+            "function setAirdropBalances(address[] recipients, uint256[] amounts) external",
         ],
         wallet
     );
@@ -98,9 +98,8 @@ async function main(hre: HardhatRuntimeEnvironment) {
         const balance = await provider.getBalance(wallet.address);
         console.log(`Deployer's balance before batch ${batchCount}: ${ethers.formatEther(balance)} ETH`);
 
-        // Send the transaction
         try {
-            const tx = await inceptionAirdrop.updateAirdrop(batchRecipients, batchBalances);
+            const tx = await inceptionAirdrop.setAirdropBalances(batchRecipients, batchBalances);
             await tx.wait();
             console.log(`Batch ${batchCount} airdrop updated successfully 👍`);
         } catch (error) {
