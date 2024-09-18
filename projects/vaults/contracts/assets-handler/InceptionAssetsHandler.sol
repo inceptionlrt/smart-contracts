@@ -9,9 +9,6 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
 import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
 
-import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
-import {Convert} from "../lib/Convert.sol";
-
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
 /// @dev Handles operations with the corresponding asset
@@ -26,7 +23,7 @@ contract InceptionAssetsHandler is
 
     IERC20 internal _asset;
 
-    uint256[49] private __reserver;
+    uint256[50 - 1] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress

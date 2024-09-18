@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {MellowHandler, IMellowRestaker} from "../mellow-handler/MellowHandler.sol";
 
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+
+import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionVault contract
+/// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault is IInceptionVault, EigenLayerHandler {
+contract InceptionVault_S is IInceptionVault, MellowHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -52,17 +54,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
-        IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy,
         IMellowRestaker _mellowRestaker
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(
-            _strategyManager,
-            _assetStrategy,
-            _mellowRestaker
-        );
+        __MellowHandler_init(_mellowRestaker);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -169,37 +165,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ) external nonReentrant whenNotPaused onlyOperator {
         if (elOperator == address(0)) revert NullParams();
 
-        if (elOperator == address(mellowRestaker)) {
-            _beforeDeposit(amount);
-            _depositAssetIntoMellow(amount);
-            emit DelegatedTo(address(0), elOperator, amount);
-            return;
-        }
+        _beforeDeposit(amount);
+        _depositAssetIntoMellow(amount);
 
-        address restaker = _getRestaker(elOperator);
-        // try to find a restaker for the specific EL operator
-        _beforeDepositAssetIntoStrategy(amount);
-
-        bool delegate = false;
-        if (restaker == _MOCK_ADDRESS) {
-            delegate = true;
-            // deploy a new restaker
-            restaker = _deployNewStub();
-            _operatorRestakers[elOperator] = restaker;
-            restakers.push(restaker);
-        }
-
-        _depositAssetIntoStrategy(restaker, amount);
-
-        if (delegate)
-            _delegateToOperator(
-                restaker,
-                elOperator,
-                approverSalt,
-                approverSignatureAndExpiry
-            );
-
-        emit DelegatedTo(restaker, elOperator, amount);
+        emit DelegatedTo(address(0), elOperator, amount);
+        return;
     }
 
     /*///////////////////////////////////////
@@ -353,25 +323,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function _deployNewStub() internal returns (address) {
-        if (_stakerImplementation == address(0)) revert ImplementationNotSet();
-        // deploy new beacon proxy and do init call
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
-            delegationManager,
-            strategyManager,
-            strategy,
-            _operator
-        );
-        address deployedAddress = address(new BeaconProxy(address(this), data));
-
-        IOwnable asOwnable = IOwnable(deployedAddress);
-        asOwnable.transferOwnership(owner());
-
-        emit RestakerDeployed(deployedAddress);
-        return deployedAddress;
-    }
-
     function implementation() external view returns (address) {
         return _stakerImplementation;
     }
@@ -479,51 +430,51 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    // function setDepositBonusParams(
-    //     uint64 newMaxBonusRate,
-    //     uint64 newOptimalBonusRate,
-    //     uint64 newDepositUtilizationKink
-    // ) external onlyOwner {
-    //     if (newMaxBonusRate > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newMaxBonusRate);
-    //     if (newOptimalBonusRate > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newOptimalBonusRate);
-    //     if (newDepositUtilizationKink > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newDepositUtilizationKink);
+    function setDepositBonusParams(
+        uint64 newMaxBonusRate,
+        uint64 newOptimalBonusRate,
+        uint64 newDepositUtilizationKink
+    ) external onlyOwner {
+        if (newMaxBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxBonusRate);
+        if (newOptimalBonusRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalBonusRate);
+        if (newDepositUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newDepositUtilizationKink);
 
-    //     maxBonusRate = newMaxBonusRate;
-    //     optimalBonusRate = newOptimalBonusRate;
-    //     depositUtilizationKink = newDepositUtilizationKink;
+        maxBonusRate = newMaxBonusRate;
+        optimalBonusRate = newOptimalBonusRate;
+        depositUtilizationKink = newDepositUtilizationKink;
 
-    //     emit DepositBonusParamsChanged(
-    //         newMaxBonusRate,
-    //         newOptimalBonusRate,
-    //         newDepositUtilizationKink
-    //     );
-    // }
+        emit DepositBonusParamsChanged(
+            newMaxBonusRate,
+            newOptimalBonusRate,
+            newDepositUtilizationKink
+        );
+    }
 
-    // function setFlashWithdrawFeeParams(
-    //     uint64 newMaxFlashFeeRate,
-    //     uint64 newOptimalWithdrawalRate,
-    //     uint64 newWithdrawUtilizationKink
-    // ) external onlyOwner {
-    //     if (newMaxFlashFeeRate > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newMaxFlashFeeRate);
-    //     if (newOptimalWithdrawalRate > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newOptimalWithdrawalRate);
-    //     if (newWithdrawUtilizationKink > MAX_PERCENT)
-    //         revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+    function setFlashWithdrawFeeParams(
+        uint64 newMaxFlashFeeRate,
+        uint64 newOptimalWithdrawalRate,
+        uint64 newWithdrawUtilizationKink
+    ) external onlyOwner {
+        if (newMaxFlashFeeRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newMaxFlashFeeRate);
+        if (newOptimalWithdrawalRate > MAX_PERCENT)
+            revert ParameterExceedsLimits(newOptimalWithdrawalRate);
+        if (newWithdrawUtilizationKink > MAX_PERCENT)
+            revert ParameterExceedsLimits(newWithdrawUtilizationKink);
 
-    //     maxFlashFeeRate = newMaxFlashFeeRate;
-    //     optimalWithdrawalRate = newOptimalWithdrawalRate;
-    //     withdrawUtilizationKink = newWithdrawUtilizationKink;
+        maxFlashFeeRate = newMaxFlashFeeRate;
+        optimalWithdrawalRate = newOptimalWithdrawalRate;
+        withdrawUtilizationKink = newWithdrawUtilizationKink;
 
-    //     emit WithdrawFeeParamsChanged(
-    //         newMaxFlashFeeRate,
-    //         newOptimalWithdrawalRate,
-    //         newWithdrawUtilizationKink
-    //     );
-    // }
+        emit WithdrawFeeParamsChanged(
+            newMaxFlashFeeRate,
+            newOptimalWithdrawalRate,
+            newWithdrawUtilizationKink
+        );
+    }
 
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
@@ -564,21 +515,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         emit NameChanged(name, newVaultName);
         name = newVaultName;
-    }
-
-    function addELOperator(address newELOperator) external onlyOwner {
-        if (!delegationManager.isOperator(newELOperator))
-            revert NotEigenLayerOperator();
-
-        if (_operatorRestakers[newELOperator] != address(0))
-            revert OperatorAlreadyExists();
-
-        _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
-        emit ELOperatorAdded(newELOperator);
-    }
-
-    function setMellowOperator() external onlyOwner {
-        _operatorRestakers[address(mellowRestaker)] = _MOCK_ADDRESS;
     }
 
     /*///////////////////////////////

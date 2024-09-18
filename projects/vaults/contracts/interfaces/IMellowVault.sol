@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Arrays.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./IMellowVaultConfigurator.sol";
+
 /**
  * @title IVault
  * @notice Interface defining core methods, constants, and errors for vault contracts.
@@ -99,7 +100,11 @@ abstract contract IMellowVault is IERC20 {
     ) external view virtual returns (WithdrawalRequest memory request);
 
     /// @return count The number of users with pending withdrawal requests.
-    function pendingWithdrawersCount() external view virtual returns (uint256 count);
+    function pendingWithdrawersCount()
+        external
+        view
+        virtual
+        returns (uint256 count);
 
     /// @notice Returns an array of addresses with pending withdrawal requests.
     /// @return users An array of addresses with pending withdrawal requests.
@@ -134,7 +139,11 @@ abstract contract IMellowVault is IERC20 {
 
     /// @notice Returns an array of addresses of all TVL modules.
     /// @return tvlModules_ An array of TVL module addresses.
-    function tvlModules() external view virtual returns (address[] memory tvlModules_);
+    function tvlModules()
+        external
+        view
+        virtual
+        returns (address[] memory tvlModules_);
 
     /// @notice Calculates and returns the total value locked (TVL) of the underlying tokens.
     /// @return tokens An array of underlying token addresses.
@@ -211,7 +220,10 @@ abstract contract IMellowVault is IERC20 {
         uint256[] memory amounts,
         uint256 minLpAmount,
         uint256 deadline
-    ) external virtual returns (uint256[] memory actualAmounts, uint256 lpAmount);
+    )
+        external
+        virtual
+        returns (uint256[] memory actualAmounts, uint256 lpAmount);
 
     /// @notice Handles emergency withdrawals, proportionally withdrawing all tokens in the system (not just the underlying).
     /// @dev Transfers tokens based on the user's share of lpAmount / totalSupply.

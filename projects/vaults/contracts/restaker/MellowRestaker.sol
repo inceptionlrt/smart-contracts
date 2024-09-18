@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -8,9 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeabl
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "hardhat/console.sol";
-
-import "../vaults/InceptionVault.sol";
+import "../vaults/InceptionVault_S.sol";
 import "../interfaces/InceptionRestakerErrors.sol";
 import "../interfaces/IDelegationManager.sol";
 import "../interfaces/IMellowRestaker.sol";
@@ -48,7 +46,7 @@ contract MellowRestaker is
 
     modifier onlyTrustee() {
         require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
+            msg == _vault || msg.sender == _trusteeManager,
             "InceptionRestaker: only vault or trustee manager"
         );
         _;
@@ -132,11 +130,17 @@ contract MellowRestaker is
     }
 
     function claimableAmount() external view returns (uint256) {
-        return IWSteth(wsteth).getStETHByWstETH(
-            IERC20(wsteth).balanceOf(address(this)));
+        return
+            IWSteth(wsteth).getStETHByWstETH(
+                IERC20(wsteth).balanceOf(address(this))
+            );
     }
 
-    function claimMellowWithdrawalCallback() external onlyTrustee returns (uint256) {
+    function claimMellowWithdrawalCallback()
+        external
+        onlyTrustee
+        returns (uint256)
+    {
         uint256 amount = IERC20(wsteth).balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
@@ -156,9 +160,9 @@ contract MellowRestaker is
         return mellowVault.withdrawalRequest(address(this));
     }
 
-    function pendingWithdrawalAmount() external view returns (uint256)
-    {
-        IMellowVault.WithdrawalRequest memory request = mellowVault.withdrawalRequest(address(this));
+    function pendingWithdrawalAmount() external view returns (uint256) {
+        IMellowVault.WithdrawalRequest memory request = mellowVault
+            .withdrawalRequest(address(this));
         return lpAmountToAmount(request.lpAmount);
     }
 
@@ -235,7 +239,8 @@ contract MellowRestaker is
     }
 
     function lpAmountToAmount(uint256 lpAmount) public view returns (uint256) {
-        IMellowVault.ProcessWithdrawalsStack memory s = mellowVault.calculateStack();
+        IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
+            .calculateStack();
         uint256 wstEthAmount = FullMath.mulDiv(
             FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply),
             s.ratiosX96[0],
@@ -244,7 +249,9 @@ contract MellowRestaker is
         return IWSteth(wsteth).getStETHByWstETH(wstEthAmount);
     }
 
-    function _unwrap(uint256 wrappedAmount) private returns (uint256 baseAmount) {
+    function _unwrap(
+        uint256 wrappedAmount
+    ) private returns (uint256 baseAmount) {
         IWSteth(wsteth).unwrap(wrappedAmount);
         return IERC20(_asset).balanceOf(address(this));
     }
