@@ -5,7 +5,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {BaseFacet} from "./BaseFacet.sol";
+import {EigenVaultStorageFacet} from "./EigenVaultStorageFacet.sol";
 
 import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
 import {IOwnable} from "../../interfaces/common/IOwnable.sol";
@@ -23,7 +23,7 @@ import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErro
 import "hardhat/console.sol";
 
 contract EigenLayerFacet is
-    BaseFacet,
+    EigenVaultStorageFacet,
     IEigenLayerHandler,
     IInceptionVaultErrors
 {

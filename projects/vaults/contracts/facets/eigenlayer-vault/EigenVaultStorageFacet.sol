@@ -2,8 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
 import {IOwnable} from "../../interfaces/common/IOwnable.sol";
@@ -18,7 +17,10 @@ import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
 
-contract BaseFacet is ReentrancyGuardUpgradeable {
+contract EigenVaultStorageFacet is
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     uint256[150] private __assetHandlerGap;
 
     IERC20 internal _asset;
@@ -72,13 +74,13 @@ contract BaseFacet is ReentrancyGuardUpgradeable {
     uint256 public minAmount;
 
     mapping(address => IEigenLayerHandler.Withdrawal)
-        private _claimerWithdrawals;
+        internal _claimerWithdrawals;
 
     /// @dev the unique InceptionVault name
     string public name;
 
     /// @dev Factory variables
-    address private _stakerImplementation;
+    address internal _stakerImplementation;
 
     /**
      *  @dev Flash withdrawal params
