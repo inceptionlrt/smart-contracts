@@ -49,10 +49,18 @@ async function main(hre: HardhatRuntimeEnvironment) {
             .pipe(csvParser())
             .on("data", (row: { address: string; token_amount: string }) => {
                 try {
-                    const address = ethers.getAddress(row.address); // Validate address format
+                    // Validate address format
+                    const address = ethers.getAddress(row.address);
+                    if (row.address !== address) {
+                        throw new Error("address not in checksum format.");
+                    }
                     console.log(`Valid address: ${address}`);
 
-                    const amount = BigInt(row.token_amount); // Validate amount
+                    // Validate amount
+                    const amount = BigInt(row.token_amount);
+                    if (amount <= 0) {
+                        throw new Error("0 or less amount assigned.");
+                    };
                     console.log(`Valid amount: ${amount} wei for address ${address}`);
 
                     recipients.push(address);
