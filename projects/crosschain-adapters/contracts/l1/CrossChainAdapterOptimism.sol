@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import "./AbstractCrossChainAdapter.sol";
 
-contract CrossChainBridgeArbitrum is AbstractCrossChainAdapter {
+contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     address public inboxArbitrum;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
 

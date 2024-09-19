@@ -5,7 +5,7 @@ import "@arbitrum/nitro-contracts/src/bridge/Inbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/Outbox.sol";
 import "./AbstractCrossChainAdapter.sol";
 
-contract CrossChainBridgeArbitrum is AbstractCrossChainAdapter {
+contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
     address public inboxArbitrum;
 
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
