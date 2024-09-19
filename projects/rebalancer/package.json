@@ -1,0 +1,21 @@
+{
+  "name": "rebalancer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^0.15.5",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/ignition-core": "^0.15.5",
+    "@openzeppelin/contracts": "^5.0.2",
+    "hardhat": "^2.22.10",
+    "hardhat-dependency-compiler": "^1.2.1"
+  }
+}
