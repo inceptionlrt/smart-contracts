@@ -7,8 +7,6 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     address public inboxOptimism;
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
 
-    uint32[] private chainIds;
-
     constructor(
         address _transactionStorage
     ) AbstractCrossChainAdapter(_transactionStorage) {}
@@ -41,18 +39,5 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
         emit L2EthDeposit(msg.value);
         (bool success, ) = rebalancer.call{value: msg.value}("");
         require(success, "Transfer to Rebalancer failed");
-    }
-
-    function addChainId(uint32 newChainId) external onlyOwner {
-        for (uint i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == newChainId) {
-                revert("Chain ID already exists");
-            }
-        }
-        chainIds.push(newChainId);
-    }
-
-    function getAllChainIds() external view returns (uint32[] memory) {
-        return chainIds;
     }
 }
