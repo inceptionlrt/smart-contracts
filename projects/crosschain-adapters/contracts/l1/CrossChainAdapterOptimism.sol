@@ -4,8 +4,8 @@ pragma solidity 0.8.26;
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
-    address public inboxArbitrum;
-    uint24 public constant ARBITRUM_CHAIN_ID = 42161;
+    address public inboxOptimism;
+    uint24 public constant OPTIMISM_CHAIN_ID = 10;
 
     uint32[] private chainIds;
 
@@ -18,13 +18,13 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
         uint256 _balance,
         uint256 _totalSupply
     ) external override {
-        require(msg.sender == inboxArbitrum, "Not Bridge");
-        handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
+        require(msg.sender == inboxOptimism, "Not Bridge");
+        handleL2Info(OPTIMISM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
-    function setInboxArbitrum(address _inbox) external onlyOwner {
+    function setInboxOptimism(address _inbox) external onlyOwner {
         require(_inbox != address(0), "Setting zero address");
-        inboxArbitrum = _inbox;
+        inboxOptimism = _inbox;
     }
 
     function updateL2Target(address _l2Target) external override onlyOwner {
