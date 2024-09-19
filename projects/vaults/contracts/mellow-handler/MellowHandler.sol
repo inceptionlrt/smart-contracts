@@ -21,18 +21,13 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev inception operator
     address internal _operator;
 
+    IMellowRestaker public mellowRestaker;
+
     /// @dev represents the pending amount to be redeemed by claimers,
     /// @notice + amount to undelegate from EigenLayer
     uint256 public totalAmountToWithdraw;
 
-    /// @dev represents the amount pending processing until it is claimed
-    /// @dev amount measured in asset
-    uint256 internal _pendingWithdrawalAmount;
-
     Withdrawal[] public claimerWithdrawalsQueue;
-
-    address internal constant _MOCK_ADDRESS =
-        0x0000000000000000000000000012345000000000;
 
     /// @dev heap reserved for the claimers
     uint256 public redeemReservedAmount;
@@ -43,8 +38,6 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public targetCapacity;
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
-
-    IMellowRestaker public mellowRestaker;
 
     //// TODO
     /// @dev constants are not stored in the storage
@@ -107,6 +100,7 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
     function undelegateFrom(
+        address mellowVault,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         amount = mellowRestaker.withdrawMellow(amount, true);
@@ -142,7 +136,9 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     // }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    function claimCompletedWithdrawals() public whenNotPaused nonReentrant {
+    function claimCompletedWithdrawals(
+        address mellowVault
+    ) public whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount = mellowRestaker
@@ -151,21 +147,6 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit WithdrawalClaimed(withdrawnAmount);
 
         _updateEpoch(availableBalance + withdrawnAmount);
-    }
-
-    function _claimCompletedWithdrawalsForVault(
-        IDelegationManager.Withdrawal[] memory withdrawals,
-        IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
-        bool[] memory receiveAsTokens
-    ) internal returns (uint256) {
-        uint256 balanceBefore = _asset.balanceOf(address(this));
-
-        // send tokens to the vault
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
-            balanceBefore;
-
-        return withdrawnAmount;
     }
 
     // /// @dev claims completed withdrawals from Mellow, if they exist

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {MellowHandler, IMellowRestaker} from "../mellow-handler/MellowHandler.sol";
+import {MellowHandler, IMellowRestaker, IERC20} from "../mellow-handler/MellowHandler.sol";
 
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
@@ -27,9 +27,6 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     /// @dev the unique InceptionVault name
     string public name;
 
-    /// @dev Factory variables
-    address private _stakerImplementation;
-
     /**
      *  @dev Flash withdrawal params
      */
@@ -54,11 +51,12 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
+        IERC20 assetAddress,
         IInceptionToken _inceptionToken,
         IMellowRestaker _mellowRestaker
     ) internal {
         __Ownable_init();
-        __MellowHandler_init(_mellowRestaker);
+        __MellowHandler_init(assetAddress, _mellowRestaker);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -90,7 +88,6 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         if (amount < minAmount) revert LowerMinAmount(minAmount);
 
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -157,18 +154,16 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
-    function delegateToOperator(
-        uint256 amount,
-        address elOperator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+    function delegateToMellowVault(
+        address mellowVault,
+        uint256 amount
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (elOperator == address(0)) revert NullParams();
+        if (mellowVault == address(0)) revert NullParams();
 
         _beforeDeposit(amount);
         _depositAssetIntoMellow(amount);
 
-        emit DelegatedTo(address(0), elOperator, amount);
+        emit DelegatedTo(address(0), mellowVault, amount);
         return;
     }
 
@@ -182,7 +177,6 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
 
         if (targetCapacity == 0) revert InceptionOnPause();
         if (treasury == address(0)) revert InceptionOnPause();
-        if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -323,19 +317,6 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function implementation() external view returns (address) {
-        return _stakerImplementation;
-    }
-
-    function upgradeTo(
-        address newImplementation
-    ) external whenNotPaused onlyOwner {
-        if (!Address.isContract(newImplementation)) revert NotContract();
-
-        emit ImplementationUpgraded(_stakerImplementation, newImplementation);
-        _stakerImplementation = newImplementation;
-    }
-
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool able, uint256[] memory) {
@@ -367,13 +348,11 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
+    /// TODO
     function getDelegatedTo(
-        address elOperator
+        address mellowVault
     ) external view returns (uint256) {
-        if (elOperator == address(mellowRestaker)) {
-            return mellowRestaker.getDeposited();
-        }
-        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
+        return mellowRestaker.getDeposited();
     }
 
     function getPendingWithdrawalOf(
@@ -382,25 +361,10 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         return _claimerWithdrawals[claimer].amount;
     }
 
-    function _verifyDelegated() internal view returns (bool) {
-        for (uint256 i = 0; i < restakers.length; i++) {
-            if (restakers[i] == address(0)) {
-                continue;
-            }
-            if (!delegationManager.isDelegated(restakers[i])) return false;
-        }
-
-        if (
-            strategy.userUnderlyingView(address(this)) > 0 &&
-            !delegationManager.isDelegated(address(this))
-        ) return false;
-
-        return true;
-    }
-
     function maxDeposit(address /*receiver*/) external view returns (uint256) {
-        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
-        return maxPerDeposit;
+        // (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
+        // return maxPerDeposit;
+        return 0;
     }
 
     function maxRedeem(

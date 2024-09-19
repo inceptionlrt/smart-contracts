@@ -46,7 +46,7 @@ contract MellowRestaker is
 
     modifier onlyTrustee() {
         require(
-            msg == _vault || msg.sender == _trusteeManager,
+            msg.sender == _vault || msg.sender == _trusteeManager,
             "InceptionRestaker: only vault or trustee manager"
         );
         _;
