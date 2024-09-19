@@ -74,7 +74,7 @@ contract cToken is Configurable, ERC20PausableUpgradeable, ICToken {
     function mint(
         address account,
         uint256 shares
-    ) external override whenNotPaused onlyRestakingPool {
+    ) external override whenNotPaused onlyMinter {
         _mint(account, shares);
     }
 
@@ -86,7 +86,7 @@ contract cToken is Configurable, ERC20PausableUpgradeable, ICToken {
     function burn(
         address account,
         uint256 shares
-    ) external override whenNotPaused onlyRestakingPool {
+    ) external override whenNotPaused onlyMinter {
         _burn(account, shares);
     }
 

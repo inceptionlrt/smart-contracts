@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 import "./interfaces/IProtocolConfig.sol";
+import "./interfaces/IRebalancer.sol";
 import "./restaker/IRestakerDeployer.sol";
 
 /**
@@ -41,6 +42,10 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
     bytes32 internal constant _RESTAKER_DEPLOYER =
         keccak256(
             abi.encode(uint256(keccak256("genesis.config.RestakerDepoyer")) - 1)
+        ) & ~bytes32(uint256(0xff));
+    bytes32 internal constant _REBALANCER_SLOT =
+        keccak256(
+            abi.encode(uint256(keccak256("genesis.config.Rebalancer")) - 1)
         ) & ~bytes32(uint256(0xff));
 
     modifier onlyGovernance() virtual {
@@ -128,6 +133,12 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
         _RESTAKING_POOL_SLOT.getAddressSlot().value = address(newValue);
     }
 
+    function setRebalancer(IRebalancer newValue) external onlyGovernance {
+        _requireNotZero(address(newValue));
+        emit RebalancerChanged(getRebalancer(), newValue);
+        _REBALANCER_SLOT.getAddressSlot().value = address(newValue);
+    }
+
     function setCToken(ICToken newValue) external onlyGovernance {
         _requireNotZero(address(newValue));
         emit CTokenChanged(getCToken(), newValue);
@@ -166,6 +177,10 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
 
     function getRestakingPool() public view override returns (IRestakingPool) {
         return IRestakingPool(_RESTAKING_POOL_SLOT.getAddressSlot().value);
+    }
+
+    function getRebalancer() public view override returns (IRebalancer) {
+        return IRebalancer(_REBALANCER_SLOT.getAddressSlot().value);
     }
 
     function getRatioFeed() public view override returns (IRatioFeed) {

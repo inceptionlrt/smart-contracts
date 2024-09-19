@@ -6,6 +6,7 @@ import "./ICToken.sol";
 import "./IRestakingPool.sol";
 import "./IEigenPodManager.sol";
 import "../restaker/IRestakerDeployer.sol";
+import "./IRebalancer.sol";
 
 interface IProtocolConfig {
     /* errors */
@@ -22,6 +23,10 @@ interface IProtocolConfig {
     event RestakingPoolChanged(
         IRestakingPool prevValue,
         IRestakingPool newValue
+    );
+    event RebalancerChanged(
+        IRebalancer prevValue,
+        IRebalancer newValue
     );
     event EigenManagerChanged(
         IEigenPodManager prevValue,
@@ -45,6 +50,8 @@ interface IProtocolConfig {
     function getRatioFeed() external view returns (IRatioFeed feed);
 
     function getRestakingPool() external view returns (IRestakingPool pool);
+
+    function getRebalancer() external view returns (IRebalancer rebalancer);
 
     function getRestakerDeployer()
         external
