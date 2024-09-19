@@ -20,10 +20,6 @@ The source code can be found: `./contracts/RateProvider.sol`
 npx hardhat run ./scripts/rate-provider.ts --network {network_name}
 ```
 
-Balance rate provider
+## Contract Addresses:
 
-## Deployemnts(InceptionLRT V2)
-
-### Mainnet
-
-- InEthRateProvider: [0xC29783738A475112Cafe58433Dd9D19F3a406619](https://etherscan.io/address/0xC29783738A475112Cafe58433Dd9D19F3a406619)
+- [RateProviders](https://docs.inceptionlrt.com/contracts/addresses/rateprovider)

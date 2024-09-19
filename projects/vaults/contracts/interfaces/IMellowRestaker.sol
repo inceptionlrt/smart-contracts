@@ -25,6 +25,10 @@ interface IMellowRestaker {
         external
         returns (IMellowVault.WithdrawalRequest memory);
 
+    function pendingWithdrawalAmount() external view returns (uint256);
+
+    function claimableAmount() external view returns (uint256);
+
     error BadMellowWithdrawRequest();
 
     error NotEnoughBalance();

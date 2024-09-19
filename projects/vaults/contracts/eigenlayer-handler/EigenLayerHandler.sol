@@ -55,7 +55,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
     IMellowRestaker public mellowRestaker;
-    uint256 public mellowDeposited;
 
     //// TODO
     /// @dev constants are not stored in the storage
@@ -117,8 +116,7 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     function _depositAssetIntoMellow(uint256 amount) internal {
         _asset.approve(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, 0, block.timestamp);
-        // emit DepositedToMellow(restaker, amount, lpAmount);
+        uint256 lpAmount = mellowRestaker.delegateMellow(amount, 0, block.timestamp);
     }
 
     /// @dev delegates assets held in the strategy to the EL operator.
@@ -147,8 +145,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ) external whenNotPaused nonReentrant onlyOperator {
         if (elOperatorAddress == address(mellowRestaker)) {
             amount = mellowRestaker.withdrawMellow(amount, true);
-            mellowDeposited -= amount;
-            _pendingWithdrawalAmount += amount;
             emit StartMellowWithdrawal(address(mellowRestaker), amount);
             return;
         }
@@ -162,16 +158,16 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev registers a withdrawal request from Mellow
     /// @dev requires a specific amount to withdraw
-    function withdrawFromMellow(
-        uint256 amount,
-        bool closePrev
-    ) external whenNotPaused nonReentrant onlyOperator {
-        amount = mellowRestaker.withdrawMellow(amount, closePrev);
-
-        _pendingWithdrawalAmount += amount;
-
-        // emit StartMellowWithdrawal(address(mellowRestaker), amount);
-    }
+    //    function withdrawFromMellow(
+    //        uint256 amount,
+    //        bool closePrev
+    //    ) external whenNotPaused nonReentrant onlyOperator {
+    //        amount = mellowRestaker.withdrawMellow(amount, closePrev);
+    //
+    //        _pendingWithdrawalAmount += amount;
+    //
+    //        // emit StartMellowWithdrawal(address(mellowRestaker), amount);
+    //    }
 
     // /// @dev performs creating a withdrawal request from EigenLayer
     // /// @dev requires a specific amount to withdraw
@@ -229,7 +225,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     /// @dev claims completed withdrawals from EigenLayer, if they exist
     function claimCompletedWithdrawals(
         address restaker,
-        uint256 amount,
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public whenNotPaused nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
@@ -248,32 +243,34 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         uint256 withdrawnAmount;
         if (restaker == address(mellowRestaker)) {
             withdrawnAmount = mellowRestaker.claimMellowWithdrawalCallback();
-        } else if (restaker == address(this)) {
-            withdrawnAmount = _claimCompletedWithdrawalsForVault(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
         } else {
-            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
+            if (restaker == address(this)) {
+                withdrawnAmount = _claimCompletedWithdrawalsForVault(
+                    withdrawals,
+                    tokens,
+                    middlewareTimesIndexes,
+                    receiveAsTokens
+                );
+            } else {
+                if (!_restakerExists(restaker)) revert RestakerNotRegistered();
+                withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
+                    withdrawals,
+                    tokens,
+                    middlewareTimesIndexes,
+                    receiveAsTokens
+                );
+            }
+
+            _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
+                ? 0
+                : _pendingWithdrawalAmount - withdrawnAmount;
+
+            if (_pendingWithdrawalAmount < 7) {
+                _pendingWithdrawalAmount = 0;
+            }
         }
 
         emit WithdrawalClaimed(withdrawnAmount);
-
-        _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
-            ? 0
-            : _pendingWithdrawalAmount - withdrawnAmount;
-
-        if (_pendingWithdrawalAmount < 7) {
-            _pendingWithdrawalAmount = 0;
-        }
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }
@@ -373,7 +370,8 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return
             getTotalDelegated() +
             totalAssets() +
-            _pendingWithdrawalAmount -
+            getPendingWithdrawalAmountFromEL() +
+            getPendingWithdrawalAmountFromMellow() -
             depositBonusAmount;
     }
 
@@ -396,12 +394,24 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
                 : getFlashCapacity() - _getTargetCapacity();
     }
 
+    /// @dev returns the total amount of pending withdrawals from EigenLayer protocol
     function getPendingWithdrawalAmountFromEL()
         public
         view
         returns (uint256 total)
     {
         return _pendingWithdrawalAmount;
+    }
+
+    /// @dev returns the total amount of pending withdrawals from Mellow LRT
+    function getPendingWithdrawalAmountFromMellow()
+    public
+    view
+    returns (uint256)
+    {
+        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
+        uint256 claimableAmount = mellowRestaker.claimableAmount();
+        return pendingWithdrawal + claimableAmount;
     }
 
     function getFlashCapacity() public view returns (uint256 total) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../../interfaces/IMellowVault.sol";
+import {IDefaultBondStrategy} from "../../interfaces/mellow/IDefaultBondStrategy.sol";
 
 contract OperatorMock {
 
@@ -13,8 +13,8 @@ contract OperatorMock {
 
     function processWithdrawals(
         address[] memory users
-    ) external returns (bool status) {
-        bool[] memory statuses = IMellowVault(mellowVault).processWithdrawals(users);
-        return statuses[0];
+    ) external {
+
+        IDefaultBondStrategy(mellowVault).processWithdrawals(users);
     }
 }
