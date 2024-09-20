@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@arbitrum/nitro-contracts/src/bridge/Inbox.sol";
-import "@arbitrum/nitro-contracts/src/bridge/Outbox.sol";
+import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
+import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {

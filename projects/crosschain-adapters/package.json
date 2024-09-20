@@ -15,6 +15,7 @@
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.5",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/ignition-core": "^0.15.5",
-    "hardhat": "^2.22.10"
+    "hardhat": "^2.22.10",
+    "openzeppelin-4": "npm:@openzeppelin/contracts@4.5.0"
   }
 }

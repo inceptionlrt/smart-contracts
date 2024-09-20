@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-4/access/Ownable.sol";
 
 import "../interface/ICrossChainAdapter.sol";
 import "../interface/ITransactionStorage.sol";
