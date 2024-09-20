@@ -26,8 +26,6 @@ interface IRebalancer {
 
     function updateTreasuryData() external;
 
-    function getTotalDeposited() external view returns (uint256);
-
     function getRatioL2(
         uint256 _tokenAmount,
         uint256 _ethAmount

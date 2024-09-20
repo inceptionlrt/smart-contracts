@@ -33,4 +33,5 @@ interface IRatioFeed {
 
     function updateRatio(address token, uint256 ratio) external;
     function getRatio(address token) external view returns (uint256 ratio);
+    function getRatioFor(address token) external view returns (uint256 ratio);
 }

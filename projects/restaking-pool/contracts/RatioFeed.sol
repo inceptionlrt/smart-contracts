@@ -150,9 +150,16 @@ contract RatioFeed is Configurable, IRatioFeed {
     *******************************************************************************/
 
     /**
-     * @notice Get ratio of a token.
+     * @notice Deprecated. Left for compatibility
      */
     function getRatio(address token) public view override returns (uint256) {
+        return _ratios[token];
+    }
+
+    /**
+     * @notice Get ratio of a token.
+     */
+    function getRatioFor(address token) public view override returns (uint256) {
         return _ratios[token];
     }
 
