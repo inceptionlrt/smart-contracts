@@ -38,7 +38,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         address _transactionStorage,
         address _ratioFeed
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
 
         require(_inETHAddress != address(0), "Invalid inETHAddress");
         require(_lockbox != address(0), "Invalid lockbox");
