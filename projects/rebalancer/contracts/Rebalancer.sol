@@ -38,7 +38,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         address _transactionStorage,
         address _ratioFeed
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
 
         require(_inETHAddress != address(0), "Invalid inETHAddress");
         require(_lockbox != address(0), "Invalid lockbox");
@@ -104,15 +104,15 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             RatioDifferenceTooHigh()
         );
 
-        uint256 _totalInETH = totalInETH();
+        uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
 
-        uint256 totalSupplyDiff = _totalInETH > totalL2InETH
-            ? _totalInETH - totalL2InETH
-            : totalL2InETH - _totalInETH;
+        uint256 totalSupplyDiff = lastUpdateTotalL2InEth > totalL2InETH
+            ? lastUpdateTotalL2InEth - totalL2InETH
+            : totalL2InETH - lastUpdateTotalL2InEth;
 
-        if (_totalInETH < totalL2InETH) {
+        if (lastUpdateTotalL2InEth < totalL2InETH) {
             mintInceptionToken(totalSupplyDiff);
-        } else if (_totalInETH > totalL2InETH) {
+        } else if (lastUpdateTotalL2InEth > totalL2InETH) {
             burnInceptionToken(totalSupplyDiff);
         }
 
@@ -149,12 +149,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         return (_tokenAmount * MULTIPLIER) / _ethAmount;
     }
 
-    function getTotalDeposited() public view returns (uint256) {
-        require(liqPool != address(0), LiquidityPoolNotSet());
-        return liqPool.balance;
-    }
-
-    function totalInETH() internal view returns (uint256) {
+    function _lastUpdateTotalL2InEth() internal view returns (uint256) {
         return IERC20(inETHAddress).balanceOf(lockboxAddress);
     }
 

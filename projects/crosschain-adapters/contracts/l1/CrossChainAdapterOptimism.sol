@@ -16,28 +16,28 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
         uint256 _balance,
         uint256 _totalSupply
     ) external override {
-        require(msg.sender == inboxOptimism, "Not Bridge");
+        require(msg.sender == inboxOptimism, NotBridge());
         handleL2Info(OPTIMISM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
     function setInboxOptimism(address _inbox) external onlyOwner {
-        require(_inbox != address(0), "Setting zero address");
+        require(_inbox != address(0), SettingZeroAddress());
         inboxOptimism = _inbox;
     }
 
     function updateL2Target(address _l2Target) external override onlyOwner {
-        require(_l2Target != address(0), "Setting zero address");
+        require(_l2Target != address(0), SettingZeroAddress());
         l2Target = _l2Target;
     }
 
     function setRebalancer(address _rebalancer) external override onlyOwner {
-        require(_rebalancer != address(0), "Setting zero address");
+        require(_rebalancer != address(0), SettingZeroAddress());
         rebalancer = _rebalancer;
     }
 
     function receiveL2Eth() external payable override {
         emit L2EthDeposit(msg.value);
         (bool success, ) = rebalancer.call{value: msg.value}("");
-        require(success, "Transfer to Rebalancer failed");
+        require(success, TransferToRebalancerFailed());
     }
 }

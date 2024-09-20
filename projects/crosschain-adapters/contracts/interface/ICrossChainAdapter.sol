@@ -13,6 +13,8 @@ interface ICrossChainAdapter {
     error NotAuthorizedByL2();
     error TransferToRebalancerFailed();
     error SettingZeroAddress();
+    error RebalancerNotSet();
+    error TxStorageNotSet();
 
     event L2InfoReceived(
         uint256 indexed networkId,
