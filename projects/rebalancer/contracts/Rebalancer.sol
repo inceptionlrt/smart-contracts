@@ -28,8 +28,11 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     error LiquidityPoolNotSet();
 
     event ETHReceived(address sender, uint256 amount);
-    event ETHDepositedToLiquidPool(address liquidPool, uint256 amountETH);
     event InETHDepositedToLockbox(uint256 mintAmount);
+    event LockboxChanged(address newLockbox);
+    event InEthChanged(address newInEth);
+    event TxStorageChanged(address newTxStorage);
+    event LiqPoolChanged(address newLiqPool);
 
     function initialize(
         address _inETHAddress,
@@ -61,21 +64,25 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     ) external onlyOwner {
         require(_transactionStorage != address(0), SettingZeroAddress());
         transactionStorage = _transactionStorage;
+        emit TxStorageChanged(_transactionStorage);
     }
 
     function setInETHAddress(address _inETHAddress) external onlyOwner {
         require(_inETHAddress != address(0), SettingZeroAddress());
         inETHAddress = _inETHAddress;
+        emit InEthChanged(_inETHAddress);
     }
 
     function setLockboxAddress(address _lockboxAddress) external onlyOwner {
         require(_lockboxAddress != address(0), SettingZeroAddress());
         lockboxAddress = _lockboxAddress;
+        emit LockboxChanged(_lockboxAddress);
     }
 
     function setLiqPool(address payable _liqPool) external onlyOwner {
         require(_liqPool != address(0), SettingZeroAddress());
         liqPool = _liqPool;
+        emit LiqPoolChanged(_liqPool);
     }
 
     function updateTreasuryData() public {
@@ -108,17 +115,22 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
 
         if (lastUpdateTotalL2InEth < totalL2InETH) {
-            mintInceptionToken(totalL2InETH - lastUpdateTotalL2InEth);
+            uint amountToMint = totalL2InETH - lastUpdateTotalL2InEth;
+            emit TreasuryDateMint(amountToMint);
+            mintInceptionToken(amountToMint);
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
-            burnInceptionToken(lastUpdateTotalL2InEth - totalL2InETH);
+            uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
+            burnInceptionToken(amountToBurn);
+            emit TreasuryDateBurn(amountToBurn);
         }
 
-        uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this)); //TODO
+        uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));
         if (inETHBalance > 0) {
             require(
                 IERC20(inETHAddress).transfer(lockboxAddress, inETHBalance),
                 TransferToLockboxFailed()
             );
+            emit InETHDepositedToLockbox(inETHBalance);
         }
     }
 
@@ -161,6 +173,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     }
 
     receive() external payable {
+        require(liqPool != address(0), LiquidityPoolNotSet());
         IRestakingPool lp = IRestakingPool(liqPool);
         lp.stake{value: msg.value}();
 
@@ -170,5 +183,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(
             IERC20(inETHAddress).transfer(lockboxAddress, localInEthBalance)
         );
+        emit ETHReceived(msg.sender, msg.value);
     }
 }
