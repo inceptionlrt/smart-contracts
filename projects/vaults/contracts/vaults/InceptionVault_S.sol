@@ -161,7 +161,7 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         if (mellowVault == address(0)) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount);
+        _depositAssetIntoMellow(amount, mellowVault);
 
         emit DelegatedTo(address(0), mellowVault, amount);
         return;
@@ -348,11 +348,10 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    /// TODO
     function getDelegatedTo(
         address mellowVault
     ) external view returns (uint256) {
-        return mellowRestaker.getDeposited();
+        return mellowRestaker.getDeposited(mellowVault);
     }
 
     function getPendingWithdrawalOf(

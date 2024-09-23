@@ -84,12 +84,13 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit DepositedToEL(restaker, amount);
     }
 
-    function _depositAssetIntoMellow(uint256 amount) internal {
+    function _depositAssetIntoMellow(uint256 amount, address mellowVault) internal {
         _asset.approve(address(mellowRestaker), amount);
         uint256 lpAmount = mellowRestaker.delegateMellow(
             amount,
             0,
-            block.timestamp
+            block.timestamp,
+            mellowVault
         );
     }
 
@@ -103,7 +104,7 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
         address mellowVault,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
-        amount = mellowRestaker.withdrawMellow(amount, true);
+        amount = mellowRestaker.withdrawMellow(mellowVault, amount, true);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }
@@ -137,7 +138,7 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawals(
-        address mellowVault
+        // address mellowVault
     ) public whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
 
@@ -216,8 +217,8 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
             depositBonusAmount;
     }
 
-    function getTotalDelegated() public view returns (uint256 total) {
-        return total + mellowRestaker.getDeposited();
+    function getTotalDelegated() public view returns (uint256) {
+        return mellowRestaker.getTotalDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
