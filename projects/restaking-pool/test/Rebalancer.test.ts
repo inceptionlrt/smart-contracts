@@ -659,7 +659,7 @@ describe("Omnivault integration tests", function () {
             it("Reverts when amount < restaking pool min stake", async function () {
                 const amount = await restakingPool.getMinStake() - 1n;
                 await expect(arbBridgeMock.connect(signer1).receiveL2Eth({value: amount}))
-                    .to.revertedWithCustomError(arbAdapter, "TransferToRebalancerFailed");
+                    .to.revertedWith("Address: unable to send value, recipient may have reverted");
             })
         })
 
