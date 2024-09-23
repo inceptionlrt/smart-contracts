@@ -29,6 +29,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
+    event TreasuryUpdateMint(uint256 mintAmount);
+    event TreasuryUpdateBurn(uint256 mintAmount);
     event LockboxChanged(address newLockbox);
     event InEthChanged(address newInEth);
     event TxStorageChanged(address newTxStorage);
@@ -116,12 +118,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
         if (lastUpdateTotalL2InEth < totalL2InETH) {
             uint amountToMint = totalL2InETH - lastUpdateTotalL2InEth;
-            emit TreasuryDateMint(amountToMint);
+            emit TreasuryUpdateMint(amountToMint);
             mintInceptionToken(amountToMint);
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
             uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
             burnInceptionToken(amountToBurn);
-            emit TreasuryDateBurn(amountToBurn);
+            emit TreasuryUpdateBurn(amountToBurn);
         }
 
         uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-interface ICrossChainAdapter {
+interface ICrossChainAdapterL1 {
     struct Transaction {
         uint256 timestamp;
         uint256 ethBalance;

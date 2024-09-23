@@ -14,7 +14,7 @@ import "../interface/ICrossChainAdapterL2.sol";
  * @dev Paul Fomichov
  */
 
-contract ArbCrossChainAdapter is ICrossChainAdapter, Ownable {
+contract ArbCrossChainAdapter is ICrossChainAdapterL2, Ownable {
     ArbSys constant arbsys = ArbSys(address(100));
     address public l1Target;
     address public vault;
