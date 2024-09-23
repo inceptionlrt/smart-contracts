@@ -29,12 +29,7 @@ abstract contract AbstractCrossChainAdapter is
         transactionStorage = _transactionStorage;
     }
 
-    function receiveL2Eth() external payable virtual {
-        require(msg.sender == inbox, NotBridge());
-        require(rebalancer != address(0), RebalancerNotSet());
-        Address.sendValue(payable(rebalancer), msg.value);
-        emit L2EthDeposit(msg.value);
-    }
+    function receiveL2Eth() external payable virtual;
 
     function handleL2Info(
         uint256 _chainId,
