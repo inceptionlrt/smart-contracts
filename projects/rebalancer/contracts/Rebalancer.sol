@@ -45,14 +45,11 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     ) public initializer {
         __Ownable_init(msg.sender);
 
-        require(_inETHAddress != address(0), "Invalid inETHAddress");
-        require(_lockbox != address(0), "Invalid lockbox");
-        require(_liqPool != address(0), "Invalid liqPool");
-        require(
-            _transactionStorage != address(0),
-            "Invalid transactionStorage"
-        );
-        require(_ratioFeed != address(0), "Invalid ratioFeed");
+        require(_inETHAddress != address(0), SettingZeroAddress());
+        require(_lockbox != address(0), SettingZeroAddress());
+        require(_liqPool != address(0), SettingZeroAddress());
+        require(_transactionStorage != address(0), SettingZeroAddress());
+        require(_ratioFeed != address(0), SettingZeroAddress());
 
         inETHAddress = _inETHAddress;
         lockboxAddress = _lockbox;
