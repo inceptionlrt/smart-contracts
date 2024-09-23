@@ -38,7 +38,7 @@ contract TransactionStorage is Ownable {
      * @notice Add a new Chain ID to the storage
      * @param _newChainId The new Chain ID to add
      */
-    function addChainId(uint32 _newChainId) external {
+    function addChainId(uint32 _newChainId) external onlyOwner {
         for (uint i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _newChainId) {
                 revert("Chain ID already exists");

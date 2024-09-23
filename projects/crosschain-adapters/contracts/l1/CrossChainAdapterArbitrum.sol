@@ -3,11 +3,10 @@ pragma solidity 0.8.26;
 
 import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
+
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
-    address public inboxArbitrum;
-
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
 
     constructor(
@@ -18,18 +17,13 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
         uint256 _timestamp,
         uint256 _balance,
         uint256 _totalSupply
-    ) external override {
-        IBridge bridge = IInbox(inboxArbitrum).bridge();
+    ) external override nonReentrant {
+        IBridge bridge = IInbox(inbox).bridge();
         require(msg.sender == address(bridge), NotBridge());
         IOutbox outbox = IOutbox(bridge.activeOutbox());
-        address l2Sender = outbox.l2ToL1Sender();
-        require(l2Sender == l2Target, NotAuthorizedByL2());
+        address actualSender = outbox.l2ToL1Sender();
+        require(actualSender == l2Sender, NotAuthorizedByL2());
 
         handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
-    }
-
-    function setInboxArbitrum(address _inbox) external onlyOwner {
-        require(_inbox != address(0), SettingZeroAddress());
-        inboxArbitrum = _inbox;
     }
 }
