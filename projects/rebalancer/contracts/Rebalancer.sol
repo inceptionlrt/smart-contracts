@@ -95,28 +95,25 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             total2ETH += txData.ethBalance;
         }
 
-        uint256 l1Ratio = getRatioL1();
-        uint256 l2Ratio = getRatioL2(totalL2InETH, total2ETH);
-        int256 ratioDiff = int256(l2Ratio) - int256(l1Ratio);
+        // //TODO: to be used in later features
+        // uint256 l1Ratio = getRatioL1();
+        // uint256 l2Ratio = getRatioL2(totalL2InETH, total2ETH);
+        // int256 ratioDiff = int256(l2Ratio) - int256(l1Ratio);
 
-        require(
-            !isAGreaterThanB(ratioDiff, int256(MAX_DIFF)),
-            RatioDifferenceTooHigh()
-        );
+        // require(
+        //     !isAGreaterThanB(ratioDiff, int256(MAX_DIFF)),
+        //     RatioDifferenceTooHigh()
+        // );
 
         uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
 
-        uint256 totalSupplyDiff = lastUpdateTotalL2InEth > totalL2InETH
-            ? lastUpdateTotalL2InEth - totalL2InETH
-            : totalL2InETH - lastUpdateTotalL2InEth;
-
         if (lastUpdateTotalL2InEth < totalL2InETH) {
-            mintInceptionToken(totalSupplyDiff);
+            mintInceptionToken(totalL2InETH - lastUpdateTotalL2InEth);
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
-            burnInceptionToken(totalSupplyDiff);
+            burnInceptionToken(lastUpdateTotalL2InEth - totalL2InETH);
         }
 
-        uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));
+        uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this)); //TODO
         if (inETHBalance > 0) {
             require(
                 IERC20(inETHAddress).transfer(lockboxAddress, inETHBalance),
@@ -170,6 +167,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 localInEthBalance = IERC20(inETHAddress).balanceOf(
             address(this)
         );
-        IERC20(inETHAddress).transfer(lockboxAddress, localInEthBalance);
+        require(
+            IERC20(inETHAddress).transfer(lockboxAddress, localInEthBalance)
+        );
     }
 }
