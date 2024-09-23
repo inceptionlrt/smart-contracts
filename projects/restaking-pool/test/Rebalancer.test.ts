@@ -3,7 +3,14 @@ import {expect} from "chai";
 import {takeSnapshot} from "@nomicfoundation/hardhat-network-helpers";
 import {e18, randomBI} from "../../vaults/test/helpers/utils.js";
 import {deployConfig, deployLiquidRestaking} from "./helpers/deploy";
-import {CrossChainAdapterArbitrum, CToken, Rebalancer, RestakingPool, TransactionStorage} from "../typechain-types";
+import {
+    CrossChainAdapterArbitrum,
+    CToken,
+    ProtocolConfig,
+    Rebalancer,
+    RestakingPool,
+    TransactionStorage
+} from "../typechain-types";
 import {SnapshotRestorer} from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import {applyProviderWrappers} from "hardhat/internal/core/providers/construction";
 import {randomInt} from "node:crypto";
@@ -21,6 +28,7 @@ describe("Omnivault integration tests", function () {
     let txStorage: TransactionStorage;
     let restakingPool: RestakingPool
     let crossChainAdapter: CrossChainAdapterArbitrum;
+    let restakingPoolConfig: ProtocolConfig;
 
     let owner, operator, treasury, signer1, signer2, signer3, target;
     let MAX_THRESHOLD, ratioThresh;
@@ -32,9 +40,9 @@ describe("Omnivault integration tests", function () {
         console.log(`Starting at block number: ${block.number}`);
 
         //Restaking pool and cToken = inEth
-        const protocolConfig = await deployConfig([owner, operator, treasury]);
+        const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
         const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
-            protocolConfig,
+            protocolConfig: restakingPoolConfig,
             tokenName: "Inception eth",
             tokenSymbol: "inEth",
             distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
@@ -92,7 +100,8 @@ describe("Omnivault integration tests", function () {
             arbBridgeMock,
             arbInboxMock,
             arbOutboxMock,
-            lockboxMock
+            lockboxMock,
+            restakingPoolConfig
         ]
     }
 
@@ -108,7 +117,8 @@ describe("Omnivault integration tests", function () {
             arbBridgeMock,
             arbInboxMock,
             arbOutboxMock,
-            lockboxMock
+            lockboxMock,
+            restakingPoolConfig
         ] = await init(owner, operator, treasury, target);
         clean_snapshot = await takeSnapshot();
 
@@ -131,6 +141,9 @@ describe("Omnivault integration tests", function () {
         await restakingPool.connect(owner).setProtocolFee(50n * 10n ** 8n);
         await restakingPool.connect(owner).setTargetFlashCapacity(1n);
         await restakingPool.connect(owner).setMinStake(RESTAKING_POOL_MIN_STAKE);
+
+        await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
+
         snapshot = await takeSnapshot();
     });
 
@@ -173,10 +186,6 @@ describe("Omnivault integration tests", function () {
             //Values
             it("getRatioL2", async function () {
                 expect(await rebalancer.getRatioL2(e18, e18)).to.be.eq(e18);
-            })
-
-            it("getTotalDeposited", async function () {
-                expect(await rebalancer.getTotalDeposited()).to.be.eq(0n);
             })
 
             it("Default total amount to withdraw is 0", async function () {
@@ -235,6 +244,55 @@ describe("Omnivault integration tests", function () {
             })
         })
 
+        describe("Update data", function() {
+
+            before(async function () {
+                await snapshot.restore();
+            })
+
+            const args = [
+                {
+                    name: "First update from 0",
+                    l2Balance: e18,
+                    l2TotalSupply: e18,
+                },
+                {
+                    name: "Update with mint",
+                    l2Balance: 2n * e18,
+                    l2TotalSupply: 2n * e18,
+                },
+                {
+                    name: "Update to the same value",
+                    l2Balance: 2n * e18,
+                    l2TotalSupply: 2n * e18,
+                },
+            ]
+
+            //Mint
+
+            //The same
+            //Burn
+
+
+            it("handleL2Info", async () => {
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp;
+                const l2Balance = e18;
+                const l2TotalSupply = e18;
+
+                await arbBridgeMock.receiveL2Info(timestamp, l2Balance, l2TotalSupply);
+                const totalSupplyBefore = await inEth.totalSupply();
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+
+                await rebalancer.updateTreasuryData();
+
+                const totalSupplyAfter = await inEth.totalSupply();
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+
+                expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(l2TotalSupply - totalSupplyBefore);
+                expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(l2TotalSupply - totalSupplyBefore);
+            })
+        })
     })
 
     describe("Restaking pool", function () {
@@ -340,7 +398,7 @@ describe("Omnivault integration tests", function () {
             it("Reverts when amount < restaking pool min stake", async function () {
                 const amount = await restakingPool.getMinStake() - 1n;
                 await expect(crossChainAdapter.connect(signer1).receiveL2Eth({value: amount}))
-                    .to.revertedWith("Transfer to Rebalancer failed");
+                    .to.revertedWithCustomError( crossChainAdapter, "TransferToRebalancerFailed");
             })
         })
 
