@@ -225,29 +225,35 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "transactionStorage address",
                     setter: "setTransactionStorage",
-                    getter: "transactionStorage"
+                    getter: "transactionStorage",
+                    event: "TxStorageChanged"
                 },
                 {
                     name: "inEth address",
                     setter: "setInETHAddress",
-                    getter: "inETHAddress"
+                    getter: "inETHAddress",
+                    event: "InEthChanged"
                 },
                 {
                     name: "lockbox address",
                     setter: "setLockboxAddress",
-                    getter: "lockboxAddress"
+                    getter: "lockboxAddress",
+                    event: "LockboxChanged"
                 },
                 {
                     name: "restaking pool address",
                     setter: "setLiqPool",
-                    getter: "liqPool"
+                    getter: "liqPool",
+                    event: "LiqPoolChanged"
                 },
             ]
 
             setters.forEach(function (arg) {
                 it(`Set new ${arg.name}`, async function () {
                     const newValue = ethers.Wallet.createRandom().address;
-                    await rebalancer[arg.setter](newValue);
+                    await expect(rebalancer[arg.setter](newValue))
+                        .to.emit(rebalancer, arg.event)
+                        .withArgs(newValue);
 
                     expect(await rebalancer[arg.getter]()).to.be.eq(newValue);
                 })
@@ -532,7 +538,8 @@ describe("Omnivault integration tests", function () {
                     const tx = arbAdapter.connect(signer1).receiveL2Eth({value: amount});
                     await expect(tx)
                         .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount);
+                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount)
+                        .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount);
                     await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
 
