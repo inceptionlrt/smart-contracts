@@ -176,6 +176,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     receive() external payable {
         require(liqPool != address(0), LiquidityPoolNotSet());
+        emit ETHReceived(msg.sender, msg.value);
         IRestakingPool lp = IRestakingPool(liqPool);
         lp.stake{value: msg.value}();
 
@@ -185,6 +186,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(
             IERC20(inETHAddress).transfer(lockboxAddress, localInEthBalance)
         );
-        emit ETHReceived(msg.sender, msg.value);
+        emit InETHDepositedToLockbox(localInEthBalance);
     }
 }
