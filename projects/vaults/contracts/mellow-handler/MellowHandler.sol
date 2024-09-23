@@ -2,13 +2,9 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
-
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
-
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
 import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
-import {IMellowDepositWrapper} from "../interfaces/IMellowDepositWrapper.sol";
 import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
 
 /// @author The InceptionLRT team
@@ -16,6 +12,7 @@ import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
 /// @dev Serves communication with external Mellow Protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
 contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
+    
     uint256 public epoch;
 
     /// @dev inception operator
@@ -39,8 +36,6 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    //// TODO
-    /// @dev constants are not stored in the storage
     uint256[50 - 15] private __reserver;
 
     modifier onlyOperator() {
@@ -61,11 +56,7 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        // _beforeDeposit(amount);
-        // if (amount > maxPerDeposit)
-        //     revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
     }
 
     function _beforeDeposit(uint256 amount) internal view {
@@ -109,33 +100,6 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
         return;
     }
 
-    // function _undelegate(
-    //     uint256 amount,
-    //     address staker
-    // ) internal returns (uint256) {
-    //     uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
-    //     uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
-    //         staker,
-    //         strategy
-    //     );
-    //     uint256 shares = strategy.underlyingToSharesView(amount);
-    //     amount = strategy.sharesToUnderlyingView(shares);
-
-    //     // we need to withdraw the remaining dust from EigenLayer
-    //     if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
-
-    //     _pendingWithdrawalAmount += amount;
-    //     emit StartWithdrawal(
-    //         staker,
-    //         strategy,
-    //         shares,
-    //         uint32(block.number),
-    //         delegationManager.delegatedTo(staker),
-    //         nonce
-    //     );
-    //     return shares;
-    // }
-
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawals(
         // address mellowVault
@@ -149,28 +113,6 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }
-
-    // /// @dev claims completed withdrawals from Mellow, if they exist
-    // function claimCompletedMellowWithdrawals(
-    //     uint256 amount
-    // ) public whenNotPaused nonReentrant {
-    //     address restaker = _getRestaker(address(mellowVault));
-
-    //     uint256 availableBalance = getFreeBalance();
-    //     uint256 withdrawnAmount = IMellowRestaker(restaker)
-    //         .claimMellowWithdrawalCallback(amount);
-    //     emit WithdrawalClaimed(withdrawnAmount);
-
-    //     _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
-    //         ? 0
-    //         : _pendingWithdrawalAmount - withdrawnAmount;
-
-    //     if (_pendingWithdrawalAmount < 7) {
-    //         _pendingWithdrawalAmount = 0;
-    //     }
-
-    //     _updateEpoch(availableBalance + withdrawnAmount);
-    // }
 
     function updateEpoch() external whenNotPaused {
         _updateEpoch(getFreeBalance());

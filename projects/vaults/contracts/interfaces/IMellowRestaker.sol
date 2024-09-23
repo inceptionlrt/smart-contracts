@@ -6,7 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IMellowVault.sol";
 
 interface IMellowRestaker {
+
+    event AllocationChanged(address mellowVault, uint256 oldAllocation, uint256 newAllocation);
+
     function getDeposited(address _mellowVault) external view returns (uint256);
+
     function getTotalDeposited() external view returns (uint256);
 
     function delegateMellow(
@@ -14,6 +18,12 @@ interface IMellowRestaker {
         uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
+    ) external returns (uint256 lpAmount);
+
+    function delegate(
+        uint256 amount,
+        uint256 minLpAmount,
+        uint256 deadline
     ) external returns (uint256 lpAmount);
 
     function withdrawMellow(

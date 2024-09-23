@@ -2,13 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {MellowHandler, IMellowRestaker, IERC20} from "../mellow-handler/MellowHandler.sol";
-
-import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-
 import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
 
@@ -16,6 +12,7 @@ import {Convert} from "../lib/Convert.sol";
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
 contract InceptionVault_S is IInceptionVault, MellowHandler {
+
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -154,17 +151,31 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
+    /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (mellowVault == address(0)) revert NullParams();
+        if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
         _depositAssetIntoMellow(amount, mellowVault);
 
         emit DelegatedTo(address(0), mellowVault, amount);
         return;
+    }
+
+    /// @dev Sends underlying to all mellow vaults based on allocation
+    /// @dev An amount of '0' means all available underlying assets
+    function delegateAuto(uint256 amount) external nonReentrant whenNotPaused onlyOperator {
+        if (amount == 0) amount = getFreeBalance();
+        _beforeDeposit(amount);
+        _asset.approve(address(mellowRestaker), amount);
+        uint256 lpAmount = mellowRestaker.delegate(
+            amount,
+            0,
+            block.timestamp
+        );
     }
 
     /*///////////////////////////////////////

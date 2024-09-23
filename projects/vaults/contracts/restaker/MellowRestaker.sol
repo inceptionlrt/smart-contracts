@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeabl
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../vaults/InceptionVault_S.sol";
+import "../interfaces/IInceptionVault.sol";
 import "../interfaces/InceptionRestakerErrors.sol";
 import "../interfaces/IDelegationManager.sol";
 import "../interfaces/IMellowRestaker.sol";
@@ -20,6 +20,12 @@ import "../lib/FullMath.sol";
 
 import "../interfaces/mellow/IMellowPriceOracle.sol";
 import "../interfaces/mellow/IMellowRatiosOracle.sol";
+
+interface Mix {
+    function getTotalDeposited() external view returns (uint256);
+    function MAX_TARGET_PERCENT() external view returns (uint256);
+    function targetCapacity() external view returns (uint256);
+}
 
 /// @author The InceptionLRT team
 /// @title The MellowRestaker Contract
@@ -48,6 +54,8 @@ contract MellowRestaker is
 
     address public constant wsteth = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
 
+    mapping(address => uint256) public allocations;
+
     modifier onlyTrustee() {
         require(
             msg.sender == _vault || msg.sender == _trusteeManager,
@@ -70,7 +78,6 @@ contract MellowRestaker is
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
-        // Ensure compatibility with future versions of ERC165Upgradeable
         __ERC165_init();
 
         require(_mellowDepositWrapper.length == _mellowVault.length, "length mismatch");
@@ -78,8 +85,6 @@ contract MellowRestaker is
             mellowDepositWrappers[address(_mellowVault[i])] = IMellowDepositWrapper(_mellowDepositWrapper[i]);
             mellowVaults.push(_mellowVault[i]);
         }
-        // mellowDepositWrapper = _mellowDepositWrapper;
-        // mellowVault = _mellowVault;
         _asset = asset;
         _trusteeManager = trusteeManager;
     }
@@ -108,6 +113,29 @@ contract MellowRestaker is
                 deadline
             );
     }
+
+    function delegate(uint256 amount, uint256 minLpAmount, uint256 deadline) external onlyTrustee returns (uint256 lpAmount) {
+        for(uint8 i = 0; i < mellowVaults.length; i++) {
+            uint256 allocation = allocations[address(mellowVaults[i])];  // in %
+            if(allocation > 0) {
+                uint256 total = Mix(_vault).getTotalDeposited();
+                uint256 MAX = Mix(_vault).MAX_TARGET_PERCENT();
+                uint256 deposited = getDeposited(address(mellowVaults[i]));
+                uint256 ratio = (deposited * MAX) / total;
+                if(ratio < allocation) {
+                    uint256 delegateAmount = ((total * allocation) / MAX) - deposited;
+                    if(amount >= delegateAmount && delegateAmount > 0) {
+                        _asset.transferFrom(_vault, address(this), delegateAmount);
+                        IMellowDepositWrapper wrapper = mellowDepositWrappers[address(mellowVaults[i])];
+                        IERC20(_asset).safeIncreaseAllowance(address(wrapper), delegateAmount);
+                        wrapper.deposit(address(this), address(_asset), delegateAmount, minLpAmount, deadline);
+                        amount -= delegateAmount;
+                    }
+                }
+            }
+        }
+    }
+
     function withdrawMellow(
         address _mellowVault,
         uint256 amount,
@@ -139,7 +167,6 @@ contract MellowRestaker is
             );
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
-
         return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
     }
 
@@ -165,6 +192,24 @@ contract MellowRestaker is
         return amount;
     }
 
+    function changeAllocation(address mellowVault, uint256 newAllocation) external onlyOwner {
+        require(mellowVault != address(0));  
+        uint256 oldAllocation = allocations[mellowVault];      
+        allocations[mellowVault] = newAllocation;
+        require(_isValidAllocation(), "MellowStaker/>100%");
+
+        emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
+    }
+    function _isValidAllocation() private view returns(bool) {
+
+        uint256 totalAllocations;
+        for(uint256 i = 0; i < mellowVaults.length; i++) {
+            totalAllocations += allocations[address(mellowVaults[i])];
+        }
+        totalAllocations += Mix(_vault).targetCapacity();
+        return totalAllocations <= Mix(_vault).MAX_TARGET_PERCENT();
+    }
+
     function pendingMellowRequest(IMellowVault mellowVault)
         external
         view
@@ -185,13 +230,13 @@ contract MellowRestaker is
         return total;
     }
 
-    function getDeposited(address _mellowVault) external view returns (uint256) {
+    function getDeposited(address _mellowVault) public view returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
         return lpAmountToAmount(balance, mellowVault);
     }
 
-    function getTotalDeposited() external view returns (uint256) {
+    function getTotalDeposited() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
