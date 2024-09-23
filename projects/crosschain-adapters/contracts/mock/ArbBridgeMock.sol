@@ -1,6 +1,6 @@
 pragma solidity ^0.8.20;
 
-import "../interface/ICrossChainAdapter.sol";
+import "../interface/ICrossChainAdapterL1.sol";
 
 contract ArbBridgeMock {
 
@@ -17,7 +17,7 @@ contract ArbBridgeMock {
         uint256 _balance,
         uint256 _totalSupply
     ) external {
-        ICrossChainAdapter(adapter).receiveL2Info(_timestamp, _balance, _totalSupply);
+        ICrossChainAdapterL1(adapter).receiveL2Info(_timestamp, _balance, _totalSupply);
     }
 
     function activeOutbox() external view returns (address) {

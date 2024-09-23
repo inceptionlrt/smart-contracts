@@ -6,7 +6,7 @@ import "openzeppelin-4/access/Ownable.sol";
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
-abstract contract AbstractCrossChainAdapter is Ownable, ICrossChainAdapter {
+abstract contract AbstractCrossChainAdapter is Ownable, ICrossChainAdapterL1 {
     address public l2Target;
     address public rebalancer;
     address public transactionStorage;

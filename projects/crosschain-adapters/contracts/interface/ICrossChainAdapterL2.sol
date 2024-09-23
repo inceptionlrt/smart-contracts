@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title ICrossChainAdapter
+ * @title ICrossChainAdapterL2
  * @dev Paul Fomichov
  */
-interface ICrossChainAdapter {
+interface ICrossChainAdapterL2 {
     error VaultNotSet();
     error OnlyVault();
 
