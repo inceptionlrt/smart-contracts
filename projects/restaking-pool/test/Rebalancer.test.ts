@@ -252,20 +252,34 @@ describe("Omnivault integration tests", function () {
 
             const args = [
                 {
-                    name: "First update from 0",
+                    name: "Increase amount and supply for the first time",
                     l2Balance: e18,
                     l2TotalSupply: e18,
                 },
                 {
-                    name: "Update with mint",
+                    name: "Increase amount and supply",
                     l2Balance: 2n * e18,
                     l2TotalSupply: 2n * e18,
                 },
                 {
-                    name: "Update to the same value",
-                    l2Balance: 2n * e18,
+                    name: "Increase only eth amount",
+                    l2Balance: 2.5 * e18,
                     l2TotalSupply: 2n * e18,
                 },
+                {
+                    name: "Increase only inEth supply",
+                    l2Balance: 2.5 * e18,
+                    l2TotalSupply: 2.5 * e18,
+                },
+                {
+                    name: "Update to the same values",
+                    l2Balance: 2.5 * e18,
+                    l2TotalSupply: 2.5 * e18,
+                },
+
+
+
+
             ]
 
             //Mint
