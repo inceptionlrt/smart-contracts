@@ -27,6 +27,7 @@ contract RestakingPool is
      * @dev block gas limit
      */
     uint64 internal constant MAX_GAS_LIMIT = 30_000_000;
+    address public rebalancer;
 
     /**
      * @notice gas available to receive unstake
@@ -155,7 +156,7 @@ contract RestakingPool is
             revert PoolStakeAmGreaterThanAvailable();
 
         uint256 stakeBonus;
-        if (stakeBonusAmount > 0) {
+        if (stakeBonusAmount > 0 && msg.sender != rebalancer) {
             uint256 capacity = getFlashCapacity();
             if (capacity < amount) {
                 stakeBonus = _calculateStakeBonus(0, amount);
@@ -480,6 +481,11 @@ contract RestakingPool is
             _getRestakerOrRevert(provider)
         );
         restaker.undelegate(address(restaker));
+    }
+
+    function setRebalancer(address _rebalancer) external onlyOperator {
+        require(_rebalancer != address(0), PoolZeroAddress());
+        rebalancer = _rebalancer;
     }
 
     /*******************************************************************************
