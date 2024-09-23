@@ -2,36 +2,37 @@
 pragma solidity 0.8.26;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
-abstract contract AbstractCrossChainAdapter is Ownable, ICrossChainAdapterL1 {
-    address public l2Target;
+abstract contract AbstractCrossChainAdapter is
+    Ownable,
+    ICrossChainAdapterL1,
+    ReentrancyGuard
+{
+    address public l2Sender;
+    address public inbox;
     address public rebalancer;
     address public transactionStorage;
 
     event L2EthDeposit(uint256 amount);
+    event L2InfoReceived();
+    event InboxChanged(address newInbox);
+    event RebalancerChanged(address newRebalancer);
+    event TxStorageChanged(address newTxStorage);
+    event L2SenderChanged(address newL2Sender);
 
     constructor(address _transactionStorage) {
         transactionStorage = _transactionStorage;
     }
 
-    function setRebalancer(address _rebalancer) external virtual onlyOwner {
-        require(_rebalancer != address(0), SettingZeroAddress());
-        rebalancer = _rebalancer;
-    }
-
-    function updateL2Target(address _l2Target) external virtual onlyOwner {
-        require(_l2Target != address(0), SettingZeroAddress());
-        l2Target = _l2Target;
-    }
-
     function receiveL2Eth() external payable virtual {
+        require(msg.sender == inbox, NotBridge());
         require(rebalancer != address(0), RebalancerNotSet());
-        require(transactionStorage != address(0), TxStorageNotSet());
-        (bool success, ) = rebalancer.call{value: msg.value}("");
-        require(success, TransferToRebalancerFailed());
+        Address.sendValue(payable(rebalancer), msg.value);
         emit L2EthDeposit(msg.value);
     }
 
@@ -51,5 +52,25 @@ abstract contract AbstractCrossChainAdapter is Ownable, ICrossChainAdapterL1 {
             _balance,
             _totalSupply
         );
+
+        emit L2InfoReceived();
+    }
+
+    function setRebalancer(address _rebalancer) external virtual onlyOwner {
+        require(_rebalancer != address(0), SettingZeroAddress());
+        rebalancer = _rebalancer;
+        emit RebalancerChanged(_rebalancer);
+    }
+
+    function setInbox(address _inbox) external virtual onlyOwner {
+        require(_inbox != address(0), SettingZeroAddress());
+        inbox = _inbox;
+        emit InboxChanged(_inbox);
+    }
+
+    function setL2Sender(address _l2Sender) external virtual onlyOwner {
+        require(_l2Sender != address(0), SettingZeroAddress());
+        l2Sender = _l2Sender;
+        emit L2SenderChanged(_l2Sender);
     }
 }
