@@ -16,4 +16,8 @@ contract OptBridgeMock {
     ) external {
         ICrossChainAdapterL1(adapter).receiveL2Info(_timestamp, _balance, _totalSupply);
     }
+
+    function receiveL2Eth() external payable {
+        ICrossChainAdapterL1(adapter).receiveL2Eth{value: msg.value}();
+    }
 }
