@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./Rebalancer.sol";
-import "./interfaces/ICrossChainAdapter.sol";
+import "./interfaces/ICrossChainAdapterL1.sol";
 
 contract TransactionStorage is Ownable {
     struct Transaction {

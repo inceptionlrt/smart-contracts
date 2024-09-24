@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-interface ICrossChainAdapter {
+interface ICrossChainAdapterL1 {
     struct Transaction {
         uint256 timestamp;
         uint256 ethBalance;
@@ -28,6 +28,8 @@ interface ICrossChainAdapter {
         uint256 _balance,
         uint256 _totalSupply
     ) external;
+
+    function sendEthToL2(uint256 _amount) external payable;
 
     function receiveL2Eth() external payable;
 }

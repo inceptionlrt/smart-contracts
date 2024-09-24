@@ -9,6 +9,7 @@ import "./TransactionStorage.sol";
 import "./interfaces/IRestakingPool.sol";
 import "./interfaces/IInceptionToken.sol";
 import "./interfaces/IInceptionRatioFeed.sol";
+import "./interfaces/ICrossChainAdapterL1.sol";
 
 contract Rebalancer is Initializable, OwnableUpgradeable {
     address public inETHAddress;
@@ -16,6 +17,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address payable public liqPool;
     address public transactionStorage;
     address public ratioFeed;
+    address public crosschainAdapter;
 
     uint256 public constant MULTIPLIER = 1e18;
     uint256 public constant MAX_DIFF = 50000000000000000; // 0.05 * 1e18
@@ -26,7 +28,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     error InETHAddressNotSet();
     error SettingZeroAddress();
     error LiquidityPoolNotSet();
+    error CrosschainAdapterNotSet();
     error MissingOneOrMoreL2Transactions(uint256 chainId);
+    error StakeAmountExceedsInEthBalance(
+        uint256 staked,
+        uint256 availableTokens
+    );
+    error SendAmountExceedsEthBalance(uint256 amountToSend);
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
@@ -36,6 +44,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event InEthChanged(address newInEth);
     event TxStorageChanged(address newTxStorage);
     event LiqPoolChanged(address newLiqPool);
+    event CrosschainAdapterChanged(address newCrosschainAdapter);
 
     function initialize(
         address _inETHAddress,
@@ -85,9 +94,17 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit LiqPoolChanged(_liqPool);
     }
 
+    function setCrosschainAdapter(
+        address _crosschainAdapter
+    ) external onlyOwner {
+        require(_crosschainAdapter != address(0), SettingZeroAddress());
+        crosschainAdapter = _crosschainAdapter;
+        emit CrosschainAdapterChanged(_crosschainAdapter);
+    }
+
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
-        uint256 total2ETH = 0;
+        // uint256 total2ETH = 0; //TODO: to be used in later features
 
         TransactionStorage storageContract = TransactionStorage(
             transactionStorage
@@ -103,7 +120,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
                 MissingOneOrMoreL2Transactions(chainId)
             );
             totalL2InETH += txData.inEthBalance;
-            total2ETH += txData.ethBalance;
+            // total2ETH += txData.ethBalance; //TODO: to be used in later features
         }
 
         // //TODO: to be used in later features
@@ -176,18 +193,35 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         return absA > absB;
     }
 
-    receive() external payable {
+    function stake(uint256 _amount) external payable onlyOwner {
         require(liqPool != address(0), LiquidityPoolNotSet());
-        emit ETHReceived(msg.sender, msg.value);
-        IRestakingPool lp = IRestakingPool(liqPool);
-        lp.stake{value: msg.value}();
-
-        uint256 localInEthBalance = IERC20(inETHAddress).balanceOf(
-            address(this)
-        );
         require(
-            IERC20(inETHAddress).transfer(lockboxAddress, localInEthBalance)
+            _amount <= localInEthBalance(),
+            StakeAmountExceedsInEthBalance(_amount, localInEthBalance())
         );
-        emit InETHDepositedToLockbox(localInEthBalance);
+        IRestakingPool(liqPool).stake{value: msg.value}();
+
+        require(
+            IERC20(inETHAddress).transfer(lockboxAddress, _amount),
+            TransferToLockboxFailed()
+        );
+        emit InETHDepositedToLockbox(_amount);
+    }
+
+    function sendEthToL2(uint256 _amount) external onlyOwner {
+        require(crosschainAdapter != address(0), CrosschainAdapterNotSet());
+        require(
+            _amount <= address(this).balance,
+            SendAmountExceedsEthBalance(_amount)
+        );
+        ICrossChainAdapterL1(crosschainAdapter).sendEthToL2(_amount);
+    }
+
+    function localInEthBalance() public view returns (uint256) {
+        return IERC20(inETHAddress).balanceOf(address(this));
+    }
+
+    receive() external payable {
+        emit ETHReceived(msg.sender, msg.value);
     }
 }
