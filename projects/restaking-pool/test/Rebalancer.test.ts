@@ -686,6 +686,7 @@ describe("Omnivault integration tests", function () {
                     await expect(tx)
                         .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
                         .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount)
+                        .and.emit(rebalancer, "InETHDepositedToLockbox")
                         .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount);
                     await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
@@ -837,6 +838,7 @@ describe("Omnivault integration tests", function () {
                     await expect(tx)
                         .and.emit(optAdapter, "L2EthDeposit").withArgs(amount)
                         .and.emit(rebalancer, "ETHReceived").withArgs(optAdapter.address, arg.amount)
+                        .and.emit(rebalancer, "InETHDepositedToLockbox")
                         .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount);
                     await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
