@@ -26,6 +26,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     error InETHAddressNotSet();
     error SettingZeroAddress();
     error LiquidityPoolNotSet();
+    error MissingOneOrMoreL2Transactions(uint256 chainId);
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
@@ -97,6 +98,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             uint32 chainId = allChainIds[i];
             TransactionStorage.Transaction memory txData = storageContract
                 .getTransactionData(chainId);
+            require(
+                txData.timestamp != 0,
+                MissingOneOrMoreL2Transactions(chainId)
+            );
             totalL2InETH += txData.inEthBalance;
             total2ETH += txData.ethBalance;
         }

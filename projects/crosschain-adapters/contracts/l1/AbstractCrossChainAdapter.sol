@@ -41,7 +41,7 @@ abstract contract AbstractCrossChainAdapter is
             _totalSupply
         );
 
-        emit L2InfoReceived();
+        emit L2InfoReceived(_chainId, _timestamp, _balance, _totalSupply);
     }
 
     function setRebalancer(address _rebalancer) external virtual onlyOwner {
@@ -60,5 +60,11 @@ abstract contract AbstractCrossChainAdapter is
         require(_l2Sender != address(0), SettingZeroAddress());
         l2Sender = _l2Sender;
         emit L2SenderChanged(_l2Sender);
+    }
+
+    function setTxStorage(address _txStorage) external virtual onlyOwner {
+        require(_txStorage != address(0), SettingZeroAddress());
+        transactionStorage = _txStorage;
+        emit TxStorageChanged(_txStorage);
     }
 }
