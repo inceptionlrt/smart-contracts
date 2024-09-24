@@ -1,18 +1,20 @@
-import {ethers, upgrades} from "hardhat";
+import {ethers, network, upgrades} from "hardhat";
 import {expect} from "chai";
 import {takeSnapshot} from "@nomicfoundation/hardhat-network-helpers";
 import {e18, randomBI} from "../../vaults/test/helpers/utils.js";
-import {deployConfig, deployLiquidRestaking} from "./helpers/deploy";
 import {
     ArbBridgeMock,
-    CrossChainAdapterArbitrum, CrossChainAdapterOptimism,
-    CToken, OptBridgeMock,
+    CrossChainAdapterArbitrum,
+    CrossChainAdapterOptimism,
+    CToken,
+    OptBridgeMock,
     ProtocolConfig,
     Rebalancer,
     RestakingPool,
     TransactionStorage
 } from "../typechain-types";
 import {SnapshotRestorer} from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
+import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
@@ -24,9 +26,34 @@ const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
 const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
 
+function getSlotByName(name) {
+    // Perform keccak256 hashing of the string
+    const governanceHash = keccak256(toUtf8Bytes(name));
+
+    // Convert the resulting hash to a BigInt
+    const governanceUint = BigInt(governanceHash);
+
+    // Subtract 1 from the hash
+    const governanceUintMinus1 = governanceUint - 1n;
+
+    // Use the AbiCoder to encode the uint256 type
+    const abiCoder = new AbiCoder();
+    const encodedValue = abiCoder.encode(["uint256"], [governanceUintMinus1]);
+
+    // Re-hash the encoded result
+    const finalHash = keccak256(encodedValue);
+
+    // Perform bitwise AND operation with ~0xff (mask out the last byte)
+    const mask = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00");
+    const governanceSlot = BigInt(finalHash) & mask;
+
+    // Return the result as a hex string (without '0x' prefix)
+    return governanceSlot.toString(16);
+}
+
 describe("Omnivault integration tests", function () {
     this.timeout(15000);
-    let ratioFeed, arbInboxMock, arbOutboxMock, lockboxMock;
+    let ratioFeed, arbInboxMock, arbOutboxMock;
     let inEth: CToken;
     let rebalancer: Rebalancer;
     let txStorage: TransactionStorage;
@@ -41,12 +68,15 @@ describe("Omnivault integration tests", function () {
     let MAX_THRESHOLD, ratioThresh;
     let clean_snapshot: SnapshotRestorer;
     let snapshot: SnapshotRestorer;
+    let lockboxAddress;
 
     async function init(owner, operator, treasury, target) {
         const block = await ethers.provider.getBlock("latest");
         console.log(`Starting at block number: ${block.number}`);
+        lockboxAddress = network.config.addresses.lockbox;
 
-        //Restaking pool and cToken = inEth
+
+/*        Restaking pool and cToken = inEth
         const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
         const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
             protocolConfig: restakingPoolConfig,
@@ -59,6 +89,74 @@ describe("Omnivault integration tests", function () {
         ratioFeed.address = await ratioFeed.getAddress();
         cToken.address = await cToken.getAddress();
 
+        let slot = "0x" + getGovernanceSlot();
+        // const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
+        await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, owner.address]);
+        console.log(value);
+
+        for(let i = 0; i < 20; i++){
+            const slot = "0x" + i.toString(16);
+            const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
+
+            console.log(value);
+            // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
+        }
+
+        const proxyadmin = await ethers.getContractAt("IProxyAdmin", "0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c");
+        for(let i = 0; i < 20; i++){
+            const slot = "0x" + i.toString(16);
+            const value = await network.provider.send("eth_getStorageAt", ["0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c", slot, "latest"]);
+
+            console.log(value);
+            // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
+        }*/
+
+        //===Restaking pool config upgrade
+        const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
+        let slot = "0x" + (0).toString(16);
+        let value = ethers.zeroPadValue(owner.address, 32);
+        await network.provider.send("hardhat_setStorageAt", [protocolConfigAdminAddress, slot, value]);
+
+        const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig", owner);
+        const restakingPoolConfig = await upgrades.upgradeProxy(network.config.addresses.restakingPoolConfig, ProtocolConfig);
+        //Updating governance address
+        slot = "0x" + getSlotByName("genesis.config.Governance");
+        value = ethers.zeroPadValue(owner.address, 32);
+        await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, value]);
+
+        //===Restaking pool upgrade
+        const restakingPoolAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPool);
+        slot = "0x" + (0).toString(16);
+        value = ethers.zeroPadValue(owner.address, 32);
+        await network.provider.send("hardhat_setStorageAt", [restakingPoolAdminAddress, slot, value]);
+        const RestakingPool = await ethers.getContractFactory("RestakingPool", {
+            signer: owner,
+            libraries: { InceptionLibrary: network.config.addresses.lib },
+        });
+        await upgrades.forceImport(network.config.addresses.restakingPool, RestakingPool);
+        const restakingPool = await upgrades.upgradeProxy(
+            network.config.addresses.restakingPool,
+            RestakingPool,
+            {unsafeAllowLinkedLibraries: true});
+        restakingPool.address = await restakingPool.getAddress();
+
+        //===cToken
+        const cTokenAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.cToken);
+        slot = "0x" + (0).toString(16);
+        value = ethers.zeroPadValue(owner.address, 32);
+        await network.provider.send("hardhat_setStorageAt", [cTokenAdminAddress, slot, value]);
+        const CToken = await ethers.getContractFactory("cToken", owner);
+        const cToken = await upgrades.upgradeProxy(network.config.addresses.cToken, CToken);
+        cToken.address = await cToken.getAddress();
+
+        //===RatioFeed
+        const ratioFeedAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.ratioFeed);
+        slot = "0x" + (0).toString(16);
+        value = ethers.zeroPadValue(owner.address, 32);
+        await network.provider.send("hardhat_setStorageAt", [ratioFeedAdminAddress, slot, value]);
+        const RatioFeed = await ethers.getContractFactory("RatioFeed", owner);
+        const ratioFeed = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
+        ratioFeed.address = await ratioFeed.getAddress();
 
         console.log('=== TransactionStorage');
         const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
@@ -89,15 +187,15 @@ describe("Omnivault integration tests", function () {
         const optBridgeMock = await ethers.deployContract("OptBridgeMock", [optAdapter.address]);
         optBridgeMock.address = await optBridgeMock.getAddress();
 
-        console.log('=== MockLockbox');
-        const lockboxMock = await ethers.deployContract("MockLockbox", [cToken.address, cToken.address, true]);
-        lockboxMock.address = await lockboxMock.getAddress();
+        // console.log('=== MockLockbox');
+        // const lockboxMock = await ethers.deployContract("MockLockbox", [cToken.address, cToken.address, true]);
+        // lockboxMock.address = await lockboxMock.getAddress();
 
         console.log('=== Rebalancer');
         const Rebalancer = await ethers.getContractFactory("Rebalancer");
         const rebalancer = await upgrades.deployProxy(Rebalancer, [
             cToken.address,
-            lockboxMock.address,
+            lockboxAddress,
             restakingPool.address,
             txStorage.address,
             ratioFeed.address
@@ -114,7 +212,6 @@ describe("Omnivault integration tests", function () {
             arbBridgeMock,
             arbInboxMock,
             arbOutboxMock,
-            lockboxMock,
             restakingPoolConfig,
             optAdapter,
             optBridgeMock
@@ -133,7 +230,6 @@ describe("Omnivault integration tests", function () {
             arbBridgeMock,
             arbInboxMock,
             arbOutboxMock,
-            lockboxMock,
             restakingPoolConfig,
             optAdapter,
             optBridgeMock
@@ -145,10 +241,10 @@ describe("Omnivault integration tests", function () {
         await txStorage.connect(owner).addChainId(OPT_ID);
         await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
 
-        MAX_THRESHOLD = await ratioFeed.MAX_THRESHOLD();
-        ratioThresh = MAX_THRESHOLD / 100n; //1%
-        await ratioFeed.connect(owner).setRatioThreshold(ratioThresh); //Default threshold 1%
-        await ratioFeed.connect(operator).updateRatio(inEth.address, e18); //Default ratio 1
+        // MAX_THRESHOLD = await ratioFeed.MAX_THRESHOLD();
+        // ratioThresh = MAX_THRESHOLD / 100n; //1%
+        // await ratioFeed.connect(owner).setRatioThreshold(ratioThresh); //Default threshold 1%
+        // await ratioFeed.connect(operator).updateRatio(inEth.address, e18); //Default ratio 1
 
         //Arbitrum adapter
         await arbAdapter.setInbox(arbInboxMock.address);
@@ -159,13 +255,13 @@ describe("Omnivault integration tests", function () {
         await optAdapter.setRebalancer(rebalancer.address);
 
         //Restaking pool
-        await restakingPool.connect(owner).setFlashUnstakeFeeParams(30n * 10n ** 7n, 5n * 10n ** 7n, 25n * 10n ** 8n);
-        await restakingPool.connect(owner).setStakeBonusParams(15n * 10n ** 7n, 25n * 10n ** 6n, 25n * 10n ** 8n);
-        await restakingPool.connect(owner).setProtocolFee(50n * 10n ** 8n);
-        await restakingPool.connect(owner).setTargetFlashCapacity(1n);
-        await restakingPool.connect(owner).setMinStake(RESTAKING_POOL_MIN_STAKE);
-
         await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
+
+        // await restakingPool.connect(owner).setFlashUnstakeFeeParams(30n * 10n ** 7n, 5n * 10n ** 7n, 25n * 10n ** 8n);
+        // await restakingPool.connect(owner).setStakeBonusParams(15n * 10n ** 7n, 25n * 10n ** 6n, 25n * 10n ** 8n);
+        // await restakingPool.connect(owner).setProtocolFee(50n * 10n ** 8n);
+        // await restakingPool.connect(owner).setTargetFlashCapacity(1n);
+        // await restakingPool.connect(owner).setMinStake(RESTAKING_POOL_MIN_STAKE);
 
         snapshot = await takeSnapshot();
     });
@@ -177,7 +273,7 @@ describe("Omnivault integration tests", function () {
             })
 
             it("Signer can stake", async function () {
-                await restakingPool.connect(signer1)["stake()"]({value: 16n * e18});
+                await restakingPool.connect(signer1)["stake()"]({value: 2n * e18});
             })
 
             it("Get min stake amount", async function () {
@@ -207,7 +303,7 @@ describe("Omnivault integration tests", function () {
             })
 
             it("lockbox address", async function () {
-                expect(await rebalancer.lockboxAddress()).to.be.eq(lockboxMock.address);
+                expect(await rebalancer.lockboxAddress()).to.be.eq(lockboxAddress);
             })
 
             it("restaking pool address", async function () {
@@ -290,18 +386,29 @@ describe("Omnivault integration tests", function () {
         })
 
         describe("Update data", function () {
+            let initialAmount;
 
             before(async function () {
                 await snapshot.restore();
-                const amount = 32n * e18;
+                const amount = 2n * e18;
                 await restakingPool.connect(signer1)["stake()"]({value: amount});
-                expect(await inEth.totalSupply()).to.be.eq(amount);
+                initialAmount = await inEth.balanceOf(lockboxAddress);
+            })
+
+            it("Update when there is no data", async function() {
+                await rebalancer.updateTreasuryData();
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
+                console.log("Lockbox inEth balance:", lockboxBalanceAfter.format());
             })
 
             const args = [
                 {
                     name: "Increase amount and supply for the first time ARB only",
                     arb: {
+                        l2Balance: e18,
+                        l2TotalSupply: e18,
+                    },
+                    opt: {
                         l2Balance: e18,
                         l2TotalSupply: e18,
                     },
@@ -459,7 +566,7 @@ describe("Omnivault integration tests", function () {
 
 
                     const totalSupplyAfter = await inEth.totalSupply();
-                    const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                    const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
                     console.log("Lockbox inEth balance:", lockboxBalanceAfter.format());
 
                     expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedTotalSupplyDiff);
@@ -479,7 +586,7 @@ describe("Omnivault integration tests", function () {
                 })
             })
 
-            it("Repeated call for updateTreasuryData takes no effect", async function() {
+            it("Repeated call for updateTreasuryData takes no effect", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
                 await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
@@ -487,33 +594,33 @@ describe("Omnivault integration tests", function () {
                 await rebalancer.updateTreasuryData();
 
                 const totalSupplyBefore = await inEth.totalSupply();
-                const lockboxBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
                 await rebalancer.updateTreasuryData();
 
                 const totalSupplyAfter = await inEth.totalSupply();
-                const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
                 expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
                 expect(lockboxBalanceAfter).to.be.eq(lockboxBalanceBefore);
             })
 
-            it("inEth leftover on rebalancer will be transferred to the lockbox", async function() {
+            it("inEth leftover on rebalancer will be transferred to the lockbox", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
                 await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
                 await optBridgeMock.receiveL2Info(timestamp, e18, e18);
                 await rebalancer.updateTreasuryData();
 
-                const amount = randomBI(18);
+                const amount = randomBI(17);
                 await inEth.connect(signer1).transfer(rebalancer.address, amount);
 
                 const totalSupplyBefore = await inEth.totalSupply();
-                const lockboxBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
                 await expect(rebalancer.updateTreasuryData())
                     .to.emit(rebalancer, "InETHDepositedToLockbox")
                     .withArgs(amount);
 
                 const totalSupplyAfter = await inEth.totalSupply();
-                const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
                 expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
                 expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(amount);
             })
@@ -595,8 +702,8 @@ describe("Omnivault integration tests", function () {
             })
         })
 
-        describe("handleL2Info", function() {
-            it("handleL2Info reverts when called by not an adapter", async function() {
+        describe("handleL2Info", function () {
+            it("handleL2Info reverts when called by not an adapter", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const chainId = ARB_ID;
                 const timestamp = block.timestamp;
@@ -669,7 +776,7 @@ describe("Omnivault integration tests", function () {
             const args = [
                 {
                     name: "Random amount ~ 1e19",
-                    amount: async () => randomBI(19)
+                    amount: async () => randomBI(17)
                 },
                 {
                     name: "Restaking pool min amount",
@@ -680,24 +787,25 @@ describe("Omnivault integration tests", function () {
             args.forEach(function (arg) {
                 it(arg.name, async function () {
                     const amount = await arg.amount();
-                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                    const shares = await inEth.convertToShares(amount);
+                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
                     const tx = arbBridgeMock.connect(signer1).receiveL2Eth({value: amount});
                     await expect(tx)
                         .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
                         .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount)
                         .and.emit(rebalancer, "InETHDepositedToLockbox")
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount);
+                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
                     await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
 
-                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
                     console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
                     console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
-                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxMock.address));
+                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
 
                     //Everything was transferred to the lockbox, nothing is left on rebalancer
-                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(amount);
+                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
                 })
             })
 
@@ -821,7 +929,7 @@ describe("Omnivault integration tests", function () {
             const args = [
                 {
                     name: "Random amount ~ 1e19",
-                    amount: async () => randomBI(19)
+                    amount: async () => randomBI(17)
                 },
                 {
                     name: "Restaking pool min amount",
@@ -832,24 +940,25 @@ describe("Omnivault integration tests", function () {
             args.forEach(function (arg) {
                 it(arg.name, async function () {
                     const amount = await arg.amount();
-                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                    const shares = await inEth.convertToShares(amount);
+                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
                     const tx = optBridgeMock.connect(signer1).receiveL2Eth({value: amount});
                     await expect(tx)
                         .and.emit(optAdapter, "L2EthDeposit").withArgs(amount)
                         .and.emit(rebalancer, "ETHReceived").withArgs(optAdapter.address, arg.amount)
                         .and.emit(rebalancer, "InETHDepositedToLockbox")
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, amount);
+                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
                     await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
 
-                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
                     console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
                     console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
-                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxMock.address));
+                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
 
                     //Everything was transferred to the lockbox, nothing is left on rebalancer
-                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(amount);
+                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
                 })
             })
 
