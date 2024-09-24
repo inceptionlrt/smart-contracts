@@ -123,4 +123,6 @@ interface IRestakingPool {
     function getMinUnstake() external view returns (uint256);
 
     function stake() external payable;
+
+    function availableToStake() external view returns (uint256);
 }

@@ -35,6 +35,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 availableTokens
     );
     error SendAmountExceedsEthBalance(uint256 amountToSend);
+    error StakeAmountExceedsMaxTVL();
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
@@ -198,6 +199,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(
             _amount <= localInEthBalance(),
             StakeAmountExceedsInEthBalance(_amount, localInEthBalance())
+        );
+        require(
+            _amount <= IRestakingPool(liqPool).availableToStake(),
+            StakeAmountExceedsMaxTVL()
         );
         IRestakingPool(liqPool).stake{value: msg.value}();
 

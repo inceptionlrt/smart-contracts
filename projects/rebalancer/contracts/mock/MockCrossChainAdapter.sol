@@ -63,7 +63,7 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
         emit L2EthReceived(msg.value);
     }
 
-    function sendEthToL2(uint256 _amount) external payable {
+    function sendEthToL2() external payable {
         //placeholder for compilation
     }
 
