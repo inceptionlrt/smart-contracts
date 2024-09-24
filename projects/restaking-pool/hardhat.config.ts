@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 
 const TARGET_DIR = "./contracts";
-const PROJECTS = [
+const EXTERNAL_PROJECTS = [
   "../crosschain-adapters",
   "../rebalancer",
 ]
@@ -18,7 +18,7 @@ const collectContracts = () => {
     fs.mkdirSync(TARGET_DIR);
   }
 
-  PROJECTS.forEach((project) => {
+  EXTERNAL_PROJECTS.forEach((project) => {
     const baseName = path.basename(project);
     const symlinkPath = path.join(TARGET_DIR, baseName);
     console.log("basename: ", baseName);

@@ -23,7 +23,13 @@ interface ICrossChainAdapterL1 {
         uint256 inEthBalance
     );
 
+    event L2EthDeposit(uint256 amount);
+    event L2InfoReceived();
     event L2EthReceived(uint256 indexed value);
+    event RebalancerChanged(address newRebalancer);
+    event L2SenderChanged(address newL2Sender);
+    event InboxChanged(address newInbox);
+    event TxStorageChanged(address newTxStorage);
 
     function receiveL2Info(
         uint256 _timestamp,

@@ -478,6 +478,45 @@ describe("Omnivault integration tests", function () {
                     }
                 })
             })
+
+            it("Repeated call for updateTreasuryData takes no effect", async function() {
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp;
+                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
+                await optBridgeMock.receiveL2Info(timestamp, e18, e18);
+                await rebalancer.updateTreasuryData();
+
+                const totalSupplyBefore = await inEth.totalSupply();
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                await rebalancer.updateTreasuryData();
+
+                const totalSupplyAfter = await inEth.totalSupply();
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
+                expect(lockboxBalanceAfter).to.be.eq(lockboxBalanceBefore);
+            })
+
+            it("inEth leftover on rebalancer will be transferred to the lockbox", async function() {
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp;
+                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
+                await optBridgeMock.receiveL2Info(timestamp, e18, e18);
+                await rebalancer.updateTreasuryData();
+
+                const amount = randomBI(18);
+                await inEth.connect(signer1).transfer(rebalancer.address, amount);
+
+                const totalSupplyBefore = await inEth.totalSupply();
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxMock.address);
+                await expect(rebalancer.updateTreasuryData())
+                    .to.emit(rebalancer, "InETHDepositedToLockbox")
+                    .withArgs(amount);
+
+                const totalSupplyAfter = await inEth.totalSupply();
+                const lockboxBalanceAfter = await inEth.balanceOf(lockboxMock.address);
+                expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
+                expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(amount);
+            })
         })
     })
 
@@ -581,24 +620,29 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "rebalancer address",
                     setter: "setRebalancer",
-                    getter: "rebalancer"
+                    getter: "rebalancer",
+                    event: "RebalancerChanged"
                 },
                 {
                     name: "l2 sender address",
                     setter: "setL2Sender",
-                    getter: "l2Sender"
+                    getter: "l2Sender",
+                    event: "L2SenderChanged"
                 },
                 {
                     name: "arbitrum inbox",
                     setter: "setInbox",
-                    getter: "inbox"
+                    getter: "inbox",
+                    event: "InboxChanged"
                 },
             ]
 
             setters.forEach(function (arg) {
                 it(`Set new ${arg.name}`, async function () {
                     const newValue = ethers.Wallet.createRandom().address;
-                    await arbAdapter[arg.setter](newValue);
+                    await expect(arbAdapter[arg.setter](newValue))
+                        .to.emit(arbAdapter, arg.event)
+                        .withArgs(newValue);
 
                     expect(await arbAdapter[arg.getter]()).to.be.eq(newValue);
                 })
@@ -664,29 +708,33 @@ describe("Omnivault integration tests", function () {
         })
 
         describe("handleL2Info", function () {
+            let lastHandleTime;
+            before(async function () {
+                await snapshot.restore();
+            })
+
             it("handleL2Info", async () => {
                 const block = await ethers.provider.getBlock("latest");
-                const _timestamp = block.timestamp;
+                lastHandleTime = block.timestamp - 1000;
                 const _balance = 100;
                 const _totalSupply = 100;
 
-                await expect(arbBridgeMock.receiveL2Info(_timestamp, _balance, _totalSupply))
+                await expect(arbBridgeMock.receiveL2Info(lastHandleTime, _balance, _totalSupply))
                     .to.emit(txStorage, "L2InfoReceived")
-                    .withArgs(ARB_ID, _timestamp, _balance, _totalSupply);
+                    .withArgs(ARB_ID, lastHandleTime, _balance, _totalSupply);
 
                 const chainDataAfter = await txStorage.getTransactionData(ARB_ID);
-                expect(chainDataAfter.timestamp).to.be.eq(_timestamp);
+                expect(chainDataAfter.timestamp).to.be.eq(lastHandleTime);
                 expect(chainDataAfter.ethBalance).to.be.eq(_balance);
                 expect(chainDataAfter.inEthBalance).to.be.eq(_totalSupply);
             })
 
-            it("Reverts: when timestamp is older than the last message", async function () {
-                const block = await ethers.provider.getBlock("latest");
-                const timestamp = block.timestamp - 1;
-                const balance = 100;
-                const totalSupply = 100;
 
-                await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
+            it("Reverts: when there is a message with this timestamp", async function () {
+                const balance = 200;
+                const totalSupply = 200;
+
+                await expect(arbBridgeMock.receiveL2Info(lastHandleTime, balance, totalSupply))
                     .to.revertedWith("Time before than prev recorded");
             })
 
@@ -723,24 +771,29 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "rebalancer address",
                     setter: "setRebalancer",
-                    getter: "rebalancer"
+                    getter: "rebalancer",
+                    event: "RebalancerChanged"
                 },
                 {
                     name: "l2 sender address",
                     setter: "setL2Sender",
-                    getter: "l2Sender"
+                    getter: "l2Sender",
+                    event: "L2SenderChanged"
                 },
                 {
                     name: "optimism inbox",
                     setter: "setInbox",
-                    getter: "inbox"
+                    getter: "inbox",
+                    event: "InboxChanged"
                 },
             ]
 
             setters.forEach(function (arg) {
                 it(`Set new ${arg.name}`, async function () {
                     const newValue = ethers.Wallet.createRandom().address;
-                    await optAdapter[arg.setter](newValue);
+                    await expect(optAdapter[arg.setter](newValue))
+                        .to.emit(optAdapter, arg.event)
+                        .withArgs(newValue);
 
                     expect(await optAdapter[arg.getter]()).to.be.eq(newValue);
                 })
@@ -812,29 +865,31 @@ describe("Omnivault integration tests", function () {
         })
 
         describe("handleL2Info", function () {
+            let lastHandleTime;
+            before(async function () {
+                await snapshot.restore();
+            })
             it("handleL2Info", async () => {
                 const block = await ethers.provider.getBlock("latest");
-                const _timestamp = block.timestamp;
+                lastHandleTime = block.timestamp - 1000;
                 const _balance = 100;
                 const _totalSupply = 100;
 
-                await expect(optBridgeMock.receiveL2Info(_timestamp, _balance, _totalSupply))
+                await expect(optBridgeMock.receiveL2Info(lastHandleTime, _balance, _totalSupply))
                     .to.emit(txStorage, "L2InfoReceived")
-                    .withArgs(OPT_ID, _timestamp, _balance, _totalSupply);
+                    .withArgs(OPT_ID, lastHandleTime, _balance, _totalSupply);
 
                 const chainDataAfter = await txStorage.getTransactionData(OPT_ID);
-                expect(chainDataAfter.timestamp).to.be.eq(_timestamp);
+                expect(chainDataAfter.timestamp).to.be.eq(lastHandleTime);
                 expect(chainDataAfter.ethBalance).to.be.eq(_balance);
                 expect(chainDataAfter.inEthBalance).to.be.eq(_totalSupply);
             })
 
             it("Reverts: when timestamp is older than the last message", async function () {
-                const block = await ethers.provider.getBlock("latest");
-                const timestamp = block.timestamp - 1;
                 const balance = 100;
                 const totalSupply = 100;
 
-                await expect(optBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
+                await expect(optBridgeMock.receiveL2Info(lastHandleTime, balance, totalSupply))
                     .to.revertedWith("Time before than prev recorded");
             })
 

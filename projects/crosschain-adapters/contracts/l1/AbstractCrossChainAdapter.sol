@@ -18,13 +18,6 @@ abstract contract AbstractCrossChainAdapter is
     address public rebalancer;
     address public transactionStorage;
 
-    event L2EthDeposit(uint256 amount);
-    event L2InfoReceived();
-    event InboxChanged(address newInbox);
-    event RebalancerChanged(address newRebalancer);
-    event TxStorageChanged(address newTxStorage);
-    event L2SenderChanged(address newL2Sender);
-
     constructor(address _transactionStorage) {
         transactionStorage = _transactionStorage;
     }
