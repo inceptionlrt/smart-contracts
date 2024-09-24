@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {IL1CrossDomainMessenger} from "@eth-optimism/contracts/L1/messaging/IL1CrossDomainMessenger.sol";
+
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
+    error NoProgrammaticEthTransferOnOptimism();
+
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
 
     constructor(
@@ -24,5 +28,9 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
         emit L2EthDeposit(msg.value);
         (bool success, ) = rebalancer.call{value: msg.value}("");
         require(success, TransferToRebalancerFailed());
+    }
+
+    function sendEthToL2() external payable {
+        revert NoProgrammaticEthTransferOnOptimism();
     }
 }
