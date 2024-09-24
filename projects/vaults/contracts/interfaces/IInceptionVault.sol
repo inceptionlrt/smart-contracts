@@ -74,6 +74,17 @@ interface IInceptionVault {
 
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
+    event TreasuryUpdated(address indexed newTreasury);
+
+
+    event EthSentToL1(uint256 amount);
+    event AssetsInfoSentToL1(uint256 tokensAmount, uint256 ethAmount);
+    event CrossChainAdapterChanged(address newCrossChainAdapter);
+
+    error EthToL1Failed(uint256 amount);
+    error MessageToL1Failed(uint256 tokensAmount, uint256 ethAmount);
+    error CrossChainAdapterNotSet();
+
     function inceptionToken() external view returns (IInceptionToken);
 
     function ratio() external view returns (uint256);
