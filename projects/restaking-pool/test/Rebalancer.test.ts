@@ -76,40 +76,40 @@ describe("Omnivault integration tests", function () {
         lockboxAddress = network.config.addresses.lockbox;
 
 
-/*        Restaking pool and cToken = inEth
-        const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
-        const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
-            protocolConfig: restakingPoolConfig,
-            tokenName: "Inception eth",
-            tokenSymbol: "inEth",
-            distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
-            maxTVL: RESTAKING_POOL_MAX_TVL,
-        });
-        restakingPool.address = await restakingPool.getAddress();
-        ratioFeed.address = await ratioFeed.getAddress();
-        cToken.address = await cToken.getAddress();
+        /*        Restaking pool and cToken = inEth
+                const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
+                const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
+                    protocolConfig: restakingPoolConfig,
+                    tokenName: "Inception eth",
+                    tokenSymbol: "inEth",
+                    distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
+                    maxTVL: RESTAKING_POOL_MAX_TVL,
+                });
+                restakingPool.address = await restakingPool.getAddress();
+                ratioFeed.address = await ratioFeed.getAddress();
+                cToken.address = await cToken.getAddress();
 
-        let slot = "0x" + getGovernanceSlot();
-        // const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
-        await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, owner.address]);
-        console.log(value);
+                let slot = "0x" + getGovernanceSlot();
+                // const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
+                await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, owner.address]);
+                console.log(value);
 
-        for(let i = 0; i < 20; i++){
-            const slot = "0x" + i.toString(16);
-            const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
+                for(let i = 0; i < 20; i++){
+                    const slot = "0x" + i.toString(16);
+                    const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
 
-            console.log(value);
-            // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
-        }
+                    console.log(value);
+                    // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
+                }
 
-        const proxyadmin = await ethers.getContractAt("IProxyAdmin", "0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c");
-        for(let i = 0; i < 20; i++){
-            const slot = "0x" + i.toString(16);
-            const value = await network.provider.send("eth_getStorageAt", ["0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c", slot, "latest"]);
+                const proxyadmin = await ethers.getContractAt("IProxyAdmin", "0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c");
+                for(let i = 0; i < 20; i++){
+                    const slot = "0x" + i.toString(16);
+                    const value = await network.provider.send("eth_getStorageAt", ["0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c", slot, "latest"]);
 
-            console.log(value);
-            // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
-        }*/
+                    console.log(value);
+                    // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
+                }*/
 
         //===Restaking pool config upgrade
         const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
@@ -131,7 +131,7 @@ describe("Omnivault integration tests", function () {
         await network.provider.send("hardhat_setStorageAt", [restakingPoolAdminAddress, slot, value]);
         const RestakingPool = await ethers.getContractFactory("RestakingPool", {
             signer: owner,
-            libraries: { InceptionLibrary: network.config.addresses.lib },
+            libraries: {InceptionLibrary: network.config.addresses.lib},
         });
         await upgrades.forceImport(network.config.addresses.restakingPool, RestakingPool);
         const restakingPool = await upgrades.upgradeProxy(
@@ -386,149 +386,152 @@ describe("Omnivault integration tests", function () {
         })
 
         describe("Update data", function () {
-            let initialAmount;
+            let initialArbAmount, initialArbSupply;
+            let initialOptAmount, initialOptSupply;
 
             before(async function () {
                 await snapshot.restore();
                 const amount = 2n * e18;
                 await restakingPool.connect(signer1)["stake()"]({value: amount});
-                initialAmount = await inEth.balanceOf(lockboxAddress);
+                const initialAmount = await inEth.balanceOf(lockboxAddress);
+                initialArbAmount = initialAmount / 2n;
+                initialArbSupply = initialAmount / 2n;
+                initialOptAmount = initialAmount - initialArbAmount;
+                initialOptSupply = initialAmount - initialArbAmount;
             })
 
-            it("Update when there is no data", async function() {
-                await rebalancer.updateTreasuryData();
-                const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                console.log("Lockbox inEth balance:", lockboxBalanceAfter.format());
+            it("Reverts when there is no data for one of the chains", async function () {
+                await expect(rebalancer.updateTreasuryData())
+                    .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp;
+                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
+
+                await expect(rebalancer.updateTreasuryData())
+                    .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
             })
 
             const args = [
                 {
-                    name: "Increase amount and supply for the first time ARB only",
+                    name: "Sync for the first time",
                     arb: {
-                        l2Balance: e18,
-                        l2TotalSupply: e18,
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => 0n,
                     },
                     opt: {
-                        l2Balance: e18,
-                        l2TotalSupply: e18,
-                    },
-                },
-                {
-                    name: "Increase amount and supply for the first time OPT only",
-                    opt: {
-                        l2Balance: e18,
-                        l2TotalSupply: e18,
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => 0n,
                     },
                 },
                 {
                     name: "Increase amount and supply ARB and OPT",
                     arb: {
-                        l2Balance: 2n * e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => e18,
+                        l2TotalSupplyDiff: () => e18,
                     },
                     opt: {
-                        l2Balance: 2n * e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => e18,
+                        l2TotalSupplyDiff: () => e18,
                     }
                 },
                 {
                     name: "Increase only eth amount ARB",
                     arb: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => ethers.parseEther("1.5"),
+                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
                     name: "Increase only eth amount OPT",
                     opt: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => ethers.parseEther("1.5"),
+                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
                     name: "Increase only inEth supply ARB",
                     arb: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: ethers.parseEther("2.5"),
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => ethers.parseEther("1.5"),
                     }
                 },
                 {
                     name: "Increase only inEth supply OPT",
                     opt: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: ethers.parseEther("2.5"),
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => ethers.parseEther("1.5"),
                     }
                 },
                 {
                     name: "Update to the same values ARB and OPT",
                     arb: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: ethers.parseEther("2.5"),
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => 0n,
                     },
                     opt: {
-                        l2Balance: ethers.parseEther("2.5"),
-                        l2TotalSupply: ethers.parseEther("2.5"),
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
                     name: "Decrease amount and total supply ARB only",
                     arb: {
-                        l2Balance: 2n * e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => -ethers.parseEther("0.5"),
+                        l2TotalSupplyDiff: () => -ethers.parseEther("0.5"),
                     }
                 },
                 {
                     name: "Decrease amount and total supply OPT only",
                     opt: {
-                        l2Balance: 2n * e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => -ethers.parseEther("0.5"),
+                        l2TotalSupplyDiff: () => -ethers.parseEther("0.5"),
                     }
                 },
                 {
                     name: "Decrease only eth amount ARB and OPT",
                     arb: {
-                        l2Balance: e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => -e18,
+                        l2TotalSupplyDiff: () => 0n,
                     },
                     opt: {
-                        l2Balance: e18,
-                        l2TotalSupply: 2n * e18,
+                        l2BalanceDiff: () => -e18,
+                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
                     name: "Decrease only total supply ARB abd OPT",
                     arb: {
-                        l2Balance: e18,
-                        l2TotalSupply: e18,
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => -e18,
                     },
                     opt: {
-                        l2Balance: e18,
-                        l2TotalSupply: e18,
+                        l2BalanceDiff: () => 0n,
+                        l2TotalSupplyDiff: () => -e18,
                     }
                 },
                 {
                     name: "Increase for ARB and decrease for OPT for the same amount",
                     arb: {
-                        l2Balance: ethers.parseEther("1.5"),
-                        l2TotalSupply: ethers.parseEther("1.5"),
+                        l2BalanceDiff: () => e18,
+                        l2TotalSupplyDiff: () => e18,
                     },
                     opt: {
-                        l2Balance: ethers.parseEther("0.5"),
-                        l2TotalSupply: ethers.parseEther("0.5"),
+                        l2BalanceDiff: () => -ethers.parseEther("0.5"),
+                        l2TotalSupplyDiff: () => -ethers.parseEther("0.5"),
                     }
                 },
                 {
                     name: "Decrease to 0 ARB",
                     arb: {
-                        l2Balance: 0n,
-                        l2TotalSupply: 0n,
+                        l2BalanceDiff: () => -initialArbSupply,
+                        l2TotalSupplyDiff: () => -initialArbSupply,
                     }
                 },
                 {
                     name: "Decrease to 0 OPT",
                     opt: {
-                        l2Balance: 0n,
-                        l2TotalSupply: 0n,
+                        l2BalanceDiff: () => -initialOptSupply,
+                        l2TotalSupplyDiff: () => -initialOptSupply,
                     }
                 },
             ]
@@ -538,32 +541,23 @@ describe("Omnivault integration tests", function () {
                     const block = await ethers.provider.getBlock("latest");
                     const timestamp = block.timestamp;
 
-                    const arbStateBefore = await txStorage.getTransactionData(ARB_ID);
-                    const optStateBefore = await txStorage.getTransactionData(OPT_ID);
-                    let arbl2BalanceNew, arbl2TotalSupplyNew;
-                    let optl2BalanceNew, optl2TotalSupplyNew;
+                    let expectedTotalSupplyDiff = 0n;
                     if (arg.arb) {
-                        arbl2BalanceNew = arg.arb.l2Balance;
-                        arbl2TotalSupplyNew = arg.arb.l2TotalSupply;
-                        await arbBridgeMock.receiveL2Info(timestamp, arbl2BalanceNew, arbl2TotalSupplyNew);
-                    } else {
-                        arbl2BalanceNew = arbStateBefore.ethBalance;
-                        arbl2TotalSupplyNew = arbStateBefore.inEthBalance;
+                        expectedTotalSupplyDiff += arg.arb.l2TotalSupplyDiff();
+                        initialArbAmount += arg.arb.l2BalanceDiff();
+                        initialArbSupply += arg.arb.l2TotalSupplyDiff();
+                        await arbBridgeMock.receiveL2Info(timestamp, initialArbAmount, initialArbSupply);
                     }
                     if (arg.opt) {
-                        optl2BalanceNew = arg.opt.l2Balance;
-                        optl2TotalSupplyNew = arg.opt.l2TotalSupply;
-                        await optBridgeMock.receiveL2Info(timestamp, optl2BalanceNew, optl2TotalSupplyNew);
-                    } else {
-                        optl2BalanceNew = optStateBefore.ethBalance;
-                        optl2TotalSupplyNew = optStateBefore.inEthBalance;
+                        expectedTotalSupplyDiff += arg.opt.l2TotalSupplyDiff();
+                        initialOptAmount += arg.opt.l2BalanceDiff();
+                        initialOptSupply += arg.opt.l2TotalSupplyDiff();
+                        await optBridgeMock.receiveL2Info(timestamp, initialOptAmount, initialOptSupply);
                     }
-                    const expectedTotalSupplyDiff = optl2TotalSupplyNew + arbl2TotalSupplyNew - arbStateBefore.inEthBalance - optStateBefore.inEthBalance
-                    const expectedLockboxBalance = optl2TotalSupplyNew + arbl2TotalSupplyNew;
+                    const expectedLockboxBalance = initialArbSupply + initialOptSupply;
                     const totalSupplyBefore = await inEth.totalSupply();
 
                     let tx = await rebalancer.updateTreasuryData();
-
 
                     const totalSupplyAfter = await inEth.totalSupply();
                     const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
@@ -731,6 +725,12 @@ describe("Omnivault integration tests", function () {
                     event: "RebalancerChanged"
                 },
                 {
+                    name: "txStorage address",
+                    setter: "setTxStorage",
+                    getter: "transactionStorage",
+                    event: "TxStorageChanged"
+                },
+                {
                     name: "l2 sender address",
                     setter: "setL2Sender",
                     getter: "l2Sender",
@@ -882,6 +882,12 @@ describe("Omnivault integration tests", function () {
                     setter: "setRebalancer",
                     getter: "rebalancer",
                     event: "RebalancerChanged"
+                },
+                {
+                    name: "txStorage address",
+                    setter: "setTxStorage",
+                    getter: "transactionStorage",
+                    event: "TxStorageChanged"
                 },
                 {
                     name: "l2 sender address",
