@@ -29,7 +29,7 @@ interface ICrossChainAdapterL1 {
         uint256 _totalSupply
     ) external;
 
-    function sendEthToL2(uint256 _amount) external payable;
+    function sendEthToL2() external payable;
 
     function receiveL2Eth() external payable;
 }

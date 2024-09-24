@@ -214,7 +214,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             _amount <= address(this).balance,
             SendAmountExceedsEthBalance(_amount)
         );
-        ICrossChainAdapterL1(crosschainAdapter).sendEthToL2(_amount);
+        ICrossChainAdapterL1(crosschainAdapter).sendEthToL2{value: _amount}();
     }
 
     function localInEthBalance() public view returns (uint256) {

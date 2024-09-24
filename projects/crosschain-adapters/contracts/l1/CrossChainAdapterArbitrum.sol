@@ -12,7 +12,11 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
     uint256 maxGas = 100000000000;
     uint256 gasPriceBid = 1000;
 
-    event GasParametersChanged(uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid);
+    event GasParametersChanged(
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid
+    );
 
     constructor(
         address _transactionStorage
@@ -40,20 +44,16 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
         emit L2EthDeposit(msg.value);
     }
 
-    function sendEthToL2(
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid
-    ) external payable {
+    function sendEthToL2() external payable {
         IInbox _inbox = IInbox(inbox);
         _inbox.createRetryableTicket{value: msg.value}(
             l2Sender,
             0,
-            _maxSubmissionCost,
+            maxSubmissionCost,
             msg.sender, // Refund unused gas to this address
             msg.sender, // Refund unused ETH to this address
-            _maxGas,
-            _gasPriceBid,
+            maxGas,
+            gasPriceBid,
             "" // Data (empty since only sending ETH)
         );
     }
