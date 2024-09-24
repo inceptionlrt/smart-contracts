@@ -9,9 +9,11 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     error NoProgrammaticEthTransferOnOptimism();
 
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
+    uint32 gasLimit = 20_000;
 
     constructor(
-        address _transactionStorage
+        address _transactionStorage,
+        address xDomainMessenger
     ) AbstractCrossChainAdapter(_transactionStorage) {}
 
     function receiveL2Info(
@@ -31,6 +33,12 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     }
 
     function sendEthToL2() external payable {
-        revert NoProgrammaticEthTransferOnOptimism();
+        _sendMessage{value: msg.value}(l2sender, "", gasLimit);
     }
+
+    function _sendMessage(
+        address _l2Sender,
+        bytes calldata _message,
+        uint32 _gasLimit
+    ) internal payable {}
 }
