@@ -5,7 +5,7 @@ import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-4/access/Ownable.sol";
 
 import "../interface/ICrossChainAdapterL2.sol";
 

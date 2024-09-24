@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "openzeppelin-4/access/Ownable.sol";
+import "openzeppelin-4/security/ReentrancyGuard.sol";
+import "openzeppelin-4/utils/Address.sol";
 
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
@@ -17,13 +17,6 @@ abstract contract AbstractCrossChainAdapter is
     address public inbox;
     address public rebalancer;
     address public transactionStorage;
-
-    event L2EthDeposit(uint256 amount);
-    event L2InfoReceived();
-    event InboxChanged(address newInbox);
-    event RebalancerChanged(address newRebalancer);
-    event TxStorageChanged(address newTxStorage);
-    event L2SenderChanged(address newL2Sender);
 
     constructor(address _transactionStorage) {
         transactionStorage = _transactionStorage;
