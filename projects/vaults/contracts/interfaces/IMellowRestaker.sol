@@ -21,9 +21,7 @@ interface IMellowRestaker {
     ) external returns (uint256 lpAmount);
 
     function delegate(
-        uint256 amount,
-        uint256 minLpAmount,
-        uint256 deadline
+        uint256 amount
     ) external returns (uint256 lpAmount);
 
     function withdrawMellow(

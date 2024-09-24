@@ -8,23 +8,21 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeabl
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IInceptionVault.sol";
 import "../interfaces/InceptionRestakerErrors.sol";
-import "../interfaces/IDelegationManager.sol";
 import "../interfaces/IMellowRestaker.sol";
 import "../interfaces/IMellowDepositWrapper.sol";
 import "../interfaces/IMellowVault.sol";
 import "../interfaces/IWSteth.sol";
-import "../interfaces/IMellowVaultConfigurator.sol";
 import "../lib/FullMath.sol";
 
 import "../interfaces/mellow/IMellowPriceOracle.sol";
 import "../interfaces/mellow/IMellowRatiosOracle.sol";
 
-interface Mix {
+interface IMellowHandler {
     function getTotalDeposited() external view returns (uint256);
     function MAX_TARGET_PERCENT() external view returns (uint256);
     function targetCapacity() external view returns (uint256);
+    function getFreeBalance() external view returns (uint256 total);
 }
 
 /// @author The InceptionLRT team
@@ -114,22 +112,21 @@ contract MellowRestaker is
             );
     }
 
-    function delegate(uint256 amount, uint256 minLpAmount, uint256 deadline) external onlyTrustee returns (uint256 lpAmount) {
+    function delegate(uint256 deadline) external onlyTrustee returns (uint256 lpAmount) {
+        uint256 MAX_TARGET_PERCENT = IMellowHandler(_vault).MAX_TARGET_PERCENT();
+        uint256 total = IMellowHandler(_vault).getTotalDeposited();
         for(uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];  // in %
             if(allocation > 0) {
-                uint256 total = Mix(_vault).getTotalDeposited();
-                uint256 MAX = Mix(_vault).MAX_TARGET_PERCENT();
                 uint256 deposited = getDeposited(address(mellowVaults[i]));
-                uint256 ratio = (deposited * MAX) / total;
+                uint256 ratio = (deposited * MAX_TARGET_PERCENT) / total;
                 if(ratio < allocation) {
-                    uint256 delegateAmount = ((total * allocation) / MAX) - deposited;
-                    if(amount >= delegateAmount && delegateAmount > 0) {
+                    uint256 delegateAmount = ((total * allocation) / MAX_TARGET_PERCENT) - deposited;
+                    if(IMellowHandler(_vault).getFreeBalance() >= delegateAmount && delegateAmount > 0) {
                         _asset.transferFrom(_vault, address(this), delegateAmount);
                         IMellowDepositWrapper wrapper = mellowDepositWrappers[address(mellowVaults[i])];
                         IERC20(_asset).safeIncreaseAllowance(address(wrapper), delegateAmount);
-                        wrapper.deposit(address(this), address(_asset), delegateAmount, minLpAmount, deadline);
-                        amount -= delegateAmount;
+                        lpAmount += wrapper.deposit(address(this), address(_asset), delegateAmount, 0, deadline);
                     }
                 }
             }
@@ -206,8 +203,8 @@ contract MellowRestaker is
         for(uint256 i = 0; i < mellowVaults.length; i++) {
             totalAllocations += allocations[address(mellowVaults[i])];
         }
-        totalAllocations += Mix(_vault).targetCapacity();
-        return totalAllocations <= Mix(_vault).MAX_TARGET_PERCENT();
+        totalAllocations += IMellowHandler(_vault).targetCapacity();
+        return totalAllocations <= IMellowHandler(_vault).MAX_TARGET_PERCENT();
     }
 
     function pendingMellowRequest(IMellowVault mellowVault)

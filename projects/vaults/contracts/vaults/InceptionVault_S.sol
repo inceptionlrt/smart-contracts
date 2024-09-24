@@ -165,17 +165,10 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         return;
     }
 
-    /// @dev Sends underlying to all mellow vaults based on allocation
-    /// @dev An amount of '0' means all available underlying assets
-    function delegateAuto(uint256 amount) external nonReentrant whenNotPaused onlyOperator {
-        if (amount == 0) amount = getFreeBalance();
-        _beforeDeposit(amount);
-        _asset.approve(address(mellowRestaker), amount);
-        uint256 lpAmount = mellowRestaker.delegate(
-            amount,
-            0,
-            block.timestamp
-        );
+    /// @dev Sends all underlying to all mellow vaults based on allocation
+    function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
+        _asset.approve(address(mellowRestaker), getFreeBalance());
+        uint256 lpAmount = mellowRestaker.delegate(block.timestamp);
     }
 
     /*///////////////////////////////////////

@@ -312,33 +312,34 @@ assets.forEach(function (a) {
       //Only stEth supports Mellow
       if (a.assetName === "stETH") {
         it("DelegateAuto to Mellow", async function () {
-          const amount = await iVault.getFreeBalance();
-          expect(amount).to.be.gt(0n);
-          const totalAssetsBefore = await iVault.totalAssets(); 
+          const amount = await iVault.getFreeBalance(); 
+          expect(amount).to.be.gt(0n); console.log(amount);
+          const totalAssetsBefore = await iVault.totalAssets();
         
+           // 1% FlashPool reserved
           await mellowRestaker.changeAllocation(mellowVault.address, toWei(25));
-          await mellowRestaker.changeAllocation(mellowVault2.address, toWei(74)); // 1% FlashPool
-          await iVault.connect(iVaultOperator).delegateAuto(amount);
+          await mellowRestaker.changeAllocation(mellowVault2.address, toWei(74));
+          await iVault.connect(iVaultOperator).delegateAuto();
           delegatedMellow += amount;
 
           const mellowBalance = await mellowVault.balanceOf(mellowRestaker.address);
           const mellowBalance2 = await mellowVault2.balanceOf(mellowRestaker.address);
           const totalAssetsAfter = await iVault.totalAssets();
           const totalDelegatedAfter = await iVault.getTotalDelegated();
-          const delegatedTo = await iVault.getDelegatedTo(mellowVault.address); console.log(delegatedTo);
-          const delegatedTo2 = await iVault.getDelegatedTo(mellowVault2.address); console.log(delegatedTo2); console.log("$$$$$$")
+          const delegatedTo = await iVault.getDelegatedTo(mellowVault.address);
+          const delegatedTo2 = await iVault.getDelegatedTo(mellowVault2.address);
           const totalDepositedAfter = await iVault.getTotalDeposited();
           console.log("Mellow LP token balance: ", mellowBalance.format());
           console.log("Mellow LP token balance2: ", mellowBalance2.format());
           console.log("Amount delegated: ", delegatedMellow.format());
 
-          expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - 4n, transactErr);
-          expect(totalDelegatedAfter).to.be.closeTo(delegatedMellow - 10n, transactErr);
-          expect(delegatedTo).to.be.closeTo(4999999999999999994n, transactErr);
-          expect(delegatedTo2).to.be.closeTo(14799999999999999992n, transactErr);
+          expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount, transactErr);
+          expect(totalDelegatedAfter).to.be.closeTo(delegatedMellow - 4n, transactErr);
+          expect(delegatedTo).to.be.closeTo((totalDeposited * 25n) / 100n - 2n, transactErr);
+          expect(delegatedTo2).to.be.closeTo((totalDeposited * 74n) / 100n - 2n, transactErr);
           expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr * 2n);
-          expect(mellowBalance).to.be.gt(4256322791824760012n);
-          expect(mellowBalance2).to.be.gt(4256322791824760012n);
+          expect(mellowBalance).to.be.gt(delegatedTo / 2n);  //Amount of shares is at least greater than half of delegated amount
+          expect(mellowBalance2).to.be.gt(delegatedTo2 / 2n);  //Amount of shares is at least greater than half of delegated amount
           expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, ratioErr);
         });
       } else { }
