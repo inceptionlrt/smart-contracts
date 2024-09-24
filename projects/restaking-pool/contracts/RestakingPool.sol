@@ -483,11 +483,6 @@ contract RestakingPool is
         restaker.undelegate(address(restaker));
     }
 
-    function setRebalancer(address _rebalancer) external onlyOperator {
-        require(_rebalancer != address(0), PoolZeroAddress());
-        rebalancer = _rebalancer;
-    }
-
     /*******************************************************************************
                         VIEW FUNCTIONS
     *******************************************************************************/
@@ -833,6 +828,11 @@ contract RestakingPool is
     ) external onlyGovernance {
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
+    }
+
+    function setRebalancer(address _rebalancer) external onlyGovernance {
+        require(_rebalancer != address(0), PoolZeroAddress());
+        rebalancer = _rebalancer;
     }
 
     function _setMaxTVL(uint256 newValue) internal {
