@@ -9,45 +9,45 @@ BigInt.prototype.format = function () {
 
 async function init() {
   const [deployer] = await ethers.getSigners();
-  const e18 = ethers.parseUnits("1", 18); // Setting the ratio value to 1e18
+  const e18 = ethers.parseUnits("1", 18);
 
   // Deploy MockERC20 (Mock Token)
   console.log("- Deploying Mock Token (ERC20)");
   const mockTokenFactory = await ethers.getContractFactory("MockERC20");
   const mockToken = await mockTokenFactory.deploy("Mock Token", "MOCK", 18);
-  await mockToken.waitForDeployment();  // Wait for the deployment to complete
-  const mockTokenAddress = await mockToken.getAddress(); // Get the deployed address
+  await mockToken.waitForDeployment();
+  const mockTokenAddress = await mockToken.getAddress();
   console.log(`Mock Token deployed at: ${mockTokenAddress}`);
 
   // Deploy MockRatioFeed (Mock Ratio Feed)
   console.log("- Deploying Mock Ratio Feed");
   const mockRatioFeedFactory = await ethers.getContractFactory("MockRatioFeed");
   const mockRatioFeed = await mockRatioFeedFactory.deploy();
-  await mockRatioFeed.waitForDeployment();  // Wait for deployment
-  const mockRatioFeedAddress = await mockRatioFeed.getAddress(); // Get the deployed address
+  await mockRatioFeed.waitForDeployment();
+  const mockRatioFeedAddress = await mockRatioFeed.getAddress();
   console.log(`Mock Ratio Feed deployed at: ${mockRatioFeedAddress}`);
 
   // Update the MockRatioFeed with mockToken data
   console.log("- Update Mock Ratio Feed with Mock Token");
-  await mockRatioFeed.updateRatioBatch([mockTokenAddress], [e18]);  // Set the initial ratio for the mock token
+  await mockRatioFeed.updateRatioBatch([mockTokenAddress], [e18]);
   console.log("Mock Ratio Feed updated with Mock Token");
 
   // Deploy the OmniVault
   console.log("- Deploying OmniVault");
   const omniVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
   const omniVault = await upgrades.deployProxy(omniVaultFactory, [mockTokenAddress], { initializer: '__InceptionOmniVault_init' });
-  await omniVault.waitForDeployment();  // Wait for deployment
-  const omniVaultAddress = await omniVault.getAddress(); // Get the deployed address
+  await omniVault.waitForDeployment();
+  const omniVaultAddress = await omniVault.getAddress();
   console.log(`OmniVault deployed at: ${omniVaultAddress}`);
 
   // Set the MockRatioFeed in OmniVault
   console.log("- Set Mock Ratio Feed for OmniVault");
-  await omniVault.setRatioFeed(mockRatioFeedAddress);  // Set the MockRatioFeed for OmniVault
+  await omniVault.setRatioFeed(mockRatioFeedAddress);
   console.log("Mock Ratio Feed set for OmniVault");
 
   // Set Vault address in Mock Token
   console.log("- Set Vault in Mock Token");
-  await mockToken.setVault(omniVaultAddress);  // Set the OmniVault as the vault for mock token
+  await mockToken.setVault(omniVaultAddress);
   console.log("Vault set for Mock Token");
 
   return [mockToken, omniVault, mockRatioFeed];
