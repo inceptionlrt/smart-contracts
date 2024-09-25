@@ -18,10 +18,16 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address public transactionStorage;
     address public ratioFeed;
     address public crosschainAdapter;
+    address public operator;
 
     uint256 public constant MULTIPLIER = 1e18;
     uint256 public constant MAX_DIFF = 50000000000000000; // 0.05 * 1e18
     uint256 public totalAmountToWithdraw; // Initialized in initialize
+
+    modifier onlyOperator() {
+        require(msg.sender == operator, OnlyOperator());
+        _;
+    }
 
     error RatioDifferenceTooHigh();
     error TransferToLockboxFailed();
@@ -36,6 +42,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     );
     error SendAmountExceedsEthBalance(uint256 amountToSend);
     error StakeAmountExceedsMaxTVL();
+    error OnlyOperator();
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
@@ -46,13 +53,15 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event TxStorageChanged(address newTxStorage);
     event LiqPoolChanged(address newLiqPool);
     event CrosschainAdapterChanged(address newCrosschainAdapter);
+    event OperatorChanged(address prevValue, address newValue);
 
     function initialize(
         address _inETHAddress,
         address _lockbox,
         address payable _liqPool,
         address _transactionStorage,
-        address _ratioFeed
+        address _ratioFeed,
+        address _operator
     ) public initializer {
         __Ownable_init(msg.sender);
 
@@ -61,12 +70,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(_liqPool != address(0), SettingZeroAddress());
         require(_transactionStorage != address(0), SettingZeroAddress());
         require(_ratioFeed != address(0), SettingZeroAddress());
+        require(_operator != address(0), SettingZeroAddress());
 
         inETHAddress = _inETHAddress;
         lockboxAddress = _lockbox;
         liqPool = _liqPool;
         transactionStorage = _transactionStorage;
         ratioFeed = _ratioFeed;
+        operator = _operator;
     }
 
     function setTransactionStorage(
@@ -101,6 +112,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(_crosschainAdapter != address(0), SettingZeroAddress());
         crosschainAdapter = _crosschainAdapter;
         emit CrosschainAdapterChanged(_crosschainAdapter);
+    }
+
+    function setOperator(address _operator) external onlyOwner {
+        require(_operator != address(0), SettingZeroAddress());
+        operator = _operator;
+        emit OperatorChanged(operator, _operator);
     }
 
     function updateTreasuryData() public {
@@ -194,7 +211,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         return absA > absB;
     }
 
-    function stake(uint256 _amount) external payable onlyOwner {
+    function stake(uint256 _amount) external payable onlyOperator {
         require(liqPool != address(0), LiquidityPoolNotSet());
         require(
             _amount <= localInEthBalance(),
@@ -213,7 +230,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit InETHDepositedToLockbox(_amount);
     }
 
-    function sendEthToL2(uint256 _amount) external onlyOwner {
+    function sendEthToL2(uint256 _amount) external onlyOperator {
         require(crosschainAdapter != address(0), CrosschainAdapterNotSet());
         require(
             _amount <= address(this).balance,
