@@ -62,7 +62,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (_inceptionToken == address(0)) {
             revert NullParams();
         }
-        __InceptionAssetsHandler_init(IERC20(_inceptionToken));
+        // __InceptionAssetsHandler_init(IERC20(_inceptionToken));
+        __InceptionOmniAssetsHandler_init();
 
         name = vaultName;
         inceptionToken = IInceptionToken(_inceptionToken);
@@ -456,8 +457,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         emit NameChanged(name, newVaultName);
         name = newVaultName;
     }
-
-    receive() external payable {}
 
     /*///////////////////////////////
     ////// Pausable functions //////
