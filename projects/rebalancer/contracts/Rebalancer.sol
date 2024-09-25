@@ -172,14 +172,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.mint(lockboxAddress, _amountToMint);
-        emit TreasuryUpdateMint(amountToMint);
+        emit TreasuryUpdateMint(_amountToMint);
     }
 
     function _burnInceptionToken(uint256 _amountToBurn) internal {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.burn(lockboxAddress, _amountToBurn);
-        emit TreasuryUpdateBurn(amountToBurn);
+        emit TreasuryUpdateBurn(_amountToBurn);
     }
 
     function _getRatioL1() internal view returns (uint256) {
