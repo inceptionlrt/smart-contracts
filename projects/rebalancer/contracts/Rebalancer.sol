@@ -238,10 +238,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         ICrossChainAdapterL1(crosschainAdapter).sendEthToL2{value: _amount}();
     }
 
-    function localInEthBalance() public view returns (uint256) {
-        return IERC20(inETHAddress).balanceOf(address(this));
-    }
-
     receive() external payable {
         emit ETHReceived(msg.sender, msg.value);
     }
