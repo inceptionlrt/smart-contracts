@@ -220,11 +220,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         );
         IRestakingPool(liqPool).stake{value: _amount}();
 
+        uint256 inEthBalance = IERC20(inETHAddress).balanceOf(address(this));
+
         require(
-            IERC20(inETHAddress).transfer(lockboxAddress, _amount),
+            IERC20(inETHAddress).transfer(lockboxAddress, inEthBalance),
             TransferToLockboxFailed()
         );
-        emit InETHDepositedToLockbox(_amount);
+        emit InETHDepositedToLockbox(inEthBalance);
     }
 
     function sendEthToL2(uint256 _amount) external onlyOperator {
