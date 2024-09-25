@@ -1,218 +1,219 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+// // SPDX-License-Identifier: MIT
+// pragma solidity ^0.8.23;
 
-import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
+// import {InceptionAssetsHandler, IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 
-import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
-import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
-import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
-import {IIEigenRestaker} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+// import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
+// import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 
-/// @author The InceptionLRT team
-/// @title The EigenLayerHandler contract
-/// @dev Serves communication with external EigenLayer protocol
-/// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
-    IStrategyManager public strategyManager;
-    IStrategy public strategy;
+// import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
+// import {IIEigenRestaker} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
 
-    uint256 public epoch;
+// /// @author The InceptionLRT team
+// /// @title The EigenLayerHandler contract
+// /// @dev Serves communication with external EigenLayer protocol
+// /// @dev Specifically, this includes depositing, and handling withdrawal requests
+// contract EigenLayerHandler is InceptionAssetsHandler {
+//     IStrategyManager public strategyManager;
+//     IStrategy public strategy;
 
-    /// @dev inception operator
-    address internal _operator;
+//     uint256 public epoch;
 
-    /// @dev represents the pending amount to be redeemed by claimers,
-    /// @notice + amount to undelegate from EigenLayer
-    uint256 public totalAmountToWithdraw;
+//     /// @dev inception operator
+//     address internal _operator;
 
-    /// @dev represents the amount pending processing until it is claimed
-    /// @dev amount measured in asset
-    uint256 internal _pendingWithdrawalAmount;
+//     /// @dev represents the pending amount to be redeemed by claimers,
+//     /// @notice + amount to undelegate from EigenLayer
+//     uint256 public totalAmountToWithdraw;
 
-    IDelegationManager public delegationManager;
+//     /// @dev represents the amount pending processing until it is claimed
+//     /// @dev amount measured in asset
+//     uint256 internal _pendingWithdrawalAmount;
 
-    Withdrawal[] public claimerWithdrawalsQueue;
+//     IDelegationManager public delegationManager;
 
-    address internal constant _MOCK_ADDRESS =
-        0x0000000000000000000000000012345000000000;
+//     IInceptionVault_EL.Withdrawal[] public claimerWithdrawalsQueue;
 
-    /// @dev heap reserved for the claimers
-    uint256 public redeemReservedAmount;
+//     address internal constant _MOCK_ADDRESS =
+//         0x0000000000000000000000000012345000000000;
 
-    /// @dev EigenLayer operator -> inception staker
-    mapping(address => address) internal _operatorRestakers;
-    address[] public restakers;
+//     /// @dev heap reserved for the claimers
+//     uint256 public redeemReservedAmount;
 
-    uint256 public depositBonusAmount;
+//     /// @dev EigenLayer operator -> inception staker
+//     mapping(address => address) internal _operatorRestakers;
+//     address[] public restakers;
 
-    /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
-    uint256 public targetCapacity;
+//     uint256 public depositBonusAmount;
 
-    uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
+//     /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
+//     uint256 public targetCapacity;
 
-    address public eigenLayerFacet;
-    address public userOperationFacet;
-    address public setterFacet;
+//     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    /// TODO
-    /// @dev constants are not stored in the storage
-    /// TODO
-    uint256[50 - 16] private __reserver;
+//     address public eigenLayerFacet;
+//     address public userOperationFacet;
+//     address public setterFacet;
 
-    modifier onlyOperator() {
-        if (msg.sender != _operator) revert OnlyOperatorAllowed();
-        _;
-    }
+//     /// TODO
+//     /// @dev constants are not stored in the storage
+//     /// TODO
+//     uint256[50 - 16] private __reserver;
 
-    function __EigenLayerHandler_init(
-        IStrategyManager _strategyManager,
-        IStrategy _assetStrategy
-    ) internal onlyInitializing {
-        strategyManager = _strategyManager;
-        strategy = _assetStrategy;
+//     modifier onlyOperator() {
+//         if (msg.sender != _operator) revert OnlyOperatorAllowed();
+//         _;
+//     }
 
-        __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
-        // approve spending by strategyManager
-        if (!_asset.approve(address(strategyManager), type(uint256).max))
-            revert ApproveError();
-    }
+//     function __EigenLayerHandler_init(
+//         IStrategyManager _strategyManager,
+//         IStrategy _assetStrategy
+//     ) internal onlyInitializing {
+//         strategyManager = _strategyManager;
+//         strategy = _assetStrategy;
 
-    /*/////////////////////////////////
-    ////// Withdrawal functions //////
-    ///////////////////////////////*/
+//         __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
+//         // approve spending by strategyManager
+//         if (!_asset.approve(address(strategyManager), type(uint256).max))
+//             revert ApproveError();
+//     }
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
-    function undelegateFrom(
-        address elOperatorAddress,
-        uint256 amount
-    ) external whenNotPaused nonReentrant onlyOperator {
-        _fallback(eigenLayerFacet);
-    }
+//     /*/////////////////////////////////
+//     ////// Withdrawal functions //////
+//     ///////////////////////////////*/
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
-    function undelegateVault(
-        uint256 amount
-    ) external whenNotPaused nonReentrant onlyOperator {
-        _fallback(eigenLayerFacet);
-    }
+//     /// @dev performs creating a withdrawal request from EigenLayer
+//     /// @dev requires a specific amount to withdraw
+//     function undelegateFrom(
+//         address elOperatorAddress,
+//         uint256 amount
+//     ) external whenNotPaused nonReentrant onlyOperator {
+//         _fallback(eigenLayerFacet);
+//     }
 
-    /// @dev claims completed withdrawals from EigenLayer, if they exist
-    function claimCompletedWithdrawals(
-        address restaker,
-        IDelegationManager.Withdrawal[] calldata withdrawals
-    ) public whenNotPaused nonReentrant {
-        _fallback(eigenLayerFacet);
-    }
+//     /// @dev performs creating a withdrawal request from EigenLayer
+//     /// @dev requires a specific amount to withdraw
+//     function undelegateVault(
+//         uint256 amount
+//     ) external whenNotPaused nonReentrant onlyOperator {
+//         _fallback(eigenLayerFacet);
+//     }
 
-    function updateEpoch() external whenNotPaused {
-        _updateEpoch(getFreeBalance());
-    }
+//     /// @dev claims completed withdrawals from EigenLayer, if they exist
+//     function claimCompletedWithdrawals(
+//         address restaker,
+//         IDelegationManager.Withdrawal[] calldata withdrawals
+//     ) public whenNotPaused nonReentrant {
+//         _fallback(eigenLayerFacet);
+//     }
 
-    /**
-     * @dev let's calculate how many withdrawals we can cover with the withdrawnAmount
-     * @dev #init state:
-     * - balance of the vault: X
-     * - epoch: means that the vault can handle the withdrawal queue up to the epoch index
-     * withdrawalQueue[... : epoch];
-     *
-     * @dev #new state:
-     * - balance of the vault: X + withdrawnAmount
-     * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
-     * withdrawalQueue[epoch : new_epoch];
-     */
-    function _updateEpoch(uint256 availableBalance) internal {
-        uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-        for (uint256 i = epoch; i < withdrawalsNum; ) {
-            uint256 amount = claimerWithdrawalsQueue[i].amount;
-            unchecked {
-                if (amount > availableBalance) {
-                    break;
-                }
-                redeemReservedAmount += amount;
-                availableBalance -= amount;
-                ++epoch;
-                ++i;
-            }
-        }
-    }
+//     function updateEpoch() external whenNotPaused {
+//         _updateEpoch(getFreeBalance());
+//     }
 
-    /*//////////////////////////
-    ////// GET functions //////
-    ////////////////////////*/
+//     /**
+//      * @dev let's calculate how many withdrawals we can cover with the withdrawnAmount
+//      * @dev #init state:
+//      * - balance of the vault: X
+//      * - epoch: means that the vault can handle the withdrawal queue up to the epoch index
+//      * withdrawalQueue[... : epoch];
+//      *
+//      * @dev #new state:
+//      * - balance of the vault: X + withdrawnAmount
+//      * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
+//      * withdrawalQueue[epoch : new_epoch];
+//      */
+//     function _updateEpoch(uint256 availableBalance) internal {
+//         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
+//         for (uint256 i = epoch; i < withdrawalsNum; ) {
+//             uint256 amount = claimerWithdrawalsQueue[i].amount;
+//             unchecked {
+//                 if (amount > availableBalance) {
+//                     break;
+//                 }
+//                 redeemReservedAmount += amount;
+//                 availableBalance -= amount;
+//                 ++epoch;
+//                 ++i;
+//             }
+//         }
+//     }
 
-    /// @dev returns the total deposited into asset strategy
-    function getTotalDeposited() public view returns (uint256) {
-        return
-            getTotalDelegated() +
-            totalAssets() +
-            _pendingWithdrawalAmount -
-            depositBonusAmount;
-    }
+//     /*//////////////////////////
+//     ////// GET functions //////
+//     ////////////////////////*/
 
-    function getTotalDelegated() public view returns (uint256 total) {
-        uint256 stakersNum = restakers.length;
-        for (uint256 i = 0; i < stakersNum; ++i) {
-            if (restakers[i] == address(0)) continue;
-            total += strategy.userUnderlyingView(restakers[i]);
-        }
-        return total + strategy.userUnderlyingView(address(this));
-    }
+//     /// @dev returns the total deposited into asset strategy
+//     function getTotalDeposited() public view returns (uint256) {
+//         return
+//             getTotalDelegated() +
+//             totalAssets() +
+//             _pendingWithdrawalAmount -
+//             depositBonusAmount;
+//     }
 
-    function getFreeBalance() public view returns (uint256 total) {
-        return
-            getFlashCapacity() < _getTargetCapacity()
-                ? 0
-                : getFlashCapacity() - _getTargetCapacity();
-    }
+//     function getTotalDelegated() public view returns (uint256 total) {
+//         uint256 stakersNum = restakers.length;
+//         for (uint256 i = 0; i < stakersNum; ++i) {
+//             if (restakers[i] == address(0)) continue;
+//             total += strategy.userUnderlyingView(restakers[i]);
+//         }
+//         return total + strategy.userUnderlyingView(address(this));
+//     }
 
-    function getPendingWithdrawalAmountFromEL()
-        public
-        view
-        returns (uint256 total)
-    {
-        return _pendingWithdrawalAmount;
-    }
+//     function getFreeBalance() public view returns (uint256 total) {
+//         return
+//             getFlashCapacity() < _getTargetCapacity()
+//                 ? 0
+//                 : getFlashCapacity() - _getTargetCapacity();
+//     }
 
-    function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - redeemReservedAmount - depositBonusAmount;
-    }
+//     function getPendingWithdrawalAmountFromEL()
+//         public
+//         view
+//         returns (uint256 total)
+//     {
+//         return _pendingWithdrawalAmount;
+//     }
 
-    function _getTargetCapacity() internal view returns (uint256) {
-        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
-    }
+//     function getFlashCapacity() public view returns (uint256 total) {
+//         return totalAssets() - redeemReservedAmount - depositBonusAmount;
+//     }
 
-    /*//////////////////////////
-    ////// SET functions //////
-    ////////////////////////*/
+//     function _getTargetCapacity() internal view returns (uint256) {
+//         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
+//     }
 
-    function setDelegationManager(
-        IDelegationManager newDelegationManager
-    ) external onlyOwner {
-        _fallback(setterFacet);
-    }
+//     /*//////////////////////////
+//     ////// SET functions //////
+//     ////////////////////////*/
 
-    function setTargetFlashCapacity(
-        uint256 newTargetCapacity
-    ) external onlyOwner {
-        _fallback(setterFacet);
-    }
+//     function setDelegationManager(
+//         IDelegationManager newDelegationManager
+//     ) external onlyOwner {
+//         _fallback(setterFacet);
+//     }
 
-    function forceUndelegateRecovery(
-        uint256 amount,
-        address restaker
-    ) external onlyOperator {
-        if (restaker == address(0)) revert NullParams();
-        for (uint256 i = 0; i < restakers.length; ++i) {
-            if (
-                restakers[i] == restaker &&
-                !delegationManager.isDelegated(restakers[i])
-            ) {
-                restakers[i] == _MOCK_ADDRESS;
-                break;
-            }
-        }
-        _pendingWithdrawalAmount += amount;
-    }
-}
+//     function setTargetFlashCapacity(
+//         uint256 newTargetCapacity
+//     ) external onlyOwner {
+//         _fallback(setterFacet);
+//     }
+
+//     function forceUndelegateRecovery(
+//         uint256 amount,
+//         address restaker
+//     ) external onlyOperator {
+//         if (restaker == address(0)) revert NullParams();
+//         for (uint256 i = 0; i < restakers.length; ++i) {
+//             if (
+//                 restakers[i] == restaker &&
+//                 !delegationManager.isDelegated(restakers[i])
+//             ) {
+//                 restakers[i] == _MOCK_ADDRESS;
+//                 break;
+//             }
+//         }
+//         _pendingWithdrawalAmount += amount;
+//     }
+// }

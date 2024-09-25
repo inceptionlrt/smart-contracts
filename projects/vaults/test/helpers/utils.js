@@ -42,7 +42,20 @@ const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
     console.log(receipt.logs);
   }
 
-  const WithdrawalQueuedEvent = receipt.logs?.find((e) => e.eventName === "StartWithdrawal").args;
+  const eigenLayerFacetFactory = await ethers.getContractFactory("EigenLayerFacet");
+  // Loop through each log in the receipt
+  let WithdrawalQueuedEvent;
+  for (const log of receipt.logs) {
+    try {
+      const event = eigenLayerFacetFactory.interface.parseLog(log);
+      if (event != null) {
+        WithdrawalQueuedEvent = event.args;
+      }
+    } catch (error) {
+      console.error("Error parsing event log:", error);
+    }
+  }
+
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,
@@ -113,8 +126,8 @@ const randomBIMax = (max) => {
   return random;
 };
 async function sleep(msec) {
-  return new Promise(resolve => setTimeout(resolve, msec));
-};
+  return new Promise((resolve) => setTimeout(resolve, msec));
+}
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 

@@ -1,32 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "../InceptionVaultStorage_EL.sol";
 
-import {EigenVaultStorageFacet} from "./EigenVaultStorageFacet.sol";
-
-import {IEigenLayerHandler} from "../../interfaces/eigenlayer-vault/IEigenLayerHandler.sol";
-import {IOwnable} from "../../interfaces/common/IOwnable.sol";
-import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
-import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
-import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
-
-import {IIEigenRestaker, IIEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
-
-import "../../handlers/eigenlayer-handler/EigenLayerHandler.sol";
-
-import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-
-import "hardhat/console.sol";
-
-contract EigenLayerFacet is
-    EigenVaultStorageFacet,
-    IEigenLayerHandler,
-    IInceptionVaultErrors
-{
+contract EigenLayerFacet is InceptionVaultStorage_EL {
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         if (amount > getFreeBalance())
@@ -48,7 +27,7 @@ contract EigenLayerFacet is
         address elOperator,
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) external nonReentrant {
+    ) external {
         if (elOperator == address(0)) revert NullParams();
 
         _beforeDepositAssetIntoStrategy(amount);
@@ -76,7 +55,7 @@ contract EigenLayerFacet is
                 approverSignatureAndExpiry
             );
 
-        emit IEigenLayerHandler.DelegatedTo(restaker, elOperator, amount);
+        emit IInceptionVault_EL.DelegatedTo(restaker, elOperator, amount);
     }
 
     /// @dev delegates assets held in the strategy to the EL operator.
@@ -101,12 +80,12 @@ contract EigenLayerFacet is
         _asset.approve(restaker, amount);
         IIEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
-        emit IEigenLayerHandler.DepositedToEL(restaker, amount);
+        emit IInceptionVault_EL.DepositedToEL(restaker, amount);
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
     /// @dev requires a specific amount to withdraw
-    function undelegateVault(uint256 amount) external nonReentrant {
+    function undelegateVault(uint256 amount) external {
         address staker = address(this);
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
@@ -133,7 +112,7 @@ contract EigenLayerFacet is
     function undelegateFrom(
         address elOperatorAddress,
         uint256 amount
-    ) external nonReentrant {
+    ) external {
         address staker = _operatorRestakers[elOperatorAddress];
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
@@ -157,7 +136,7 @@ contract EigenLayerFacet is
         if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
 
         _pendingWithdrawalAmount += amount;
-        emit IEigenLayerHandler.StartWithdrawal(
+        emit IInceptionVault_EL.StartWithdrawal(
             staker,
             strategy,
             shares,
@@ -172,7 +151,7 @@ contract EigenLayerFacet is
     function claimCompletedWithdrawals(
         address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
-    ) public nonReentrant {
+    ) public {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
         uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
@@ -204,7 +183,7 @@ contract EigenLayerFacet is
             );
         }
 
-        emit IEigenLayerHandler.WithdrawalClaimed(withdrawnAmount);
+        emit IInceptionVault_EL.WithdrawalClaimed(withdrawnAmount);
 
         _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
             ? 0
@@ -255,10 +234,8 @@ contract EigenLayerFacet is
 
     function _updateEpoch(uint256 availableBalance) internal {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-        console.log("++++++++++++++ withdrawalsNum: ", withdrawalsNum);
         for (uint256 i = epoch; i < withdrawalsNum; ) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
-            console.log(amount, availableBalance);
             unchecked {
                 if (amount > availableBalance) {
                     break;
@@ -269,39 +246,6 @@ contract EigenLayerFacet is
                 ++i;
             }
         }
-    }
-
-    function getFreeBalance() public view returns (uint256 total) {
-        return
-            getFlashCapacity() < _getTargetCapacity()
-                ? 0
-                : getFlashCapacity() - _getTargetCapacity();
-    }
-
-    function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - redeemReservedAmount - depositBonusAmount;
-    }
-
-    function _getTargetCapacity() internal view returns (uint256) {
-        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
-    }
-
-    /// @dev returns the total deposited into asset strategy
-    function getTotalDeposited() public view returns (uint256) {
-        return
-            getTotalDelegated() +
-            totalAssets() +
-            _pendingWithdrawalAmount -
-            depositBonusAmount;
-    }
-
-    function getTotalDelegated() public view returns (uint256 total) {
-        uint256 stakersNum = restakers.length;
-        for (uint256 i = 0; i < stakersNum; ++i) {
-            if (restakers[i] == address(0)) continue;
-            total += strategy.userUnderlyingView(restakers[i]);
-        }
-        return total + strategy.userUnderlyingView(address(this));
     }
 
     function forceUndelegateRecovery(
@@ -334,16 +278,9 @@ contract EigenLayerFacet is
         address deployedAddress = address(new BeaconProxy(address(this), data));
 
         IOwnable asOwnable = IOwnable(deployedAddress);
-
-        /// TODO
-        //asOwnable.transferOwnership(owner());
+        asOwnable.transferOwnership(owner());
 
         emit IInceptionVault_EL.RestakerDeployed(deployedAddress);
         return deployedAddress;
-    }
-
-    /// @dev returns the balance of iVault in the asset
-    function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
     }
 }

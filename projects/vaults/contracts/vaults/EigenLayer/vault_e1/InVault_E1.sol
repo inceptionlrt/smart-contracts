@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {InceptionVault_EL, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault_EL.sol";
+import {IStrategyManager, IStrategy} from "../../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
+
+import {InceptionVault_EL, IInceptionToken} from "../InceptionVault_EL.sol";
 
 /// @author The InceptionLRT team
 contract InVault_E1 is InceptionVault_EL {

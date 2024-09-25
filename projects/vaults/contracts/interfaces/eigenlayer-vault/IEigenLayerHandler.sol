@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "./eigen-core/IStrategyManager.sol";
 
-interface IEigenLayerHandler {
+interface IEigenLayerVault {
     /// @dev Epoch represents the period of the rebalancing process
     /// @dev Receiver is a receiver of assets in claim()
     /// @dev Amount represents the exact amount of the asset to be claimed
