@@ -18,6 +18,7 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@eth-optimism/contracts": "^0.6.0",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
         "@nomicfoundation/hardhat-ethers": "^3.0.5",
         "@nomicfoundation/hardhat-network-helpers": "^1.0.9",

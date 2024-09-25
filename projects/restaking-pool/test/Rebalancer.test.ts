@@ -26,31 +26,6 @@ const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
 const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
 
-function getSlotByName(name) {
-    // Perform keccak256 hashing of the string
-    const governanceHash = keccak256(toUtf8Bytes(name));
-
-    // Convert the resulting hash to a BigInt
-    const governanceUint = BigInt(governanceHash);
-
-    // Subtract 1 from the hash
-    const governanceUintMinus1 = governanceUint - 1n;
-
-    // Use the AbiCoder to encode the uint256 type
-    const abiCoder = new AbiCoder();
-    const encodedValue = abiCoder.encode(["uint256"], [governanceUintMinus1]);
-
-    // Re-hash the encoded result
-    const finalHash = keccak256(encodedValue);
-
-    // Perform bitwise AND operation with ~0xff (mask out the last byte)
-    const mask = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00");
-    const governanceSlot = BigInt(finalHash) & mask;
-
-    // Return the result as a hex string (without '0x' prefix)
-    return governanceSlot.toString(16);
-}
-
 describe("Omnivault integration tests", function () {
     this.timeout(15000);
     let ratioFeed, arbInboxMock, arbOutboxMock;
@@ -1033,3 +1008,32 @@ describe("Omnivault integration tests", function () {
         })
     })
 })
+
+
+/**
+ * @return slot number for the value by its internal name for restaking balance ProtocolConfig
+ */
+function getSlotByName(name) {
+    // Perform keccak256 hashing of the string
+    const governanceHash = keccak256(toUtf8Bytes(name));
+
+    // Convert the resulting hash to a BigInt
+    const governanceUint = BigInt(governanceHash);
+
+    // Subtract 1 from the hash
+    const governanceUintMinus1 = governanceUint - 1n;
+
+    // Use the AbiCoder to encode the uint256 type
+    const abiCoder = new AbiCoder();
+    const encodedValue = abiCoder.encode(["uint256"], [governanceUintMinus1]);
+
+    // Re-hash the encoded result
+    const finalHash = keccak256(encodedValue);
+
+    // Perform bitwise AND operation with ~0xff (mask out the last byte)
+    const mask = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00");
+    const governanceSlot = BigInt(finalHash) & mask;
+
+    // Return the result as a hex string (without '0x' prefix)
+    return governanceSlot.toString(16);
+}
