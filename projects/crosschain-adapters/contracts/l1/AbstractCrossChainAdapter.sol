@@ -63,7 +63,7 @@ abstract contract AbstractCrossChainAdapter is
     }
 
     function setTxStorage(address _txStorage) external virtual onlyOwner {
-        require(_txStorage != address(0), CannotSetZero());
+        require(_txStorage != address(0), SettingZeroAddress());
         transactionStorage = _txStorage;
         emit TxStorageChanged(_txStorage);
     }

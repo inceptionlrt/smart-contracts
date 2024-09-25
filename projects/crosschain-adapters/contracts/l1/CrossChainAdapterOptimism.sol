@@ -11,6 +11,7 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     uint32 gasLimit = 20_000;
 
+    //TODO to be finished
     constructor(
         address _transactionStorage,
         address xDomainMessenger
