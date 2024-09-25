@@ -283,4 +283,18 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         emit IInceptionVault_EL.RestakerDeployed(deployedAddress);
         return deployedAddress;
     }
+
+    /// @dev addRewards ...
+    function addRewards(uint256 amount) external {
+        /// @dev verify whether the prev timeline is over
+        if (currentRewards > 0) {
+            uint256 totalDays = rewardsTimeline / 1 days;
+            uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+            if (dayNum < totalDays) revert TimelineNotOver();
+        }
+        currentRewards = _transferAssetFrom(_operator, amount);
+        startTimeline = block.timestamp;
+
+        emit RewardsAdded(amount, startTimeline);
+    }
 }

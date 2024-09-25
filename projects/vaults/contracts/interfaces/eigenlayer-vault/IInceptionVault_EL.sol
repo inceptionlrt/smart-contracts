@@ -111,6 +111,10 @@ interface IInceptionVault_EL {
 
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
+    event RewardsTimelineChanged(uint256 prevValue, uint256 newValue);
+
+    event RewardsAdded(uint256 amount, uint256 startTimeline);
+
     // function inceptionToken() external view returns (IInceptionToken);
 
     // function ratio() external view returns (uint256);

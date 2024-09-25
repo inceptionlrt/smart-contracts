@@ -109,6 +109,14 @@ contract InceptionVaultStorage_EL is
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
+    uint256 public currentRewards;
+
+    /// @dev blockTime
+    uint256 public startTimeline;
+
+    /// @dev in days
+    uint256 public rewardsTimeline;
+
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
     ) internal onlyInitializing {
@@ -166,12 +174,26 @@ contract InceptionVaultStorage_EL is
 
     /// @dev returns the balance of iVault in the asset
     function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (dayNum > totalDays) return _asset.balanceOf(address(this));
+
+        uint256 reservedRewards = (currentRewards / totalDays) *
+            (totalDays - dayNum);
+
+        return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
-    function _transferAssetFrom(address staker, uint256 amount) internal {
+    function _transferAssetFrom(
+        address staker,
+        uint256 amount
+    ) internal returns (uint256) {
+        uint256 depositedBefore = _asset.balanceOf(address(this));
+
         if (!_asset.transferFrom(staker, address(this), amount))
             revert TransferAssetFromFailed(address(_asset));
+
+        return _asset.balanceOf(address(this)) - depositedBefore;
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {

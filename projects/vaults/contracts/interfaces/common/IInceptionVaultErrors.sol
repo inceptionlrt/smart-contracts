@@ -51,4 +51,6 @@ interface IInceptionVaultErrors {
     error NotEigenLayerOperator();
 
     error EigenLayerOperatorAlreadyExists();
+
+    error TimelineNotOver();
 }

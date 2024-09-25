@@ -31,6 +31,11 @@ interface IIEigenRestaker {
         uint32 withdrawalStartBlock
     );
 
+    event RewardCoordinatorChanged(
+        address indexed prevValue,
+        address indexed newValue
+    );
+
     function depositAssetIntoStrategy(uint256 amount) external;
 
     function delegateToOperator(

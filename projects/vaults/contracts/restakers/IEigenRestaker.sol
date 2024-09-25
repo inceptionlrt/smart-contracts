@@ -11,6 +11,7 @@ import {IIEigenRestaker, IIEigenRestakerErrors} from "../interfaces/eigenlayer-v
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
+import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
 /// @author The InceptionLRT team
 /// @title The IEigenRestaker Contract
@@ -31,6 +32,7 @@ contract IEigenRestaker is
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
+    IRewardsCoordinator internal _rewardCoordinator;
 
     modifier onlyTrustee() {
         require(
@@ -144,6 +146,19 @@ contract IEigenRestaker is
 
     function getVersion() external pure returns (uint256) {
         return 1;
+    }
+
+    function setRewardCoordinator(
+        IRewardsCoordinator newRewardCoordinator
+    ) external onlyOwner {
+        newRewardCoordinator.setClaimerFor(owner());
+
+        emit RewardCoordinatorChanged(
+            address(_rewardCoordinator),
+            address(newRewardCoordinator)
+        );
+
+        _rewardCoordinator = newRewardCoordinator;
     }
 
     function pause() external onlyOwner {

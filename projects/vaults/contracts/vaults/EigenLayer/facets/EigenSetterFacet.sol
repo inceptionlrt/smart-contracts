@@ -137,4 +137,18 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
             newWithdrawUtilizationKink
         );
     }
+
+    /// @dev setRewardsTimeline ...
+    /// @dev newTimelineInDays is measured in seconds
+    function setRewardsTimeline(
+        uint256 newTimelineInSeconds
+    ) external onlyOwner {
+        if (newTimelineInSeconds < 1 days) revert InconsistentData();
+
+        emit IInceptionVault_EL.RewardsTimelineChanged(
+            rewardsTimeline,
+            newTimelineInSeconds
+        );
+        rewardsTimeline = newTimelineInSeconds;
+    }
 }
