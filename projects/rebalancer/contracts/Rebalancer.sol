@@ -229,17 +229,24 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit InETHDepositedToLockbox(inEthBalance);
     }
 
-    function sendEthToL2(uint256 _amount) external onlyOperator {
-        require(crosschainAdapter != address(0), CrosschainAdapterNotSet());
+    function sendEthToL2(
+        uint256 _chainId,
+        uint256 _amount
+    ) external onlyOperator {
+        address crossChainAdapterAddress = TransactionStorage(
+            transactionStorage
+        ).adapters(_chainId);
+        require(
+            crossChainAdapterAddress != address(0),
+            CrosschainAdapterNotSet()
+        );
         require(
             _amount <= address(this).balance,
             SendAmountExceedsEthBalance(_amount)
         );
-        ICrossChainAdapterL1(crosschainAdapter).sendEthToL2{value: _amount}();
-    }
-
-    function localInEthBalance() public view returns (uint256) {
-        return IERC20(inETHAddress).balanceOf(address(this));
+        ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
+            value: _amount
+        }();
     }
 
     receive() external payable {
