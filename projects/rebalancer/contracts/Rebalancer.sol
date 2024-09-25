@@ -48,7 +48,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event InEthChanged(address newInEth);
     event TxStorageChanged(address newTxStorage);
     event LiqPoolChanged(address newLiqPool);
-    event OperatorChanged(address prevValue, address newValue);
+    event OperatorChanged(address newOperator);
 
     function initialize(
         address _inETHAddress,
@@ -103,8 +103,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0), SettingZeroAddress());
-        operator = _operator;
-        emit OperatorChanged(operator, _operator);
+        emit OperatorChanged(_operator);
     }
 
     function updateTreasuryData() public {
