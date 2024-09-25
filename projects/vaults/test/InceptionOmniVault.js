@@ -8,26 +8,49 @@ BigInt.prototype.format = function () {
 };
 
 async function init() {
-  console.log("- iToken");
-  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
-  const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
-  iToken.address = await iToken.getAddress();
+  const [deployer] = await ethers.getSigners();
+  const e18 = ethers.parseUnits("1", 18); // Setting the ratio value to 1e18
 
-  console.log("- Ratio feed");
-  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
-  const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
-  await ratioFeed.updateRatioBatch([await iToken.getAddress()], [e18]);
-  ratioFeed.address = await ratioFeed.getAddress();
+  // Deploy MockERC20 (Mock Token)
+  console.log("- Deploying Mock Token (ERC20)");
+  const mockTokenFactory = await ethers.getContractFactory("MockERC20");
+  const mockToken = await mockTokenFactory.deploy("Mock Token", "MOCK", 18);
+  await mockToken.waitForDeployment();  // Wait for the deployment to complete
+  const mockTokenAddress = await mockToken.getAddress(); // Get the deployed address
+  console.log(`Mock Token deployed at: ${mockTokenAddress}`);
 
-  console.log("- Omni vault");
-  const iVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
-  const omniVault = await upgrades.deployProxy(iVaultFactory, [iToken.address]);
-  omniVault.address = await omniVault.getAddress();
+  // Deploy MockRatioFeed (Mock Ratio Feed)
+  console.log("- Deploying Mock Ratio Feed");
+  const mockRatioFeedFactory = await ethers.getContractFactory("MockRatioFeed");
+  const mockRatioFeed = await mockRatioFeedFactory.deploy();
+  await mockRatioFeed.waitForDeployment();  // Wait for deployment
+  const mockRatioFeedAddress = await mockRatioFeed.getAddress(); // Get the deployed address
+  console.log(`Mock Ratio Feed deployed at: ${mockRatioFeedAddress}`);
 
-  await omniVault.setRatioFeed(ratioFeed.address);
-  await iToken.setVault(omniVault.address);
+  // Update the MockRatioFeed with mockToken data
+  console.log("- Update Mock Ratio Feed with Mock Token");
+  await mockRatioFeed.updateRatioBatch([mockTokenAddress], [e18]);  // Set the initial ratio for the mock token
+  console.log("Mock Ratio Feed updated with Mock Token");
 
-  return [iToken, omniVault, ratioFeed];
+  // Deploy the OmniVault
+  console.log("- Deploying OmniVault");
+  const omniVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
+  const omniVault = await upgrades.deployProxy(omniVaultFactory, [mockTokenAddress], { initializer: '__InceptionOmniVault_init' });
+  await omniVault.waitForDeployment();  // Wait for deployment
+  const omniVaultAddress = await omniVault.getAddress(); // Get the deployed address
+  console.log(`OmniVault deployed at: ${omniVaultAddress}`);
+
+  // Set the MockRatioFeed in OmniVault
+  console.log("- Set Mock Ratio Feed for OmniVault");
+  await omniVault.setRatioFeed(mockRatioFeedAddress);  // Set the MockRatioFeed for OmniVault
+  console.log("Mock Ratio Feed set for OmniVault");
+
+  // Set Vault address in Mock Token
+  console.log("- Set Vault in Mock Token");
+  await mockToken.setVault(omniVaultAddress);  // Set the OmniVault as the vault for mock token
+  console.log("Vault set for Mock Token");
+
+  return [mockToken, omniVault, mockRatioFeed];
 }
 
 describe("Inception omni vault", function () {

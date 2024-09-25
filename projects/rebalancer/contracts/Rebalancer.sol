@@ -17,7 +17,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address payable public liqPool;
     address public transactionStorage;
     address public ratioFeed;
-    address public crosschainAdapter;
     address public operator;
 
     uint256 public constant MULTIPLIER = 1e18;
@@ -49,7 +48,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event InEthChanged(address newInEth);
     event TxStorageChanged(address newTxStorage);
     event LiqPoolChanged(address newLiqPool);
-    event CrosschainAdapterChanged(address newCrosschainAdapter);
     event OperatorChanged(address prevValue, address newValue);
 
     function initialize(
@@ -101,14 +99,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(_liqPool != address(0), SettingZeroAddress());
         liqPool = _liqPool;
         emit LiqPoolChanged(_liqPool);
-    }
-
-    function setCrosschainAdapter(
-        address _crosschainAdapter
-    ) external onlyOwner {
-        require(_crosschainAdapter != address(0), SettingZeroAddress());
-        crosschainAdapter = _crosschainAdapter;
-        emit CrosschainAdapterChanged(_crosschainAdapter);
     }
 
     function setOperator(address _operator) external onlyOwner {
