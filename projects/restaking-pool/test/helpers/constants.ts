@@ -1,4 +1,7 @@
 export const _1E18 = 10n ** 18n;
+
+export const e18 = 10n ** 18n;
+
 export const pubkeys = [
     "0xb8ed0276c4c631f3901bafa668916720f2606f58e0befab541f0cf9e0ec67a8066577e9a01ce58d4e47fba56c516f25b",
     "0xb8ed0276c4c631f3901bafa668916720f2606f58e0befab541f0cf9e0ec67a8066577e9a01ce58d4e47fba56c516f25a",

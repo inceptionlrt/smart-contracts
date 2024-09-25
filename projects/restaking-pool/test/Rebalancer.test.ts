@@ -1,7 +1,8 @@
 import {ethers, network, upgrades} from "hardhat";
 import {expect} from "chai";
 import {takeSnapshot} from "@nomicfoundation/hardhat-network-helpers";
-import {e18, randomBI} from "../../vaults/test/helpers/utils.js";
+import {randomBI, randomBIbyMax} from "./helpers/math";
+import {e18} from "./helpers/constants";
 import {
     ArbBridgeMock,
     CrossChainAdapterArbitrum,
@@ -142,7 +143,8 @@ describe("Omnivault integration tests", function () {
         arbAdapter.address = await arbAdapter.getAddress();
 
         console.log('=== CrossChainAdapterOptimism');
-        const optAdapter = await ethers.deployContract("CrossChainAdapterOptimism", [txStorage.address]);
+        const xDomainMessenger = ethers.Wallet.createRandom().address;
+        const optAdapter = await ethers.deployContract("CrossChainAdapterOptimism", [txStorage.address, xDomainMessenger]);
         optAdapter.address = await optAdapter.getAddress();
 
         //===L2 mocks
@@ -173,7 +175,8 @@ describe("Omnivault integration tests", function () {
             lockboxAddress,
             restakingPool.address,
             txStorage.address,
-            ratioFeed.address
+            ratioFeed.address,
+            operator.address
         ]);
         rebalancer.address = await rebalancer.getAddress();
 
@@ -594,6 +597,53 @@ describe("Omnivault integration tests", function () {
                 expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(amount);
             })
         })
+
+        describe("Stake", function() {
+            const args = [
+                {
+                    name: "Part of the balance",
+                    balance: async () => await restakingPool.availableToStake(),
+                    amount: async (amount) => amount / 2n
+                },
+                {
+                    name: "All balance",
+                    balance: async () => await restakingPool.availableToStake(),
+                    amount: async (amount) => amount
+                },
+                {
+                    name: "Restaking pool min amount",
+                    balance: async () => await restakingPool.availableToStake(),
+                    amount: async () => await restakingPool.getMinStake()
+                }
+            ]
+
+            args.forEach(function(arg){
+                it(`${arg.name}`, async function() {
+                    await snapshot.restore();
+                    const balance = await arg.balance();
+                    await signer1.sendTransaction({value: balance, to: rebalancer.address});
+
+                    const amount = await arg.amount(balance);
+                    const shares = await inEth.convertToShares(amount);
+                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
+
+                    const tx = await rebalancer.connect(operator).stake(amount);
+                    await expect(tx)
+                        .and.emit(rebalancer, "InETHDepositedToLockbox").withArgs(amount)
+                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
+
+                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
+                    console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
+                    console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
+                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
+
+                    //Everything was transferred to the lockbox, nothing is left on rebalancer
+                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
+                })
+            })
+
+
+        })
     })
 
     describe("Transaction storage", function () {
@@ -762,25 +812,23 @@ describe("Omnivault integration tests", function () {
             args.forEach(function (arg) {
                 it(arg.name, async function () {
                     const amount = await arg.amount();
-                    const shares = await inEth.convertToShares(amount);
-                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
+                    // const shares = await inEth.convertToShares(amount);
+                    // const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
                     const tx = arbBridgeMock.connect(signer1).receiveL2Eth({value: amount});
                     await expect(tx)
                         .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
-                        .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount)
-                        .and.emit(rebalancer, "InETHDepositedToLockbox")
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
-                    await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
+                        .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount);
+                    await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
 
-                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                    console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
-                    console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
-                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
-
-                    //Everything was transferred to the lockbox, nothing is left on rebalancer
-                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
+                    // const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
+                    // console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
+                    // console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
+                    // console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
+                    //
+                    // //Everything was transferred to the lockbox, nothing is left on rebalancer
+                    // expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
                 })
             })
 
@@ -921,25 +969,25 @@ describe("Omnivault integration tests", function () {
             args.forEach(function (arg) {
                 it(arg.name, async function () {
                     const amount = await arg.amount();
-                    const shares = await inEth.convertToShares(amount);
-                    const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
+                    // const shares = await inEth.convertToShares(amount);
+                    // const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
                     const tx = optBridgeMock.connect(signer1).receiveL2Eth({value: amount});
                     await expect(tx)
                         .and.emit(optAdapter, "L2EthDeposit").withArgs(amount)
-                        .and.emit(rebalancer, "ETHReceived").withArgs(optAdapter.address, arg.amount)
-                        .and.emit(rebalancer, "InETHDepositedToLockbox")
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
-                    await expect(tx).to.changeEtherBalance(restakingPool.address, amount);
+                        .and.emit(rebalancer, "ETHReceived").withArgs(optAdapter.address, arg.amount);
+                        // .and.emit(rebalancer, "InETHDepositedToLockbox")
+                        // .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
+                    await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
 
-                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                    console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
-                    console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
-                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
-
-                    //Everything was transferred to the lockbox, nothing is left on rebalancer
-                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
+                    // const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
+                    // console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
+                    // console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
+                    // console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
+                    //
+                    // //Everything was transferred to the lockbox, nothing is left on rebalancer
+                    // expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
                 })
             })
 

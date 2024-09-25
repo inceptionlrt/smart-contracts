@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { CToken, RestakingPool } from "../../typechain-types";
 import { _1E18 } from "./constants";
 
-export function randomBN(length: number): bigint {
+export function randomBI(length: number): bigint {
   if (length > 0) {
     let randomNum = "";
     randomNum += Math.floor(Math.random() * 9) + 1; // generates a random digit 1-9
@@ -15,7 +15,7 @@ export function randomBN(length: number): bigint {
   }
 }
 
-export function randomBNbyMax(max: bigint) {
+export function randomBIbyMax(max: bigint): bigint {
   const maxRandom = 1000_000_000_000n;
   if (max > 0) {
     const r = BigInt(Math.floor(Math.random() * Number(maxRandom)));

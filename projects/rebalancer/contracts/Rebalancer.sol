@@ -155,12 +155,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
         if (lastUpdateTotalL2InEth < totalL2InETH) {
             uint amountToMint = totalL2InETH - lastUpdateTotalL2InEth;
-            emit TreasuryUpdateMint(amountToMint);
             _mintInceptionToken(amountToMint);
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
             uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
             _burnInceptionToken(amountToBurn);
-            emit TreasuryUpdateBurn(amountToBurn);
         }
 
         uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));
@@ -177,12 +175,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.mint(lockboxAddress, _amountToMint);
+        emit TreasuryUpdateMint(amountToMint);
     }
 
     function _burnInceptionToken(uint256 _amountToBurn) internal {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.burn(lockboxAddress, _amountToBurn);
+        emit TreasuryUpdateBurn(amountToBurn);
     }
 
     function _getRatioL1() internal view returns (uint256) {
