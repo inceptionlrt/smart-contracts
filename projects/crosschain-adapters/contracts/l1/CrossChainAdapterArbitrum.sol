@@ -7,6 +7,9 @@ import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
+    address public l2Target;
+    address public l2Sender;
+    IInbox public inbox;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
     uint256 maxSubmissionCost = 100000000000;
     uint256 maxGas = 100000000000;
@@ -17,6 +20,8 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
         uint256 maxGas,
         uint256 gasPriceBid
     );
+
+    event RetryableTicketCreated(uint256 indexed ticketId);
 
     constructor(
         address _transactionStorage
@@ -44,18 +49,22 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
         emit L2EthDeposit(msg.value);
     }
 
-    function sendEthToL2() external payable {
-        IInbox _inbox = IInbox(inbox);
-        _inbox.createRetryableTicket{value: msg.value}(
-            l2Sender,
-            0,
+    function sendEthToL2(uint256 callValue) public payable returns (uint256) {
+        require(address(inbox) != address(0), "Inbox not set");
+        require(maxGas > 0, "Invalid gas value");
+        uint256 ticketID = inbox.createRetryableTicket{value: msg.value}(
+            l2Target,
+            callValue,
             maxSubmissionCost,
-            msg.sender, // Refund unused gas to this address
-            msg.sender, // Refund unused ETH to this address
+            msg.sender,
+            msg.sender,
             maxGas,
             gasPriceBid,
-            "" // Data (empty since only sending ETH)
+            ""
         );
+
+        emit RetryableTicketCreated(ticketID);
+        return ticketID;
     }
 
     function setGasParameters(
@@ -71,5 +80,20 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
         maxGas = _maxGas;
         gasPriceBid = _gasPriceBid;
         emit GasParametersChanged(_maxSubmissionCost, _maxGas, _gasPriceBid);
+    }
+
+    function setL2Target(address _l2Target) external onlyOwner {
+        require(_l2Target != address(0), SettingZeroAddress());
+        l2Target = _l2Target;
+    }
+
+    function setL2Sender(address _l2Sender) external onlyOwner {
+        require(_l2Sender != address(0), SettingZeroAddress());
+        l2Sender = _l2Sender;
+    }
+
+    function setInbox(address _inbox) external onlyOwner {
+        require(_inbox != address(0), SettingZeroAddress());
+        inbox = IInbox(_inbox);
     }
 }

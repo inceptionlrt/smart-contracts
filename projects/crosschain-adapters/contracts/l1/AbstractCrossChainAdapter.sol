@@ -13,8 +13,6 @@ abstract contract AbstractCrossChainAdapter is
     ICrossChainAdapterL1,
     ReentrancyGuard
 {
-    address public l2Sender;
-    address public inbox;
     address public rebalancer;
     address public transactionStorage;
 
@@ -50,21 +48,15 @@ abstract contract AbstractCrossChainAdapter is
         emit RebalancerChanged(_rebalancer);
     }
 
-    function setInbox(address _inbox) external virtual onlyOwner {
-        require(_inbox != address(0), SettingZeroAddress());
-        inbox = _inbox;
-        emit InboxChanged(_inbox);
-    }
-
-    function setL2Sender(address _l2Sender) external virtual onlyOwner {
-        require(_l2Sender != address(0), SettingZeroAddress());
-        l2Sender = _l2Sender;
-        emit L2SenderChanged(_l2Sender);
-    }
-
     function setTxStorage(address _txStorage) external virtual onlyOwner {
         require(_txStorage != address(0), SettingZeroAddress());
         transactionStorage = _txStorage;
         emit TxStorageChanged(_txStorage);
+    }
+
+    receive() external payable {
+        require(rebalancer != address(0), RebalancerNotSet());
+        (bool ok, ) = address(rebalancer).call{value: msg.value}("");
+        require(ok, TransferToRebalancerFailed());
     }
 }

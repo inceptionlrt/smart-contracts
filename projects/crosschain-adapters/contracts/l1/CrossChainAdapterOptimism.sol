@@ -5,11 +5,13 @@ import {IL1CrossDomainMessenger} from "@eth-optimism/contracts/L1/messaging/IL1C
 
 import "./AbstractCrossChainAdapter.sol";
 
-contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
+abstract contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     error NoProgrammaticEthTransferOnOptimism();
 
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     uint32 gasLimit = 20_000;
+    address public inbox;
+    address public l2Sender;
 
     //TODO to be finished
     constructor(

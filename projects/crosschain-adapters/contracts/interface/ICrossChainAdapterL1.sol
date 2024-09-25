@@ -29,13 +29,15 @@ interface ICrossChainAdapterL1 {
     event InboxChanged(address newInbox);
     event TxStorageChanged(address newTxStorage);
 
+    function ARBITRUM_CHAIN_ID() external returns (uint24);
+
     function receiveL2Info(
         uint256 _timestamp,
         uint256 _balance,
         uint256 _totalSupply
     ) external;
 
-    function sendEthToL2() external payable;
+    function sendEthToL2(uint256 callValue) external payable returns (uint256);
 
     function receiveL2Eth() external payable;
 }
