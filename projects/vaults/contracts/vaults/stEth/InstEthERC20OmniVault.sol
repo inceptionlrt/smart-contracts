@@ -17,14 +17,12 @@ contract InstEthERC20OmniVault is InceptionERC20OmniVault {
 
     function initialize(
         IInceptionToken _inceptionToken,
-        IERC20 baseAsset,
-        ICrossChainAdapterL2 crossChainAdapter
+        IERC20 baseAsset
     ) external initializer {
         __InceptionERC20OmniVault_init(
             "InstEthERC20OmniVault",
             _inceptionToken,
-            baseAsset,
-            crossChainAdapter
+            baseAsset
         );
     }
 }

@@ -34,8 +34,6 @@ contract InceptionERC20OmniVault is
     address public treasuryAddress;
     IInceptionRatioFeed public ratioFeed;
 
-    ICrossChainAdapterL2 public crossChainAdapter;
-
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
 
@@ -54,13 +52,11 @@ contract InceptionERC20OmniVault is
     function __InceptionERC20OmniVault_init(
         string memory vaultName,
         IInceptionToken _inceptionToken,
-        IERC20 wrappedAsset,
-        ICrossChainAdapterL2 _crossChainAdapter
+        IERC20 wrappedAsset
     ) internal {
         __Ownable_init();
         __InceptionERC20OmniAssetsHandler_init(wrappedAsset);
 
-        crossChainAdapter = _crossChainAdapter;
         name = vaultName;
         inceptionToken = _inceptionToken;
         /// TODO
@@ -279,30 +275,6 @@ contract InceptionERC20OmniVault is
         }
     }
 
-    /**
-     * @dev Sends the information about the total amount of tokens and ETH held by this contract to L1 using CrossChainAdapter.
-     * @notice This only sends the info, not the actual assets.
-     */
-    function sendAssetsInfoToL1() external onlyOwner {
-        if (address(crossChainAdapter) == address(0)) {
-            revert CrossChainAdapterNotSet();
-        }
-        uint256 tokensAmount = getTotalTokens();
-
-        // Send the assets information (not the actual assets) to L1
-        bool success = crossChainAdapter.sendAssetsInfoToL1(tokensAmount, 0);
-
-        if (!success) {
-            revert MessageToL1Failed(tokensAmount, 0);
-        }
-
-        emit AssetsInfoSentToL1(tokensAmount, 0);
-    }
-
-    function getTotalTokens() public view returns (uint256) {
-        return IERC20(address(inceptionToken)).balanceOf(address(this));
-    }
-
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
@@ -406,14 +378,6 @@ contract InceptionERC20OmniVault is
 
         emit TreasuryUpdated(newTreasury);
         treasuryAddress = newTreasury;
-    }
-
-    function setCrossChainAdapter(
-        address newCrossChainAdapter
-    ) external onlyOwner {
-        if (newCrossChainAdapter == address(0)) revert NullParams();
-        emit CrossChainAdapterChanged(newCrossChainAdapter);
-        crossChainAdapter = ICrossChainAdapterL2(newCrossChainAdapter);
     }
 
     function setTargetFlashCapacity(
