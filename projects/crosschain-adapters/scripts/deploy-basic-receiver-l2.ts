@@ -1,15 +1,27 @@
 require("dotenv").config();
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 async function main() {
-    const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
-    const rpcUrlArbitrumSepolia = process.env.RPC_URL_ARBITRUM_SEPOLIA;
 
-    if (!deployerPrivateKey || !rpcUrlArbitrumSepolia) {
+    const networkName = network.name;
+    console.log(`Deploying BasicReceiver on network: ${networkName}`);
+
+    let rpcUrlArbitrum;
+    if (networkName === "sepolia") {
+        rpcUrlArbitrum = process.env.RPC_URL_ARBITRUM_SEPOLIA;
+    } else if (networkName === "ethereum") {
+        rpcUrlArbitrum = process.env.RPC_URL_ARBITRUM;
+    } else {
+        console.error("Unsupported chain.");
+        process.exit(1);
+    }
+
+    const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+    if (!deployerPrivateKey || !rpcUrlArbitrum) {
         throw new Error("Missing environment variables");
     }
 
-    const provider = new ethers.JsonRpcProvider(rpcUrlArbitrumSepolia);
+    const provider = new ethers.JsonRpcProvider(rpcUrlArbitrum);
     const wallet = new ethers.Wallet(deployerPrivateKey, provider);
 
     // Get the contract factory and deploy the contract
