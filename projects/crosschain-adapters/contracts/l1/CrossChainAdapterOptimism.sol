@@ -33,12 +33,12 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
     }
 
     function sendEthToL2() external payable {
-        _sendMessage{value: msg.value}(l2sender, "", gasLimit);
+        this._sendMessage{value: msg.value}(l2Sender, "", gasLimit);
     }
 
     function _sendMessage(
         address _l2Sender,
         bytes calldata _message,
         uint32 _gasLimit
-    ) internal payable {}
+    ) external payable {}
 }
