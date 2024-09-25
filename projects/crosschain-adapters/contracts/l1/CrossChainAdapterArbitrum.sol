@@ -65,7 +65,7 @@ contract CrossChainAdapterArbitrum is AbstractCrossChainAdapter {
     ) external onlyOwner {
         require(
             _maxSubmissionCost > 0 && _maxGas > 0 && _gasPriceBid > 0,
-            CannotSetZero()
+            SettingZeroAddress()
         );
         maxSubmissionCost = _maxSubmissionCost;
         maxGas = _maxGas;

@@ -15,7 +15,6 @@ interface ICrossChainAdapterL1 {
     error SettingZeroAddress();
     error RebalancerNotSet();
     error TxStorageNotSet();
-    error CannotSetZero();
 
     event L2InfoReceived(
         uint256 indexed networkId,
