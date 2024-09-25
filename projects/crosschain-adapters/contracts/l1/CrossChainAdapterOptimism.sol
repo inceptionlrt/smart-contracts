@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {IL1CrossDomainMessenger} from "@eth-optimism/contracts/L1/messaging/IL1CrossDomainMessenger.sol";
+
 import "./AbstractCrossChainAdapter.sol";
 
 contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
+    error NoProgrammaticEthTransferOnOptimism();
+
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
+    uint32 gasLimit = 20_000;
 
     constructor(
-        address _transactionStorage
+        address _transactionStorage,
+        address xDomainMessenger
     ) AbstractCrossChainAdapter(_transactionStorage) {}
 
     function receiveL2Info(
@@ -25,4 +31,14 @@ contract CrossChainAdapterOptimism is AbstractCrossChainAdapter {
         (bool success, ) = rebalancer.call{value: msg.value}("");
         require(success, TransferToRebalancerFailed());
     }
+
+    function sendEthToL2() external payable {
+        _sendMessage{value: msg.value}(l2sender, "", gasLimit);
+    }
+
+    function _sendMessage(
+        address _l2Sender,
+        bytes calldata _message,
+        uint32 _gasLimit
+    ) internal payable {}
 }

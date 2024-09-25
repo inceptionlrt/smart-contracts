@@ -15,6 +15,7 @@ interface ICrossChainAdapterL1 {
     error SettingZeroAddress();
     error RebalancerNotSet();
     error TxStorageNotSet();
+    error CannotSetZero();
 
     event L2InfoReceived(
         uint256 indexed networkId,
@@ -34,6 +35,8 @@ interface ICrossChainAdapterL1 {
         uint256 _balance,
         uint256 _totalSupply
     ) external;
+
+    function sendEthToL2() external payable;
 
     function receiveL2Eth() external payable;
 }

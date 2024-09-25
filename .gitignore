@@ -8,3 +8,5 @@ typechain-types
 # Hardhat files
 cache
 artifacts
+*.bin
+*.abi

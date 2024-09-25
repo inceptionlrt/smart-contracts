@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "../interfaces/ICrossChainAdapter.sol";
+import "../interfaces/ICrossChainAdapterL1.sol";
 import "../interfaces/IRestakingPool.sol";
 import "../TransactionStorage.sol";
 
-contract MockCrossChainAdapter is ICrossChainAdapter {
+contract MockCrossChainAdapter is ICrossChainAdapterL1 {
     TransactionStorage public transactionStorage;
     IRestakingPool public restakingPool;
 
@@ -61,6 +61,10 @@ contract MockCrossChainAdapter is ICrossChainAdapter {
         restakingPool.stake{value: msg.value}();
 
         emit L2EthReceived(msg.value);
+    }
+
+    function sendEthToL2() external payable {
+        //placeholder for compilation
     }
 
     receive() external payable {

@@ -39,4 +39,8 @@ contract MockRestakingPool is IRestakingPool {
     function getMinUnstake() external pure override returns (uint256) {
         return 1;
     }
+
+    function availableToStake() external view returns (uint256) {
+        return type(uint256).max;
+    }
 }
