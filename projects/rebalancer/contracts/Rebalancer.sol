@@ -36,9 +36,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     error LiquidityPoolNotSet();
     error CrosschainAdapterNotSet();
     error MissingOneOrMoreL2Transactions(uint256 chainId);
-    error StakeAmountExceedsInEthBalance(
+    error StakeAmountExceedsEthBalance(
         uint256 staked,
-        uint256 availableTokens
+        uint256 availableEth,
+        uint256 sentValue
     );
     error SendAmountExceedsEthBalance(uint256 amountToSend);
     error StakeAmountExceedsMaxTVL();
@@ -214,8 +215,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     function stake(uint256 _amount) external payable onlyOperator {
         require(liqPool != address(0), LiquidityPoolNotSet());
         require(
-            _amount <= localInEthBalance(),
-            StakeAmountExceedsInEthBalance(_amount, localInEthBalance())
+            _amount <= address(this).balance + msg.value,
+            StakeAmountExceedsEthBalance(
+                _amount,
+                address(this).balance,
+                msg.value
+            )
         );
         require(
             _amount <= IRestakingPool(liqPool).availableToStake(),
