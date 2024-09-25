@@ -1,9 +1,71 @@
 require("dotenv").config();
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
+//Gas costs can be unpredictable, so play around with Gas settings
 async function main() {
-    const transactionStorageAddress = `${process.env.TRANSACTION_STORAGE_ADDRESS}`;
-    const inboxAddress = `0xaAe29B0366299461418F5324a79Afc425BE5ae21`; // Correct Arbitrum Sepolia Inbox
+
+    //IMPORTANT! Gas costs can be unpredictable, so play around with Gas settings
+    const maxSubmissionCost = ethers.parseUnits("0.02", "ether");
+    const maxGas = ethers.parseUnits("2000000", "wei");
+    const gasPriceBid = ethers.parseUnits("3", "gwei");
+
+    const networkName = network.name;
+    console.log(`Deploying CrossChainAdapterArbitrum on network: ${networkName}`);
+
+    const transactionStorageAddress = process.env.TRANSACTION_STORAGE_ADDRESS;
+    const l2ContractAddress = process.env.L2_CONTRACT_ADDRESS;
+
+    console.log(`Sanity checks: env variables, l1 contracts, l2 receiver contracts on Arbitrum (${networkName === "sepolia" ? "Sepolia" : "Mainnet"})...`);
+
+    //Sanity check 1: env variables
+    if (!transactionStorageAddress || !l2ContractAddress) {
+        console.error("Set TRANSACTION_STORAGE_ADDRESS, L2_CONTRACT_ADDRESS env variables!");
+        process.exit(1);
+    }
+
+    //Sanity check 2: supporting L1 contracts existence
+    const code = await ethers.provider.getCode(transactionStorageAddress);
+    if (code === "0x") {
+        console.error(`Error: TransactionStorage not found at address ${transactionStorageAddress} on the network ${network.name}.`);
+        process.exit(1);
+    }
+
+    //Sanity check 3: receiver L2 contract existence
+    let arbitrumRpcUrl;
+    let arbitrumInboxAddress;
+    if (networkName === "sepolia") {
+        arbitrumRpcUrl = process.env.RPC_URL_ARBITRUM_SEPOLIA;
+        arbitrumInboxAddress = process.env.ARB_INBOX_SEPOLIA;
+        if (!arbitrumInboxAddress) {
+            console.error("Set ARB_INBOX_SEPOLIA env variable!");
+            process.exit(1);
+        }
+    } else if (networkName === "ethereum") {
+        arbitrumRpcUrl = process.env.RPC_URL_ARBITRUM;
+        arbitrumInboxAddress = process.env.ARB_INBOX_MAINNET;
+        if (!arbitrumInboxAddress) {
+            console.error("Set ARB_INBOX_MAINNET env variable!");
+            process.exit(1);
+        }
+    } else {
+        console.error("Unsupported network. Please use Sepolia or Ethereum (Mainnet).");
+        process.exit(1);
+    }
+
+    if (!arbitrumRpcUrl) {
+        console.error("Error: Corresponding Arbitrum RPC URL is not set in the environment variables.");
+        process.exit(1);
+    }
+
+    const arbitrumProvider = new ethers.JsonRpcProvider(arbitrumRpcUrl);
+    const l2Code = await arbitrumProvider.getCode(l2ContractAddress);
+    if (l2Code === "0x") {
+        console.error(`Error: No contract found at address ${l2ContractAddress} on Arbitrum ${networkName === "sepolia" ? "Sepolia" : "Ethereum"}.`);
+        process.exit(1);
+    }
+
+    console.log("All sanity checks passed 💪");
+    //end of sanity checks
 
     console.log("Deploying CrossChainAdapterArbitrum...");
 
@@ -21,14 +83,9 @@ async function main() {
 
     // Set the inbox address for Arbitrum communication
     console.log("Setting inbox address...");
-    const setInboxTx = await crossChainAdapter.setInbox(inboxAddress);
+    const setInboxTx = await crossChainAdapter.setInbox(arbitrumInboxAddress);
     await setInboxTx.wait();
     console.log("Inbox address set successfully");
-
-    // Set the initial gas parameters
-    const maxSubmissionCost = ethers.parseUnits("0.02", "ether");
-    const maxGas = ethers.parseUnits("2000000", "wei");
-    const gasPriceBid = ethers.parseUnits("3", "gwei");
 
     const gasTx = await crossChainAdapter.setGasParameters(
         maxSubmissionCost,
@@ -38,17 +95,18 @@ async function main() {
     await gasTx.wait();
     console.log("Gas parameters set successfully");
 
-    const l2Target = `${process.env.L2TARGET}`;
-    const l2Sender = `${process.env.L2SENDER}`;
+    console.log("L2 Target:", l2ContractAddress);
+    console.log("L2 Sender:", l2ContractAddress);
 
-    console.log("L2 Target:", l2Target);
-    console.log("L2 Sender:", l2Sender);
-
-    await crossChainAdapter.setL2Target(l2Target);
+    await crossChainAdapter.setL2Target(l2ContractAddress);
     console.log("L2 Target set successfully");
 
-    await crossChainAdapter.setL2Sender(l2Sender);
+    await crossChainAdapter.setL2Sender(l2ContractAddress);
     console.log("L2 Sender set successfully");
+
+    // uncomment lines below if you just want to deploy the AbstractCrossChainAdapter without cross-chain txs
+    // console.error("Bye, bye!");
+    // process.exit();
 
     // Send a small amount of ETH to L2 using sendEthToL2
     console.log("Sending a small amount of ETH to L2...");
