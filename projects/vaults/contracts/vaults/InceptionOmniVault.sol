@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 import "../assets-handler/InceptionAssetsHandler.sol";
 
@@ -119,6 +120,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionAssetsHandler {
         __beforeDeposit(receiver, amount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
+            console.log("here 3");
             uint256 capacity = getFlashCapacity();
             depositBonus = _calculateDepositBonus(amount, capacity - amount);
             if (depositBonus > depositBonusAmount) {
@@ -331,6 +333,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionAssetsHandler {
     ////////////////////////////*/
 
     function ratio() public view returns (uint256) {
+        require(address(ratioFeed) != address(0), "RatioFeed is set to zero");
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 

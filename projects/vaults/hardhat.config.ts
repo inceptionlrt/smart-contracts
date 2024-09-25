@@ -1,4 +1,4 @@
-import { HardhatUserConfig } from "hardhat/config";
+// import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
@@ -11,7 +11,7 @@ import "./tasks/get-inception-vaults";
 import "./tasks/deposit-extra";
 
 const config: HardhatUserConfig = {
-  ...(CONFIG as HardhatUserConfig),
+  // ...(CONFIG as HardhatUserConfig),
   solidity: {
     version: "0.8.24",
     settings: {
