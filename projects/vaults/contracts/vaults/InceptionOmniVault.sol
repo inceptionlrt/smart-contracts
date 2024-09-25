@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 
-import "../assets-handler/InceptionAssetsHandler.sol";
+import "../assets-handler/InceptionOmniAssetHandler.sol";
 
 import "../interfaces/IOwnable.sol";
 import "../interfaces/IInceptionVault.sol";
@@ -15,7 +15,7 @@ import "../interfaces/ICrossChainAdapterL2.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionOmniVault contract
-contract InceptionOmniVault is IInceptionVault, InceptionAssetsHandler {
+contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     event TargetCapacityChanged(
         uint256 targetCapacity,
         uint256 newTargetCapacity
@@ -456,6 +456,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionAssetsHandler {
         emit NameChanged(name, newVaultName);
         name = newVaultName;
     }
+
+    receive() external payable {}
 
     /*///////////////////////////////
     ////// Pausable functions //////
