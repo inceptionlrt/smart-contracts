@@ -11,11 +11,14 @@ import "../interfaces/IInceptionOmniVault.sol";
 import "../interfaces/IInceptionToken.sol";
 import "../interfaces/IRebalanceStrategy.sol";
 import "../interfaces/IInceptionRatioFeed.sol";
-
+import "../interfaces/ICrossChainAdapterL2.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionERC20OmniVault contract
-contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAssetsHandler {
+contract InceptionERC20OmniVault is
+    IInceptionOmniVault,
+    InceptionERC20OmniAssetsHandler
+{
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -30,6 +33,8 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
      */
     address public treasuryAddress;
     IInceptionRatioFeed public ratioFeed;
+
+    ICrossChainAdapterL2 public crossChainAdapter;
 
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
@@ -49,11 +54,13 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
     function __InceptionERC20OmniVault_init(
         string memory vaultName,
         IInceptionToken _inceptionToken,
-        IERC20 wrappedAsset
+        IERC20 wrappedAsset,
+        ICrossChainAdapterL2 _crossChainAdapter
     ) internal {
         __Ownable_init();
         __InceptionERC20OmniAssetsHandler_init(wrappedAsset);
 
+        crossChainAdapter = _crossChainAdapter;
         name = vaultName;
         inceptionToken = _inceptionToken;
         /// TODO
@@ -201,17 +208,19 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
     }
 
     function _calculateDepositBonus(
-        uint256 amount, uint256 capacity
+        uint256 amount,
+        uint256 capacity
     ) internal view returns (uint256 bonus) {
-        uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) / MAX_PERCENT;
+        uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
+            MAX_PERCENT;
 
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
-            uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) *
-                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
+            uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) * 1e18) /
+                ((optimalCapacity * 1e18) / targetCapacity);
             uint256 bonusPercent = maxBonusRate -
                 (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
@@ -234,11 +243,11 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
     function calculateFlashUnstakeFee(
         uint256 amount
     ) public view returns (uint256 fee) {
-
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT;
+        uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) /
+            MAX_PERCENT;
 
         /// @dev the utilization rate is greater 1, [ :100] %
         if (amount > 0 && capacity > targetCapacity) {
@@ -268,6 +277,30 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
         }
+    }
+
+    /**
+     * @dev Sends the information about the total amount of tokens and ETH held by this contract to L1 using CrossChainAdapter.
+     * @notice This only sends the info, not the actual assets.
+     */
+    function sendAssetsInfoToL1() external onlyOwner {
+        if (address(crossChainAdapter) == address(0)) {
+            revert CrossChainAdapterNotSet();
+        }
+        uint256 tokensAmount = getTotalTokens();
+
+        // Send the assets information (not the actual assets) to L1
+        bool success = crossChainAdapter.sendAssetsInfoToL1(tokensAmount, 0);
+
+        if (!success) {
+            revert MessageToL1Failed(tokensAmount, 0);
+        }
+
+        emit AssetsInfoSentToL1(tokensAmount, 0);
+    }
+
+    function getTotalTokens() public view returns (uint256) {
+        return IERC20(address(inceptionToken)).balanceOf(address(this));
     }
 
     /*//////////////////////////////
@@ -373,6 +406,14 @@ contract InceptionERC20OmniVault is IInceptionOmniVault, InceptionERC20OmniAsset
 
         emit TreasuryUpdated(newTreasury);
         treasuryAddress = newTreasury;
+    }
+
+    function setCrossChainAdapter(
+        address newCrossChainAdapter
+    ) external onlyOwner {
+        if (newCrossChainAdapter == address(0)) revert NullParams();
+        emit CrossChainAdapterChanged(newCrossChainAdapter);
+        crossChainAdapter = ICrossChainAdapterL2(newCrossChainAdapter);
     }
 
     function setTargetFlashCapacity(

@@ -46,6 +46,8 @@ interface IInceptionOmniVault {
 
     event DepositBonus(uint256 amount);
 
+    event CrossChainAdapterChanged(address newCrossChainAdapter);
+
     event DepositBonusParamsChanged(
         uint256 newMaxBonusRate,
         uint256 newOptimalBonusRate,
@@ -63,6 +65,8 @@ interface IInceptionOmniVault {
 
     error MessageToL1Failed(uint256 tokenAmount, uint256 ethAmount);
     error EthToL1Failed(uint256 ethAmount);
+
+    error CrossChainAdapterNotSet();
 
     function ratio() external view returns (uint256);
 }

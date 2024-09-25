@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../InceptionERC20OmniVault.sol";
 import "../../interfaces/IStEth.sol";
+import "../../interfaces/ICrossChainAdapterL2.sol";
 
 /// @author The InceptionLRT team
 /// @title The InstEthOmniVault, specifically designed for the Lido Ethereum LST
@@ -16,12 +17,14 @@ contract InstEthERC20OmniVault is InceptionERC20OmniVault {
 
     function initialize(
         IInceptionToken _inceptionToken,
-        IERC20 baseAsset
+        IERC20 baseAsset,
+        ICrossChainAdapterL2 crossChainAdapter
     ) external initializer {
         __InceptionERC20OmniVault_init(
             "InstEthERC20OmniVault",
             _inceptionToken,
-            baseAsset
+            baseAsset,
+            crossChainAdapter
         );
     }
 }
