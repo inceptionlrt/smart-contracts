@@ -317,25 +317,36 @@ describe("Omnivault integration tests", function () {
                     name: "transactionStorage address",
                     setter: "setTransactionStorage",
                     getter: "transactionStorage",
-                    event: "TxStorageChanged"
+                    event: "TxStorageChanged",
+                    args: (newValue) => [newValue]
                 },
                 {
                     name: "inEth address",
                     setter: "setInETHAddress",
                     getter: "inETHAddress",
-                    event: "InEthChanged"
+                    event: "InEthChanged",
+                    args: (newValue) => [newValue]
                 },
                 {
                     name: "lockbox address",
                     setter: "setLockboxAddress",
                     getter: "lockboxAddress",
-                    event: "LockboxChanged"
+                    event: "LockboxChanged",
+                    args: (newValue) => [newValue]
                 },
                 {
                     name: "restaking pool address",
                     setter: "setLiqPool",
                     getter: "liqPool",
-                    event: "LiqPoolChanged"
+                    event: "LiqPoolChanged",
+                    args: (newValue) => [newValue]
+                },
+                {
+                    name: "operator address",
+                    setter: "setOperator",
+                    getter: "operator",
+                    event: "OperatorChanged",
+                    args: (newValue) => [operator.address, newValue]
                 },
             ]
 
@@ -344,7 +355,7 @@ describe("Omnivault integration tests", function () {
                     const newValue = ethers.Wallet.createRandom().address;
                     await expect(rebalancer[arg.setter](newValue))
                         .to.emit(rebalancer, arg.event)
-                        .withArgs(newValue);
+                        .withArgs(...arg.args(newValue));
 
                     expect(await rebalancer[arg.getter]()).to.be.eq(newValue);
                 })
@@ -695,12 +706,24 @@ describe("Omnivault integration tests", function () {
 
             const args = [
                 {
-                    name: "Part of the balance",
-                    amount: async (amount) => amount / 2n
+                    name: "Part of the balance to ARB",
+                    amount: async (amount) => amount / 2n,
+                    chainId: ARB_ID,
                 },
                 {
-                    name: "All balance",
-                    amount: async (amount) => amount
+                    name: "Part of the balance to OPT",
+                    amount: async (amount) => amount / 2n,
+                    chainId: OPT_ID,
+                },
+                {
+                    name: "All balance to ARB",
+                    amount: async (amount) => amount,
+                    chainId: ARB_ID,
+                },
+                {
+                    name: "All balance to OPT",
+                    amount: async (amount) => amount,
+                    chainId: OPT_ID,
                 }
             ]
 
@@ -708,51 +731,33 @@ describe("Omnivault integration tests", function () {
                 it(`${arg.name}`, async function () {
                     const balance = await ethers.provider.getBalance(rebalancer.address);
                     const amount = await arg.amount(balance);
-                    const shares = await inEth.convertToShares(amount);
-                    const lockboxInEthBalanceBefore = await ethers.provider.getBalance(crosschainAdapter);
+                    const adapter = await txStorage.adapters(arg.chainId);
 
-                    const tx = await rebalancer.connect(operator).stake(amount);
-                    await expect(tx)
-                        .and.emit(rebalancer, "InETHDepositedToLockbox").withArgs(shares)
-                        .and.emit(restakingPool, "Staked").withArgs(rebalancer.address, amount, shares);
-
-                    const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                    console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
-                    console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
-                    console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
-
-                    //Everything was staked goes to the lockbox
-                    expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
-                    expect(await inEth.balanceOf(rebalancer.address)).to.be.eq(0n);
+                    const tx = await rebalancer.connect(operator).sendEthToL2(arg.chainId, amount);
+                    await expect(tx).to.changeEtherBalance(rebalancer, -amount);
+                    await expect(tx).to.changeEtherBalance(adapter, amount);
                 })
             })
 
-            it("Reverts when amount > available to stake from restaking pool", async function () {
-                const amount = await restakingPool.availableToStake() + 1n;
-                await signer1.sendTransaction({value: amount, to: rebalancer.address});
-                await expect(rebalancer.connect(operator).stake(amount))
-                    .to.revertedWithCustomError(rebalancer, "StakeAmountExceedsMaxTVL");
-            })
-
             it("Reverts when amount > eth balance", async function () {
-                const amount = await restakingPool.availableToStake() / 2n;
-                await signer1.sendTransaction({value: amount, to: rebalancer.address});
-                await expect(rebalancer.connect(operator).stake(amount + 1n))
-                    .to.revertedWithCustomError(rebalancer, "StakeAmountExceedsEthBalance");
-            })
-
-            it("Reverts when amount < restaking pool min stake", async function () {
-                const amount = await restakingPool.getMinStake() - 1n;
-                await signer1.sendTransaction({value: amount, to: rebalancer.address});
-                await expect(rebalancer.connect(operator).stake(amount))
-                    .to.revertedWithCustomError(restakingPool, "PoolStakeAmLessThanMin");
+                await signer1.sendTransaction({value: e18, to: rebalancer.address});
+                const amount = await ethers.provider.getBalance(rebalancer.address);
+                await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n))
+                    .to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
             })
 
             it("Reverts when called by not an operator", async function () {
-                const amount = await restakingPool.availableToStake() / 2n;
-                await signer1.sendTransaction({value: amount, to: rebalancer.address});
-                await expect(rebalancer.connect(signer1).stake(amount))
+                await signer1.sendTransaction({value: e18, to: rebalancer.address});
+                const amount = await ethers.provider.getBalance(rebalancer.address);
+                await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount))
                     .to.revertedWithCustomError(rebalancer, "OnlyOperator");
+            })
+
+            it("Reverts when there is no adapter for the chain", async function () {
+                await signer1.sendTransaction({value: e18, to: rebalancer.address});
+                const amount = await ethers.provider.getBalance(rebalancer.address);
+                await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount))
+                    .to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
             })
         })
     })
