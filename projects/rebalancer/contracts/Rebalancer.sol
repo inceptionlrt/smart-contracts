@@ -130,7 +130,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         // int256 ratioDiff = int256(l2Ratio) - int256(l1Ratio);
 
         // require(
-        //     !isAGreaterThanB(ratioDiff, int256(MAX_DIFF)),
+        //     !_isAGreaterThanB(ratioDiff, int256(MAX_DIFF)),
         //     RatioDifferenceTooHigh()
         // );
 
@@ -139,10 +139,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         if (lastUpdateTotalL2InEth < totalL2InETH) {
             uint amountToMint = totalL2InETH - lastUpdateTotalL2InEth;
             emit TreasuryUpdateMint(amountToMint);
-            mintInceptionToken(amountToMint);
+            _mintInceptionToken(amountToMint);
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
             uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
-            burnInceptionToken(amountToBurn);
+            _burnInceptionToken(amountToBurn);
             emit TreasuryUpdateBurn(amountToBurn);
         }
 
@@ -156,19 +156,19 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         }
     }
 
-    function mintInceptionToken(uint256 _amountToMint) internal {
+    function _mintInceptionToken(uint256 _amountToMint) internal {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.mint(lockboxAddress, _amountToMint);
     }
 
-    function burnInceptionToken(uint256 _amountToBurn) internal {
+    function _burnInceptionToken(uint256 _amountToBurn) internal {
         require(inETHAddress != address(0), InETHAddressNotSet());
         IInceptionToken cToken = IInceptionToken(inETHAddress);
         cToken.burn(lockboxAddress, _amountToBurn);
     }
 
-    function getRatioL1() internal view returns (uint256) {
+    function _getRatioL1() internal view returns (uint256) {
         return
             IInceptionRatioFeed(ratioFeed).getRatioFor(address(inETHAddress));
     }
@@ -184,13 +184,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         return IERC20(inETHAddress).balanceOf(lockboxAddress);
     }
 
-    function abs(int256 x) internal pure returns (uint256) {
+    function _abs(int256 x) internal pure returns (uint256) {
         return x < 0 ? uint256(-x) : uint256(x);
     }
 
-    function isAGreaterThanB(int256 a, int256 b) internal pure returns (bool) {
-        uint256 absA = abs(a);
-        uint256 absB = abs(b);
+    function _isAGreaterThanB(int256 a, int256 b) internal pure returns (bool) {
+        uint256 absA = _abs(a);
+        uint256 absB = _abs(b);
         return absA > absB;
     }
 
