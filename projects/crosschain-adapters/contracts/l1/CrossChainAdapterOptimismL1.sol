@@ -52,6 +52,7 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
         bytes[] calldata _gasData
     ) external payable returns (uint256) {
         require(callValue <= msg.value, InvalidValue());
+        require(l2Receiver != address(0), L2ReceiverNotSet());
 
         uint256 maxGas;
         if (_gasData.length > 0) {

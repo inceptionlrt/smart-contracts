@@ -20,6 +20,8 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
 
     event InboxChanged(address newInbox);
 
+    error ArbInboxNotSet();
+
     constructor(
         address _transactionStorage
     ) AbstractCrossChainAdapterL1(_transactionStorage) {}
@@ -48,6 +50,7 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
     ) public payable returns (uint256) {
         require(callValue <= msg.value, "Invalid call value");
         require(address(inbox) != address(0), "Inbox not set");
+        require(l2Receiver != address(0), L2ReceiverNotSet());
 
         (uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid) = abi
             .decode(_gasData[0], (uint256, uint256, uint256));
@@ -78,7 +81,7 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         emit InboxChanged(_inbox);
     }
 
-	function receiveL2Eth() external payable override {
+    function receiveL2Eth() external payable override {
         IBridge bridge = IInbox(inbox).bridge();
         require(msg.sender == address(bridge), NotBridge());
         require(rebalancer != address(0), RebalancerNotSet());
