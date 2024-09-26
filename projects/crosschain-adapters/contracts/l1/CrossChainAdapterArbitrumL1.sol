@@ -14,13 +14,7 @@ contract CrossChainAdapterArbitrumL1 is
 {
     IInbox public inbox;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
-
-    event GasParametersChanged(
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid
-    );
-
+    
     event RetryableTicketCreated(uint256 indexed ticketId);
 
     event InboxChanged(address newInbox);
