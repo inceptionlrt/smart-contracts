@@ -220,8 +220,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     function sendEthToL2(
         uint256 _chainId,
-        uint256 _amount
-    ) external onlyOperator {
+        uint256 _callValue,
+        uint256 _additionalFees
+    ) external payable onlyOperator {
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
         );
@@ -229,13 +230,16 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             crossChainAdapterAddress != address(0),
             CrosschainAdapterNotSet()
         );
+
+        uint256 totalTxCost = _callValue + _additionalFees;
         require(
-            _amount <= address(this).balance,
-            SendAmountExceedsEthBalance(_amount)
+            totalTxCost <= address(this).balance,
+            SendAmountExceedsEthBalance(_callValue)
         );
+
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
-            value: _amount
-        }(_amount);
+            value: _callValue + _additionalFees
+        }(_callValue); // total value must be callValue + fees
     }
 
     receive() external payable {
