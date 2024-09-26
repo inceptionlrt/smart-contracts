@@ -66,7 +66,7 @@ contract CrossChainAdapterArbitrumL1 is
             .decode(_gasData[0], (uint256, uint256, uint256));
 
         require(
-            maxGas > 0 || gasPriceBid > 0 || maxSubmissionCost > 0,
+            maxGas > 0 && gasPriceBid > 0 && maxSubmissionCost > 0,
             SettingZeroGas()
         );
 

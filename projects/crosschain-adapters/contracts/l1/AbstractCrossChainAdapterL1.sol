@@ -77,6 +77,7 @@ abstract contract AbstractCrossChainAdapterL1 is
     }
 
     function recoverFunds() external onlyOwner {
+        require(rebalancer != address(0), RebalancerNotSet());
         (bool ok, ) = rebalancer.call{value: address(this).balance}("");
         require(ok, TransferToRebalancerFailed());
     }

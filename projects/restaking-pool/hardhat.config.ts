@@ -48,7 +48,8 @@ const config: HardhatUserConfig = {
         lib: "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66",
         cToken: "0xf073bAC22DAb7FaF4a3Dd6c6189a70D54110525C",
         ratioFeed: "0x122ee24Cb3Cc1b6B987800D3B54A68FC16910Dbf",
-        lockbox: "0xb86d7BfB30E4e9552Ba1Dd6208284667DF2E8c0E"
+        lockbox: "0xb86d7BfB30E4e9552Ba1Dd6208284667DF2E8c0E",
+        optimismInbox: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
       }
     },
   },
