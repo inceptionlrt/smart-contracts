@@ -23,6 +23,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
 
     error InsufficientEthSent(uint256 _callValue, uint256 _fees);
     error OnlyOwnerOrOperator();
+    error ResultISharesZero();
+    error RatioFeedNotSet();
 
     modifier onlyOwnerOrOperator() {
         if (msg.sender == owner() || msg.sender == operator) {
@@ -109,7 +111,9 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
-        require(iShares > 0, "InceptionVault: result iShares 0");
+        if (iShares > 0) {
+            revert ResultISharesZero();
+        }
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -134,7 +138,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         __beforeDeposit(receiver, amount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
-            console.log("here 3");
             uint256 capacity = getFlashCapacity();
             depositBonus = _calculateDepositBonus(amount, capacity - amount);
             if (depositBonus > depositBonusAmount) {
@@ -356,7 +359,9 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     ////////////////////////////*/
 
     function ratio() public view returns (uint256) {
-        require(address(ratioFeed) != address(0), "RatioFeed is set to zero");
+        if (address(ratioFeed) == address(0)) {
+            revert RatioFeedNotSet();
+        }
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
