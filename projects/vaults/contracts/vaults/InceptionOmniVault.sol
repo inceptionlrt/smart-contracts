@@ -21,6 +21,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 newTargetCapacity
     );
 
+    error InsufficientEthSent(uint256 _callValue, uint256 _fees);
+
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -305,20 +307,29 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
 
     /**
      * @dev Sends a specific amount of ETH to L1 using CrossChainAdapter.
-     * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information.
-     * @param amount The amount of ETH to send to L1.
+     * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information. _callValue + _fees must be >= msg.value
+     * @param _callValue The amount of ETH to send to L1.
+     * @param _fees The amount of ETH to pay for cross-chain submission.
      */
-    function sendEthToL1(uint256 amount) external onlyOwner {
-        require(amount <= getTotalEth(), "Not enough ETH");
-
-        // Send ETH to L1 using the CrossChainAdapter
-        bool success = crossChainAdapter.sendEthToL1{value: amount}();
-
-        if (!success) {
-            revert EthToL1Failed(amount);
+    function sendEthToL1(
+        uint256 _callValue,
+        uint256 _fees
+    ) external payable onlyOwner {
+        uint256 totalSubmissionCost = _callValue + _fees;
+        if (totalSubmissionCost > address(this).balance) {
+            revert InsufficientEthSent(_callValue, _fees);
         }
 
-        emit EthSentToL1(amount);
+        // remainder will be refunded
+        bool success = crossChainAdapter.sendEthToL1{
+            value: totalSubmissionCost
+        }(_callValue, _fees);
+
+        if (!success) {
+            revert EthToL1Failed(_callValue);
+        }
+
+        emit EthSentToL1(_callValue);
     }
 
     function getTotalTokens() public view returns (uint256) {

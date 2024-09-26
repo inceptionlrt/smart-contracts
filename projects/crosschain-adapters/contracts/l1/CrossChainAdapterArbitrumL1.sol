@@ -9,9 +9,6 @@ import "./AbstractCrossChainAdapterL1.sol";
 contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
     IInbox public inbox;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
-    uint256 maxSubmissionCost = 100000000000;
-    uint256 maxGas = 100000000000;
-    uint256 gasPriceBid = 1000;
 
     event GasParametersChanged(
         uint256 maxSubmissionCost,
@@ -45,18 +42,29 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
-    function sendEthToL2(uint256 callValue) public payable returns (uint256) {
-        require(callValue <= msg.value, InvalidValue());
+    function sendEthToL2(
+        uint256 callValue,
+        bytes[] calldata _gasData
+    ) public payable returns (uint256) {
+        require(callValue <= msg.value, "Invalid call value");
         require(address(inbox) != address(0), "Inbox not set");
-        require(maxGas > 0, "Invalid gas value");
+
+        (uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid) = abi
+            .decode(_gasData[0], (uint256, uint256, uint256));
+
+        require(
+            maxGas > 0 || gasPriceBid > 0 || maxSubmissionCost > 0,
+            SettingZeroGas()
+        );
+
         uint256 ticketID = inbox.createRetryableTicket{value: msg.value}(
-            l2Receiver,
-            callValue,
-            maxSubmissionCost,
-            msg.sender,
-            msg.sender,
-            maxGas,
-            gasPriceBid,
+            l2Receiver, // Destination address on L2
+            callValue, // ETH to send to L2
+            maxSubmissionCost, // Cost for submitting the ticket
+            msg.sender, // Refund address if the ticket fails
+            msg.sender, // Refund any excess ETH
+            maxGas, // Max gas for L2 execution
+            gasPriceBid, // Bid for L2 gas price
             ""
         );
 
@@ -64,25 +72,18 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         return ticketID;
     }
 
-    function setGasParameters(
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid
-    ) external onlyOwner {
-        require(
-            _maxSubmissionCost > 0 && _maxGas > 0 && _gasPriceBid > 0,
-            SettingZeroAddress()
-        );
-        maxSubmissionCost = _maxSubmissionCost;
-        maxGas = _maxGas;
-        gasPriceBid = _gasPriceBid;
-        emit GasParametersChanged(_maxSubmissionCost, _maxGas, _gasPriceBid);
-    }
-
     function setInbox(address _inbox) external onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
         inbox = IInbox(_inbox);
         emit InboxChanged(_inbox);
+    }
+
+    function receiveL2Eth() external payable override {
+        IBridge bridge = IInbox(inbox).bridge();
+        require(msg.sender == address(bridge), NotBridge());
+        require(rebalancer != address(0), RebalancerNotSet());
+        Address.sendValue(payable(rebalancer), msg.value);
+        emit L2EthDeposit(msg.value);
     }
 
     receive() external payable override {

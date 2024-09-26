@@ -17,5 +17,8 @@ interface ICrossChainAdapterL2 {
         uint256 ethAmount
     ) external returns (bool success);
 
-    function sendEthToL1() external payable returns (bool success);
+    function sendEthToL1(
+        uint256 _callValue,
+        uint256 _fees
+    ) external payable returns (bool success);
 }
