@@ -40,7 +40,7 @@ interface ICrossChainAdapterL1 {
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
-    ) external payable returns (uint256);
+    ) external payable;
 
     function getChainId() external returns (uint24);
 
