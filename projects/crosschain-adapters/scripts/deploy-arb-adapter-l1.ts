@@ -1,11 +1,10 @@
 require("dotenv").config();
-import { ethers, network } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 
 // Gas costs can be unpredictable, so play around with gas settings
 async function main() {
-    // Use the correct ethers API for parsing units
     const maxSubmissionCost = ethers.parseEther("0.02");
-    const maxGas = ethers.toBigInt("2000000"); // Parse directly to BigInt as required
+    const maxGas = ethers.toBigInt("2000000");
     const gasPriceBid = ethers.parseUnits("3", "gwei");
 
     const networkName = network.name;
@@ -59,26 +58,24 @@ async function main() {
 
     console.log("All sanity checks passed 💪");
 
-    // Deploy the CrossChainAdapterArbitrumL1 contract
     console.log("Deploying CrossChainAdapterArbitrumL1...");
     const CrossChainAdapterArbitrum = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
-    const crossChainAdapter = await CrossChainAdapterArbitrum.deploy(transactionStorageAddress);
-    await crossChainAdapter.waitForDeployment();
-    const crossChainAdapterAddress = await crossChainAdapter.getAddress();
-    console.log("CrossChainAdapterArbitrum deployed at:", crossChainAdapterAddress);
+    const crossChainAdapter = await upgrades.deployProxy(CrossChainAdapterArbitrum, [transactionStorageAddress, arbitrumInboxAddress], {
+        initializer: "initialize",
+    });
 
-    // Set the inbox address for Arbitrum communication
-    console.log("Setting inbox address...");
-    const setInboxTx = await crossChainAdapter.setInbox(arbitrumInboxAddress);
-    await setInboxTx.wait();
-    console.log("Inbox address set successfully");
+    console.log("CrossChainAdapterArbitrumL1 deployed at:", await crossChainAdapter.getAddress());
 
-    console.log("L2 receiver:", l2Receiver);
+    // Set the deployer's address as the rebalancer
+    const [deployer] = await ethers.getSigners();
+    const deployerAddress = await deployer.getAddress();
+    await crossChainAdapter.setRebalancer(deployerAddress);
 
-    const txReceiver = await crossChainAdapter.setL2Receiver(l2Receiver);
-    await txReceiver.wait();
-    const txSender = await crossChainAdapter.setL2Sender(l2Sender);
-    await txSender.wait();
+    console.log("Rebalancer set to deployer's address:", deployerAddress);
+
+    // Set L2 receiver and sender
+    await crossChainAdapter.setL2Receiver(l2Receiver);
+    await crossChainAdapter.setL2Sender(l2Sender);
     console.log("L2 sender and receiver set successfully");
 
     // Send a small amount of ETH to L2 using the updated sendEthToL2 function
