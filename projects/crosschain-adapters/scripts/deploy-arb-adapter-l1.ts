@@ -23,14 +23,7 @@ async function main() {
         process.exit(1);
     }
 
-    // Sanity check 2: Ensure L1 contract existence
-    const code = await ethers.provider.getCode(transactionStorageAddress);
-    if (code === "0x") {
-        console.error(`Error: TransactionStorage not found at address ${transactionStorageAddress} on the network ${network.name}.`);
-        process.exit(1);
-    }
-
-    // Sanity check 3: Ensure L2 receiver contract existence
+    // Sanity check 2: Ensure L2 receiver contract existence
     let arbitrumRpcUrl;
     let arbitrumInboxAddress;
     if (networkName === "sepolia") {
@@ -40,7 +33,7 @@ async function main() {
             console.error("Set ARB_INBOX_SEPOLIA env variable!");
             process.exit(1);
         }
-    } else if (networkName === "ethereum") {
+    } else if (networkName === "ethereum" || networkName === "hardhat") {
         arbitrumRpcUrl = process.env.RPC_URL_ARBITRUM;
         arbitrumInboxAddress = process.env.ARB_INBOX_MAINNET;
         if (!arbitrumInboxAddress) {
