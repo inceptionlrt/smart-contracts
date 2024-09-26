@@ -278,11 +278,6 @@ describe("Omnivault integration tests", function () {
             it("ratio feed address", async function () {
                 expect(await rebalancer.ratioFeed()).to.be.eq(ratioFeed.address);
             })
-
-            //Values
-            it("getRatioL2", async function () {
-                expect(await rebalancer.getRatioL2(e18, e18)).to.be.eq(e18);
-            })
         })
 
         describe("Getters and setters", function () {
@@ -990,7 +985,8 @@ describe("Omnivault integration tests", function () {
                 const totalSupply = 100;
 
                 await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
-                    .to.revertedWithCustomError(arbAdapter, "FutureTimestamp");
+                    .to.revertedWithCustomError(txStorage, "TimeCannotBeInFuture")
+                    .withArgs(timestamp);
             })
 
             it("Reverts: when called by not a bridge", async function () {
@@ -1141,7 +1137,8 @@ describe("Omnivault integration tests", function () {
                 const totalSupply = 100;
 
                 await expect(optBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
-                    .to.revertedWithCustomError(optAdapter, "FutureTimestamp");
+                    .to.revertedWithCustomError(txStorage, "TimeCannotBeInFuture")
+                    .withArgs(timestamp);
             })
 
             it("Reverts: when called by not a bridge", async function () {
