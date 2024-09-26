@@ -96,7 +96,7 @@ async function main() {
         });
         await sendTx.wait();
         console.log("ETH sent to L2 successfully.");
-    } catch (error) {
+    } catch (error) { 
         console.error("Error sending ETH to L2:", error);
     }
 
