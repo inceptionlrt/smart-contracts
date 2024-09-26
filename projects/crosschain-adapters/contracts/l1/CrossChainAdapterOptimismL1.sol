@@ -7,6 +7,14 @@ import "openzeppelin-4/access/Ownable.sol";
 
 import "./AbstractCrossChainAdapterL1.sol";
 
+interface PayableCrossDomainMessenger {
+    function sendMessage(
+        address _target,
+        bytes calldata _message,
+        uint32 _gasLimit
+    ) external payable;
+}
+
 contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     IL1CrossDomainMessenger public immutable l1CrossDomainMessenger;
@@ -44,11 +52,16 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
 
     function sendEthToL2(uint256 callValue) external payable returns (uint256) {
         require(callValue <= msg.value, InvalidValue());
+
+        
         l1StandardBridge.depositETHTo{value: callValue}(
             address(l2Receiver),
             uint32(maxGas),
             ""
         );
+
+        // PayableCrossDomainMessenger(address(l1CrossDomainMessenger))
+        //     .sendMessage{value: msg.value}(l2Receiver, "", uint32(maxGas));
 
         return 0;
     }

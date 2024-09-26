@@ -3,22 +3,36 @@ pragma solidity 0.8.26;
 
 import "@eth-optimism/contracts/L2/messaging/IL2CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
-import "openzeppelin-4/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 import "../interface/ICrossChainAdapterL2.sol";
 
+interface PayableCrossDomainMessenger {
+    function sendMessage(
+        address _target,
+        bytes calldata _message,
+        uint32 _gasLimit
+    ) external payable;
+}
 
-contract CrossChainAdapterOptimismL2 is ICrossChainAdapterL2, Ownable {
-    IL2CrossDomainMessenger public immutable l2CrossDomainMessenger;
+contract CrossChainAdapterOptimismL2 is
+    ICrossChainAdapterL2,
+    Ownable,
+    ReentrancyGuard
+{
+    IL2CrossDomainMessenger public immutable l2Messenger;
     L2StandardBridge public immutable l2StandardBridge;
     address public l1Target;
     address public vault;
-    uint256 maxGas = 3_000_000;
+    uint256 maxGas = 20_000_000;
 
     event AssetsInfoSentToL1(
-        uint256 indexed tokensAmount,
-        uint256 indexed ethAmount
+        uint256 tokensAmount,
+        uint256 ethAmount,
+        bytes32 messageId
     );
-    event EthSentToL1(uint256 indexed amount);
+    event EthSentToL1(uint256 amount);
 
     modifier onlyVault() {
         if (vault == address(0)) {
@@ -31,24 +45,29 @@ contract CrossChainAdapterOptimismL2 is ICrossChainAdapterL2, Ownable {
     }
 
     constructor(
-        IL2CrossDomainMessenger _l2CrossDomainMessenger,
+        IL2CrossDomainMessenger _l2Messenger,
         L2StandardBridge _l2StandardBridge,
         address _l1Target
     ) {
-        l2CrossDomainMessenger = _l2CrossDomainMessenger;
+        l2Messenger = _l2Messenger;
         l2StandardBridge = _l2StandardBridge;
         l1Target = _l1Target;
     }
 
-    /// @dev Allows the owner to set the L1 target address for cross-chain messaging.
     function setL1Target(address _l1Target) external onlyOwner {
         l1Target = _l1Target;
     }
 
-    /// @notice Send information about assets to L1, using the cross-domain messenger.
-    /// @dev Sends encoded message to the L1 target contract.
-    /// @param tokensAmount Amount of tokens on L2
-    /// @param ethAmount Amount of ETH on L2
+    function setVault(address _vault) external onlyOwner {
+        vault = _vault;
+    }
+
+    /**
+     * @dev Send token and ETH information to L1
+     * @param tokensAmount Amount of tokens to send
+     * @param ethAmount Amount of ETH to send
+     * @return success True if the message was sent
+     */
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
         uint256 ethAmount
@@ -59,45 +78,45 @@ contract CrossChainAdapterOptimismL2 is ICrossChainAdapterL2, Ownable {
             ethAmount
         );
 
-        // Use Optimism L2 cross-domain messenger to send the message to L1.
-        l2CrossDomainMessenger.sendMessage(l1Target, data, 200_000);
+        // Send the message to the L1 target contract
+        l2Messenger.sendMessage(
+            l1Target,
+            data,
+            200_000 // Gas limit for L1 execution, adjust as needed
+        );
 
-        emit AssetsInfoSentToL1(tokensAmount, ethAmount);
+        bytes32 messageId = keccak256(data); // Optional: Generate a unique message ID
+        emit AssetsInfoSentToL1(tokensAmount, ethAmount, messageId);
+
         return true;
     }
 
-    /// @notice Sends ETH to L1 using the L2StandardBridge.
-    /// @dev Transfers ETH from L2 to L1 through the Optimism L2 Standard Bridge.
+    /**
+     * @dev Sends ETH from L2 to L1 using the Optimism bridge
+     */
     function sendEthToL1()
         external
         payable
         override
         onlyVault
+        nonReentrant
         returns (bool success)
     {
-        require(msg.value > 0, "No ETH sent");
+        // Use the L2 Standard Bridge to send ETH to the L1 target contract
+        l2StandardBridge.withdrawTo(
+            address(0),
+            l1Target,
+            msg.value,
+            uint32(maxGas),
+            ""
+        );
 
-        // l2CrossDomainMessenger.sendMessage{value: msg.value}({
-        //     _target: l1Target,
-        //     _message: "",
-        //     _gasLimit: uint32(maxGas)
-        // });
-
-        l2StandardBridge.withdrawTo()
+        // PayableCrossDomainMessenger(address(l2Messenger)).sendMessage{
+        //     value: msg.value
+        // }(l1Target, "", uint32(maxGas));
 
         emit EthSentToL1(msg.value);
+
         return true;
-    }
-
-    function setMaxGas(uint256 _maxGas) external onlyOwner {
-        require(_maxGas > 0, SettingZeroGas());
-        maxGas = _maxGas;
-        emit MaxGasChanged(_maxGas);
-    }
-
-    /// @dev Allows the owner to set the vault address.
-    /// @param _vault The address of the vault allowed to call `sendEthToL1`.
-    function setVault(address _vault) external onlyOwner {
-        vault = _vault;
     }
 }
