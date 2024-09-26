@@ -109,7 +109,7 @@ describe("InceptionOmniVault contract", function () {
             expect(flashCapacity).to.be.gt(0); // This checks if the vault has capacity to withdraw
 
             console.log("Frog 🐸");
-            
+
 
             // Withdraw the same amount that was deposited
             const withdrawTx = await inceptionOmniVault.flashWithdraw(depositAmount, ownerAddress);
@@ -150,6 +150,7 @@ describe("InceptionOmniVault contract", function () {
         it("Should send ETH to L1", async function () {
             const { inceptionOmniVault, owner } = await loadFixture(deployInceptionOmniVaultFixture);
             const sendAmount = ethers.parseEther("1");
+            const fees = ethers.parseEther("0.1");
 
             // Send ETH to contract
             await owner.sendTransaction({
@@ -158,7 +159,7 @@ describe("InceptionOmniVault contract", function () {
             });
 
             // Send ETH to L1
-            await expect(inceptionOmniVault.sendEthToL1(sendAmount)).to.emit(inceptionOmniVault, "EthSentToL1");
+            await expect(inceptionOmniVault.sendEthToL1(sendAmount, fees)).to.emit(inceptionOmniVault, "EthSentToL1");
 
             // Check balance after sending
             const totalEth = await inceptionOmniVault.getTotalEth();
