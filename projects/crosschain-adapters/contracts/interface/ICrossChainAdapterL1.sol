@@ -10,11 +10,13 @@ interface ICrossChainAdapterL1 {
 
     error NotBridge();
     error FutureTimestamp();
-    error NotAuthorizedByL2();
+    error UnauthorizedOriginalSender();
     error TransferToRebalancerFailed();
     error SettingZeroAddress();
+    error SettingZeroGas();
     error RebalancerNotSet();
     error TxStorageNotSet();
+    error InvalidValue();
 
     event L2InfoReceived(
         uint256 indexed networkId,
@@ -25,6 +27,7 @@ interface ICrossChainAdapterL1 {
 
     event L2EthDeposit(uint256 amount);
     event RebalancerChanged(address newRebalancer);
+    event L2ReceiverChanged(address newL2Receiver);
     event L2SenderChanged(address newL2Sender);
     event InboxChanged(address newInbox);
     event TxStorageChanged(address newTxStorage);
@@ -35,7 +38,9 @@ interface ICrossChainAdapterL1 {
         uint256 _totalSupply
     ) external;
 
-    function sendEthToL2() external payable;
+    function sendEthToL2(uint256 callValue) external payable returns (uint256);
 
-    function receiveL2Eth() external payable;
+    function getChainId() external returns (uint24);
+
+    receive() external payable;
 }

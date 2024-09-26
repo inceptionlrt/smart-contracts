@@ -10,7 +10,7 @@ interface ICrossChainAdapterL1 {
 
     error NotBridge();
     error FutureTimestamp();
-    error NotAuthorizedByL2();
+    error UnauthorizedOriginalSender();
     error TransferToRebalancerFailed();
     error SettingZeroAddress();
 

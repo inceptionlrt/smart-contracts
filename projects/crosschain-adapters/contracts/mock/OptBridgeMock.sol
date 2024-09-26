@@ -4,9 +4,9 @@ pragma solidity ^0.8.20;
 import "../interface/ICrossChainAdapterL1.sol";
 
 contract OptBridgeMock {
-    address private adapter;
+    address payable private adapter;
 
-    constructor(address _adapter) {
+    constructor(address payable _adapter) {
         adapter = _adapter;
     }
 
@@ -23,6 +23,6 @@ contract OptBridgeMock {
     }
 
     function receiveL2Eth() external payable {
-        ICrossChainAdapterL1(adapter).receiveL2Eth{value: msg.value}();
+        adapter.call{value: msg.value}("");
     }
 }
