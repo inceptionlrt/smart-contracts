@@ -333,7 +333,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     }
 
     function getTotalTokens() public view returns (uint256) {
-        return IERC20(address(inceptionToken)).balanceOf(address(this));
+        return IERC20(address(inceptionToken)).totalSupply();
     }
 
     function getTotalEth() public view returns (uint256) {
