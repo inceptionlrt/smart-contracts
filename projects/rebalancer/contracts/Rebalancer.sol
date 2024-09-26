@@ -235,7 +235,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         bytes[] calldata _gasData // Encoded gas parameters (e.g., maxGas, gasPriceBid, etc.)
     ) external payable onlyOperator {
 
-        require(_callValue <= address(this).balance, SendAmountExceedsEthBalance(_callValue));
+        require(_callValue + msg.value <= address(this).balance, SendAmountExceedsEthBalance(_callValue));
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
         );

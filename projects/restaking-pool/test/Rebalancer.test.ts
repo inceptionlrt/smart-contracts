@@ -114,16 +114,32 @@ describe("Omnivault integration tests", function () {
         const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
         txStorage.address = await txStorage.getAddress();
 
+        //===Arbitrum
+        console.log('=== ArbInboxMock');
+        const arbInboxMock = await ethers.deployContract("ArbInboxMock", []);
+        arbInboxMock.address = await arbInboxMock.getAddress();
+
+        console.log('=== ArbOutboxMock');
+        const arbOutboxMock = await ethers.deployContract("ArbOutboxMock", [target]);
+        arbOutboxMock.address = await arbOutboxMock.getAddress();
+
         console.log('=== CrossChainAdapterArbitrumL1');
-        const arbAdapter = await ethers.deployContract("CrossChainAdapterArbitrumL1", [txStorage.address]);
+        const ArbAdapter = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
+        const arbAdapter = await upgrades.deployProxy(ArbAdapter, [txStorage.address, arbInboxMock.address]);
         arbAdapter.address = await arbAdapter.getAddress();
+
+        console.log('=== ArbBridgeMock');
+        const arbBridgeMock = await ethers.deployContract("ArbBridgeMock", [arbAdapter.address, arbOutboxMock.address]);
+        arbBridgeMock.address = await arbBridgeMock.getAddress();
+        await arbInboxMock.setBridge(arbBridgeMock.address);
 
         console.log('=== OptimismBridgeMock');
         const optBridgeMock = await ethers.deployContract("OptBridgeMock", [target.address]);
         optBridgeMock.address = await optBridgeMock.getAddress();
 
         console.log('=== CrossChainAdapterOptimismL1');
-        const optAdapter = await ethers.deployContract("CrossChainAdapterOptimismL1", [
+        const OptAdapter = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
+        const optAdapter = await upgrades.deployProxy(OptAdapter, [
             optBridgeMock.address,
             network.config.addresses.optimismInbox,
             txStorage.address
@@ -131,18 +147,7 @@ describe("Omnivault integration tests", function () {
         optAdapter.address = await optAdapter.getAddress();
         await optBridgeMock.setAdapter(optAdapter.address);
 
-        //===L2 mocks
-        console.log('=== ArbOutboxMock');
-        const arbOutboxMock = await ethers.deployContract("ArbOutboxMock", [target]);
-        arbOutboxMock.address = await arbOutboxMock.getAddress();
 
-        console.log('=== ArbBridgeMock');
-        const arbBridgeMock = await ethers.deployContract("ArbBridgeMock", [arbAdapter.address, arbOutboxMock.address]);
-        arbBridgeMock.address = await arbBridgeMock.getAddress();
-
-        console.log('=== ArbInboxMock');
-        const arbInboxMock = await ethers.deployContract("ArbInboxMock", [arbBridgeMock.address]);
-        arbInboxMock.address = await arbInboxMock.getAddress();
 
         // console.log('=== MockLockbox');
         // const lockboxMock = await ethers.deployContract("MockLockbox", [cToken.address, cToken.address, true]);
@@ -249,10 +254,6 @@ describe("Omnivault integration tests", function () {
             })
 
             //Constants
-            it("MAX_DIFF", async function () {
-                expect(await rebalancer.MAX_DIFF()).to.be.eq(50_000_000_000_000_000n);
-            })
-
             it("MULTIPLIER", async function () {
                 expect(await rebalancer.MULTIPLIER()).to.be.eq(e18);
             })
@@ -774,7 +775,8 @@ describe("Omnivault integration tests", function () {
 
             it("addChainId reverts when chain is added already", async function () {
                 await expect(txStorage.connect(owner).addChainId(chain))
-                    .to.be.revertedWith("Chain ID already exists");
+                    .to.be.revertedWithCustomError(txStorage, "ChainIdAlreadyExists")
+                    .withArgs(chain);
             })
 
             it("addChainId reverts when called by not an owner", async function () {
@@ -793,7 +795,8 @@ describe("Omnivault integration tests", function () {
 
             it("addAdapter reverts when adapter is already set for the chain", async function () {
                 await expect(txStorage.connect(owner).addAdapter(chain, adapter))
-                    .to.revertedWith("Adapter already exists for this Chain ID");
+                    .to.revertedWithCustomError(txStorage, "AdapterAlreadyExists")
+                    .withArgs(chain);
             })
 
             it("addAdapter reverts when called by not an owner", async function () {
@@ -816,8 +819,10 @@ describe("Omnivault integration tests", function () {
             })
 
             it("replaceAdapter reverts when adapter is not set", async function () {
-                await expect(txStorage.connect(owner).replaceAdapter(randomBI(6), adapter))
-                    .to.revertedWith("Adapter does not exist for this Chain ID");
+                const chainId = randomBI(6);
+                await expect(txStorage.connect(owner).replaceAdapter(chainId, adapter))
+                    .to.revertedWithCustomError(txStorage, "NoAdapterForThisChainId")
+                    .withArgs(chainId);
             })
 
             it("replaceAdapter reverts when called by not an owner", async function () {
@@ -974,7 +979,8 @@ describe("Omnivault integration tests", function () {
                 const totalSupply = 200;
 
                 await expect(arbBridgeMock.receiveL2Info(lastHandleTime, balance, totalSupply))
-                    .to.revertedWith("Time before than prev recorded");
+                    .to.revertedWithCustomError(txStorage, "TimeBeforePrevRecord")
+                    .withArgs(lastHandleTime);
             })
 
             it("Reverts: when timestamp in the future", async function () {
@@ -1120,11 +1126,12 @@ describe("Omnivault integration tests", function () {
             })
 
             it("Reverts: when timestamp is older than the last message", async function () {
-                const balance = 100;
-                const totalSupply = 100;
+                const balance = 200;
+                const totalSupply = 200;
 
                 await expect(optBridgeMock.receiveL2Info(lastHandleTime, balance, totalSupply))
-                    .to.revertedWith("Time before than prev recorded");
+                    .to.revertedWithCustomError(txStorage, "TimeBeforePrevRecord")
+                    .withArgs(lastHandleTime);
             })
 
             it("Reverts: when timestamp in the future", async function () {
