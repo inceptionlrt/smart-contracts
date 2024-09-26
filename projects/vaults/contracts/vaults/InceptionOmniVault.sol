@@ -316,15 +316,14 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 _fees
     ) external payable onlyOwner {
         uint256 totalSubmissionCost = _callValue + _fees;
-        require(
-            totalSubmissionCost <= address(this).balance,
-            InsufficientEthSent(_callValue, _fees)
-        );
+        if (totalSubmissionCost > address(this).balance) {
+            revert InsufficientEthSent(_callValue, _fees);
+        }
 
         // remainder will be refunded
         bool success = crossChainAdapter.sendEthToL1{
             value: totalSubmissionCost
-        }(_callValue);
+        }(_callValue, _fees);
 
         if (!success) {
             revert EthToL1Failed(_callValue);
