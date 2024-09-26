@@ -85,8 +85,7 @@ contract CrossChainAdapterOptimismL1 is
     function receiveL2Eth() external payable override {
         require(msg.sender == address(l1CrossDomainMessenger), NotBridge());
         require(rebalancer != address(0), RebalancerNotSet());
+        Address.sendValue(payable(rebalancer), msg.value);
         emit L2EthDeposit(msg.value);
-        (bool success, ) = rebalancer.call{value: msg.value}("");
-        require(success, TransferToRebalancerFailed());
     }
 }
