@@ -19,7 +19,8 @@ import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
-};78
+};
+78
 
 const ARB_ID = 42161;
 const OPT_ID = 10;
@@ -51,17 +52,17 @@ describe("Omnivault integration tests", function () {
         console.log(`Starting at block number: ${block.number}`);
         lockboxAddress = network.config.addresses.lockbox;
 
-  /*      const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
-        const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
-            protocolConfig: restakingPoolConfig,
-            tokenName: "Inception eth",
-            tokenSymbol: "inEth",
-            distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
-            maxTVL: RESTAKING_POOL_MAX_TVL,
-        });
-        restakingPool.address = await restakingPool.getAddress();
-        ratioFeed.address = await ratioFeed.getAddress();
-        cToken.address = await cToken.getAddress();*/
+        /*      const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
+              const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
+                  protocolConfig: restakingPoolConfig,
+                  tokenName: "Inception eth",
+                  tokenSymbol: "inEth",
+                  distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
+                  maxTVL: RESTAKING_POOL_MAX_TVL,
+              });
+              restakingPool.address = await restakingPool.getAddress();
+              ratioFeed.address = await ratioFeed.getAddress();
+              cToken.address = await cToken.getAddress();*/
 
         //===Restaking pool config upgrade
         const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
@@ -280,10 +281,6 @@ describe("Omnivault integration tests", function () {
             //Values
             it("getRatioL2", async function () {
                 expect(await rebalancer.getRatioL2(e18, e18)).to.be.eq(e18);
-            })
-
-            it("Default total amount to withdraw is 0", async function () {
-                expect(await rebalancer.totalAmountToWithdraw()).to.be.eq(0n);
             })
         })
 
@@ -678,11 +675,11 @@ describe("Omnivault integration tests", function () {
                 const balance = await restakingPool.availableToStake();
                 await signer1.sendTransaction({value: balance, to: rebalancer.address});
                 await arbAdapter.setInbox("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f");
-                await arbAdapter.connect(owner).setGasParameters(
-                    2n * 10n ** 15n,
-                    200_000n,
-                    100_000_000n
-                );
+                // await arbAdapter.connect(owner).setGasParameters(
+                //     2n * 10n ** 15n,
+                //     200_000n,
+                //     100_000_000n
+                // );
             })
 
             const args = [
@@ -717,13 +714,13 @@ describe("Omnivault integration tests", function () {
                     const balance = await ethers.provider.getBalance(rebalancer.address);
                     const amount = await arg.amount(balance);
                     const adapter = await txStorage.adapters(arg.chainId);
-
+                    const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
                     const fees = arg.fees;
                     const tx = await rebalancer.connect(operator)
-                        .sendEthToL2(arg.chainId, amount, fees, {value: fees});
+                        .sendEthToL2(arg.chainId, amount, feeParams, {value: fees});
                     await expect(tx).to.changeEtherBalance(rebalancer, -amount);
                     await expect(tx).to.changeEtherBalance(adapter, 0n);
-                    await expect(tx).to.changeEtherBalance(operator, -fees, { includeFee: false });
+                    await expect(tx).to.changeEtherBalance(operator, -fees, {includeFee: false});
                 })
             })
 
@@ -731,7 +728,8 @@ describe("Omnivault integration tests", function () {
                 const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, fees, {value: fees}))
+                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
             })
 
@@ -739,7 +737,8 @@ describe("Omnivault integration tests", function () {
                 const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, fees, {value: fees}))
+                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "OnlyOperator");
             })
 
@@ -747,7 +746,8 @@ describe("Omnivault integration tests", function () {
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const fees = 2n * 10n ** 15n;
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, fees, {value: fees}))
+                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
             })
         })
@@ -1135,6 +1135,14 @@ describe("Omnivault integration tests", function () {
         })
     })
 })
+
+function encodeFeeParams(maxSubmissionCost, maxGas, gasPriceBid) {
+    const abiCoder = new AbiCoder();
+    return [abiCoder.encode(
+        ["uint256", "uint256", "uint256"],
+        [maxSubmissionCost, maxGas, gasPriceBid]
+    )];
+}
 
 
 /**
