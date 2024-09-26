@@ -20,7 +20,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address public operator;
 
     uint256 public constant MULTIPLIER = 1e18;
-    uint256 public constant MAX_DIFF = 50000000000000000; // 0.05 * 1e18
+    // uint256 public constant maxDiff = 50000000000000000; // 0.05 * 1e18
 
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperator());
