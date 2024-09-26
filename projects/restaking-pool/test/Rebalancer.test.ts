@@ -145,9 +145,9 @@ describe("Omnivault integration tests", function () {
         console.log('=== CrossChainAdapterOptimismL1');
         const xDomainMessenger = ethers.Wallet.createRandom().address;
         const optAdapter = await ethers.deployContract("CrossChainAdapterOptimismL1", [
-            txStorage.address,
             "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1",
-            "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
+            "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+            txStorage.address
         ]);
         optAdapter.address = await optAdapter.getAddress();
 
@@ -700,6 +700,12 @@ describe("Omnivault integration tests", function () {
             before(async function () {
                 const balance = await restakingPool.availableToStake();
                 await signer1.sendTransaction({value: balance, to: rebalancer.address});
+                await arbAdapter.setInbox("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f");
+                await arbAdapter.connect(owner).setGasParameters(
+                    2n * 10n ** 15n,
+                    200_000n,
+                    100_000_000n
+                );
             })
 
             const args = [
@@ -731,30 +737,36 @@ describe("Omnivault integration tests", function () {
                     const amount = await arg.amount(balance);
                     const adapter = await txStorage.adapters(arg.chainId);
 
-                    const tx = await rebalancer.connect(operator).sendEthToL2(arg.chainId, amount);
+                    const fees = 2n * 10n ** 16n;
+                    const tx = await rebalancer.connect(operator)
+                        .sendEthToL2(arg.chainId, amount, fees, {value: fees});
                     await expect(tx).to.changeEtherBalance(rebalancer, -amount);
-                    await expect(tx).to.changeEtherBalance(adapter, amount);
+                    await expect(tx).to.changeEtherBalance(adapter, 0n);
+                    await expect(tx).to.changeEtherBalance(operator, -fees, { includeFee: false });
                 })
             })
 
             it("Reverts when amount > eth balance", async function () {
+                const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n))
+                await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, fees, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
             })
 
             it("Reverts when called by not an operator", async function () {
+                const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount))
+                await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, fees, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "OnlyOperator");
             })
 
             it("Reverts when there is no adapter for the chain", async function () {
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
+                const fees = 2n * 10n ** 15n;
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount))
+                await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, fees, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
             })
         })
