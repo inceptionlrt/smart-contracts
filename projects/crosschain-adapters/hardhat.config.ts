@@ -16,7 +16,7 @@ const config: HardhatUserConfig = {
     sepolia: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_SEPOLIA}`,
-      chainId: 11155111.,
+      chainId: 11155111,
       gas: 800000,
     },
     arbitrum: {
