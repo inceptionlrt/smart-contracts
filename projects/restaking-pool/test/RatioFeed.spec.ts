@@ -3,7 +3,7 @@ import { deployConfig, deployRatioFeed } from "./helpers/deploy";
 import { ProtocolConfig, RatioFeed } from "../typechain-types";
 import { _1E18 } from "./helpers/constants";
 import { increaseChainTimeForSeconds } from "./helpers/evmutils";
-import { randomBN, randomBNbyMax } from "./helpers/math";
+import { randomBI, randomBIbyMax } from "./helpers/math";
 import { HardhatEthersSigner, SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 const { ethers, network, upgrades } = require("hardhat");
@@ -38,7 +38,7 @@ describe("RatioFeed", function () {
 
     it("Changes threshold value", async function () {
       const oldThreshold = await ratioFeed.ratioThreshold();
-      const newThreshold = randomBN(7);
+      const newThreshold = randomBI(7);
 
       await expect(ratioFeed.setRatioThreshold(newThreshold))
         .to.emit(ratioFeed, "RatioThresholdChanged")
@@ -49,7 +49,7 @@ describe("RatioFeed", function () {
 
     it("Changes threshold one more time", async function () {
       const oldThreshold = await ratioFeed.ratioThreshold();
-      const newThreshold = randomBN(7);
+      const newThreshold = randomBI(7);
       await expect(ratioFeed.setRatioThreshold(newThreshold))
         .to.emit(ratioFeed, "RatioThresholdChanged")
         .withArgs(oldThreshold, newThreshold);
@@ -58,7 +58,7 @@ describe("RatioFeed", function () {
     });
 
     it("Reverts: only governance can modify", async function () {
-      const newThreshold = randomBN(7);
+      const newThreshold = randomBI(7);
       await expect(ratioFeed.connect(signer1).setRatioThreshold(newThreshold)).to.be.revertedWithCustomError(
         ratioFeed,
         "OnlyGovernanceAllowed",
@@ -86,7 +86,7 @@ describe("RatioFeed", function () {
     });
 
     it("Set threshold value", async function () {
-      await ratioFeed.setRatioThreshold(randomBN(7));
+      await ratioFeed.setRatioThreshold(randomBI(7));
     });
 
     it("Publish ratio for the first time", async function () {
@@ -103,7 +103,7 @@ describe("RatioFeed", function () {
       await increaseChainTimeForSeconds(60 * 60 * 12 + 1); //+12h
       const ratioBefore = await ratioFeed.getRatio(token1.address);
       const threshold = (ratioBefore * (await ratioFeed.ratioThreshold())) / (await ratioFeed.MAX_THRESHOLD());
-      const newRatio = ratioBefore - randomBNbyMax(threshold);
+      const newRatio = ratioBefore - randomBIbyMax(threshold);
       await expect(ratioFeed.connect(operator).updateRatio(token1.address, newRatio))
         .to.emit(ratioFeed, "RatioUpdated")
         .withArgs(token1.address, ratioBefore, newRatio);
@@ -172,7 +172,7 @@ describe("RatioFeed", function () {
     it("Decrease ratio", async function () {
       const ratioBefore = await ratioFeed.getRatio(token1.address);
       console.log(`Ratio before: ${ratioBefore}`);
-      const newRatio = randomBN(18);
+      const newRatio = randomBI(18);
 
       await expect(ratioFeed.repairRatio(token1.address, newRatio))
         .to.emit(ratioFeed, "RatioUpdated")
@@ -202,7 +202,7 @@ describe("RatioFeed", function () {
     });
 
     it("Reverts: only governance can", async function () {
-      await expect(ratioFeed.connect(signer1).repairRatio(token1.address, randomBN(18))).to.be.revertedWithCustomError(
+      await expect(ratioFeed.connect(signer1).repairRatio(token1.address, randomBI(18))).to.be.revertedWithCustomError(
         ratioFeed,
         "OnlyGovernanceAllowed",
       );

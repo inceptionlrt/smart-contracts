@@ -5,7 +5,7 @@ import { deployConfig, deployEigenMocks, deployLiquidRestaking, deployRestakerCo
 import { CToken, ExpensiveStakerMock, ProtocolConfig, RatioFeed, RestakerDeployer, RestakingPool } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { _1E18, dataRoot, pubkeys, signature } from "./helpers/constants";
-import { calcRatio, divideAndCeil, randomBN, randomBNbyMax, toWei } from "./helpers/math";
+import { calcRatio, divideAndCeil, randomBI, randomBIbyMax, toWei } from "./helpers/math";
 import { increaseChainTimeForSeconds } from "./helpers/evmutils";
 import { SnapshotRestorer } from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 
@@ -103,9 +103,9 @@ describe("RestakingPool", function () {
         toWei(0.05),
         toWei(0.025),
         toWei(0.0125),
-        randomBN(16),
-        randomBN(14),
-        randomBN(12),
+        randomBI(16),
+        randomBI(14),
+        randomBI(12),
       ];
 
       ratios.forEach(function (ratio) {
@@ -138,7 +138,7 @@ describe("RestakingPool", function () {
 
     it("setTargetFlashCapacity(): only governance can", async function () {
       const prevValue = await pool.targetCapacity();
-      const newValue = randomBN(18);
+      const newValue = randomBI(18);
       await expect(pool.connect(governance).setTargetFlashCapacity(newValue))
         .to.emit(pool, "TargetCapacityChanged")
         .withArgs(prevValue, newValue);
@@ -146,13 +146,13 @@ describe("RestakingPool", function () {
     });
 
     it("setTargetFlashCapacity(): reverts when caller is not an owner", async function () {
-      const newValue = randomBN(18);
+      const newValue = randomBI(18);
       await expect(pool.connect(signer1).setTargetFlashCapacity(newValue)).to.be.revertedWithCustomError(pool, "OnlyGovernanceAllowed");
     });
 
     it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
       const prevValue = await pool.protocolFee();
-      const newValue = randomBN(10);
+      const newValue = randomBI(10);
       await expect(pool.setProtocolFee(newValue)).to.emit(pool, "ProtocolFeeChanged").withArgs(prevValue, newValue);
       expect(await pool.protocolFee()).to.be.eq(newValue);
     });
@@ -163,7 +163,7 @@ describe("RestakingPool", function () {
     });
 
     it("setProtocolFee(): reverts when caller is not an owner", async function () {
-      const newValue = randomBN(10);
+      const newValue = randomBI(10);
       await expect(pool.connect(signer1).setProtocolFee(newValue)).to.be.revertedWithCustomError(pool, "OnlyGovernanceAllowed");
     });
   });
@@ -183,7 +183,7 @@ describe("RestakingPool", function () {
     });
 
     const amounts = [
-      { name: "Random value", amount: async (x) => randomBN(19) },
+      { name: "Random value", amount: async (x) => randomBI(19) },
       {
         name: "999999999999999999",
         amount: async (x) => 999999999999999999n,
@@ -308,11 +308,11 @@ describe("RestakingPool", function () {
       const iterations = 50;
       await pool.setMaxTVL(BigInt(iterations) * 10n * _1E18);
       for (let i = 0; i < iterations; i++) {
-        ratio = (await cToken.ratio()) - randomBN(15);
+        ratio = (await cToken.ratio()) - randomBI(15);
         await updateRatio(feed, cToken, ratio);
 
         for (const signer of signers) {
-          const amount = randomBNbyMax(10n ** 18n - MIN_STAKE + MIN_UNSTAKE);
+          const amount = randomBIbyMax(10n ** 18n - MIN_STAKE + MIN_UNSTAKE);
           expectedPoolBalance = expectedPoolBalance + amount;
           await pool.connect(signer)["stake()"]({ value: amount });
           const shares = (amount * ratio) / _1E18;
@@ -549,12 +549,12 @@ describe("RestakingPool", function () {
       {
         name: "for the first time",
         flashCapacity: (targetCapacity) => 0n,
-        amount: (targetCapacity) => randomBNbyMax(targetCapacity / 4n) + targetCapacity / 4n,
+        amount: (targetCapacity) => randomBIbyMax(targetCapacity / 4n) + targetCapacity / 4n,
       },
       {
         name: "more",
         flashCapacity: (targetCapacity) => targetCapacity / 3n,
-        amount: (targetCapacity) => randomBNbyMax(targetCapacity / 3n),
+        amount: (targetCapacity) => randomBIbyMax(targetCapacity / 3n),
       },
       {
         name: "up to target cap",
@@ -574,7 +574,7 @@ describe("RestakingPool", function () {
       {
         name: "above target cap",
         flashCapacity: (targetCapacity) => targetCapacity,
-        amount: (targetCapacity) => randomBN(19),
+        amount: (targetCapacity) => randomBI(19),
       },
     ];
 
@@ -672,7 +672,7 @@ describe("RestakingPool", function () {
     const amounts = [
       {
         name: "Random value to another address",
-        shares: async () => randomBN(19),
+        shares: async () => randomBI(19),
         receiver: () => signer2,
       },
       {
@@ -1008,7 +1008,7 @@ describe("RestakingPool", function () {
 
     it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
       await snapshot.restore();
-      await pool.connect(signer1)["stake()"]({ value: randomBN(19) });
+      await pool.connect(signer1)["stake()"]({ value: randomBI(19) });
       const capacity = await pool.getFlashCapacity();
       await expect(pool.calculateFlashUnstakeFee(capacity + 1n))
         .to.be.revertedWithCustomError(pool, "InsufficientCapacity")
@@ -1279,13 +1279,13 @@ describe("RestakingPool", function () {
 
       it(`unstake from contract (${i}/${difficult})`, async () => {
         const signer = signers[signerIndex]();
-        const stakeAmount = randomBN(18);
+        const stakeAmount = randomBI(18);
         console.log(`Stake amount: ${stakeAmount}`);
         await pool.connect(signer)["stake()"]({ value: stakeAmount });
         /// get tokens amount and unstake a bit less
         const sharesAmount = await cToken.balanceOf(signer.address);
         console.log(`Shares amount: ${sharesAmount}`);
-        await updateRatio(feed, cToken, (await cToken.ratio()) - randomBN(15));
+        await updateRatio(feed, cToken, (await cToken.ratio()) - randomBI(15));
 
         await pool.connect(signer).unstake(signer, sharesAmount);
       });

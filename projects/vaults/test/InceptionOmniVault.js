@@ -2,60 +2,41 @@ const { ethers, upgrades, network } = require("hardhat");
 const { expect } = require("chai");
 const { takeSnapshot } = require("@nomicfoundation/hardhat-network-helpers");
 const { toWei, randomBI, e18, randomBIMax } = require("./helpers/utils");
-const { log } = require("console");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
 };
 
 async function init() {
-  const [deployer] = await ethers.getSigners();
-  const e18 = ethers.parseUnits("1", 18);
+  console.log("- iToken");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+  iToken.address = await iToken.getAddress();
 
-  // Deploy MockERC20 (Mock Token)
-  console.log("- Deploying Mock Token (ERC20)");
-  const mockTokenFactory = await ethers.getContractFactory("MockERC20");
-  const mockToken = await mockTokenFactory.deploy("Mock Token", "MOCK", 18);
-  await mockToken.waitForDeployment();
-  const mockTokenAddress = await mockToken.getAddress();
-  console.log(`Mock Token deployed at: ${mockTokenAddress}`);
+  console.log("- Ratio feed");
+  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
+  const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
+  await ratioFeed.updateRatioBatch([await iToken.getAddress()], [e18]);
+  ratioFeed.address = await ratioFeed.getAddress();
 
-  // Deploy MockRatioFeed (Mock Ratio Feed)
-  console.log("- Deploying Mock Ratio Feed");
-  const mockRatioFeedFactory = await ethers.getContractFactory("MockRatioFeed");
-  const mockRatioFeed = await mockRatioFeedFactory.deploy();
-  await mockRatioFeed.waitForDeployment();
-  const mockRatioFeedAddress = await mockRatioFeed.getAddress();
-  console.log(`Mock Ratio Feed deployed at: ${mockRatioFeedAddress}`);
-
-  // Update the MockRatioFeed with mockToken data
   console.log("- Update Mock Ratio Feed with Mock Token");
-  await mockRatioFeed.updateRatioBatch([mockTokenAddress], [e18]);
-  console.log("Mock Ratio Feed updated with Mock Token");
+  await ratioFeed.updateRatioBatch([iToken.address], [e18]);
 
   // Deploy the OmniVault
   console.log("- Deploying OmniVault");
+  const adapter = ethers.Wallet.createRandom().address;
   const omniVaultFactory = await ethers.getContractFactory("InstEthOmniVault");
-  const omniVault = await upgrades.deployProxy(omniVaultFactory, [mockTokenAddress], { initializer: '__InceptionOmniVault_init' });
-  await omniVault.waitForDeployment();
-  const omniVaultAddress = await omniVault.getAddress();
-  console.log(`OmniVault deployed at: ${omniVaultAddress}`);
+  const omniVault = await upgrades.deployProxy(omniVaultFactory,
+    ["Omnivault", iToken.address, adapter],
+    { initializer: '__InceptionOmniVault_init' });
+  omniVault.address = await omniVault.getAddress();
 
-  // Set the MockRatioFeed in OmniVault
-  console.log("- Set Mock Ratio Feed for OmniVault");
-  await omniVault.setRatioFeed(mockRatioFeedAddress);
-  console.log("Mock Ratio Feed set for OmniVault");
+  await omniVault.setRatioFeed(ratioFeed.address);
+  await iToken.setVault(omniVault.address);
 
-  // Set Vault address in Mock Token
-  console.log("- Set Vault in Mock Token");
-  await mockToken.setVault(omniVaultAddress);
-  console.log("Vault set for Mock Token");
-
-  return [mockToken, omniVault, mockRatioFeed];
+  return [iToken, omniVault, ratioFeed];
 }
 
-describe("Inception omni vault", function () {
-
-
+describe("Inception omni vault", function() {
   this.timeout(150000);
   let omniVault, iToken, ratioFeed;
   let owner, staker1, staker2, staker3, treasury;
@@ -576,12 +557,13 @@ describe("Inception omni vault", function () {
     });
   })
 
-  describe("Flash withdraw", function () {
-    let TARGET, ratio;
-    beforeEach(async function () {
+  describe("Flash withdraw", function() {
+    let TARGET, MAX_PERCENT, ratio;
+    beforeEach(async function() {
       await snapshot.restore();
       TARGET = toWei(10);
       await omniVault.setTargetFlashCapacity(TARGET);
+      MAX_PERCENT = await omniVault.MAX_PERCENT();
     })
 
     const args = [
@@ -633,6 +615,13 @@ describe("Inception omni vault", function () {
         amount: async () => (await omniVault.getFlashCapacity()) / 2n,
         receiver: () => staker2,
       },
+      {
+        name: "after protocol fee has been changed",
+        poolCapacity: () => TARGET,
+        amount: async () => await omniVault.getFlashCapacity(),
+        receiver: () => staker1,
+        protocolFee: () => BigInt(25*10**8),
+      }
     ];
 
     args.forEach(function (arg) {
@@ -641,8 +630,13 @@ describe("Inception omni vault", function () {
         await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
         //Deposit
         const predepositAmount = arg.poolCapacity();
-        await omniVault.connect(staker1).deposit(staker1.address, { value: predepositAmount });
-
+        await omniVault.connect(staker1).deposit(staker1.address, {value: predepositAmount});
+        //Set protocol fee
+        let protocolFee = await omniVault.protocolFee();
+        if(arg.protocolFee){
+          protocolFee = arg.protocolFee();
+          await omniVault.setProtocolFee(protocolFee);
+        }
         //flashWithdraw
         const ratioBefore = await omniVault.ratio();
         console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
@@ -686,8 +680,10 @@ describe("Inception omni vault", function () {
         expect(sharesBefore - sharesAfter).to.be.eq(shares);
         expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee - txFee, 1n);
         expect(actualFee).to.be.closeTo(expectedFee, 1n);
-        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 1n);
-        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, 1n);
+        const toDepositBonus = expectedFee * (MAX_PERCENT - protocolFee)/MAX_PERCENT;
+        const toTreasury = expectedFee * protocolFee/MAX_PERCENT;
+        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(toTreasury, 1n);
+        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - toDepositBonus, 1n);
         expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, 1n);
       });
     });
@@ -1023,6 +1019,26 @@ describe("Inception omni vault", function () {
     it("setTargetFlashCapacity(): reverts when sets to 0", async function () {
       await expect(omniVault.setTargetFlashCapacity(0n))
         .to.be.revertedWithCustomError(omniVault, "NullParams");
+    });
+
+    it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
+      const prevValue = await omniVault.protocolFee();
+      const newValue = randomBI(10);
+      await expect(omniVault.setProtocolFee(newValue))
+        .to.emit(omniVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
+      expect(await omniVault.protocolFee()).to.be.eq(newValue);
+    });
+
+    it("setProtocolFee(): reverts when > MAX_PERCENT", async function () {
+      const newValue = (await omniVault.MAX_PERCENT()) + 1n;
+      await expect(omniVault.setProtocolFee(newValue))
+        .to.be.revertedWithCustomError(omniVault, "ParameterExceedsLimits").withArgs(newValue);
+    });
+
+    it("setProtocolFee(): reverts when caller is not an owner", async function () {
+      const newValue = randomBI(10);
+      await expect(omniVault.connect(staker1).setProtocolFee(newValue))
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("setName(): only owner can", async function () {
