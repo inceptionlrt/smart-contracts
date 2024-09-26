@@ -2,7 +2,6 @@
 pragma solidity 0.8.26;
 
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
-import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 import "openzeppelin-4/access/Ownable.sol";
