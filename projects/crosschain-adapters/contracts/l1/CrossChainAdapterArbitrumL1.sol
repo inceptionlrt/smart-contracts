@@ -78,6 +78,14 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         emit InboxChanged(_inbox);
     }
 
+    function receiveL2Eth() external payable override {
+        IBridge bridge = IInbox(inbox).bridge();
+        require(msg.sender == address(bridge), NotBridge());
+        require(rebalancer != address(0), RebalancerNotSet());
+        Address.sendValue(payable(rebalancer), msg.value);
+        emit L2EthDeposit(msg.value);
+    }
+
     receive() external payable override {
         require(rebalancer != address(0), RebalancerNotSet());
         Address.sendValue(payable(rebalancer), msg.value);

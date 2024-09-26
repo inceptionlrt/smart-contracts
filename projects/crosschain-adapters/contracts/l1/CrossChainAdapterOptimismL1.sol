@@ -74,6 +74,11 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
         return 0; // Optimism doesn't return a ticket ID, unlike Arbitrum
     }
 
+    function receiveL2Eth() external payable override {
+        (bool success, ) = rebalancer.call{value: msg.value}("");
+        require(success, TransferToRebalancerFailed());
+    }
+
     receive() external payable override {
         require(rebalancer != address(0), RebalancerNotSet());
         Address.sendValue(payable(rebalancer), msg.value);
