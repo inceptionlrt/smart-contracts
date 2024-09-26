@@ -48,8 +48,8 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         uint256 callValue,
         bytes[] calldata _gasData
     ) public payable returns (uint256) {
-        require(callValue <= msg.value, "Invalid call value");
-        require(address(inbox) != address(0), "Inbox not set");
+        require(callValue <= msg.value, InvalidValue());
+        require(address(inbox) != address(0), ArbInboxNotSet());
         require(l2Receiver != address(0), L2ReceiverNotSet());
 
         (uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid) = abi

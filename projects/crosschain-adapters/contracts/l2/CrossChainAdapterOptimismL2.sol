@@ -98,7 +98,7 @@ contract CrossChainAdapterOptimismL2 is
         uint256 _callValue,
         uint256 _fees
     ) external payable override onlyVault nonReentrant returns (bool success) {
-        require(_callValue <= msg.value, "Insufficient ETH sent");
+        require(_callValue <= msg.value, InsufficientValueSent());
         // Use the L2 Standard Bridge to send ETH to the L1 target contract
         l2StandardBridge.withdrawTo(
             address(0),

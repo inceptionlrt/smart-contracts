@@ -18,6 +18,7 @@ interface ICrossChainAdapterL1 {
     error TxStorageNotSet();
     error InvalidValue();
     error L2ReceiverNotSet();
+    error GasDataNotProvided();
 
     event L2InfoReceived(
         uint256 indexed networkId,

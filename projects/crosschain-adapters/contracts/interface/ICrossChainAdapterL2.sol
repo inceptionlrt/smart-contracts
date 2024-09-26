@@ -9,6 +9,7 @@ interface ICrossChainAdapterL2 {
     error VaultNotSet();
     error SettingZeroGas();
     error OnlyVault();
+    error InsufficientValueSent();
 
     event MaxGasChanged(uint256 newMaxGas);
 

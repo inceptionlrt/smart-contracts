@@ -58,7 +58,7 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
         if (_gasData.length > 0) {
             (maxGas) = abi.decode(_gasData[0], (uint256));
         } else {
-            revert("Gas data not provided");
+            revert GasDataNotProvided();
         }
 
         // Use the standard bridge to send ETH to Optimism
