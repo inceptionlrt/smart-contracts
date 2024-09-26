@@ -31,6 +31,18 @@ const config: HardhatUserConfig = {
       chainId: 42161,
       gas: 8000000,
     },
+    optimism: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+      url: `${process.env.RPC_URL_OPTIMISM}`,
+      chainId: 10,
+      gas: 8000000,
+    },
+    optimismSepolia: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+      url: `${process.env.RPC_URL_OPTIMISM_SEPOLIA}`,
+      chainId: 11155420,
+      gas: 8000000,
+    },
   },
   solidity: {
     compilers: [

@@ -67,10 +67,10 @@ async function main() {
     console.log("All sanity checks passed 💪");
     //end of sanity checks
 
-    console.log("Deploying CrossChainAdapterArbitrum...");
+    console.log("Deploying CrossChainAdapterArbitrumL1...");
 
     const CrossChainAdapterArbitrum = await ethers.getContractFactory(
-        "CrossChainAdapterArbitrum"
+        "CrossChainAdapterArbitrumL1"
     );
 
     const crossChainAdapter = await CrossChainAdapterArbitrum.deploy(
@@ -96,13 +96,9 @@ async function main() {
     console.log("Gas parameters set successfully");
 
     console.log("L2 Target:", l2ContractAddress);
-    console.log("L2 Sender:", l2ContractAddress);
 
-    await crossChainAdapter.setL2Target(l2ContractAddress);
+    await crossChainAdapter.setL2Contract(l2ContractAddress);
     console.log("L2 Target set successfully");
-
-    await crossChainAdapter.setL2Sender(l2ContractAddress);
-    console.log("L2 Sender set successfully");
 
     // uncomment lines below if you just want to deploy the AbstractCrossChainAdapter without cross-chain txs
     // console.error("Bye, bye!");

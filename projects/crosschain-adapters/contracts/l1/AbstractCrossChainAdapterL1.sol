@@ -8,19 +8,19 @@ import "openzeppelin-4/utils/Address.sol";
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
-abstract contract AbstractCrossChainAdapter is
+abstract contract AbstractCrossChainAdapterL1 is
     Ownable,
     ICrossChainAdapterL1,
     ReentrancyGuard
 {
     address public rebalancer;
     address public transactionStorage;
+    address public l2Receiver;
+    address public l2Sender;
 
     constructor(address _transactionStorage) {
         transactionStorage = _transactionStorage;
     }
-
-    function receiveL2Eth() external payable virtual;
 
     function handleL2Info(
         uint256 _chainId,
@@ -54,7 +54,19 @@ abstract contract AbstractCrossChainAdapter is
         emit TxStorageChanged(_txStorage);
     }
 
-    receive() external payable {
+    function setL2Receiver(address _l2Receiver) external onlyOwner {
+        require(_l2Receiver != address(0), SettingZeroAddress());
+        l2Receiver = _l2Receiver;
+        emit L2ReceiverChanged(_l2Receiver);
+    }
+
+    function setL2Sender(address _l2Sender) external onlyOwner {
+        require(_l2Sender != address(0), SettingZeroAddress());
+        l2Sender = _l2Sender;
+        emit L2SenderChanged(_l2Sender);
+    }
+
+    receive() external payable virtual {
         require(rebalancer != address(0), RebalancerNotSet());
         (bool ok, ) = address(rebalancer).call{value: msg.value}("");
         require(ok, TransferToRebalancerFailed());
