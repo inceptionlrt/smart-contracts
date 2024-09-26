@@ -51,41 +51,17 @@ describe("Omnivault integration tests", function () {
         console.log(`Starting at block number: ${block.number}`);
         lockboxAddress = network.config.addresses.lockbox;
 
-
-        /*        Restaking pool and cToken = inEth
-                const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
-                const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
-                    protocolConfig: restakingPoolConfig,
-                    tokenName: "Inception eth",
-                    tokenSymbol: "inEth",
-                    distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
-                    maxTVL: RESTAKING_POOL_MAX_TVL,
-                });
-                restakingPool.address = await restakingPool.getAddress();
-                ratioFeed.address = await ratioFeed.getAddress();
-                cToken.address = await cToken.getAddress();
-
-                let slot = "0x" + getGovernanceSlot();
-                // const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
-                await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, owner.address]);
-                console.log(value);
-
-                for(let i = 0; i < 20; i++){
-                    const slot = "0x" + i.toString(16);
-                    const value = await network.provider.send("eth_getStorageAt", ["0x81b98D3a51d4aC35e0ae132b0CF6b50EA1Da2603", slot, "latest"]);
-
-                    console.log(value);
-                    // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
-                }
-
-                const proxyadmin = await ethers.getContractAt("IProxyAdmin", "0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c");
-                for(let i = 0; i < 20; i++){
-                    const slot = "0x" + i.toString(16);
-                    const value = await network.provider.send("eth_getStorageAt", ["0x6aB15B49Ad9CB743A403850fad9E09aaA12C8F5c", slot, "latest"]);
-
-                    console.log(value);
-                    // await network.provider.send("hardhat_setStorageAt", [mellowVaultOperatorAddress, slot, value]);
-                }*/
+  /*      const restakingPoolConfig = await deployConfig([owner, operator, treasury]);
+        const {restakingPool, ratioFeed, cToken} = await deployLiquidRestaking({
+            protocolConfig: restakingPoolConfig,
+            tokenName: "Inception eth",
+            tokenSymbol: "inEth",
+            distributeGasLimit: RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT,
+            maxTVL: RESTAKING_POOL_MAX_TVL,
+        });
+        restakingPool.address = await restakingPool.getAddress();
+        ratioFeed.address = await ratioFeed.getAddress();
+        cToken.address = await cToken.getAddress();*/
 
         //===Restaking pool config upgrade
         const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
@@ -142,14 +118,19 @@ describe("Omnivault integration tests", function () {
         const arbAdapter = await ethers.deployContract("CrossChainAdapterArbitrumL1", [txStorage.address]);
         arbAdapter.address = await arbAdapter.getAddress();
 
+        console.log('=== OptimismBridgeMock');
+        const optBridgeMock = await ethers.deployContract("OptBridgeMock", [target.address]);
+        optBridgeMock.address = await optBridgeMock.getAddress();
+
         console.log('=== CrossChainAdapterOptimismL1');
-        const xDomainMessenger = ethers.Wallet.createRandom().address;
         const optAdapter = await ethers.deployContract("CrossChainAdapterOptimismL1", [
-            "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1",
-            "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+            // "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1",
+            optBridgeMock.address,
+            network.config.addresses.optimismInbox,
             txStorage.address
         ]);
         optAdapter.address = await optAdapter.getAddress();
+        await optBridgeMock.setAdapter(optAdapter.address);
 
         //===L2 mocks
         console.log('=== ArbOutboxMock');
@@ -163,10 +144,6 @@ describe("Omnivault integration tests", function () {
         console.log('=== ArbInboxMock');
         const arbInboxMock = await ethers.deployContract("ArbInboxMock", [arbBridgeMock.address]);
         arbInboxMock.address = await arbInboxMock.getAddress();
-
-        console.log('=== OptimismBridgeMock');
-        const optBridgeMock = await ethers.deployContract("OptBridgeMock", [optAdapter.address]);
-        optBridgeMock.address = await optBridgeMock.getAddress();
 
         // console.log('=== MockLockbox');
         // const lockboxMock = await ethers.deployContract("MockLockbox", [cToken.address, cToken.address, true]);
@@ -712,21 +689,25 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "Part of the balance to ARB",
                     amount: async (amount) => amount / 2n,
+                    fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                 },
                 {
                     name: "Part of the balance to OPT",
                     amount: async (amount) => amount / 2n,
+                    fees: 0n,
                     chainId: OPT_ID,
                 },
                 {
                     name: "All balance to ARB",
                     amount: async (amount) => amount,
+                    fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                 },
                 {
                     name: "All balance to OPT",
                     amount: async (amount) => amount,
+                    fees: 0n,
                     chainId: OPT_ID,
                 }
             ]
@@ -737,7 +718,7 @@ describe("Omnivault integration tests", function () {
                     const amount = await arg.amount(balance);
                     const adapter = await txStorage.adapters(arg.chainId);
 
-                    const fees = 2n * 10n ** 16n;
+                    const fees = arg.fees;
                     const tx = await rebalancer.connect(operator)
                         .sendEthToL2(arg.chainId, amount, fees, {value: fees});
                     await expect(tx).to.changeEtherBalance(rebalancer, -amount);
