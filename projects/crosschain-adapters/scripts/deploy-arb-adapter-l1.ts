@@ -13,13 +13,14 @@ async function main() {
     console.log(`Deploying CrossChainAdapterArbitrum on network: ${networkName}`);
 
     const transactionStorageAddress = process.env.TRANSACTION_STORAGE_ADDRESS;
-    const l2ContractAddress = process.env.L2_CONTRACT_ADDRESS;
+    const l2Receiver = process.env.L2_RECEIVER;
+    const l2Sender = process.env.L2_SENDER;
 
     console.log(`Sanity checks: env variables, l1 contracts, l2 receiver contracts on Arbitrum (${networkName === "sepolia" ? "Sepolia" : "Mainnet"})...`);
 
     //Sanity check 1: env variables
-    if (!transactionStorageAddress || !l2ContractAddress) {
-        console.error("Set TRANSACTION_STORAGE_ADDRESS, L2_CONTRACT_ADDRESS env variables!");
+    if (!transactionStorageAddress || !l2Receiver || !l2Sender) {
+        console.error("Set TRANSACTION_STORAGE_ADDRESS, L2_SENDER, L2_RECEIVER env variables!");
         process.exit(1);
     }
 
@@ -58,9 +59,9 @@ async function main() {
     }
 
     const arbitrumProvider = new ethers.JsonRpcProvider(arbitrumRpcUrl);
-    const l2Code = await arbitrumProvider.getCode(l2ContractAddress);
+    const l2Code = await arbitrumProvider.getCode(l2Receiver);
     if (l2Code === "0x") {
-        console.error(`Error: No contract found at address ${l2ContractAddress} on Arbitrum ${networkName === "sepolia" ? "Sepolia" : "Ethereum"}.`);
+        console.error(`Error: No contract found at address ${l2Receiver} on Arbitrum ${networkName === "sepolia" ? "Sepolia" : "Ethereum"}.`);
         process.exit(1);
     }
 
@@ -95,11 +96,11 @@ async function main() {
     await gasTx.wait();
     console.log("Gas parameters set successfully");
 
-    console.log("L2 Target:", l2ContractAddress);
+    console.log("L2 receiver:", l2Receiver);
 
-    const txReceiver = await crossChainAdapter.setL2Receiver(l2ContractAddress);
+    const txReceiver = await crossChainAdapter.setL2Receiver(l2Receiver);
     txReceiver.wait();
-    const txSender = await crossChainAdapter.setL2Sender(l2ContractAddress);
+    const txSender = await crossChainAdapter.setL2Sender(l2Sender);
     txSender.wait();
     console.log("L2 sender and receiver set successfully");
 
