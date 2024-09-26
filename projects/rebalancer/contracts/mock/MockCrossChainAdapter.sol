@@ -54,13 +54,18 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
         );
     }
 
-    function sendEthToL2(uint amount) external payable returns (uint256) {
+    function sendEthToL2(
+        uint256 _amount,
+        bytes[] calldata _gasData
+    ) external payable returns (uint256) {
         //placeholder for compilation
     }
 
     function getChainId() external pure returns (uint24) {
         return 1;
     }
+
+    function receiveL2Eth() external payable {}
 
     receive() external payable {
         // Resend ETH to the restaking pool when received via fallback
