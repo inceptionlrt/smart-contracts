@@ -19,9 +19,6 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     IL1CrossDomainMessenger public immutable l1CrossDomainMessenger;
     IL1StandardBridge public immutable l1StandardBridge;
-    uint256 private maxGas = 10_000_000;
-
-    event GasSettingsChanged(uint256 newMaxGas);
 
     constructor(
         IL1CrossDomainMessenger _l1CrossDomainMessenger,
@@ -50,26 +47,31 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
         handleL2Info(OPTIMISM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
-    function sendEthToL2(uint256 callValue) external payable returns (uint256) {
+    function sendEthToL2(
+        uint256 callValue,
+        bytes[] calldata _gasData
+    ) external payable returns (uint256) {
         require(callValue <= msg.value, InvalidValue());
 
-        
+        uint256 maxGas;
+        if (_gasData.length > 0) {
+            (maxGas) = abi.decode(_gasData[0], (uint256));
+        } else {
+            revert("Gas data not provided");
+        }
+
+        // Use the standard bridge to send ETH to Optimism
         l1StandardBridge.depositETHTo{value: callValue}(
-            address(l2Receiver),
-            uint32(maxGas),
+            address(l2Receiver), // L2 receiver address
+            uint32(maxGas), // Decoded maxGas from _gasData
             ""
         );
 
+        // // NB! if the code block above fails - uncomment the one below
         // PayableCrossDomainMessenger(address(l1CrossDomainMessenger))
         //     .sendMessage{value: msg.value}(l2Receiver, "", uint32(maxGas));
 
-        return 0;
-    }
-
-    function setMaxGas(uint256 _maxGas) external onlyOwner {
-        require(_maxGas > 0, SettingZeroGas());
-        maxGas = _maxGas;
-        emit GasSettingsChanged(_maxGas);
+        return 0; // Optimism doesn't return a ticket ID, unlike Arbitrum
     }
 
     receive() external payable override {
