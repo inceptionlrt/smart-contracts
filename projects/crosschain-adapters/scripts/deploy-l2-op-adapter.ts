@@ -23,7 +23,7 @@ async function main() {
     console.log("✅Environment variables validated. All systems nominal.");
 
     // Sanity check 2: Ensure correct network (Optimism L2)
-    if (networkName !== "optimism" && networkName !== "optimism-goerli") {
+    if (networkName !== "optimism" && networkName !== "optimism-goerli" && networkName !== "hardhat") {
         console.error("⚠️Error. Unsupported network detected. Please use Optimism Mainnet or Goerli. Deployment terminated.");
         process.exit(1);
     }
