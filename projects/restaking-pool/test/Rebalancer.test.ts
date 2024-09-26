@@ -210,11 +210,9 @@ describe("Omnivault integration tests", function () {
         // await ratioFeed.connect(operator).updateRatio(inEth.address, e18); //Default ratio 1
 
         //Arbitrum adapter
-        await arbAdapter.setInbox(arbInboxMock.address);
         await arbAdapter.setL2Sender(target);
         await arbAdapter.setRebalancer(rebalancer.address);
         await arbAdapter.setL2Receiver(target.address);
-        // await optAdapter.setInbox(optBridgeMock.address);
         await optAdapter.setL2Sender(target);
         await optAdapter.setRebalancer(rebalancer.address);
         await optAdapter.setL2Receiver(target.address);
@@ -848,7 +846,7 @@ describe("Omnivault integration tests", function () {
     })
 
     describe("Crosschain adapter Arbitrum", function () {
-        describe("Setters", function () {
+        describe("Getters and setters", function () {
             beforeEach(async function () {
                 await snapshot.restore();
             })
@@ -908,6 +906,15 @@ describe("Omnivault integration tests", function () {
                         .to.be.revertedWithCustomError(arbAdapter, "SettingZeroAddress");
                 })
             })
+
+            it("Chain id", async function() {
+                expect(await arbAdapter.getChainId()).to.be.eq(ARB_ID);
+                expect(await arbAdapter.ARBITRUM_CHAIN_ID()).to.be.eq(ARB_ID);
+            })
+
+            it("Owner", async function() {
+                expect(await arbAdapter.owner()).to.be.eq(owner.address);
+            })
         })
 
         describe("receiveL2Eth", function () {
@@ -917,12 +924,16 @@ describe("Omnivault integration tests", function () {
 
             const args = [
                 {
-                    name: "Random amount ~ 1e19",
+                    name: "Random amount ~ 1e17",
                     amount: async () => randomBI(17)
                 },
                 {
                     name: "Restaking pool min amount",
                     amount: async () => await restakingPool.getMinStake()
+                },
+                {
+                    name: "Greater than available to stake",
+                    amount: async () => await restakingPool.availableToStake() + 1n
                 }
             ];
 
@@ -944,15 +955,30 @@ describe("Omnivault integration tests", function () {
                 await expect(arbAdapter.connect(signer1).receiveL2Eth({value: amount}))
                     .to.revertedWithCustomError(arbAdapter, "NotBridge");
             })
+
+            it("Reverts when rebalancer is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await arbAdapter.setL2Sender(target);
+                await arbAdapter.setL2Receiver(target.address);
+
+                await expect(arbBridgeMock.connect(signer1).receiveL2Eth({value: e18}))
+                    .to.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+            })
         })
 
-        describe("handleL2Info", function () {
+        describe("receiveL2Info", function () {
             let lastHandleTime;
             before(async function () {
                 await snapshot.restore();
             })
 
-            it("handleL2Info", async () => {
+            it("receiveL2Info", async () => {
                 const block = await ethers.provider.getBlock("latest");
                 lastHandleTime = block.timestamp - 1000;
                 const _balance = 100;
@@ -968,8 +994,20 @@ describe("Omnivault integration tests", function () {
                 expect(chainDataAfter.inEthBalance).to.be.eq(_totalSupply);
             })
 
+            it("Reverts when l2 sender is unknown", async function() {
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp + 100;
+                const balance = 100;
+                const totalSupply = 100;
 
-            it("Reverts: when there is a message with this timestamp", async function () {
+                const unknownSender = ethers.Wallet.createRandom().address;
+                await arbOutboxMock.setL2Sender(unknownSender);
+
+                await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
+                    .to.revertedWithCustomError(arbAdapter, "UnauthorizedOriginalSender");
+            })
+
+            it("Reverts when there is a message with this timestamp", async function () {
                 const balance = 200;
                 const totalSupply = 200;
 
@@ -978,7 +1016,7 @@ describe("Omnivault integration tests", function () {
                     .withArgs(lastHandleTime);
             })
 
-            it("Reverts: when timestamp in the future", async function () {
+            it("Reverts when timestamp is in the future", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp + 100;
                 const balance = 100;
@@ -989,7 +1027,7 @@ describe("Omnivault integration tests", function () {
                     .withArgs(timestamp);
             })
 
-            it("Reverts: when called by not a bridge", async function () {
+            it("Reverts when called by not a bridge", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp + 100;
                 const balance = 100;
@@ -997,6 +1035,40 @@ describe("Omnivault integration tests", function () {
 
                 await expect(arbAdapter.connect(signer1).receiveL2Info(timestamp, balance, totalSupply))
                     .to.revertedWithCustomError(arbAdapter, "NotBridge");
+            })
+
+            it("Reverts when rebalancer is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await arbAdapter.setL2Sender(target);
+                await arbAdapter.setL2Receiver(target.address);
+
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp + 100;
+                const balance = 100;
+                const totalSupply = 100;
+                await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
+                    .to.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+            })
+        })
+
+        describe("sendEthToL2", function() {
+            before(async function() {
+                await snapshot.restore();
+                await arbAdapter.setRebalancer(signer1.address);
+            })
+
+            it("Reverts when called by not a rebalancer", async function() {
+                const feesParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const value = e18;
+                await expect(arbAdapter.connect(signer2).sendEthToL2(value, feesParams, {value: value}))
+                    .to.be.revertedWithCustomError(arbAdapter, "OnlyRebalancerCanCall")
+                    .withArgs(signer2);
             })
 
         })
@@ -1060,8 +1132,12 @@ describe("Omnivault integration tests", function () {
 
             it("Chain id", async function() {
                 expect(await optAdapter.getChainId()).to.be.eq(OPT_ID);
+                expect(await optAdapter.OPTIMISM_CHAIN_ID()).to.be.eq(OPT_ID);
             })
 
+            it("Owner", async function() {
+                expect(await optAdapter.owner()).to.be.eq(owner.address);
+            })
         })
 
         describe("receiveL2Eth", function () {
@@ -1077,6 +1153,10 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "Restaking pool min amount",
                     amount: async () => await restakingPool.getMinStake()
+                },
+                {
+                    name: "Greater than available to stake",
+                    amount: async () => await restakingPool.availableToStake() + 1n
                 }
             ];
 
@@ -1098,14 +1178,29 @@ describe("Omnivault integration tests", function () {
                 await expect(optAdapter.connect(signer1).receiveL2Eth({value: amount}))
                     .to.revertedWithCustomError(optAdapter, "NotBridge");
             })
+
+            it("Reverts when rebalancer is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await optAdapter.setL2Sender(target);
+                await optAdapter.setL2Receiver(target.address);
+
+                await expect(optBridgeMock.connect(signer1).receiveL2Eth({value: e18}))
+                    .to.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+            })
         })
 
-        describe("handleL2Info", function () {
+        describe("receiveL2Info", function () {
             let lastHandleTime;
             before(async function () {
                 await snapshot.restore();
             })
-            it("handleL2Info", async () => {
+            it("receiveL2Info", async () => {
                 const block = await ethers.provider.getBlock("latest");
                 lastHandleTime = block.timestamp - 1000;
                 const _balance = 100;
@@ -1121,7 +1216,7 @@ describe("Omnivault integration tests", function () {
                 expect(chainDataAfter.inEthBalance).to.be.eq(_totalSupply);
             })
 
-            it("Reverts: when timestamp is older than the last message", async function () {
+            it("Reverts when timestamp is older than the last message", async function () {
                 const balance = 200;
                 const totalSupply = 200;
 
@@ -1130,7 +1225,7 @@ describe("Omnivault integration tests", function () {
                     .withArgs(lastHandleTime);
             })
 
-            it("Reverts: when timestamp in the future", async function () {
+            it("Reverts when timestamp is in the future", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp + 100;
                 const balance = 100;
@@ -1141,7 +1236,7 @@ describe("Omnivault integration tests", function () {
                     .withArgs(timestamp);
             })
 
-            it("Reverts: when called by not a bridge", async function () {
+            it("Reverts when called by not a bridge", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp + 100;
                 const balance = 100;
@@ -1151,7 +1246,28 @@ describe("Omnivault integration tests", function () {
                     .to.revertedWithCustomError(optAdapter, "NotBridge");
             })
 
+            it("Reverts when rebalancer is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await optAdapter.setL2Sender(target);
+                await optAdapter.setL2Receiver(target.address);
+
+                const block = await ethers.provider.getBlock("latest");
+                const timestamp = block.timestamp + 100;
+                const balance = 100;
+                const totalSupply = 100;
+                await expect(optBridgeMock.receiveL2Info(timestamp, balance, totalSupply))
+                    .to.revertedWithCustomError(optAdapter, "RebalancerNotSet");
+            })
+
         })
+
+
     })
 })
 
