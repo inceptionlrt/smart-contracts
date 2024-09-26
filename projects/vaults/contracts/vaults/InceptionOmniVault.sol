@@ -22,6 +22,14 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     );
 
     error InsufficientEthSent(uint256 _callValue, uint256 _fees);
+    error OnlyOwnerOrOperator();
+
+    modifier onlyOwnerOrOperator() {
+        if (msg.sender == owner() || msg.sender == operator) {
+            revert OnlyOwnerOrOperator();
+        }
+        _;
+    }
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -36,6 +44,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
      *  @dev Flash withdrawal params
      */
     address public treasuryAddress;
+    address public operator;
     IInceptionRatioFeed public ratioFeed;
 
     ICrossChainAdapterL2 public crossChainAdapter;
@@ -57,17 +66,19 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
 
     function __InceptionOmniVault_init(
         string memory vaultName,
+        address _operator,
         address _inceptionToken,
         ICrossChainAdapterL2 _crossChainAdapter
     ) public initializer {
         __Ownable_init();
-        if (_inceptionToken == address(0)) {
+        if (_inceptionToken == address(0) || _operator == address(0)) {
             revert NullParams();
         }
         // __InceptionAssetsHandler_init(IERC20(_inceptionToken));
         __InceptionOmniAssetsHandler_init();
 
         name = vaultName;
+        operator = _operator;
         inceptionToken = IInceptionToken(_inceptionToken);
         crossChainAdapter = _crossChainAdapter;
         /// TODO
@@ -285,7 +296,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
      * @dev Sends the information about the total amount of tokens and ETH held by this contract to L1 using CrossChainAdapter.
      * @notice This only sends the info, not the actual assets.
      */
-    function sendAssetsInfoToL1() external onlyOwner {
+    function sendAssetsInfoToL1() external onlyOwnerOrOperator {
         if (address(crossChainAdapter) == address(0)) {
             revert CrossChainAdapterNotSet();
         }
@@ -314,7 +325,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     function sendEthToL1(
         uint256 _callValue,
         uint256 _fees
-    ) external payable onlyOwner {
+    ) external payable onlyOwnerOrOperator {
         uint256 totalSubmissionCost = _callValue + _fees;
         if (totalSubmissionCost > address(this).balance) {
             revert InsufficientEthSent(_callValue, _fees);
