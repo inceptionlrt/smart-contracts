@@ -222,9 +222,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 _chainId,
         uint256 _amount
     ) external onlyOperator {
-        address crossChainAdapterAddress = TransactionStorage(
-            transactionStorage
-        ).adapters(_chainId);
+        address payable crossChainAdapterAddress = payable(
+            TransactionStorage(transactionStorage).adapters(_chainId)
+        );
         require(
             crossChainAdapterAddress != address(0),
             CrosschainAdapterNotSet()
@@ -235,7 +235,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         );
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
             value: _amount
-        }();
+        }(_amount);
     }
 
     receive() external payable {
