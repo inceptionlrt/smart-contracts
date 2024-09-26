@@ -18,7 +18,7 @@ async function main() {
     console.log("✅Environment variables validated. All systems nominal.");
 
     // Sanity check 2: Ensure correct network (Arbitrum L2)
-    if (networkName !== "arbitrum" && networkName !== "arbitrum-goerli") {
+    if (networkName !== "arbitrum" && networkName !== "arbitrum-goerli" && networkName !== "hardhat") {
         console.error("⚠️Error. Unsupported network detected. Please use Arbitrum Mainnet or Goerli. Deployment terminated.");
         process.exit(1);
     }

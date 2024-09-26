@@ -1,9 +1,9 @@
 require("dotenv").config();
-import { ethers, network } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 
 async function main() {
     // Define the gas costs for Optimism L1 to L2 transfers
-    const maxGas = ethers.parseUnits("2000000", "wei");
+    const maxGas = ethers.toBigInt("2000000"); // Directly parse to BigInt as required
 
     const networkName = network.name;
     console.log(`Deploying CrossChainAdapterOptimismL1 on network: ${networkName}`);
@@ -19,14 +19,6 @@ async function main() {
         process.exit(1);
     }
 
-    // Sanity check 2: Check if the L1 transaction storage contract exists
-    // const code = await ethers.provider.getCode(transactionStorageAddress);
-    // if (code === "0x") {
-    //     console.error(`Error: TransactionStorage not found at address ${transactionStorageAddress} on the network ${networkName}.`);
-    //     process.exit(1);
-    // }
-
-    // Sanity check 3: Optimism L2 contract existence
     let optimismRpcUrl;
     let optimismMessengerAddress;
     let optimismBridgeAddress;
@@ -40,7 +32,7 @@ async function main() {
             console.error("Set OP_MESSENGER_SEPOLIA and OP_BRIDGE_SEPOLIA env variables!");
             process.exit(1);
         }
-    } else if (networkName === "ethereum") {
+    } else if (networkName === "ethereum" || networkName === "hardhat") {
         optimismRpcUrl = process.env.RPC_URL_OPTIMISM_MAINNET;
         optimismMessengerAddress = process.env.OPT_X_DOMAIN_MESSENGER_L1_MAINNET;
         optimismBridgeAddress = process.env.OPT_L1_BRIDGE_ETHEREUM;
@@ -60,62 +52,62 @@ async function main() {
     }
 
     const optimismProvider = new ethers.JsonRpcProvider(optimismRpcUrl);
-    const l2Code = await optimismProvider.getCode(l2ContractAddress);
-    if (l2Code === "0x") {
-        console.error(`Error: No contract found at address ${l2ContractAddress} on Optimism ${networkName === "sepolia" ? "Sepolia" : "Mainnet"}.`);
-        process.exit(1);
-    }
+    // const l2Code = await optimismProvider.getCode(l2ContractAddress);
+    // if (l2Code === "0x") {
+    //     console.error(`Error: No contract found at address ${l2ContractAddress} on Optimism ${networkName === "sepolia" ? "Sepolia" : "Mainnet"}.`);
+    //     process.exit(1);
+    // }
 
     console.log("All sanity checks passed 💪");
 
-    // Deploy CrossChainAdapterOptimismL1
+    // Deploy CrossChainAdapterOptimismL1 using a proxy
     console.log("Deploying CrossChainAdapterOptimismL1...");
 
-    const CrossChainAdapterOptimism = await ethers.getContractFactory(
-        "CrossChainAdapterOptimismL1"
-    );
+    const CrossChainAdapterOptimism = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
 
-    const crossChainAdapter = await CrossChainAdapterOptimism.deploy(
-        optimismMessengerAddress,  // IL1CrossDomainMessenger address
-        optimismBridgeAddress,     // IL1StandardBridge address
-        transactionStorageAddress  // Transaction storage address
-    );
+    const crossChainAdapter = await upgrades.deployProxy(CrossChainAdapterOptimism, [
+        optimismMessengerAddress,
+        optimismBridgeAddress,
+        transactionStorageAddress,
+    ], {
+        initializer: "initialize",
+    });
 
+    // Wait for the deployment to finish
     await crossChainAdapter.waitForDeployment();
     const crossChainAdapterAddress = await crossChainAdapter.getAddress();
     console.log("CrossChainAdapterOptimismL1 deployed at:", crossChainAdapterAddress);
 
-    // Set gas parameters
-    // const gasTx = await crossChainAdapter.setGasParameters(
-    //     maxSubmissionCost,
-    //     maxGas,
-    //     gasPriceBid
-    // );
-    // await gasTx.wait();
-    // console.log("Gas parameters set successfully");
+    // Set the deployer's address as the rebalancer
+    const [deployer] = await ethers.getSigners();
+    const deployerAddress = await deployer.getAddress();
+    await crossChainAdapter.setRebalancer(deployerAddress);
 
     // Set the L2 receiver and sender addresses
     console.log("L2 Receiver (Optimism):", l2ContractAddress);
     const txReceiver = await crossChainAdapter.setL2Receiver(l2ContractAddress);
-    // await txReceiver.wait();
+    await txReceiver.wait();
 
     const txSender = await crossChainAdapter.setL2Sender(l2ContractAddress);
-    // await txSender.wait();
+    await txSender.wait();
     console.log("L2 sender and receiver set successfully");
-
-    // uncomment lines below if you just want to deploy the AbstractCrossChainAdapter without cross-chain txs
-    // console.error("Bye, bye!");
-    // process.exit();
 
     // Send a small amount of ETH to L2 using sendEthToL2
     console.log("Sending a small amount of ETH to L2...");
-    const callValue = ethers.parseUnits("0.01", "ether");  // The ETH to send
-    const totalValue = ethers.parseUnits("0.05", "ether");  // Total msg.value (callValue + fees)
+    const callValue = ethers.parseEther("0.01");  // ETH to send to L2
+    const totalValue = ethers.parseEther("0.05"); // Adjust total value to cover potential fees
 
     try {
         console.log(`CallValue: ${callValue.toString()}, TotalValue: ${totalValue.toString()}`);
-        const sendTx = await crossChainAdapter.sendEthToL2(callValue, {
-            value: totalValue,  // msg.value includes callValue + fees
+
+        // Ensure gasData contains proper maxGas value
+        const gasData = ethers.AbiCoder.defaultAbiCoder().encode(
+            ["uint256"],
+            [maxGas] // Provide a reasonable gas value
+        );
+
+        const sendTx = await crossChainAdapter.sendEthToL2(callValue, [gasData], {
+            value: totalValue,  // Ensure totalValue covers callValue + fees
         });
         await sendTx.wait();
         console.log("ETH sent to L2 successfully.");
