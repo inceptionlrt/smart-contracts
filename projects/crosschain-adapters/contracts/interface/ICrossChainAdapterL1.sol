@@ -21,13 +21,6 @@ interface ICrossChainAdapterL1 {
     error GasDataNotProvided();
     error OnlyRebalancerCanCall(address caller);
 
-    event L2InfoReceived(
-        uint256 indexed networkId,
-        uint256 timestamp,
-        uint256 ethBalance,
-        uint256 inEthBalance
-    );
-
     event L2EthDeposit(uint256 amount);
     event RebalancerChanged(address newRebalancer);
     event L2ReceiverChanged(address newL2Receiver);

@@ -48,8 +48,6 @@ abstract contract AbstractCrossChainAdapterL1 is
             _balance,
             _totalSupply
         );
-
-        emit L2InfoReceived(_chainId, _timestamp, _balance, _totalSupply);
     }
 
     function setRebalancer(address _rebalancer) external virtual onlyOwner {
