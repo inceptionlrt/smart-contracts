@@ -9,7 +9,7 @@ async function main() {
     if (networkName === "optimismSepolia") {
         rpcUrlOptimism = process.env.RPC_URL_OPTIMISM_SEPOLIA;
     } else if (networkName === "optimism") {
-        rpcUrlOptimism = process.env.RPC_URL_OPTIMISM_SEPOLIA;
+        rpcUrlOptimism = process.env.RPC_URL_OPTIMISM;
     } else {
         console.error("Unsupported chain. Use Optimism Sepolia or Mainnet.");
         process.exit(1);
@@ -25,8 +25,8 @@ async function main() {
     const wallet = new ethers.Wallet(deployerPrivateKey, provider);
 
     // Get the contract factory and deploy the contract
-    const ReceiverFactory = await ethers.getContractFactory("OptimismReceiver", wallet);
-    console.log("Deploying the OptimismReceiver contract...");
+    const ReceiverFactory = await ethers.getContractFactory("L2Receiver", wallet);
+    console.log("Deploying the L2Receiver contract...");
 
     const receiverContract = await ReceiverFactory.deploy();
 

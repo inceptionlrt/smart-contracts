@@ -97,8 +97,11 @@ async function main() {
 
     console.log("L2 Target:", l2ContractAddress);
 
-    await crossChainAdapter.setL2Contract(l2ContractAddress);
-    console.log("L2 Target set successfully");
+    const txReceiver = await crossChainAdapter.setL2Receiver(l2ContractAddress);
+    txReceiver.wait();
+    const txSender = await crossChainAdapter.setL2Sender(l2ContractAddress);
+    txSender.wait();
+    console.log("L2 sender and receiver set successfully");
 
     // uncomment lines below if you just want to deploy the AbstractCrossChainAdapter without cross-chain txs
     // console.error("Bye, bye!");
