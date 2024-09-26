@@ -20,7 +20,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address public operator;
 
     uint256 public constant MULTIPLIER = 1e18;
-    uint256 public constant MAX_DIFF = 50000000000000000; // 0.05 * 1e18
+    // uint256 public constant maxDiff = 50000000000000000; // 0.05 * 1e18
 
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperator());
@@ -234,6 +234,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 _callValue, // The ETH amount to be sent to the recipient on L2
         bytes[] calldata _gasData // Encoded gas parameters (e.g., maxGas, gasPriceBid, etc.)
     ) external payable onlyOperator {
+
+        require(_callValue <= address(this).balance, SendAmountExceedsEthBalance(_callValue));
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
         );

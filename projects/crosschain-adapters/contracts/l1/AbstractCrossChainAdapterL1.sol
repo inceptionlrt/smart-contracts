@@ -41,7 +41,6 @@ abstract contract AbstractCrossChainAdapterL1 is
     ) internal {
         require(rebalancer != address(0), RebalancerNotSet());
         require(transactionStorage != address(0), TxStorageNotSet());
-        require(_timestamp <= block.timestamp, FutureTimestamp());
 
         ITransactionStorage(transactionStorage).handleL2Info(
             _chainId,
