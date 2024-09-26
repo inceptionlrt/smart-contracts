@@ -234,6 +234,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 _callValue, // The ETH amount to be sent to the recipient on L2
         bytes[] calldata _gasData // Encoded gas parameters (e.g., maxGas, gasPriceBid, etc.)
     ) external payable onlyOperator {
+
+        require(_callValue <= address(this).balance, SendAmountExceedsEthBalance(_callValue));
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
         );
