@@ -65,10 +65,4 @@ abstract contract AbstractCrossChainAdapterL1 is
         l2Sender = _l2Sender;
         emit L2SenderChanged(_l2Sender);
     }
-
-    receive() external payable virtual {
-        require(rebalancer != address(0), RebalancerNotSet());
-        (bool ok, ) = address(rebalancer).call{value: msg.value}("");
-        require(ok, TransferToRebalancerFailed());
-    }
 }

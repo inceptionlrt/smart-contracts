@@ -218,10 +218,21 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit InETHDepositedToLockbox(inEthBalance);
     }
 
+    /**
+     * @notice Sends a specific amount of ETH to the L2 chain through a cross-chain bridge.
+     * @dev This function sends ETH to an L2 address and passes gas parameters required for the transaction execution.
+     * It requires that the total `msg.value` includes both the amount to be transferred to the recipient on L2 (`_callValue`)
+     * and the gas fees for the transaction. The gas parameters (e.g. `maxGas`, `gasPriceBid` and `maxSubmissionCost`)
+     * are passed dynamically as encoded `bytes[] _gasData`.
+     * @param _chainId The ID of the Layer 2 chain where the ETH will be sent (e.g., Arbitrum, Optimism).
+     * @param _callValue The amount of ETH that should be transferred to the recipient on the L2.
+     * @param _gasData Encoded gas parameters required for the cross-chain transaction, specific to the L2 network.
+     * @custom:note The `msg.value` must cover both `_callValue` and additional fees (for gas and submission costs).
+     */
     function sendEthToL2(
         uint256 _chainId,
-        uint256 _callValue,
-        uint256 _additionalFees
+        uint256 _callValue, // The ETH amount to be sent to the recipient on L2
+        bytes[] calldata _gasData // Encoded gas parameters (e.g., maxGas, gasPriceBid, etc.)
     ) external payable onlyOperator {
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
@@ -231,15 +242,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             CrosschainAdapterNotSet()
         );
 
-        uint256 totalTxCost = _callValue + _additionalFees;
-        require(
-            totalTxCost <= address(this).balance,
-            SendAmountExceedsEthBalance(_callValue)
-        );
+        // Ensure that the total ETH provided (msg.value) is enough to cover callValue + fees
+        require(msg.value >= _callValue, "Insufficient ETH provided");
 
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
-            value: _callValue + _additionalFees
-        }(_callValue); // total value must be callValue + fees
+            value: msg.value
+        }(_callValue, _gasData);
     }
 
     receive() external payable {
