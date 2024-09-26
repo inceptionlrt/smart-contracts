@@ -29,7 +29,9 @@ abstract contract AbstractCrossChainAdapterL1 is
     }
 
     modifier onlyRebalancer() {
-        require(msg.sender == rebalancer, OnlyRebalancerCanCall(msg.sender));
+        if (msg.sender != rebalancer) {
+            revert OnlyRebalancerCanCall(msg.sender);
+        }
         _;
     }
 
