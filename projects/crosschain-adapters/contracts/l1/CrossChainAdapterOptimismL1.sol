@@ -50,7 +50,7 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
-    ) external payable returns (uint256) {
+    ) external payable onlyRebalancer returns (uint256) {
         require(callValue <= msg.value, InvalidValue());
         require(l2Receiver != address(0), L2ReceiverNotSet());
 

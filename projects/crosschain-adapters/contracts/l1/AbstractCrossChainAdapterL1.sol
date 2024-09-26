@@ -22,6 +22,11 @@ abstract contract AbstractCrossChainAdapterL1 is
         transactionStorage = _transactionStorage;
     }
 
+    modifier onlyRebalancer() {
+        require(msg.sender == rebalancer, OnlyRebalancerCanCall(msg.sender));
+        _;
+    }
+
     function handleL2Info(
         uint256 _chainId,
         uint256 _timestamp,
@@ -64,5 +69,10 @@ abstract contract AbstractCrossChainAdapterL1 is
         require(_l2Sender != address(0), SettingZeroAddress());
         l2Sender = _l2Sender;
         emit L2SenderChanged(_l2Sender);
+    }
+
+    function recoverFunds() external onlyOwner {
+        (bool ok, ) = rebalancer.call{value: address(this).balance}("");
+        require(ok, TransferToRebalancerFailed());
     }
 }
