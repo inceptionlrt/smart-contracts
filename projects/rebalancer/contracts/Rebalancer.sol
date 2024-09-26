@@ -242,9 +242,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             CrosschainAdapterNotSet()
         );
 
-        // Ensure that the total ETH provided (msg.value) is enough to cover callValue + fees
-        require(msg.value >= _callValue, "Insufficient ETH provided");
-
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
             value: msg.value
         }(_callValue, _gasData);
