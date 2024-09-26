@@ -29,7 +29,9 @@ abstract contract AbstractCrossChainAdapterL1 is
     }
 
     modifier onlyRebalancer() {
-        require(msg.sender == rebalancer, OnlyRebalancerCanCall(msg.sender));
+        if (msg.sender != rebalancer) {
+            revert OnlyRebalancerCanCall(msg.sender);
+        }
         _;
     }
 
@@ -48,8 +50,6 @@ abstract contract AbstractCrossChainAdapterL1 is
             _balance,
             _totalSupply
         );
-
-        emit L2InfoReceived(_chainId, _timestamp, _balance, _totalSupply);
     }
 
     function setRebalancer(address _rebalancer) external virtual onlyOwner {
