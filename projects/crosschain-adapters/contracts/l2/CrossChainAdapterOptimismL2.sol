@@ -94,15 +94,11 @@ contract CrossChainAdapterOptimismL2 is
     /**
      * @dev Sends ETH from L2 to L1 using the Optimism bridge
      */
-    function sendEthToL1(uint256 _callValue, uint256 _fees)
-        external
-        payable
-        override
-        onlyVault
-        nonReentrant
-        returns (bool success)
-    {
-        require(_callValue + _fees >= msg.value, "Insufficient ETH sent");
+    function sendEthToL1(
+        uint256 _callValue,
+        uint256 _fees
+    ) external payable override onlyVault nonReentrant returns (bool success) {
+        require(_callValue <= msg.value, "Insufficient ETH sent");
         // Use the L2 Standard Bridge to send ETH to the L1 target contract
         l2StandardBridge.withdrawTo(
             address(0),
