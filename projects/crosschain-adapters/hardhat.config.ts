@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
     arbitrumSepolia: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_ARBITRUM_SEPOLIA}`,
-      chainId: 42161,
+      chainId: 421614,
       gas: 8000000,
     },
     optimism: {

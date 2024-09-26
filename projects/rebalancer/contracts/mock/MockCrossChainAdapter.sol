@@ -57,7 +57,7 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
     function sendEthToL2(
         uint256 _amount,
         bytes[] calldata _gasData
-    ) external payable returns (uint256) {
+    ) external payable {
         //placeholder for compilation
     }
 

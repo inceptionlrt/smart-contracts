@@ -57,7 +57,7 @@ contract CrossChainAdapterArbitrumL1 is
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
-    ) external payable onlyRebalancer returns (uint256) {
+    ) external payable onlyRebalancer {
         require(callValue <= msg.value, InvalidValue());
         require(address(inbox) != address(0), ArbInboxNotSet());
         require(l2Receiver != address(0), L2ReceiverNotSet());
@@ -82,7 +82,6 @@ contract CrossChainAdapterArbitrumL1 is
         );
 
         emit RetryableTicketCreated(ticketID);
-        return ticketID;
     }
 
     function setInbox(address _inbox) public onlyOwner {

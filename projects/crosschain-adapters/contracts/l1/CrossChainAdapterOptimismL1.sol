@@ -20,6 +20,8 @@ contract CrossChainAdapterOptimismL1 is
     OwnableUpgradeable,
     AbstractCrossChainAdapterL1
 {
+    event CrossChainTxOptimismSent();
+
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     IL1CrossDomainMessenger public l1CrossDomainMessenger;
     IL1StandardBridge public l1StandardBridge;
@@ -57,7 +59,7 @@ contract CrossChainAdapterOptimismL1 is
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
-    ) external payable onlyRebalancer returns (uint256) {
+    ) external payable onlyRebalancer {
         require(callValue <= msg.value, InvalidValue());
         require(l2Receiver != address(0), L2ReceiverNotSet());
 
@@ -75,11 +77,7 @@ contract CrossChainAdapterOptimismL1 is
             ""
         );
 
-        // // NB! if the code block above fails - uncomment the one below
-        // PayableCrossDomainMessenger(address(l1CrossDomainMessenger))
-        //     .sendMessage{value: msg.value}(l2Receiver, "", uint32(maxGas));
-
-        return 0; // Optimism doesn't return a ticket ID, unlike Arbitrum
+        emit CrossChainTxOptimismSent();
     }
 
     function receiveL2Eth() external payable override {
