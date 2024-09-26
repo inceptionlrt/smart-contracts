@@ -103,6 +103,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0), SettingZeroAddress());
+        operator = _operator;
         emit OperatorChanged(_operator);
     }
 
