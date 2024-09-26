@@ -18,6 +18,8 @@ interface ICrossChainAdapterL1 {
     error TxStorageNotSet();
     error InvalidValue();
     error L2ReceiverNotSet();
+    error GasDataNotProvided();
+    error OnlyRebalancerCanCall(address caller);
 
     event L2InfoReceived(
         uint256 indexed networkId,
@@ -44,6 +46,8 @@ interface ICrossChainAdapterL1 {
     ) external payable returns (uint256);
 
     function getChainId() external returns (uint24);
+
+    function recoverFunds() external;
 
     function receiveL2Eth() external payable;
 }

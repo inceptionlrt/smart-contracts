@@ -31,6 +31,10 @@ contract TransactionStorage is Ownable {
         address newAdapterAddress
     );
     error MsgNotFromAdapter(address caller);
+    error ChainIdAlreadyExists(uint256 chainId);
+    error NoAdapterForThisChainId(uint256 chainId);
+    error TimeCannotBeInFuture(uint256 timestamp);
+    error TimeBeforePrevRecord(uint256 timestamp);
 
     constructor(address _owner) Ownable(_owner) {}
 
@@ -41,7 +45,7 @@ contract TransactionStorage is Ownable {
     function addChainId(uint32 _newChainId) external onlyOwner {
         for (uint i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _newChainId) {
-                revert("Chain ID already exists");
+                revert ChainIdAlreadyExists(chainIds[i]);
             }
         }
         chainIds.push(_newChainId);
@@ -60,7 +64,10 @@ contract TransactionStorage is Ownable {
         uint256 _balance,
         uint256 _totalSupply
     ) external {
-        require(_timestamp <= block.timestamp, "Time cannot be in the future");
+        require(
+            _timestamp <= block.timestamp,
+            TimeCannotBeInFuture(_timestamp)
+        );
         require(
             msg.sender == adapters[_chainId],
             MsgNotFromAdapter(msg.sender)
@@ -70,7 +77,7 @@ contract TransactionStorage is Ownable {
         if (lastUpdate.timestamp != 0) {
             require(
                 _timestamp > lastUpdate.timestamp,
-                "Time before than prev recorded"
+                TimeBeforePrevRecord(_timestamp)
             );
         }
 
@@ -115,7 +122,7 @@ contract TransactionStorage is Ownable {
     ) external onlyOwner {
         require(
             adapters[_chainId] == address(0),
-            "Adapter already exists for this Chain ID"
+            ChainIdAlreadyExists(_chainId)
         );
         adapters[_chainId] = _adapterAddress;
 
@@ -129,7 +136,7 @@ contract TransactionStorage is Ownable {
         address prevAdapterAddress = adapters[_chainId];
         require(
             prevAdapterAddress != address(0),
-            "Adapter does not exist for this Chain ID"
+            NoAdapterForThisChainId(_chainId)
         );
 
         adapters[_chainId] = _newAdapterAddress;

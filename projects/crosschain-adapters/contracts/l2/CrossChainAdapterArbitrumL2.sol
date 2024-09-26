@@ -56,9 +56,9 @@ contract CrossChainAdapterArbitrumL2 is ICrossChainAdapterL2, Ownable {
 
     function sendEthToL1(
         uint256 _callValue,
-        uint256 _fees
+        uint256
     ) external payable onlyVault returns (bool success) {
-        require(_callValue <= msg.value, "Insufficient ETH sent");
+        require(_callValue <= msg.value, InsufficientValueSent());
         uint256 withdrawalId = arbsys.withdrawEth{value: msg.value}(l1Target);
 
         emit EthSentToL1(msg.value, withdrawalId);

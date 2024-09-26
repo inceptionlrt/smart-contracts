@@ -3,10 +3,15 @@ pragma solidity 0.8.26;
 
 import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
-
+import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
 import "./AbstractCrossChainAdapterL1.sol";
 
-contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
+contract CrossChainAdapterArbitrumL1 is
+    Initializable,
+    OwnableUpgradeable,
+    AbstractCrossChainAdapterL1
+{
     IInbox public inbox;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
 
@@ -22,9 +27,14 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
 
     error ArbInboxNotSet();
 
-    constructor(
-        address _transactionStorage
-    ) AbstractCrossChainAdapterL1(_transactionStorage) {}
+    function initialize(
+        address _transactionStorage,
+        address _inbox
+    ) public initializer {
+        __Ownable_init();
+        __AbstractCrossChainAdapterL1_init(_transactionStorage);
+        setInbox(_inbox);
+    }
 
     function getChainId() external pure override returns (uint24) {
         return ARBITRUM_CHAIN_ID;
@@ -47,9 +57,9 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
-    ) public payable returns (uint256) {
-        require(callValue <= msg.value, "Invalid call value");
-        require(address(inbox) != address(0), "Inbox not set");
+    ) external payable onlyRebalancer returns (uint256) {
+        require(callValue <= msg.value, InvalidValue());
+        require(address(inbox) != address(0), ArbInboxNotSet());
         require(l2Receiver != address(0), L2ReceiverNotSet());
 
         (uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid) = abi
@@ -75,7 +85,7 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         return ticketID;
     }
 
-    function setInbox(address _inbox) external onlyOwner {
+    function setInbox(address _inbox) public onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
         inbox = IInbox(_inbox);
         emit InboxChanged(_inbox);

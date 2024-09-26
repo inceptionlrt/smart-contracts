@@ -30,6 +30,7 @@
     "ethers": "^6.13.2",
     "hardhat": "^2.22.10",
     "hardhat-gas-reporter": "^1.0.8",
+    "openzeppelin-4-upgradeable": "npm:@openzeppelin/contracts-upgradeable@4.5.0",
     "openzeppelin-4": "npm:@openzeppelin/contracts@4.5.0",
     "solidity-coverage": "^0.8.1",
     "ts-node": "^10.9.2",
