@@ -3,8 +3,8 @@ pragma solidity 0.8.26;
 
 import "@eth-optimism/contracts/L2/messaging/IL2CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "openzeppelin-4/access/Ownable.sol";
+import "openzeppelin-4/security/ReentrancyGuard.sol";
 
 import "../interface/ICrossChainAdapterL2.sol";
 

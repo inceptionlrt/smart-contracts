@@ -1,12 +1,12 @@
 import {ethers, network, upgrades} from "hardhat";
 import {expect} from "chai";
 import {takeSnapshot} from "@nomicfoundation/hardhat-network-helpers";
-import {randomBI, randomBIbyMax} from "./helpers/math";
+import {randomBI} from "./helpers/math";
 import {e18} from "./helpers/constants";
 import {
     ArbBridgeMock,
-    CrossChainAdapterArbitrum,
-    CrossChainAdapterOptimism,
+    CrossChainAdapterArbitrumL1,
+    CrossChainAdapterOptimismL1,
     CToken,
     OptBridgeMock,
     ProtocolConfig,
@@ -16,11 +16,10 @@ import {
 } from "../typechain-types";
 import {SnapshotRestorer} from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
-import {restaker} from "../typechain-types/contracts";
 
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
-};
+};78
 
 const ARB_ID = 42161;
 const OPT_ID = 10;
@@ -36,9 +35,9 @@ describe("Omnivault integration tests", function () {
     let txStorage: TransactionStorage;
     let restakingPool: RestakingPool
     let arbBridgeMock: ArbBridgeMock;
-    let arbAdapter: CrossChainAdapterArbitrum;
+    let arbAdapter: CrossChainAdapterArbitrumL1;
     let optBridgeMock: OptBridgeMock;
-    let optAdapter: CrossChainAdapterOptimism;
+    let optAdapter: CrossChainAdapterOptimismL1;
     let restakingPoolConfig: ProtocolConfig;
 
     let owner, operator, treasury, signer1, signer2, signer3, target;
@@ -139,13 +138,17 @@ describe("Omnivault integration tests", function () {
         const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
         txStorage.address = await txStorage.getAddress();
 
-        console.log('=== CrossChainAdapterArbitrum');
-        const arbAdapter = await ethers.deployContract("CrossChainAdapterArbitrum", [txStorage.address]);
+        console.log('=== CrossChainAdapterArbitrumL1');
+        const arbAdapter = await ethers.deployContract("CrossChainAdapterArbitrumL1", [txStorage.address]);
         arbAdapter.address = await arbAdapter.getAddress();
 
-        console.log('=== CrossChainAdapterOptimism');
+        console.log('=== CrossChainAdapterOptimismL1');
         const xDomainMessenger = ethers.Wallet.createRandom().address;
-        const optAdapter = await ethers.deployContract("CrossChainAdapterOptimism", [txStorage.address, xDomainMessenger]);
+        const optAdapter = await ethers.deployContract("CrossChainAdapterOptimismL1", [
+            txStorage.address,
+            "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1",
+            "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1"
+        ]);
         optAdapter.address = await optAdapter.getAddress();
 
         //===L2 mocks
@@ -229,7 +232,7 @@ describe("Omnivault integration tests", function () {
         await arbAdapter.setInbox(arbInboxMock.address);
         await arbAdapter.setL2Sender(target);
         await arbAdapter.setRebalancer(rebalancer.address);
-        await optAdapter.setInbox(optBridgeMock.address);
+        // await optAdapter.setInbox(optBridgeMock.address);
         await optAdapter.setL2Sender(target);
         await optAdapter.setRebalancer(rebalancer.address);
 
@@ -318,35 +321,30 @@ describe("Omnivault integration tests", function () {
                     setter: "setTransactionStorage",
                     getter: "transactionStorage",
                     event: "TxStorageChanged",
-                    args: (newValue) => [newValue]
                 },
                 {
                     name: "inEth address",
                     setter: "setInETHAddress",
                     getter: "inETHAddress",
                     event: "InEthChanged",
-                    args: (newValue) => [newValue]
                 },
                 {
                     name: "lockbox address",
                     setter: "setLockboxAddress",
                     getter: "lockboxAddress",
                     event: "LockboxChanged",
-                    args: (newValue) => [newValue]
                 },
                 {
                     name: "restaking pool address",
                     setter: "setLiqPool",
                     getter: "liqPool",
                     event: "LiqPoolChanged",
-                    args: (newValue) => [newValue]
                 },
                 {
                     name: "operator address",
                     setter: "setOperator",
                     getter: "operator",
                     event: "OperatorChanged",
-                    args: (newValue) => [operator.address, newValue]
                 },
             ]
 
@@ -355,7 +353,7 @@ describe("Omnivault integration tests", function () {
                     const newValue = ethers.Wallet.createRandom().address;
                     await expect(rebalancer[arg.setter](newValue))
                         .to.emit(rebalancer, arg.event)
-                        .withArgs(...arg.args(newValue));
+                        .withArgs(newValue);
 
                     expect(await rebalancer[arg.getter]()).to.be.eq(newValue);
                 })
