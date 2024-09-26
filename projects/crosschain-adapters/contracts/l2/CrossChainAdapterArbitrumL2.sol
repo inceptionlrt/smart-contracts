@@ -4,11 +4,16 @@ pragma solidity 0.8.26;
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
-import "openzeppelin-4/access/Ownable.sol";
+import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interface/ICrossChainAdapterL2.sol";
 
-contract CrossChainAdapterArbitrumL2 is ICrossChainAdapterL2, Ownable {
+contract CrossChainAdapterArbitrumL2 is
+    ICrossChainAdapterL2,
+    Initializable,
+    OwnableUpgradeable
+{
     ArbSys constant arbsys = ArbSys(address(100));
     address public l1Target;
     address public vault;
@@ -30,8 +35,11 @@ contract CrossChainAdapterArbitrumL2 is ICrossChainAdapterL2, Ownable {
     );
     event EthSentToL1(uint256 indexed amount, uint256 indexed ticketId);
 
-    constructor(address _l1Target) {
+    // Replaces constructor for upgradeable contracts
+    function initialize(address _l1Target, address _owner) public initializer {
+        __Ownable_init();
         l1Target = _l1Target;
+        transferOwnership(_owner); // Set the owner after initialization
     }
 
     function setL1Target(address _l1Target) external onlyOwner {
@@ -55,9 +63,8 @@ contract CrossChainAdapterArbitrumL2 is ICrossChainAdapterL2, Ownable {
     }
 
     function sendEthToL1(
-        uint256 _callValue,
-        uint256
-    ) external payable onlyVault returns (bool success) {
+        uint256 _callValue
+    ) external payable override onlyVault returns (bool success) {
         require(_callValue <= msg.value, InsufficientValueSent());
         uint256 withdrawalId = arbsys.withdrawEth{value: msg.value}(l1Target);
 

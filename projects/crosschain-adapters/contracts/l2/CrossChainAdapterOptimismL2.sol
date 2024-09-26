@@ -3,8 +3,9 @@ pragma solidity 0.8.26;
 
 import "@eth-optimism/contracts/L2/messaging/IL2CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
-import "openzeppelin-4/access/Ownable.sol";
-import "openzeppelin-4/security/ReentrancyGuard.sol";
+import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-4-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interface/ICrossChainAdapterL2.sol";
 
@@ -18,14 +19,15 @@ interface PayableCrossDomainMessenger {
 
 contract CrossChainAdapterOptimismL2 is
     ICrossChainAdapterL2,
-    Ownable,
-    ReentrancyGuard
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
 {
-    IL2CrossDomainMessenger public immutable l2Messenger;
-    L2StandardBridge public immutable l2StandardBridge;
+    IL2CrossDomainMessenger public l2Messenger;
+    L2StandardBridge public l2StandardBridge;
     address public l1Target;
     address public vault;
-    uint256 maxGas = 20_000_000;
+    uint256 public maxGas;
 
     event AssetsInfoSentToL1(
         uint256 tokensAmount,
@@ -44,14 +46,18 @@ contract CrossChainAdapterOptimismL2 is
         _;
     }
 
-    constructor(
+    // This function replaces the constructor for upgradeable contracts
+    function initialize(
         IL2CrossDomainMessenger _l2Messenger,
         L2StandardBridge _l2StandardBridge,
         address _l1Target
-    ) {
+    ) public initializer {
+        __Ownable_init();
+        __ReentrancyGuard_init();
         l2Messenger = _l2Messenger;
         l2StandardBridge = _l2StandardBridge;
         l1Target = _l1Target;
+        maxGas = 20_000_000; // Default max gas
     }
 
     function setL1Target(address _l1Target) external onlyOwner {
@@ -95,25 +101,20 @@ contract CrossChainAdapterOptimismL2 is
      * @dev Sends ETH from L2 to L1 using the Optimism bridge
      */
     function sendEthToL1(
-        uint256 _callValue,
-        uint256 _fees
+        uint256 _callValue
     ) external payable override onlyVault nonReentrant returns (bool success) {
         require(_callValue <= msg.value, InsufficientValueSent());
+
         // Use the L2 Standard Bridge to send ETH to the L1 target contract
         l2StandardBridge.withdrawTo(
-            address(0),
+            address(0), // Address(0) represents ETH in the L2 StandardBridge
             l1Target,
             _callValue,
             uint32(maxGas),
             ""
         );
 
-        // PayableCrossDomainMessenger(address(l2Messenger)).sendMessage{
-        //     value: msg.value
-        // }(l1Target, "", uint32(maxGas));
-
         emit EthSentToL1(msg.value);
-
         return true;
     }
 }
