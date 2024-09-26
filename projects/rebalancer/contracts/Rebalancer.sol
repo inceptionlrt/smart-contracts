@@ -243,7 +243,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         );
 
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
-            value: _callValue
+            value: _callValue + msg.value
         }(_callValue, _gasData);
     }
 
