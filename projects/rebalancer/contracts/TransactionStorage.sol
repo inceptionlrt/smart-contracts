@@ -32,6 +32,7 @@ contract TransactionStorage is Ownable {
     );
     error MsgNotFromAdapter(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
+    error AdapterAlreadyExists(uint256 chainId);
     error NoAdapterForThisChainId(uint256 chainId);
     error TimeCannotBeInFuture(uint256 timestamp);
     error TimeBeforePrevRecord(uint256 timestamp);
@@ -122,7 +123,7 @@ contract TransactionStorage is Ownable {
     ) external onlyOwner {
         require(
             adapters[_chainId] == address(0),
-            ChainIdAlreadyExists(_chainId)
+            AdapterAlreadyExists(_chainId)
         );
         adapters[_chainId] = _adapterAddress;
 
