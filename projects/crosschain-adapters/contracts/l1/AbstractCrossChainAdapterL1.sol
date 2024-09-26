@@ -1,24 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "openzeppelin-4/access/Ownable.sol";
-import "openzeppelin-4/security/ReentrancyGuard.sol";
+import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-4-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin-4/utils/Address.sol";
 
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
 abstract contract AbstractCrossChainAdapterL1 is
-    Ownable,
+    Initializable,
+    OwnableUpgradeable,
     ICrossChainAdapterL1,
-    ReentrancyGuard
+    ReentrancyGuardUpgradeable
 {
     address public rebalancer;
     address public transactionStorage;
     address public l2Receiver;
     address public l2Sender;
 
-    constructor(address _transactionStorage) {
+    function __AbstractCrossChainAdapterL1_init(
+        address _transactionStorage
+    ) public initializer {
+        __Ownable_init();
+        __ReentrancyGuard_init();
         transactionStorage = _transactionStorage;
     }
 

@@ -3,8 +3,8 @@ pragma solidity 0.8.26;
 
 import "@eth-optimism/contracts/L1/messaging/IL1CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L1/messaging/IL1StandardBridge.sol";
-import "openzeppelin-4/access/Ownable.sol";
-
+import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "./AbstractCrossChainAdapterL1.sol";
 
 interface PayableCrossDomainMessenger {
@@ -15,16 +15,23 @@ interface PayableCrossDomainMessenger {
     ) external payable;
 }
 
-contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
+contract CrossChainAdapterOptimismL1 is
+    Initializable,
+    OwnableUpgradeable,
+    AbstractCrossChainAdapterL1
+{
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
-    IL1CrossDomainMessenger public immutable l1CrossDomainMessenger;
-    IL1StandardBridge public immutable l1StandardBridge;
+    IL1CrossDomainMessenger public l1CrossDomainMessenger;
+    IL1StandardBridge public l1StandardBridge;
 
-    constructor(
+    function initialize(
         IL1CrossDomainMessenger _l1CrossDomainMessenger,
         IL1StandardBridge _l1StandardBridge,
         address _transactionStorage
-    ) AbstractCrossChainAdapterL1(_transactionStorage) {
+    ) public initializer {
+        __Ownable_init();
+        __AbstractCrossChainAdapterL1_init(_transactionStorage);
+
         l1CrossDomainMessenger = _l1CrossDomainMessenger;
         l1StandardBridge = _l1StandardBridge;
     }
