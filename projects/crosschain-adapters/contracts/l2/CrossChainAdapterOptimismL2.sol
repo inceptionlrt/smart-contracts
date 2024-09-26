@@ -117,4 +117,13 @@ contract CrossChainAdapterOptimismL2 is
         emit EthSentToL1(msg.value);
         return true;
     }
+
+    function recoverFunds() external onlyOwner {
+        (bool ok, ) = vault.call{value: address(this).balance}("");
+        require(ok, TransferToVaultFailed(address(this).balance));
+    }
+
+    receive() external payable {
+        emit ReceiveTriggered(msg.value);
+    }
 }

@@ -75,4 +75,13 @@ contract CrossChainAdapterArbitrumL2 is
     function setVault(address _vault) external onlyOwner {
         vault = _vault;
     }
+
+    function recoverFunds() external onlyOwner {
+        (bool ok, ) = vault.call{value: address(this).balance}("");
+        require(ok, TransferToVaultFailed(address(this).balance));
+    }
+
+    receive() external payable {
+        emit ReceiveTriggered(msg.value);
+    }
 }

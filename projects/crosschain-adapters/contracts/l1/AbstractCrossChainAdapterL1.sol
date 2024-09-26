@@ -81,4 +81,8 @@ abstract contract AbstractCrossChainAdapterL1 is
         (bool ok, ) = rebalancer.call{value: address(this).balance}("");
         require(ok, TransferToRebalancerFailed());
     }
+
+    receive() external payable {
+        emit ReceiveTriggered(msg.value);
+    }
 }

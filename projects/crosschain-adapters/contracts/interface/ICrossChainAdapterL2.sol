@@ -10,8 +10,10 @@ interface ICrossChainAdapterL2 {
     error SettingZeroGas();
     error OnlyVault();
     error InsufficientValueSent();
+    error TransferToVaultFailed(uint256 amount);
 
     event MaxGasChanged(uint256 newMaxGas);
+    event ReceiveTriggered(uint256 amount);
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
@@ -21,4 +23,8 @@ interface ICrossChainAdapterL2 {
     function sendEthToL1(
         uint256 _callValue
     ) external payable returns (bool success);
+
+    function recoverFunds() external;
+
+    receive() external payable;
 }

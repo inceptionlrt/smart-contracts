@@ -26,6 +26,7 @@ interface ICrossChainAdapterL1 {
     event L2ReceiverChanged(address newL2Receiver);
     event L2SenderChanged(address newL2Sender);
     event TxStorageChanged(address newTxStorage);
+    event ReceiveTriggered(uint256 amount);
 
     function receiveL2Info(
         uint256 _timestamp,
@@ -43,4 +44,6 @@ interface ICrossChainAdapterL1 {
     function recoverFunds() external;
 
     function receiveL2Eth() external payable;
+
+    receive() external payable;
 }
