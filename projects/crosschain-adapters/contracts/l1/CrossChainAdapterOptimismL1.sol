@@ -11,7 +11,6 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     IL1CrossDomainMessenger public immutable l1CrossDomainMessenger;
     IL1StandardBridge public immutable l1StandardBridge;
-    // mapping(address => string) public greetings;
     uint256 private maxGas = 10_000_000;
 
     event GasSettingsChanged(uint256 newMaxGas);
@@ -28,31 +27,6 @@ contract CrossChainAdapterOptimismL1 is AbstractCrossChainAdapterL1 {
     function getChainId() external pure override returns (uint24) {
         return OPTIMISM_CHAIN_ID;
     }
-
-    // //TODO
-    // function sendGreeting(string memory _greeting) public {
-    //     l1CrossDomainMessenger.sendMessage(
-    //         address(l2Contract),
-    //         abi.encodeCall(this.setGreeting, (msg.sender, _greeting)),
-    //         200000
-    //     );
-    // }
-
-    // //TODO
-    // function setGreeting(address _sender, string memory _greeting) public {
-    //     require(
-    //         msg.sender == address(l1CrossDomainMessenger),
-    //         "Greeter: Direct sender must be the CrossDomainMessenger"
-    //     );
-
-    //     require(
-    //         l1CrossDomainMessenger.xDomainMessageSender() ==
-    //             address(l2Contract),
-    //         "Greeter: Remote sender must be the other Greeter contract"
-    //     );
-
-    //     greetings[_sender] = _greeting;
-    // }
 
     function receiveL2Info(
         uint256 _timestamp,

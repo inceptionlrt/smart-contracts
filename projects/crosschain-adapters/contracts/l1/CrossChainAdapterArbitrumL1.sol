@@ -77,8 +77,6 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
         emit GasParametersChanged(_maxSubmissionCost, _maxGas, _gasPriceBid);
     }
 
-
-
     function setInbox(address _inbox) external onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
         inbox = IInbox(_inbox);
