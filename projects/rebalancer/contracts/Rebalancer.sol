@@ -176,12 +176,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
             IInceptionRatioFeed(ratioFeed).getRatioFor(address(inETHAddress));
     }
 
-    function getRatioL2(
-        uint256 _tokenAmount,
-        uint256 _ethAmount
-    ) public pure returns (uint256) {
-        return (_tokenAmount * MULTIPLIER) / _ethAmount;
-    }
+    // //TO BE USED LATER
+    // function getRatioL2(
+    //     uint256 _tokenAmount,
+    //     uint256 _ethAmount
+    // ) public pure returns (uint256) {
+    //     return (_tokenAmount * MULTIPLIER) / _ethAmount;
+    // }
 
     function _lastUpdateTotalL2InEth() internal view returns (uint256) {
         return IERC20(inETHAddress).balanceOf(lockboxAddress);
