@@ -20,7 +20,6 @@ import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
 };
-78
 
 const ARB_ID = 42161;
 const OPT_ID = 10;
@@ -125,7 +124,6 @@ describe("Omnivault integration tests", function () {
 
         console.log('=== CrossChainAdapterOptimismL1');
         const optAdapter = await ethers.deployContract("CrossChainAdapterOptimismL1", [
-            // "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1",
             optBridgeMock.address,
             network.config.addresses.optimismInbox,
             txStorage.address
@@ -210,9 +208,11 @@ describe("Omnivault integration tests", function () {
         await arbAdapter.setInbox(arbInboxMock.address);
         await arbAdapter.setL2Sender(target);
         await arbAdapter.setRebalancer(rebalancer.address);
+        await arbAdapter.setL2Receiver(target.address);
         // await optAdapter.setInbox(optBridgeMock.address);
         await optAdapter.setL2Sender(target);
         await optAdapter.setRebalancer(rebalancer.address);
+        await optAdapter.setL2Receiver(target.address);
 
         //Restaking pool
         await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
@@ -686,24 +686,28 @@ describe("Omnivault integration tests", function () {
                 {
                     name: "Part of the balance to ARB",
                     amount: async (amount) => amount / 2n,
+                    feeParams: () => encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n),
                     fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                 },
                 {
                     name: "Part of the balance to OPT",
                     amount: async (amount) => amount / 2n,
+                    feeParams: () => encodeOptimismFees(200_000n),
                     fees: 0n,
                     chainId: OPT_ID,
                 },
                 {
                     name: "All balance to ARB",
                     amount: async (amount) => amount,
+                    feeParams: () => encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n),
                     fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                 },
                 {
                     name: "All balance to OPT",
                     amount: async (amount) => amount,
+                    feeParams: () => encodeOptimismFees(200_000n),
                     fees: 0n,
                     chainId: OPT_ID,
                 }
@@ -714,7 +718,7 @@ describe("Omnivault integration tests", function () {
                     const balance = await ethers.provider.getBalance(rebalancer.address);
                     const amount = await arg.amount(balance);
                     const adapter = await txStorage.adapters(arg.chainId);
-                    const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                    const feeParams = arg.feeParams();
                     const fees = arg.fees;
                     const tx = await rebalancer.connect(operator)
                         .sendEthToL2(arg.chainId, amount, feeParams, {value: fees});
@@ -728,7 +732,7 @@ describe("Omnivault integration tests", function () {
                 const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
                 await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
             })
@@ -737,7 +741,7 @@ describe("Omnivault integration tests", function () {
                 const fees = 2n * 10n ** 15n;
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
                 await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "OnlyOperator");
             })
@@ -746,7 +750,7 @@ describe("Omnivault integration tests", function () {
                 await signer1.sendTransaction({value: e18, to: rebalancer.address});
                 const fees = 2n * 10n ** 15n;
                 const amount = await ethers.provider.getBalance(rebalancer.address);
-                const feeParams = encodeFeeParams(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
                 await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, feeParams, {value: fees}))
                     .to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
             })
@@ -873,6 +877,12 @@ describe("Omnivault integration tests", function () {
                     setter: "setInbox",
                     getter: "inbox",
                     event: "InboxChanged"
+                },
+                {
+                    name: "l2 receiver",
+                    setter: "setL2Receiver",
+                    getter: "l2Receiver",
+                    event: "L2ReceiverChanged"
                 },
             ]
 
@@ -1016,10 +1026,10 @@ describe("Omnivault integration tests", function () {
                     event: "L2SenderChanged"
                 },
                 {
-                    name: "optimism inbox",
-                    setter: "setInbox",
-                    getter: "inbox",
-                    event: "InboxChanged"
+                    name: "l2 receiver",
+                    setter: "setL2Receiver",
+                    getter: "l2Receiver",
+                    event: "L2ReceiverChanged"
                 },
             ]
 
@@ -1045,6 +1055,11 @@ describe("Omnivault integration tests", function () {
                         .to.be.revertedWithCustomError(optAdapter, "SettingZeroAddress");
                 })
             })
+
+            it("Chain id", async function() {
+                expect(await optAdapter.getChainId()).to.be.eq(OPT_ID);
+            })
+
         })
 
         describe("receiveL2Eth", function () {
@@ -1136,11 +1151,19 @@ describe("Omnivault integration tests", function () {
     })
 })
 
-function encodeFeeParams(maxSubmissionCost, maxGas, gasPriceBid) {
+function encodeArbitrumFees(maxSubmissionCost, maxGas, gasPriceBid) {
     const abiCoder = new AbiCoder();
     return [abiCoder.encode(
         ["uint256", "uint256", "uint256"],
         [maxSubmissionCost, maxGas, gasPriceBid]
+    )];
+}
+
+function encodeOptimismFees(maxGas) {
+    const abiCoder = new AbiCoder();
+    return [abiCoder.encode(
+        ["uint256"],
+        [maxGas]
     )];
 }
 
