@@ -716,6 +716,7 @@ describe("Omnivault integration tests", function () {
                     const fees = arg.fees;
                     const tx = await rebalancer.connect(operator)
                         .sendEthToL2(arg.chainId, amount, feeParams, {value: fees});
+                    await expect(tx).to.emit(arbAdapter, "RetryableTicketCreated");
                     await expect(tx).to.changeEtherBalance(rebalancer, -amount);
                     await expect(tx).to.changeEtherBalance(adapter, 0n);
                     await expect(tx).to.changeEtherBalance(operator, -fees, {includeFee: false});
@@ -1068,9 +1069,47 @@ describe("Omnivault integration tests", function () {
                 const value = e18;
                 await expect(arbAdapter.connect(signer2).sendEthToL2(value, feesParams, {value: value}))
                     .to.be.revertedWithCustomError(arbAdapter, "OnlyRebalancerCanCall")
-                    .withArgs(signer2);
+                    .withArgs(signer2.address);
             })
 
+            it("Reverts amount > value", async function() {
+                const feesParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const value = e18;
+                await expect(arbAdapter.connect(signer1).sendEthToL2(value + 1n, feesParams, {value: value}))
+                    .to.be.revertedWithCustomError(arbAdapter, "InvalidValue");
+            })
+
+            it("Reverts when gas params are zero", async function () {
+                const value = e18;
+                let feeParams = encodeArbitrumFees(0n, 200_000n, 100_000_000n);
+                await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, {value: value}))
+                    .to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
+
+                feeParams = encodeArbitrumFees(2n * 10n ** 15n, 0n, 100_000_000n);
+                await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, {value: value}))
+                    .to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
+
+                feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 0n);
+                await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, {value: value}))
+                    .to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
+            })
+
+            it("Reverts receiver is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await arbAdapter.setRebalancer(signer1.address)
+                await arbAdapter.setL2Sender(target.address);
+
+                const feesParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
+                const value = e18;
+                await expect(arbAdapter.connect(signer1).sendEthToL2(value, feesParams, {value: value}))
+                    .to.revertedWithCustomError(arbAdapter, "L2ReceiverNotSet");
+            })
         })
     })
 
@@ -1267,7 +1306,50 @@ describe("Omnivault integration tests", function () {
 
         })
 
+        describe("sendEthToL2", function() {
+            before(async function() {
+                await snapshot.restore();
+                await optAdapter.setRebalancer(signer1.address);
+            })
 
+            it("Reverts when called by not a rebalancer", async function() {
+                const feesParams = encodeOptimismFees(200_000n);
+                const value = e18;
+                await expect(optAdapter.connect(signer2).sendEthToL2(value, feesParams, {value: value}))
+                    .to.be.revertedWithCustomError(optAdapter, "OnlyRebalancerCanCall")
+                    .withArgs(signer2.address);
+            })
+
+            it("Reverts amount > value", async function() {
+                const feesParams = encodeOptimismFees(200_000n);
+                const value = e18;
+                await expect(optAdapter.connect(signer1).sendEthToL2(value + 1n, feesParams, {value: value}))
+                    .to.be.revertedWithCustomError(optAdapter, "InvalidValue");
+            })
+
+            it("Reverts when there is no gas params", async function() {
+                const value = e18;
+                await expect(optAdapter.connect(signer1).sendEthToL2(value, [], {value: value}))
+                    .to.be.revertedWithCustomError(optAdapter, "GasDataNotProvided");
+            })
+
+            it("Reverts when receiver is not set", async function() {
+                await clean_snapshot.restore();
+                await txStorage.connect(owner).addChainId(ARB_ID);
+                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addChainId(OPT_ID);
+                await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
+                //Arbitrum adapter
+                await optAdapter.setRebalancer(signer1.address)
+                await optAdapter.setL2Sender(target.address);
+
+                const feesParams = encodeOptimismFees(200_000n);
+                const value = e18;
+                await expect(optAdapter.connect(signer1).sendEthToL2(value, feesParams, {value: value}))
+                    .to.revertedWithCustomError(optAdapter, "L2ReceiverNotSet");
+            })
+        })
     })
 })
 
