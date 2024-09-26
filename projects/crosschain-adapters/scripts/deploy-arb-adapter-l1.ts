@@ -1,12 +1,11 @@
 require("dotenv").config();
 import { ethers, network } from "hardhat";
 
-//Gas costs can be unpredictable, so play around with Gas settings
+// Gas costs can be unpredictable, so play around with gas settings
 async function main() {
-
-    //IMPORTANT! Gas costs can be unpredictable, so play around with Gas settings
-    const maxSubmissionCost = ethers.parseUnits("0.02", "ether");
-    const maxGas = ethers.parseUnits("2000000", "wei");
+    // Use the correct ethers API for parsing units
+    const maxSubmissionCost = ethers.parseEther("0.02");
+    const maxGas = ethers.toBigInt("2000000"); // Parse directly to BigInt as required
     const gasPriceBid = ethers.parseUnits("3", "gwei");
 
     const networkName = network.name;
@@ -16,22 +15,22 @@ async function main() {
     const l2Receiver = process.env.L2_RECEIVER;
     const l2Sender = process.env.L2_SENDER;
 
-    console.log(`Sanity checks: env variables, l1 contracts, l2 receiver contracts on Arbitrum (${networkName === "sepolia" ? "Sepolia" : "Mainnet"})...`);
+    console.log(`Sanity checks: env variables, L1 contracts, L2 receiver contracts on Arbitrum (${networkName === "sepolia" ? "Sepolia" : "Mainnet"})...`);
 
-    //Sanity check 1: env variables
+    // Sanity check 1: Ensure env variables are set
     if (!transactionStorageAddress || !l2Receiver || !l2Sender) {
         console.error("Set TRANSACTION_STORAGE_ADDRESS, L2_SENDER, L2_RECEIVER env variables!");
         process.exit(1);
     }
 
-    //Sanity check 2: supporting L1 contracts existence
+    // Sanity check 2: Ensure L1 contract existence
     const code = await ethers.provider.getCode(transactionStorageAddress);
     if (code === "0x") {
         console.error(`Error: TransactionStorage not found at address ${transactionStorageAddress} on the network ${network.name}.`);
         process.exit(1);
     }
 
-    //Sanity check 3: receiver L2 contract existence
+    // Sanity check 3: Ensure L2 receiver contract existence
     let arbitrumRpcUrl;
     let arbitrumInboxAddress;
     if (networkName === "sepolia") {
@@ -66,18 +65,11 @@ async function main() {
     }
 
     console.log("All sanity checks passed 💪");
-    //end of sanity checks
 
+    // Deploy the CrossChainAdapterArbitrumL1 contract
     console.log("Deploying CrossChainAdapterArbitrumL1...");
-
-    const CrossChainAdapterArbitrum = await ethers.getContractFactory(
-        "CrossChainAdapterArbitrumL1"
-    );
-
-    const crossChainAdapter = await CrossChainAdapterArbitrum.deploy(
-        transactionStorageAddress
-    );
-
+    const CrossChainAdapterArbitrum = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
+    const crossChainAdapter = await CrossChainAdapterArbitrum.deploy(transactionStorageAddress);
     await crossChainAdapter.waitForDeployment();
     const crossChainAdapterAddress = await crossChainAdapter.getAddress();
     console.log("CrossChainAdapterArbitrum deployed at:", crossChainAdapterAddress);
@@ -88,34 +80,28 @@ async function main() {
     await setInboxTx.wait();
     console.log("Inbox address set successfully");
 
-    const gasTx = await crossChainAdapter.setGasParameters(
-        maxSubmissionCost,
-        maxGas,
-        gasPriceBid
-    );
-    await gasTx.wait();
-    console.log("Gas parameters set successfully");
-
     console.log("L2 receiver:", l2Receiver);
 
     const txReceiver = await crossChainAdapter.setL2Receiver(l2Receiver);
-    txReceiver.wait();
+    await txReceiver.wait();
     const txSender = await crossChainAdapter.setL2Sender(l2Sender);
-    txSender.wait();
+    await txSender.wait();
     console.log("L2 sender and receiver set successfully");
 
-    // uncomment lines below if you just want to deploy the AbstractCrossChainAdapter without cross-chain txs
-    // console.error("Bye, bye!");
-    // process.exit();
-
-    // Send a small amount of ETH to L2 using sendEthToL2
+    // Send a small amount of ETH to L2 using the updated sendEthToL2 function
     console.log("Sending a small amount of ETH to L2...");
-    const callValue = ethers.parseUnits("0.01", "ether"); // The ETH to send
-    const totalValue = ethers.parseUnits("0.05", "ether"); // Total msg.value (callValue + fees)
+    const callValue = ethers.parseEther("0.01");  // The ETH to send
+    const totalValue = ethers.parseEther("0.05"); // Total msg.value (callValue + fees)
+
+    // Encode gas parameters for Arbitrum as bytes[]
+    const gasData = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint256", "uint256"],
+        [maxSubmissionCost, maxGas, gasPriceBid]
+    );
 
     try {
         console.log(`CallValue: ${callValue.toString()}, TotalValue: ${totalValue.toString()}`);
-        const sendTx = await crossChainAdapter.sendEthToL2(callValue, {
+        const sendTx = await crossChainAdapter.sendEthToL2(callValue, [gasData], {
             value: totalValue, // msg.value includes callValue + fees
         });
         await sendTx.wait();
