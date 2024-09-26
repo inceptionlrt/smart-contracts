@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.26;
 
 /**
  * @title ICrossChainAdapterL2
@@ -7,7 +7,10 @@ pragma solidity ^0.8.20;
  */
 interface ICrossChainAdapterL2 {
     error VaultNotSet();
+    error SettingZeroGas();
     error OnlyVault();
+
+    event MaxGasChanged(uint256 newMaxGas);
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,

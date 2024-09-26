@@ -9,12 +9,7 @@ import "openzeppelin-4/access/Ownable.sol";
 
 import "../interface/ICrossChainAdapterL2.sol";
 
-/**
- * @title CrossChainAdapter
- * @dev Paul Fomichov
- */
-
-contract ArbCrossChainAdapter is ICrossChainAdapterL2, Ownable {
+contract CrossChainAdapterArbitrumL2 is ICrossChainAdapterL2, Ownable {
     ArbSys constant arbsys = ArbSys(address(100));
     address public l1Target;
     address public vault;
@@ -30,8 +25,8 @@ contract ArbCrossChainAdapter is ICrossChainAdapterL2, Ownable {
     }
 
     event AssetsInfoSentToL1(
-        uint256 indexed amount,
-        uint256 indexed to,
+        uint256 indexed tokensAmount,
+        uint256 indexed ethAmount,
         uint256 indexed ticketId
     );
     event EthSentToL1(uint256 indexed amount, uint256 indexed ticketId);
