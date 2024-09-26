@@ -45,6 +45,4 @@ interface ICrossChainAdapterL1 {
     function getChainId() external returns (uint24);
 
     function receiveL2Eth() external payable;
-
-    receive() external payable;
 }
