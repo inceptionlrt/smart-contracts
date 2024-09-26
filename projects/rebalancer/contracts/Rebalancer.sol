@@ -21,7 +21,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     uint256 public constant MULTIPLIER = 1e18;
     uint256 public constant MAX_DIFF = 50000000000000000; // 0.05 * 1e18
-    uint256 public totalAmountToWithdraw; // Initialized in initialize
 
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperator());
@@ -103,6 +102,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
 
     function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0), SettingZeroAddress());
+        operator = _operator;
         emit OperatorChanged(_operator);
     }
 
@@ -222,9 +222,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 _chainId,
         uint256 _amount
     ) external onlyOperator {
-        address crossChainAdapterAddress = TransactionStorage(
-            transactionStorage
-        ).adapters(_chainId);
+        address payable crossChainAdapterAddress = payable(
+            TransactionStorage(transactionStorage).adapters(_chainId)
+        );
         require(
             crossChainAdapterAddress != address(0),
             CrosschainAdapterNotSet()
@@ -235,7 +235,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         );
         ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
             value: _amount
-        }();
+        }(_amount);
     }
 
     receive() external payable {

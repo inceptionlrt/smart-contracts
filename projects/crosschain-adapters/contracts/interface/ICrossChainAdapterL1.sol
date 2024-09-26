@@ -29,7 +29,6 @@ interface ICrossChainAdapterL1 {
     event RebalancerChanged(address newRebalancer);
     event L2ReceiverChanged(address newL2Receiver);
     event L2SenderChanged(address newL2Sender);
-    event InboxChanged(address newInbox);
     event TxStorageChanged(address newTxStorage);
 
     function receiveL2Info(

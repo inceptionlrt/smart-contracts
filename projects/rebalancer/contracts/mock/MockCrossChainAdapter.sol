@@ -54,24 +54,19 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
         );
     }
 
-    function receiveL2Eth() external payable override {
-        require(msg.value > 0, "No ETH received");
-
-        // Forward the received ETH to the Restaking Pool contract
-        restakingPool.stake{value: msg.value}();
-
-        emit L2EthReceived(msg.value);
+    function sendEthToL2(uint amount) external payable returns (uint256) {
+        //placeholder for compilation
     }
 
-    function sendEthToL2() external payable {
-        //placeholder for compilation
+    function getChainId() external pure returns (uint24) {
+        return 1;
     }
 
     receive() external payable {
         // Resend ETH to the restaking pool when received via fallback
         if (msg.value > 0) {
             restakingPool.stake{value: msg.value}();
-            emit L2EthReceived(msg.value);
+            emit L2EthDeposit(msg.value);
         }
     }
 }

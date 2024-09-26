@@ -21,6 +21,8 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
 
     event RetryableTicketCreated(uint256 indexed ticketId);
 
+    event InboxChanged(address newInbox);
+
     constructor(
         address _transactionStorage
     ) AbstractCrossChainAdapterL1(_transactionStorage) {}
@@ -80,11 +82,10 @@ contract CrossChainAdapterArbitrumL1 is AbstractCrossChainAdapterL1 {
     function setInbox(address _inbox) external onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
         inbox = IInbox(_inbox);
+        emit InboxChanged(_inbox);
     }
 
     receive() external payable override {
-        // IBridge bridge = IInbox(inbox).bridge();
-        // require(msg.sender == address(bridge), NotBridge());
         require(rebalancer != address(0), RebalancerNotSet());
         Address.sendValue(payable(rebalancer), msg.value);
         emit L2EthDeposit(msg.value);
