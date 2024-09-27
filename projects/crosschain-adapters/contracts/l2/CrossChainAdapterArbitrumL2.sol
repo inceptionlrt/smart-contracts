@@ -9,7 +9,8 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
-        uint256 ethAmount
+        uint256 ethAmount,
+        bytes[] calldata
     ) external override returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
         bytes memory data = abi.encodeWithSignature(
@@ -25,7 +26,8 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     }
 
     function sendEthToL1(
-        uint256 _callValue
+        uint256 _callValue,
+        bytes[] calldata
     ) external payable override onlyVault returns (bool success) {
         require(_callValue <= msg.value, InsufficientValueSent());
         require(l1Target != address(0), L1TargetNotSet());

@@ -27,11 +27,13 @@ interface ICrossChainAdapterL2 {
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
-        uint256 ethAmount
+        uint256 ethAmount,
+        bytes[] calldata _gasData
     ) external returns (bool success);
 
     function sendEthToL1(
-        uint256 _callValue
+        uint256 _callValue,
+        bytes[] calldata _gasData
     ) external payable returns (bool success);
 
     function recoverFunds() external;
