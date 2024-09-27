@@ -112,21 +112,21 @@ contract MellowRestaker is
             );
     }
 
-    function delegate(uint256 deadline) external onlyTrustee returns (uint256 lpAmount) {
+    function delegate(uint256 deadline) external onlyTrustee returns (uint256 amount, uint256 lpAmount) {
         uint256 MAX_TARGET_PERCENT = IMellowHandler(_vault).MAX_TARGET_PERCENT();
         uint256 total = IMellowHandler(_vault).getTotalDeposited();
         for(uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];  // in %
             if(allocation > 0) {
-                uint256 deposited = getDeposited(address(mellowVaults[i]));
-                uint256 ratio = (deposited * MAX_TARGET_PERCENT) / total;
-                if(ratio < allocation) {
-                    uint256 delegateAmount = ((total * allocation) / MAX_TARGET_PERCENT) - deposited;
-                    if(IMellowHandler(_vault).getFreeBalance() >= delegateAmount && delegateAmount > 0) {
-                        _asset.transferFrom(_vault, address(this), delegateAmount);
+                uint256 bal = getDeposited(address(mellowVaults[i]));
+                if((bal * MAX_TARGET_PERCENT) / total < allocation) {
+                    bal = ((total * allocation) / MAX_TARGET_PERCENT) - bal;
+                    if(IMellowHandler(_vault).getFreeBalance() >= bal && bal > 0) {
+                        _asset.transferFrom(_vault, address(this), bal);
                         IMellowDepositWrapper wrapper = mellowDepositWrappers[address(mellowVaults[i])];
-                        IERC20(_asset).safeIncreaseAllowance(address(wrapper), delegateAmount);
-                        lpAmount += wrapper.deposit(address(this), address(_asset), delegateAmount, 0, deadline);
+                        IERC20(_asset).safeIncreaseAllowance(address(wrapper), bal);
+                        lpAmount += wrapper.deposit(address(this), address(_asset), bal, 0, deadline);
+                        amount += bal;
                     }
                 }
             }

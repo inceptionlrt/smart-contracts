@@ -21,8 +21,8 @@ interface IMellowRestaker {
     ) external returns (uint256 lpAmount);
 
     function delegate(
-        uint256 amount
-    ) external returns (uint256 lpAmount);
+        uint256 deadline
+    ) external returns (uint256 amount, uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
@@ -42,9 +42,5 @@ interface IMellowRestaker {
 
     error BadMellowWithdrawRequest();
 
-    error NotEnoughBalance();
-
     error ValueZero();
-
-    error MellowLimitOverflow();
 }

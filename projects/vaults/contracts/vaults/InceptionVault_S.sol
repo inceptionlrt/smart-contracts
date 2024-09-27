@@ -10,7 +10,7 @@ import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of EigenLayer for a certain asset.
+/// @notice Aims to maximize the profit of Mellow asset.
 contract InceptionVault_S is IInceptionVault, MellowHandler {
 
     /// @dev Inception restaking token
@@ -168,7 +168,9 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     /// @dev Sends all underlying to all mellow vaults based on allocation
     function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
         _asset.approve(address(mellowRestaker), getFreeBalance());
-        uint256 lpAmount = mellowRestaker.delegate(block.timestamp);
+        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(block.timestamp);
+
+        emit Delegated(address(0), amount, lpAmount);
     }
 
     /*///////////////////////////////////////

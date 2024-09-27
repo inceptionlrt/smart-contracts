@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
-import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
+import {IMellowHandler} from "../interfaces/IMellowHandler.sol";
 import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
 import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
 
@@ -11,7 +11,7 @@ import {IMellowRestaker} from "../interfaces/IMellowRestaker.sol";
 /// @title The MellowHandler contract
 /// @dev Serves communication with external Mellow Protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
+contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     
     uint256 public epoch;
 
@@ -21,7 +21,7 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     IMellowRestaker public mellowRestaker;
 
     /// @dev represents the pending amount to be redeemed by claimers,
-    /// @notice + amount to undelegate from EigenLayer
+    /// @notice + amount to undelegate from Mellow
     uint256 public totalAmountToWithdraw;
 
     Withdrawal[] public claimerWithdrawalsQueue;
@@ -56,23 +56,9 @@ contract MellowHandler is InceptionAssetsHandler, IEigenLayerHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
-    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-    }
-
     function _beforeDeposit(uint256 amount) internal view {
         if (amount > getFreeBalance())
             revert InsufficientCapacity(totalAssets());
-    }
-
-    /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategy(
-        address restaker,
-        uint256 amount
-    ) internal {
-        _asset.approve(restaker, amount);
-        IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
-
-        emit DepositedToEL(restaker, amount);
     }
 
     function _depositAssetIntoMellow(uint256 amount, address mellowVault) internal {
