@@ -23,11 +23,11 @@ interface ICrossChainAdapterL1 {
     error OnlyOperatorCanCall(address caller);
 
     event L2EthDeposit(uint256 amount);
-    event RebalancerChanged(address newRebalancer);
-    event L2ReceiverChanged(address newL2Receiver);
-    event L2SenderChanged(address newL2Sender);
-    event TxStorageChanged(address newTxStorage);
-    event ReceiveTriggered(uint256 amount);
+    event RebalancerChanged(address prevRebalancer, address newRebalancer);
+    event L2ReceiverChanged(address prevL2Receiver, address newL2Receiver);
+    event L2SenderChanged(address prevL2Sender, address newL2Sender);
+    event TxStorageChanged(address prevTxStorage, address newTxStorage);
+    event ReceiveTriggered(address caller, uint256 amount);
 
     function receiveL2Info(
         uint256 _timestamp,

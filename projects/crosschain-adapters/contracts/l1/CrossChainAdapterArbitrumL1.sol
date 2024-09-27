@@ -17,7 +17,7 @@ contract CrossChainAdapterArbitrumL1 is
 
     event RetryableTicketCreated(uint256 indexed ticketId);
 
-    event InboxChanged(address newInbox);
+    event InboxChanged(address prevInbox, address newInbox);
 
     error ArbInboxNotSet();
 
@@ -46,7 +46,7 @@ contract CrossChainAdapterArbitrumL1 is
         address actualSender = outbox.l2ToL1Sender();
         require(actualSender == l2Sender, UnauthorizedOriginalSender());
 
-        handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
+        _handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
     function sendEthToL2(
@@ -82,7 +82,8 @@ contract CrossChainAdapterArbitrumL1 is
     function setInbox(address _inbox) public onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
         inbox = IInbox(_inbox);
-        emit InboxChanged(_inbox);
+        address prevInbox = address(inbox);
+        emit InboxChanged(prevInbox, _inbox);
     }
 
     function receiveL2Eth() external payable override {

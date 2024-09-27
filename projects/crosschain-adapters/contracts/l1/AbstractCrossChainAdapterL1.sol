@@ -45,7 +45,7 @@ abstract contract AbstractCrossChainAdapterL1 is
         _;
     }
 
-    function handleL2Info(
+    function _handleL2Info(
         uint256 _chainId,
         uint256 _timestamp,
         uint256 _balance,
@@ -65,25 +65,29 @@ abstract contract AbstractCrossChainAdapterL1 is
     function setRebalancer(address _rebalancer) external virtual onlyOwner {
         require(_rebalancer != address(0), SettingZeroAddress());
         rebalancer = _rebalancer;
-        emit RebalancerChanged(_rebalancer);
+        address prevRebalancer = rebalancer;
+        emit RebalancerChanged(prevRebalancer, _rebalancer);
     }
 
     function setTxStorage(address _txStorage) external virtual onlyOwner {
         require(_txStorage != address(0), SettingZeroAddress());
         transactionStorage = _txStorage;
-        emit TxStorageChanged(_txStorage);
+        address prevTxStorage = transactionStorage;
+        emit TxStorageChanged(prevTxStorage, transactionStorage);
     }
 
     function setL2Receiver(address _l2Receiver) external onlyOwner {
         require(_l2Receiver != address(0), SettingZeroAddress());
         l2Receiver = _l2Receiver;
-        emit L2ReceiverChanged(_l2Receiver);
+        address prevL2Receiver = l2Receiver;
+        emit L2ReceiverChanged(prevL2Receiver, _l2Receiver);
     }
 
     function setL2Sender(address _l2Sender) external onlyOwner {
         require(_l2Sender != address(0), SettingZeroAddress());
         l2Sender = _l2Sender;
-        emit L2SenderChanged(_l2Sender);
+        address prevL2Sender = l2Sender;
+        emit L2SenderChanged(prevL2Sender, _l2Sender);
     }
 
     function recoverFunds() external onlyOperator {
@@ -93,6 +97,6 @@ abstract contract AbstractCrossChainAdapterL1 is
     }
 
     receive() external payable {
-        emit ReceiveTriggered(msg.value);
+        emit ReceiveTriggered(msg.sender, msg.value);
     }
 }

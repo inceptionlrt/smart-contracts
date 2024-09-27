@@ -59,6 +59,6 @@ abstract contract AbstractCrossChainAdapterL2 is
     }
 
     receive() external payable {
-        emit ReceiveTriggered(msg.value);
+        emit ReceiveTriggered(msg.sender, msg.value);
     }
 }

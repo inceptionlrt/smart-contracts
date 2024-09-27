@@ -20,7 +20,7 @@ contract CrossChainAdapterOptimismL1 is
     OwnableUpgradeable,
     AbstractCrossChainAdapterL1
 {
-    event CrossChainTxOptimismSent();
+    event CrossChainTxOptimismSent(uint256 indexed amountSent);
 
     uint24 public constant OPTIMISM_CHAIN_ID = 10;
     IL1CrossDomainMessenger public l1CrossDomainMessenger;
@@ -54,7 +54,7 @@ contract CrossChainAdapterOptimismL1 is
             l1CrossDomainMessenger.xDomainMessageSender() == l2Sender,
             UnauthorizedOriginalSender()
         );
-        handleL2Info(OPTIMISM_CHAIN_ID, _timestamp, _balance, _totalSupply);
+        _handleL2Info(OPTIMISM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
     function sendEthToL2(
@@ -78,7 +78,7 @@ contract CrossChainAdapterOptimismL1 is
             ""
         );
 
-        emit CrossChainTxOptimismSent();
+        emit CrossChainTxOptimismSent(callValue);
     }
 
     function receiveL2Eth() external payable override {
