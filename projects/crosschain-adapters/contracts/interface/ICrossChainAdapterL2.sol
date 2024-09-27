@@ -15,6 +15,13 @@ interface ICrossChainAdapterL2 {
 
     event MaxGasChanged(uint256 newMaxGas);
     event ReceiveTriggered(uint256 amount);
+    event AssetsInfoSentToL1(
+        uint256 indexed tokensAmount,
+        uint256 indexed ethAmount,
+        uint256 indexed withrawalId //revelant for Arbitrum, always 0 for Optimism
+    );
+
+    event EthSentToL1(uint256 indexed amount, uint256 indexed withrawalId); //revelant for Arbitrum, always 0 for Optimism
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
