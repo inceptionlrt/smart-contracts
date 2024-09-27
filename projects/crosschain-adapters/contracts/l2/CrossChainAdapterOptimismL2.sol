@@ -30,6 +30,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         uint256 tokensAmount,
         uint256 ethAmount
     ) external override returns (bool success) {
+        require(l1Target != address(0), L1TargetNotSet());
         bytes memory data = abi.encodeWithSignature(
             "receiveAssetsInfo(uint256,uint256)",
             tokensAmount,
@@ -50,6 +51,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         uint256 _callValue
     ) external payable override onlyVault returns (bool success) {
         require(_callValue <= msg.value, InsufficientValueSent());
+        require(l1Target != address(0), L1TargetNotSet());
 
         l2StandardBridge.withdrawTo(
             address(0),
