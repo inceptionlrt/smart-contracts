@@ -2,12 +2,21 @@
 pragma solidity 0.8.26;
 
 import "@eth-optimism/contracts/L2/messaging/IL2CrossDomainMessenger.sol";
-import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
 import "./AbstractCrossChainAdapterL2.sol";
+import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
+
+interface OpCrossDomainMessenger {
+    function sendMessage(
+        address target,
+        bytes calldata message,
+        uint32 gasLimit
+    ) external payable;
+}
 
 contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
     IL2CrossDomainMessenger public l2Messenger;
     L2StandardBridge public l2StandardBridge;
+    
 
     function initialize(
         IL2CrossDomainMessenger _l2Messenger,
@@ -48,13 +57,11 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
 
         uint32 maxGas = _decodeGas(_gasData);
 
-        l2StandardBridge.withdrawTo(
-            address(0), // Address(0) represents ETH in L2 StandardBridge
-            l1Target,
-            _callValue,
-            uint32(maxGas),
-            ""
-        );
+        OpCrossDomainMessenger(0x4200000000000000000000000000000000000010).sendMessage{value: msg.value}({
+            target: l1Target,
+            message: "",
+            gasLimit: maxGas
+        });
 
         emit EthSentToL1(msg.value, 0);
         return true;
