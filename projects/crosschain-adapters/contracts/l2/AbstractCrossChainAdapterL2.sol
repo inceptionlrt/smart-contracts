@@ -31,7 +31,7 @@ abstract contract AbstractCrossChainAdapterL2 is
         _;
     }
 
-    function initialize(
+    function __AbstractCrossChainAdapterL1_init(
         address _l1Target,
         address _owner,
         address _operator
