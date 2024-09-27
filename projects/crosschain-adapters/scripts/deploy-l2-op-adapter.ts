@@ -23,8 +23,8 @@ async function main() {
     console.log("✅Environment variables validated. All systems nominal.");
 
     // Sanity check 2: Ensure correct network (Optimism L2)
-    if (networkName !== "optimism" && networkName !== "optimism-goerli" && networkName !== "hardhat") {
-        console.error("⚠️Error. Unsupported network detected. Please use Optimism Mainnet or Goerli. Deployment terminated.");
+    if (networkName !== "optimism" && networkName !== "optimismSepolia" && networkName !== "hardhat") {
+        console.error("⚠️Error. Unsupported network detected. Please use Optimism Mainnet or Sepolia. Deployment terminated.");
         process.exit(1);
     }
     console.log(`✅Network check complete. ${networkName} network is operational.`);
@@ -34,11 +34,14 @@ async function main() {
 
     const CrossChainAdapterOptimismL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2");
 
+    const operator = process.env.DEPLOYER_PRIVATE_KEY;
+
     // Deploy the proxy contract using OpenZeppelin's upgrades plugin
     const crossChainAdapter = await upgrades.deployProxy(CrossChainAdapterOptimismL2, [
         l2MessengerAddress,
         l2StandardBridgeAddress,
-        l1TargetAddress
+        l1TargetAddress,
+        operator
     ], {
         initializer: 'initialize',
     });

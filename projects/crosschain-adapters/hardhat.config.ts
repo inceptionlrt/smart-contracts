@@ -10,7 +10,7 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       forking: {
-        url: process.env.RPC_URL_ETHEREUM || "",
+        url: process.env.RPC_URL_OPTIMISM_SEPOLIA || "",
         blockNumber: 15000000,
       },
       chainId: 1337,  // Local chain ID for Hardhat network
