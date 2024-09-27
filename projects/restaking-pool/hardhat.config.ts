@@ -6,6 +6,7 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import fs from "fs";
+import fse from "fs-extra";
 import path from "path";
 
 const TARGET_DIR = "./contracts";
@@ -14,7 +15,7 @@ const EXTERNAL_PROJECTS = [
   "../rebalancer",
 ]
 
-const collectContracts = () => {
+const collectContractsWithSymlinks = () => {
   if (!fs.existsSync(TARGET_DIR)) {
     fs.mkdirSync(TARGET_DIR);
   }
@@ -31,8 +32,24 @@ const collectContracts = () => {
     }
   });
 };
+// collectContractsWithSymlinks();
 
-collectContracts();
+const copyContracts = () => {
+  EXTERNAL_PROJECTS.forEach((project) => {
+    const srcDir = path.resolve(project + "/contracts");
+    const dstDir = path.join(TARGET_DIR, path.basename(project));
+    console.log("src dir:", srcDir);
+    console.log("dst dir:", dstDir);
+
+    //Clear old contracts
+    fse.removeSync(dstDir);
+    fse.ensureDirSync(dstDir);
+
+    //Cope
+    fse.copySync(srcDir, dstDir, { overwrite: true });
+  });
+};
+copyContracts();
 
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
