@@ -332,10 +332,9 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         }
 
         // remainder will be refunded
-        bool success = crossChainAdapter.sendEthToL1{value: msg.value}(
-            callValue,
-            _gasData
-        );
+        bool success = crossChainAdapter.sendEthToL1{
+            value: msg.value + callValue
+        }(callValue, _gasData);
 
         if (!success) {
             revert EthToL1Failed(callValue);
