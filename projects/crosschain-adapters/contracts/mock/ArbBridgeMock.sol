@@ -4,10 +4,10 @@ import "../interface/ICrossChainAdapterL1.sol";
 
 contract ArbBridgeMock {
 
-    address public adapter;
-    address public outbox;
+    address payable private adapter;
+    address private outbox;
 
-    constructor(address _adapter, address _outbox) {
+    constructor(address payable _adapter, address _outbox) {
         adapter = _adapter;
         outbox = _outbox;
     }
