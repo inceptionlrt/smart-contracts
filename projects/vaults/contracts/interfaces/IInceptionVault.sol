@@ -76,10 +76,14 @@ interface IInceptionVault {
 
     event TreasuryUpdated(address indexed newTreasury);
 
-
     event EthSentToL1(uint256 amount);
     event AssetsInfoSentToL1(uint256 tokensAmount, uint256 ethAmount);
     event CrossChainAdapterChanged(address newCrossChainAdapter);
+
+    error OnlyOwnerOrOperator();
+    error ResultISharesZero();
+    error RatioFeedNotSet();
+    error FreeBalanceIsZero();
 
     error EthToL1Failed(uint256 amount);
     error MessageToL1Failed(uint256 tokensAmount, uint256 ethAmount);
