@@ -15,10 +15,12 @@ contract InstEthOmniVault is InceptionOmniVault {
 
     function initialize(
         address _inceptionToken,
+        address _operator,
         ICrossChainAdapterL2 _crossChainAdapter
     ) external initializer {
         __InceptionOmniVault_init(
             "InstEthOmniVault",
+            _operator,
             _inceptionToken,
             _crossChainAdapter
         );

@@ -8,7 +8,6 @@ import "./AbstractCrossChainAdapterL2.sol";
 contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
     IL2CrossDomainMessenger public l2Messenger;
     L2StandardBridge public l2StandardBridge;
-    uint256 public maxGas;
 
     function initialize(
         IL2CrossDomainMessenger _l2Messenger,
@@ -23,38 +22,38 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         );
         l2Messenger = _l2Messenger;
         l2StandardBridge = _l2StandardBridge;
-        maxGas = 20_000_000;
     }
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
-        uint256 ethAmount
+        uint256 ethAmount,
+        bytes[] calldata _gasData
     ) external override returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
+        uint32 maxGas = _decodeGas(_gasData);
         bytes memory data = abi.encodeWithSignature(
             "receiveAssetsInfo(uint256,uint256)",
             tokensAmount,
             ethAmount
         );
 
-        l2Messenger.sendMessage(
-            l1Target,
-            data,
-            200_000 // Gas limit for L1 execution
-        );
+        l2Messenger.sendMessage(l1Target, data, maxGas);
 
         emit AssetsInfoSentToL1(tokensAmount, ethAmount, 0);
         return true;
     }
 
     function sendEthToL1(
-        uint256 _callValue
+        uint256 _callValue,
+        bytes[] calldata _gasData
     ) external payable override onlyVault returns (bool success) {
         require(_callValue <= msg.value, InsufficientValueSent());
         require(l1Target != address(0), L1TargetNotSet());
 
+        uint32 maxGas = _decodeGas(_gasData);
+
         l2StandardBridge.withdrawTo(
-            address(0),
+            address(0), // Address(0) represents ETH in L2 StandardBridge
             l1Target,
             _callValue,
             uint32(maxGas),
@@ -63,5 +62,13 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
 
         emit EthSentToL1(msg.value, 0);
         return true;
+    }
+
+    function _decodeGas(
+        bytes[] calldata _gasData
+    ) internal pure returns (uint32 maxGas) {
+        maxGas = abi.decode(_gasData[0], (uint32));
+        require(maxGas > 0, SettingZeroGas());
+        return maxGas;
     }
 }

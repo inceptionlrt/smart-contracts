@@ -299,7 +299,9 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
      * @dev Sends the information about the total amount of tokens and ETH held by this contract to L1 using CrossChainAdapter.
      * @notice This only sends the info, not the actual assets.
      */
-    function sendAssetsInfoToL1() external onlyOwnerOrOperator {
+    function sendAssetsInfoToL1(
+        bytes[] calldata _gasData
+    ) external onlyOwnerOrOperator {
         if (address(crossChainAdapter) == address(0)) {
             revert CrossChainAdapterNotSet();
         }
@@ -309,7 +311,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         // Send the assets information (not the actual assets) to L1
         bool success = crossChainAdapter.sendAssetsInfoToL1(
             tokensAmount,
-            ethAmount
+            ethAmount,
+            _gasData
         );
 
         if (!success) {
@@ -323,21 +326,20 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
      * @dev Sends a specific amount of ETH to L1 using CrossChainAdapter.
      * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information. _callValue + _fees must be >= msg.value
      * @param _callValue The amount of ETH to send to L1.
-     * @param _fees The amount of ETH to pay for cross-chain submission.
      */
     function sendEthToL1(
         uint256 _callValue,
-        uint256 _fees
+        bytes[] calldata _gasData
     ) external payable onlyOwnerOrOperator {
-        uint256 totalSubmissionCost = _callValue + _fees;
-        if (totalSubmissionCost > address(this).balance) {
-            revert InsufficientEthSent(_callValue, _fees);
+        if (_callValue > address(this).balance) {
+            revert InsufficientEthSent(_callValue, msg.value);
         }
 
         // remainder will be refunded
-        bool success = crossChainAdapter.sendEthToL1{
-            value: totalSubmissionCost
-        }(_callValue, _fees);
+        bool success = crossChainAdapter.sendEthToL1{value: msg.value}(
+            _callValue,
+            _gasData
+        );
 
         if (!success) {
             revert EthToL1Failed(_callValue);
@@ -463,7 +465,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     }
 
     function setCrossChainAdapter(
-        address newCrossChainAdapter
+        address payable newCrossChainAdapter
     ) external onlyOwner {
         if (newCrossChainAdapter == address(0)) revert NullParams();
         emit CrossChainAdapterChanged(newCrossChainAdapter);
