@@ -29,10 +29,11 @@ contract CrossChainAdapterOptimismL1 is
     function initialize(
         IL1CrossDomainMessenger _l1CrossDomainMessenger,
         IL1StandardBridge _l1StandardBridge,
-        address _transactionStorage
+        address _transactionStorage,
+        address _opeator
     ) public initializer {
         __Ownable_init();
-        __AbstractCrossChainAdapterL1_init(_transactionStorage);
+        __AbstractCrossChainAdapterL1_init(_transactionStorage, _opeator);
 
         l1CrossDomainMessenger = _l1CrossDomainMessenger;
         l1StandardBridge = _l1StandardBridge;

@@ -11,6 +11,7 @@ interface ICrossChainAdapterL2 {
     error OnlyVault();
     error InsufficientValueSent();
     error TransferToVaultFailed(uint256 amount);
+    error OnlyOperatorCanCall(address caller);
 
     event MaxGasChanged(uint256 newMaxGas);
     event ReceiveTriggered(uint256 amount);

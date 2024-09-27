@@ -14,7 +14,7 @@ contract CrossChainAdapterArbitrumL1 is
 {
     IInbox public inbox;
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
-    
+
     event RetryableTicketCreated(uint256 indexed ticketId);
 
     event InboxChanged(address newInbox);
@@ -23,10 +23,11 @@ contract CrossChainAdapterArbitrumL1 is
 
     function initialize(
         address _transactionStorage,
-        address _inbox
+        address _inbox,
+        address _operator
     ) public initializer {
         __Ownable_init();
-        __AbstractCrossChainAdapterL1_init(_transactionStorage);
+        __AbstractCrossChainAdapterL1_init(_transactionStorage, _operator);
         setInbox(_inbox);
     }
 

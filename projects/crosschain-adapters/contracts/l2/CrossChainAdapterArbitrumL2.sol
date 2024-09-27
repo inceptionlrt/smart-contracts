@@ -17,6 +17,7 @@ contract CrossChainAdapterArbitrumL2 is
     ArbSys constant arbsys = ArbSys(address(100));
     address public l1Target;
     address public vault;
+    address public operator;
 
     modifier onlyVault() {
         if (vault == address(0)) {
@@ -28,6 +29,13 @@ contract CrossChainAdapterArbitrumL2 is
         _;
     }
 
+    modifier onlyOperator() {
+        if (msg.sender != operator) {
+            revert OnlyOperatorCanCall(msg.sender);
+        }
+        _;
+    }
+
     event AssetsInfoSentToL1(
         uint256 indexed tokensAmount,
         uint256 indexed ethAmount,
@@ -35,11 +43,15 @@ contract CrossChainAdapterArbitrumL2 is
     );
     event EthSentToL1(uint256 indexed amount, uint256 indexed ticketId);
 
-    // Replaces constructor for upgradeable contracts
-    function initialize(address _l1Target, address _owner) public initializer {
+    function initialize(
+        address _l1Target,
+        address _owner,
+        address _operator
+    ) public initializer {
         __Ownable_init();
         l1Target = _l1Target;
-        transferOwnership(_owner); // Set the owner after initialization
+        transferOwnership(_owner);
+        operator = _operator;
     }
 
     function setL1Target(address _l1Target) external onlyOwner {
@@ -76,7 +88,7 @@ contract CrossChainAdapterArbitrumL2 is
         vault = _vault;
     }
 
-    function recoverFunds() external onlyOwner {
+    function recoverFunds() external onlyOperator {
         (bool ok, ) = vault.call{value: address(this).balance}("");
         require(ok, TransferToVaultFailed(address(this).balance));
     }

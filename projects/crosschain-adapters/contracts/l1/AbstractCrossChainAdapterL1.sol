@@ -19,18 +19,28 @@ abstract contract AbstractCrossChainAdapterL1 is
     address public transactionStorage;
     address public l2Receiver;
     address public l2Sender;
+    address public operator;
 
     function __AbstractCrossChainAdapterL1_init(
-        address _transactionStorage
+        address _transactionStorage,
+        address _operator
     ) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
         transactionStorage = _transactionStorage;
+        operator = _operator;
     }
 
     modifier onlyRebalancer() {
         if (msg.sender != rebalancer) {
             revert OnlyRebalancerCanCall(msg.sender);
+        }
+        _;
+    }
+
+    modifier onlyOperator() {
+        if (msg.sender != operator) {
+            revert OnlyOperatorCanCall(msg.sender);
         }
         _;
     }
@@ -76,7 +86,7 @@ abstract contract AbstractCrossChainAdapterL1 is
         emit L2SenderChanged(_l2Sender);
     }
 
-    function recoverFunds() external onlyOwner {
+    function recoverFunds() external onlyOperator {
         require(rebalancer != address(0), RebalancerNotSet());
         (bool ok, ) = rebalancer.call{value: address(this).balance}("");
         require(ok, TransferToRebalancerFailed());

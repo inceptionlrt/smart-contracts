@@ -27,6 +27,7 @@ contract CrossChainAdapterOptimismL2 is
     L2StandardBridge public l2StandardBridge;
     address public l1Target;
     address public vault;
+    address public operator;
     uint256 public maxGas;
 
     event AssetsInfoSentToL1(
@@ -46,18 +47,27 @@ contract CrossChainAdapterOptimismL2 is
         _;
     }
 
-    // This function replaces the constructor for upgradeable contracts
+    modifier onlyOperator() {
+        if (msg.sender != operator) {
+            revert OnlyOperatorCanCall(msg.sender);
+        }
+        _;
+    }
+
     function initialize(
         IL2CrossDomainMessenger _l2Messenger,
         L2StandardBridge _l2StandardBridge,
-        address _l1Target
+        address _l1Target,
+        address _operator
     ) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
         l2Messenger = _l2Messenger;
         l2StandardBridge = _l2StandardBridge;
         l1Target = _l1Target;
-        maxGas = 20_000_000; // Default max gas
+        operator = _operator;
+
+        maxGas = 20_000_000;
     }
 
     function setL1Target(address _l1Target) external onlyOwner {
@@ -118,7 +128,7 @@ contract CrossChainAdapterOptimismL2 is
         return true;
     }
 
-    function recoverFunds() external onlyOwner {
+    function recoverFunds() external onlyOperator {
         (bool ok, ) = vault.call{value: address(this).balance}("");
         require(ok, TransferToVaultFailed(address(this).balance));
     }
