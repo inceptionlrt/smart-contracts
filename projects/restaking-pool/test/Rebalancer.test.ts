@@ -126,7 +126,11 @@ describe("Omnivault integration tests", function () {
 
         console.log('=== CrossChainAdapterArbitrumL1');
         const ArbAdapter = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
-        const arbAdapter = await upgrades.deployProxy(ArbAdapter, [txStorage.address, arbInboxMock.address]);
+        const arbAdapter = await upgrades.deployProxy(ArbAdapter, [
+            txStorage.address,
+            arbInboxMock.address,
+            operator.address
+        ]);
         arbAdapter.address = await arbAdapter.getAddress();
 
         console.log('=== ArbBridgeMock');
@@ -144,7 +148,8 @@ describe("Omnivault integration tests", function () {
         const optAdapter = await upgrades.deployProxy(OptAdapter, [
             optBridgeMock.address,
             optimismStandardBridge,
-            txStorage.address
+            txStorage.address,
+            operator.address
         ]);
         optAdapter.address = await optAdapter.getAddress();
         await optBridgeMock.setAdapter(optAdapter.address);
@@ -923,6 +928,10 @@ describe("Omnivault integration tests", function () {
             it("Owner", async function() {
                 expect(await arbAdapter.owner()).to.be.eq(owner.address);
             })
+
+            it("Operator", async function() {
+                expect(await arbAdapter.operator()).to.be.eq(operator.address);
+            })
         })
 
         describe("receiveL2Eth", function () {
@@ -1124,26 +1133,25 @@ describe("Omnivault integration tests", function () {
                 await snapshot.restore();
             })
 
-            it("Owner can transfer funds from adapter to rebalancer", async function() {
+            it("Operator can transfer funds from adapter to rebalancer", async function() {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: arbAdapter.address, value: amount}))
                     .to.emit(arbAdapter, "ReceiveTriggered")
                     .withArgs(amount);
 
-                const tx = arbAdapter.recoverFunds();
+                const tx = arbAdapter.connect(operator).recoverFunds();
                 await expect(tx).to.changeEtherBalance(arbAdapter, -amount);
                 await expect(tx).to.changeEtherBalance(rebalancer, amount);
             })
 
-            //TODO: only owner??
-            it("Reverts when called by not an owner", async function() {
+            it("Reverts when called by not an operator", async function() {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: arbAdapter.address, value: amount}))
                     .to.emit(arbAdapter, "ReceiveTriggered")
                     .withArgs(amount);
 
                 await expect(arbAdapter.connect(signer1).recoverFunds())
-                    .to.be.revertedWith("Ownable: caller is not the owner");
+                    .to.be.revertedWithCustomError(arbAdapter, "OnlyOperatorCanCall");
             })
 
             it.skip("Reverts when rebalancer is not set", async function() {
@@ -1158,7 +1166,7 @@ describe("Omnivault integration tests", function () {
                 await arbAdapter.setL2Receiver(target.address);
 
                 await signer1.sendTransaction({to: arbAdapter.address, value: e18});
-                await expect(arbAdapter.recoverFunds())
+                await expect(arbAdapter.connect(operator).recoverFunds())
                     .to.be.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
             })
         })
@@ -1226,15 +1234,19 @@ describe("Omnivault integration tests", function () {
             })
 
             it("l1CrossDomainMessenger", async function() {
-                await expect(optAdapter.l1CrossDomainMessenger()).to.be.eq(optBridgeMock.address);
+                expect(await optAdapter.l1CrossDomainMessenger()).to.be.eq(optBridgeMock.address);
             })
 
             it("l1StandardBridge", async function() {
-                await expect(optAdapter.l1StandardBridge()).to.be.eq(optimismStandardBridge);
+                expect(await optAdapter.l1StandardBridge()).to.be.eq(optimismStandardBridge);
             })
 
             it("Owner", async function() {
                 expect(await optAdapter.owner()).to.be.eq(owner.address);
+            })
+
+            it("Operator", async function() {
+                expect(await optAdapter.operator()).to.be.eq(operator.address);
             })
         })
 
@@ -1422,32 +1434,31 @@ describe("Omnivault integration tests", function () {
                 await snapshot.restore();
             })
 
-            it("Owner can transfer funds from adapter to rebalancer", async function() {
+            it("Operator can transfer funds from adapter to rebalancer", async function() {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: optAdapter.address, value: amount}))
                     .to.emit(optAdapter, "ReceiveTriggered")
                     .withArgs(amount);
 
-                const tx = optAdapter.recoverFunds();
+                const tx = optAdapter.connect(operator).recoverFunds();
                 await expect(tx).to.changeEtherBalance(optAdapter, -amount);
                 await expect(tx).to.changeEtherBalance(rebalancer, amount);
             })
 
-            //TODO: only owner??
-            it("Reverts when called by not an owner", async function() {
+            it("Reverts when called by not an operator", async function() {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: optAdapter.address, value: amount}))
                     .to.emit(optAdapter, "ReceiveTriggered")
                     .withArgs(amount);
 
                 await expect(optAdapter.connect(signer1).recoverFunds())
-                    .to.be.revertedWith("Ownable: caller is not the owner");
+                    .to.be.revertedWithCustomError(optAdapter, "OnlyOperatorCanCall");
             })
 
             it.skip("Reverts when rebalancer is not set", async function() {
                 await clean_snapshot.restore();
                 await txStorage.connect(owner).addChainId(ARB_ID);
-                await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+                await txStorage.connect(owner).addAdapter(ARB_ID, optAdapter.address);
                 await txStorage.connect(owner).addChainId(OPT_ID);
                 await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
 
@@ -1456,7 +1467,7 @@ describe("Omnivault integration tests", function () {
                 await optAdapter.setL2Receiver(target.address);
 
                 await signer1.sendTransaction({to: optAdapter.address, value: e18});
-                await expect(optAdapter.recoverFunds())
+                await expect(optAdapter.connect(operator).recoverFunds())
                     .to.be.revertedWithCustomError(optAdapter, "RebalancerNotSet");
             })
         })
