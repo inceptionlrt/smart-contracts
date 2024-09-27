@@ -53,8 +53,8 @@ async function main() {
 
     // Call sendEthToL1 with only the _callValue (ETH value to send)
     const callValue = ethers.parseEther("0.000001"); // The amount of ETH to send
-    const sendEthTx = await crossChainAdapter.sendEthToL1(callValue, {
-        value: callValue // Must match _callValue
+    const sendEthTx = await crossChainAdapter.sendEthToL1_2({
+        value: callValue // The amount of ETH to send
     });
     await sendEthTx.wait();
 
