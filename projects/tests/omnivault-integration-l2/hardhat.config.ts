@@ -56,8 +56,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.RPC_URL_OPTIMISM,
-        blockNumber: 125920000
+        url: process.env.MAINNET_RPC,
+        blockNumber: 20810000,
       },
       addresses: {
         OPT_DOMAIN_MESSENGER: "0x4200000000000000000000000000000000000007",

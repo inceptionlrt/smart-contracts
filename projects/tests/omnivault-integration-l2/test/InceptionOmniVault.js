@@ -8,6 +8,22 @@ BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
 };
 
+function encodeArbitrumFees(maxSubmissionCost, maxGas, gasPriceBid) {
+  const abiCoder = new ethers.AbiCoder();
+  return [abiCoder.encode(
+    ["uint256", "uint256", "uint256"],
+    [maxSubmissionCost, maxGas, gasPriceBid]
+  )];
+}
+
+function encodeOptimismFees(maxGas) {
+  const abiCoder = new ethers.AbiCoder();
+  return [abiCoder.encode(
+    ["uint256"],
+    [maxGas]
+  )];
+}
+
 const adapters = [
   {
     name: "Optimism",
@@ -20,12 +36,13 @@ const adapters = [
         args.optBridge,
         args.targetL1.address,
         args.operator.address,
-      ], { initializer: 'initialize(address,address,address,address)' });
+      ]);
       adapter.address = await adapter.getAddress();
       return adapter;
     },
     url: process.env.RPC_URL_OPTIMISM,
-    blockNumber: 125920000
+    blockNumber: 125920000,
+    feesFunc: () => encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n),
   },
   {
     name: "Arbitrum",
@@ -35,14 +52,14 @@ const adapters = [
       const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
         args.targetL1.address,
-        args.owner.address,
         args.operator.address
       ]);
       adapter.address = await adapter.getAddress();
       return adapter;
     },
     url: process.env.RPC_URL_ARBITRUM,
-    blockNumber: 257920000
+    blockNumber: 257920000,
+    feesFunc: () => encodeOptimismFees(200_000n)
   }
 ]
 
@@ -94,6 +111,19 @@ adapters.forEach(function (adapterInfo) {
     let owner, operator, targetL1, staker1, staker2, staker3, treasury;
     let snapshot;
     let TARGET;
+
+    async function addReplenishBonus(amount) {
+      let collectedFee = 0n;
+      if (amount > 0n) {
+        await omniVault.connect(staker3).deposit(staker3.address, { value: amount });
+        const shares = await iToken.balanceOf(staker3.address);
+        const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
+        const rec = await tx.wait();
+        collectedFee += (rec.logs.find((l) => l.eventName === 'FlashWithdraw')?.args.fee || 0n) / 2n;
+        console.log(`collectedFee: ${collectedFee.format()}`);
+      }
+      return collectedFee;
+    }
 
     before(async function () {
       if (process.env.CHAINS) {
@@ -309,19 +339,6 @@ adapters.forEach(function (adapterInfo) {
         },
 
       ]
-
-      async function addReplenishBonus(amount) {
-        let collectedFee = 0n;
-        if (amount > 0n) {
-          await omniVault.connect(staker3).deposit(staker3.address, { value: amount });
-          const shares = await iToken.balanceOf(staker3.address);
-          const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
-          const rec = await tx.wait();
-          collectedFee += (rec.logs.find((l) => l.eventName === 'FlashWithdraw')?.args.fee || 0n) / 2n;
-          console.log(`collectedFee: ${collectedFee.format()}`);
-        }
-        return collectedFee;
-      }
 
       args.forEach(function (arg) {
         it(`Deposit ${arg.name}`, async function () {
@@ -1162,6 +1179,74 @@ adapters.forEach(function (adapterInfo) {
         expect(await omniVault.paused()).is.true;
         await expect(omniVault.connect(staker1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
       });
+    })
+
+    describe("Bridge", function () {
+      describe("Send info", function () {
+        let TARGET = toWei(10);
+
+        beforeEach(async function () {
+          await snapshot.restore();
+          await omniVault.setTargetFlashCapacity(TARGET);
+        })
+
+        const args = [
+          {
+            name: "When there are no eth and shares",
+            depositAmount: () => 0n
+          },
+          {
+            name: "After deposit",
+            depositAmount: () => randomBI(18)
+          },
+          {
+            name: "After deposit when deposit bonus > 0",
+            depositAmount: () => randomBI(18),
+            depositBonus: true
+          },
+          {
+            name: "When there are shares, but eth was sent to L1",
+            depositAmount: () => TARGET + randomBI(18),
+            depositBonus: true,
+            sentToL1: (amount) => amount - TARGET,
+          }
+        ];
+        args.forEach(function (arg) {
+          it(`sendAssetsInfoToL1 ${arg.name}`, async function () {
+            let amount = arg.depositAmount();
+            if (amount > 0n) {
+              await omniVault.connect(staker1).deposit(staker1, { value: amount });
+            }
+
+            let depositBonus = 0n;
+            if (arg.depositBonus) {
+              depositBonus = await addReplenishBonus(TARGET);
+            }
+
+            let sentToL1Amount = 0n;
+            if(arg.sentToL1) {
+              sentToL1Amount = arg.sentToL1(amount);
+              const feeParams = adapterInfo.feesFunc();
+              const fees = 2n * 10n ** 16n;
+              await omniVault.connect(operator).sendEthToL1(sentToL1Amount, feeParams, {value: fees});
+            }
+
+            expect(await ethers.provider.getBalance(omniVault.address)).to.be.eq(amount + depositBonus - sentToL1Amount);
+
+
+          })
+
+
+        })
+
+
+        //Only operator
+        //Crosschain adapter is not set
+        //
+
+      })
+
+
     })
   })
 })
