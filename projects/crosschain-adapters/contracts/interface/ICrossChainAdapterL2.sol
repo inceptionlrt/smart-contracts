@@ -7,7 +7,9 @@ pragma solidity 0.8.26;
  */
 interface ICrossChainAdapterL2 {
     error VaultNotSet();
+    error L1TargetNotSet();
     error SettingZeroGas();
+    error SettingZeroAddress();
     error OnlyVault();
     error InsufficientValueSent();
     error TransferToVaultFailed(uint256 amount);
