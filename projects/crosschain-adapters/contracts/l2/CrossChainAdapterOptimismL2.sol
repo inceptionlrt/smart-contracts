@@ -5,8 +5,8 @@ import "@eth-optimism/contracts/L2/messaging/IL2CrossDomainMessenger.sol";
 import "./AbstractCrossChainAdapterL2.sol";
 import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
 
-interface OpCrossDomainMessenger {
-    function sendMessage(
+interface OptimismBridge {
+    function bridgeETHTo(
         address target,
         bytes calldata message,
         uint32 gasLimit
@@ -16,7 +16,8 @@ interface OpCrossDomainMessenger {
 contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
     IL2CrossDomainMessenger public l2Messenger;
     L2StandardBridge public l2StandardBridge;
-    
+    OptimismBridge public bridge =
+        OptimismBridge(0x4200000000000000000000000000000000000010);
 
     function initialize(
         IL2CrossDomainMessenger _l2Messenger,
@@ -57,7 +58,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
 
         uint32 maxGas = _decodeGas(_gasData);
 
-        OpCrossDomainMessenger(0x4200000000000000000000000000000000000010).sendMessage{value: msg.value}({
+        bridge.bridgeETHTo{value: msg.value}({
             target: l1Target,
             message: "",
             gasLimit: maxGas

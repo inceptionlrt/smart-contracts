@@ -53,10 +53,16 @@ async function main() {
 
     // Call sendEthToL1 with only the _callValue (ETH value to send)
     const callValue = ethers.parseEther("0.000001"); // The amount of ETH to send
-    const sendEthTx = await crossChainAdapter.sendEthToL1_2({
+    const gasData = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["uint256", "uint256", "uint256"],
+        [1000n, 100n, 100n]
+    );
+    // Call sendEthToL1 with _callValue (ETH value to send) and gasData as a bytes[] array
+    const sendEthTx = await crossChainAdapter.sendEthToL1(0n, [gasData], {
         value: callValue // The amount of ETH to send
     });
     await sendEthTx.wait();
+
 
     console.log("✅ ETH sent to L1 successfully.");
     console.log("🎉 Mission complete. CrossChainAdapterArbitrumL2 is now fully deployed and configured.");
