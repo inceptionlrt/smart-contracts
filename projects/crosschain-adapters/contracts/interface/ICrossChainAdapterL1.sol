@@ -20,6 +20,7 @@ interface ICrossChainAdapterL1 {
     error L2ReceiverNotSet();
     error GasDataNotProvided();
     error OnlyRebalancerCanCall(address caller);
+    error OnlyOperatorCanCall(address caller);
 
     event L2EthDeposit(uint256 amount);
     event RebalancerChanged(address newRebalancer);
