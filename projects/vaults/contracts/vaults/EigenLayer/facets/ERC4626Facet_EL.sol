@@ -25,30 +25,30 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         return _deposit(amount, msg.sender, receiver);
     }
 
-    /**
-     * @dev The `mint` function is used to mint the specified amount of shares
-     * in
-     * exchange of the corresponding assets amount from owner.
-     * @param shares The shares amount to be converted into underlying assets.
-     * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * amount of shares.
-     */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            //  revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
+    // /**
+    //  * @dev The `mint` function is used to mint the specified amount of shares
+    //  * in
+    //  * exchange of the corresponding assets amount from owner.
+    //  * @param shares The shares amount to be converted into underlying assets.
+    //  * @param receiver The address of the shares receiver.
+    //  * @return Amount of underlying assets deposited in exchange of the
+    //  * specified
+    //  * amount of shares.
+    //  */
+    // function mint(
+    //     uint256 shares,
+    //     address receiver
+    // ) public whenNotPaused returns (uint256) {
+    //     uint256 maxShares = maxMint(receiver);
+    //     if (shares > maxShares) {
+    //         //  revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
+    //     }
 
-        uint256 assetsAmount = previewMint(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+    //     uint256 assetsAmount = previewMint(shares);
+    //     _deposit(assetsAmount, msg.sender, receiver);
 
-        return assetsAmount;
-    }
+    //     return assetsAmount;
+    // }
 
     /// @notice The deposit function but with a referral code
     function depositWithReferral(
@@ -56,7 +56,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         address receiver,
         bytes32 code
     ) external whenNotPaused returns (uint256) {
-        emit IInceptionVault_EL.ReferralCode(code);
+        emit ReferralCode(code);
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -80,7 +80,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
             } else {
                 depositBonusAmount -= depositBonus;
             }
-            emit IInceptionVault_EL.DepositBonus(depositBonus);
+            emit DepositBonus(depositBonus);
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
@@ -88,13 +88,14 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
-        emit IInceptionVault_EL.Deposit(sender, receiver, amount, iShares);
+        emit Deposit(sender, receiver, amount, iShares);
         return iShares;
     }
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert NullParams();
         if (receiver == address(0)) revert NullParams();
+
         if (targetCapacity == 0) revert InceptionOnPause();
         if (treasury == address(0)) revert InceptionOnPause();
         if (!_verifyDelegated()) revert InceptionOnPause();
@@ -114,27 +115,22 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
 
         // update global state and claimer's state
         totalAmountToWithdraw += amount;
-        IInceptionVault_EL.Withdrawal storage genRequest = _claimerWithdrawals[
-            receiver
-        ];
-        genRequest.amount += (amount - 2);
+        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
+        genRequest.amount += _getAssetReceivedAmount(amount);
         claimerWithdrawalsQueue.push(
-            IInceptionVault_EL.Withdrawal({
+            Withdrawal({
                 epoch: claimerWithdrawalsQueue.length,
                 receiver: receiver,
-                amount: (amount - 2)
+                amount: _getAssetReceivedAmount(amount)
             })
         );
 
-        emit IInceptionVault_EL.Withdraw(
-            claimer,
-            receiver,
-            claimer,
-            amount,
-            iShares
-        );
+        emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
 
+    /// @dev Performs burning iToken from mgs.sender
+    /// @dev Creates a withdrawal requests based on the current ratio
+    /// @param iShares is measured in Inception token(shares)
     function flashWithdraw(uint256 iShares, address receiver) external {
         __beforeWithdraw(receiver, iShares);
 
@@ -158,14 +154,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
-        emit IInceptionVault_EL.FlashWithdraw(
-            claimer,
-            receiver,
-            claimer,
-            amount,
-            iShares,
-            fee
-        );
+        emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
     function redeem(address receiver) external {
@@ -177,19 +166,16 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 numOfWithdrawals = availableWithdrawals.length;
         uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
 
-        IInceptionVault_EL.Withdrawal storage genRequest = _claimerWithdrawals[
-            receiver
-        ];
+        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
         for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
-            IInceptionVault_EL.Withdrawal
-                storage request = claimerWithdrawalsQueue[withdrawalNum];
+            Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
             uint256 amount = request.amount;
             // update the genRequest and the global state
             genRequest.amount -= amount;
 
-            totalAmountToWithdraw -= amount;
+            totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
             redeemedWithdrawals[i] = withdrawalNum;
@@ -202,8 +188,8 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
 
         _transferAssetTo(receiver, redeemedAmount);
 
-        emit IInceptionVault_EL.RedeemedRequests(redeemedWithdrawals);
-        emit IInceptionVault_EL.Redeem(msg.sender, receiver, redeemedAmount);
+        emit RedeemedRequests(redeemedWithdrawals);
+        emit Redeem(msg.sender, receiver, redeemedAmount);
     }
 
     function _verifyDelegated() internal view returns (bool) {

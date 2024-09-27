@@ -130,6 +130,7 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
     function _getSelectorToTarget(
         bytes4 sig
     ) internal view returns (address, FuncAccess) {
+        _requireNotPaused();
         FuncData memory target = _selectorToTarget[sig];
         if (target.facet == FuncTarget.ERC4626_FACET) {
             return (userOperationFacet, target.access);

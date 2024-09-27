@@ -9,10 +9,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     function upgradeTo(address newImplementation) external {
         if (!Address.isContract(newImplementation)) revert NotContract();
 
-        emit IInceptionVault_EL.ImplementationUpgraded(
-            stakerImplementation,
-            newImplementation
-        );
+        emit ImplementationUpgraded(stakerImplementation, newImplementation);
         stakerImplementation = newImplementation;
     }
 
@@ -20,43 +17,40 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         if (newProtocolFee >= MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
 
-        emit IInceptionVault_EL.ProtocolFeeChanged(protocolFee, newProtocolFee);
+        emit ProtocolFeeChanged(protocolFee, newProtocolFee);
         protocolFee = newProtocolFee;
     }
 
     function setTreasuryAddress(address newTreasury) external {
         if (newTreasury == address(0)) revert NullParams();
 
-        emit IInceptionVault_EL.TreasuryChanged(treasury, newTreasury);
+        emit TreasuryChanged(treasury, newTreasury);
         treasury = newTreasury;
     }
 
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
-        emit IInceptionVault_EL.RatioFeedChanged(
-            address(ratioFeed),
-            address(newRatioFeed)
-        );
+        emit RatioFeedChanged(address(ratioFeed), address(newRatioFeed));
         ratioFeed = newRatioFeed;
     }
 
     function setOperator(address newOperator) external {
         if (newOperator == address(0)) revert NullParams();
 
-        emit IInceptionVault_EL.OperatorChanged(_operator, newOperator);
+        emit OperatorChanged(_operator, newOperator);
         _operator = newOperator;
     }
 
     function setMinAmount(uint256 newMinAmount) external {
-        emit IInceptionVault_EL.MinAmountChanged(minAmount, newMinAmount);
+        emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
     }
 
     function setName(string memory newVaultName) external {
         if (bytes(newVaultName).length == 0) revert NullParams();
 
-        emit IInceptionVault_EL.NameChanged(name, newVaultName);
+        emit NameChanged(name, newVaultName);
         name = newVaultName;
     }
 
@@ -68,7 +62,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
             revert EigenLayerOperatorAlreadyExists();
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
-        emit IInceptionVault_EL.ELOperatorAdded(newELOperator);
+        emit ELOperatorAdded(newELOperator);
     }
 
     function setDelegationManager(
@@ -77,7 +71,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         if (address(delegationManager) != address(0))
             revert DelegationManagerImmutable();
 
-        emit IInceptionVault_EL.DelegationManagerChanged(
+        emit DelegationManagerChanged(
             address(delegationManager),
             address(newDelegationManager)
         );
@@ -85,10 +79,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     }
 
     function setTargetFlashCapacity(uint256 newTargetCapacity) external {
-        emit IInceptionVault_EL.TargetCapacityChanged(
-            targetCapacity,
-            newTargetCapacity
-        );
+        emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
 
@@ -108,7 +99,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         optimalBonusRate = newOptimalBonusRate;
         depositUtilizationKink = newDepositUtilizationKink;
 
-        emit IInceptionVault_EL.DepositBonusParamsChanged(
+        emit DepositBonusParamsChanged(
             newMaxBonusRate,
             newOptimalBonusRate,
             newDepositUtilizationKink
@@ -131,7 +122,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         optimalWithdrawalRate = newOptimalWithdrawalRate;
         withdrawUtilizationKink = newWithdrawUtilizationKink;
 
-        emit IInceptionVault_EL.WithdrawFeeParamsChanged(
+        emit WithdrawFeeParamsChanged(
             newMaxFlashFeeRate,
             newOptimalWithdrawalRate,
             newWithdrawUtilizationKink
@@ -145,10 +136,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     ) external onlyOwner {
         if (newTimelineInSeconds < 1 days) revert InconsistentData();
 
-        emit IInceptionVault_EL.RewardsTimelineChanged(
-            rewardsTimeline,
-            newTimelineInSeconds
-        );
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
         rewardsTimeline = newTimelineInSeconds;
     }
 }

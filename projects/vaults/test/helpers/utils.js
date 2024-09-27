@@ -35,27 +35,8 @@ const calculateRatio = async (vault, token) => {
   return ratio;
 };
 
-const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
-  const receipt = await tx.wait();
-  if (receipt.logs.length !== 3) {
-    console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
-    console.log(receipt.logs);
-  }
-
-  const eigenLayerFacetFactory = await ethers.getContractFactory("EigenLayerFacet");
-  // Loop through each log in the receipt
-  let WithdrawalQueuedEvent;
-  for (const log of receipt.logs) {
-    try {
-      const event = eigenLayerFacetFactory.interface.parseLog(log);
-      if (event != null) {
-        WithdrawalQueuedEvent = event.args;
-      }
-    } catch (error) {
-      console.error("Error parsing event log:", error);
-    }
-  }
-
+const withdrawDataFromTx = async (event, operatorAddress, restaker) => {
+  const WithdrawalQueuedEvent = event.args;
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,

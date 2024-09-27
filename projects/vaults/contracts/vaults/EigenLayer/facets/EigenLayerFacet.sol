@@ -55,7 +55,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
                 approverSignatureAndExpiry
             );
 
-        emit IInceptionVault_EL.DelegatedTo(restaker, elOperator, amount);
+        emit DelegatedTo(restaker, elOperator, amount);
     }
 
     /// @dev delegates assets held in the strategy to the EL operator.
@@ -80,7 +80,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         _asset.approve(restaker, amount);
         IIEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
-        emit IInceptionVault_EL.DepositedToEL(restaker, amount);
+        emit DepositedToEL(restaker, amount);
     }
 
     /// @dev performs creating a withdrawal request from EigenLayer
@@ -136,7 +136,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
 
         _pendingWithdrawalAmount += amount;
-        emit IInceptionVault_EL.StartWithdrawal(
+        emit StartWithdrawal(
             staker,
             strategy,
             shares,
@@ -183,7 +183,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             );
         }
 
-        emit IInceptionVault_EL.WithdrawalClaimed(withdrawnAmount);
+        emit WithdrawalClaimed(withdrawnAmount);
 
         _pendingWithdrawalAmount = _pendingWithdrawalAmount < withdrawnAmount
             ? 0
@@ -280,7 +280,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         IOwnable asOwnable = IOwnable(deployedAddress);
         asOwnable.transferOwnership(owner());
 
-        emit IInceptionVault_EL.RestakerDeployed(deployedAddress);
+        emit RestakerDeployed(deployedAddress);
         return deployedAddress;
     }
 
