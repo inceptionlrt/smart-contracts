@@ -7,6 +7,13 @@ import "./AbstractCrossChainAdapterL2.sol";
 contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     ArbSys constant arbsys = ArbSys(address(100));
 
+    function initialize(
+        address _l1Target,
+        address _operator
+    ) public initializer {
+        __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
+    }
+
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
         uint256 ethAmount,

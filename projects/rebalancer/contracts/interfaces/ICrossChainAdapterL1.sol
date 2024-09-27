@@ -17,19 +17,17 @@ interface ICrossChainAdapterL1 {
     error RebalancerNotSet();
     error TxStorageNotSet();
     error InvalidValue();
-
-    event L2InfoReceived(
-        uint256 indexed networkId,
-        uint256 timestamp,
-        uint256 ethBalance,
-        uint256 inEthBalance
-    );
+    error L2ReceiverNotSet();
+    error GasDataNotProvided();
+    error OnlyRebalancerCanCall(address caller);
+    error OnlyOperatorCanCall(address caller);
 
     event L2EthDeposit(uint256 amount);
-    event RebalancerChanged(address newRebalancer);
-    event L2ReceiverChanged(address newL2Receiver);
-    event L2SenderChanged(address newL2Sender);
-    event TxStorageChanged(address newTxStorage);
+    event RebalancerChanged(address prevRebalancer, address newRebalancer);
+    event L2ReceiverChanged(address prevL2Receiver, address newL2Receiver);
+    event L2SenderChanged(address prevL2Sender, address newL2Sender);
+    event TxStorageChanged(address prevTxStorage, address newTxStorage);
+    event ReceiveTriggered(address caller, uint256 amount);
 
     function receiveL2Info(
         uint256 _timestamp,
@@ -44,5 +42,9 @@ interface ICrossChainAdapterL1 {
 
     function getChainId() external returns (uint24);
 
+    function recoverFunds() external;
+
     function receiveL2Eth() external payable;
+
+    receive() external payable;
 }
