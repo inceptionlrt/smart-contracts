@@ -1,3 +1,4 @@
+import "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
@@ -52,6 +53,18 @@ copyContracts();
 
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
+  networks: {
+    hardhat: {
+      forking: {
+        url: process.env.RPC_URL_OPTIMISM,
+        blockNumber: 125920000
+      },
+      addresses: {
+        OPT_DOMAIN_MESSENGER: "0x4200000000000000000000000000000000000007",
+        OPT_BRIDGE: "0x4200000000000000000000000000000000000010"
+      }
+    },
+  },
   solidity: {
     version: "0.8.26",
     settings: {
