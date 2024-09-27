@@ -360,7 +360,7 @@ describe("Inception omni vault", function() {
     it("Reverts when shares is 0", async function () {
       await omniVault.setMinAmount(0n);
       await expect(omniVault.connect(staker1).deposit(staker1.address, { value: 0n }))
-        .to.be.revertedWith("InceptionVault: result iShares 0");
+        .to.be.revertedWithCustomError(omniVault, "ResultISharesZero");
     });
   })
 
