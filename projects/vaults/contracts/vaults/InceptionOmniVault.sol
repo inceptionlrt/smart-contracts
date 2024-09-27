@@ -21,11 +21,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 newTargetCapacity
     );
 
-    error InsufficientEthSent(uint256 _callValue, uint256 _fees);
-    error OnlyOwnerOrOperator();
-    error ResultISharesZero();
-    error RatioFeedNotSet();
-
     modifier onlyOwnerOrOperator() {
         if (msg.sender == owner() || msg.sender == operator) {
             revert OnlyOwnerOrOperator();
@@ -305,8 +300,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (address(crossChainAdapter) == address(0)) {
             revert CrossChainAdapterNotSet();
         }
-        uint256 tokensAmount = getTotalTokens();
-        uint256 ethAmount = getTotalEth();
+        uint256 tokensAmount = geTotalUnderlyingToken();
+        uint256 ethAmount = getTotalDeposited();
 
         // Send the assets information (not the actual assets) to L1
         bool success = crossChainAdapter.sendAssetsInfoToL1(
@@ -323,37 +318,29 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     }
 
     /**
-     * @dev Sends a specific amount of ETH to L1 using CrossChainAdapter.
-     * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information. _callValue + _fees must be >= msg.value
-     * @param _callValue The amount of ETH to send to L1.
+     * @dev Sends a free amount of ETH to L1 using CrossChainAdapter.
+     * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information. msg.value is used to pay tx fees
+     * @param _gasData used to decode Gas parameters by the L2 Adapter
      */
     function sendEthToL1(
-        uint256 _callValue,
         bytes[] calldata _gasData
     ) external payable onlyOwnerOrOperator {
-        if (_callValue > address(this).balance) {
-            revert InsufficientEthSent(_callValue, msg.value);
+        uint256 callValue = getFreeBalance();
+
+        if (callValue == 0) {
+            revert FreeBalanceIsZero();
         }
 
         // remainder will be refunded
-        bool success = crossChainAdapter.sendEthToL1{value: msg.value}(
-            _callValue,
-            _gasData
-        );
+        bool success = crossChainAdapter.sendEthToL1{
+            value: msg.value + callValue
+        }(callValue, _gasData);
 
         if (!success) {
-            revert EthToL1Failed(_callValue);
+            revert EthToL1Failed(callValue);
         }
 
-        emit EthSentToL1(_callValue);
-    }
-
-    function getTotalTokens() public view returns (uint256) {
-        return IERC20(address(inceptionToken)).totalSupply();
-    }
-
-    function getTotalEth() public view returns (uint256) {
-        return address(this).balance;
+        emit EthSentToL1(callValue);
     }
 
     /*//////////////////////////////
@@ -369,6 +356,21 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
 
     function getFlashCapacity() public view returns (uint256 total) {
         return totalAssets() - depositBonusAmount;
+    }
+
+    function getFreeBalance() public view returns (uint256 total) {
+        return
+            getFlashCapacity() < targetCapacity
+                ? 0
+                : getFlashCapacity() - targetCapacity;
+    }
+
+    function getTotalDeposited() public view returns (uint256) {
+        return totalAssets() - depositBonusAmount;
+    }
+
+    function geTotalUnderlyingToken() public view returns (uint256) {
+        return IERC20(address(inceptionToken)).totalSupply();
     }
 
     /*//////////////////////////////

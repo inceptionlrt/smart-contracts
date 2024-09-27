@@ -15,11 +15,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         address _l1Target,
         address _operator
     ) public initializer {
-        __AbstractCrossChainAdapterL1_init(
-            _l1Target,
-            _msgSender(),
-            _operator
-        );
+        __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
         l2Messenger = _l2Messenger;
         l2StandardBridge = _l2StandardBridge;
     }
