@@ -22,7 +22,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     );
 
     modifier onlyOwnerOrOperator() {
-        if (msg.sender == owner() || msg.sender == operator) {
+        if (msg.sender != owner() && msg.sender != operator) {
             revert OnlyOwnerOrOperator();
         }
         _;
