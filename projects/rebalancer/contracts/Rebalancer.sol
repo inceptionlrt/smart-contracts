@@ -27,7 +27,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         _;
     }
 
-    error RatioDifferenceTooHigh();
     error TransferToLockboxFailed();
     error InETHAddressNotSet();
     error SettingZeroAddress();
