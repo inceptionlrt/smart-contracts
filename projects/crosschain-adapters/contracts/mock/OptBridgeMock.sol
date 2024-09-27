@@ -32,6 +32,10 @@ contract OptBridgeMock {
         adapter = _adapter;
     }
 
+    function setL2Sender(address _l2Sender) external {
+        l2Sender = _l2Sender;
+    }
+
     function xDomainMessageSender() external view returns (address) {
         return l2Sender;
     }
