@@ -111,7 +111,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
-        if (iShares > 0) {
+        if (iShares == 0) {
             revert ResultISharesZero();
         }
     }
