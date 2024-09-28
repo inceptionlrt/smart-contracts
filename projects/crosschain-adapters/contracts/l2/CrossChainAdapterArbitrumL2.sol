@@ -21,7 +21,8 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     ) external override returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
         bytes memory data = abi.encodeWithSignature(
-            "receiveAssetsInfo(uint256,uint256)",
+            "receiveL2Info(uint256,uint256,uint256)",
+            block.timestamp,
             tokensAmount,
             ethAmount
         );
