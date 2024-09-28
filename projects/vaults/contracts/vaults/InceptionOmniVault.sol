@@ -223,7 +223,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 capacity
     ) internal view returns (uint256 bonus) {
         uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
-            MAX_PERCENT;
+                    MAX_PERCENT;
 
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
@@ -258,7 +258,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
         uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) /
-            MAX_PERCENT;
+                    MAX_PERCENT;
 
         /// @dev the utilization rate is greater 1, [ :100] %
         if (amount > 0 && capacity > targetCapacity) {
@@ -330,9 +330,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         }
 
         // remainder will be refunded
-        bool success = crossChainAdapter.sendEthToL1{
-            value: msg.value + callValue
-        }(callValue, _gasData);
+        bool success = crossChainAdapter.sendEthToL1{value: callValue}(callValue, _gasData);
 
         if (!success) {
             revert EthToL1Failed(callValue);
