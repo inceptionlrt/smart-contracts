@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.27;
 
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -129,8 +129,9 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         );
     }
 
-    /// @dev setRewardsTimeline ...
-    /// @dev newTimelineInDays is measured in seconds
+    /**
+     * @param newTimelineInSeconds is measured in seconds
+     */
     function setRewardsTimeline(
         uint256 newTimelineInSeconds
     ) external onlyOwner {

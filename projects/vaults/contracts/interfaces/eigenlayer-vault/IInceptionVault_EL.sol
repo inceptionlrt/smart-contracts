@@ -5,13 +5,32 @@ import "./eigen-core/IStrategyManager.sol";
 import "../common/IInceptionToken.sol";
 
 interface IInceptionVault_EL {
-    /*///////////////////
-    ////// Events //////
-    /////////////////*/
+    enum FuncTarget {
+        SETTER_FACET,
+        EIGEN_LAYER_FACET,
+        ERC4626_FACET
+    }
 
-    /// @dev Epoch represents the period of the rebalancing process
-    /// @dev Receiver is a receiver of assets in claim()
-    /// @dev Amount represents the exact amount of the asset to be claimed
+    enum FuncAccess {
+        EVERYONE,
+        ONLY_OPERATOR,
+        ONLY_OWNER
+    }
+
+    struct FuncData {
+        FuncTarget facet;
+        FuncAccess access;
+    }
+
+    /*/////////////////////////////////////////////////////////////////////
+    /////////////////////////////// Events ///////////////////////////////
+    ///////////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev Epoch represents the period of the rebalancing process
+     * @dev Receiver is a receiver of assets in claim()
+     * @dev Amount represents the exact amount of the asset to be claimed
+     */
     struct Withdrawal {
         uint256 epoch;
         address receiver;
@@ -26,8 +45,6 @@ interface IInceptionVault_EL {
         address delegatedAddress,
         uint256 nonce
     );
-
-    event StartMellowWithdrawal(address indexed stakerAddress, uint256 amount);
 
     event DepositedToEL(address indexed stakerAddress, uint256 amount);
 
@@ -91,8 +108,6 @@ interface IInceptionVault_EL {
 
     event TreasuryChanged(address prevValue, address newValue);
 
-    event MellowRestakerChanged(address prevValue, address newValue);
-
     event ReferralCode(bytes32 indexed code);
 
     event DepositBonus(uint256 amount);
@@ -115,7 +130,9 @@ interface IInceptionVault_EL {
 
     event RewardsAdded(uint256 amount, uint256 startTimeline);
 
-    // function inceptionToken() external view returns (IInceptionToken);
+    event EigenLayerFacetChanged(address prevValue, address newValue);
 
-    // function ratio() external view returns (uint256);
+    event SetterFacetChanged(address prevValue, address newValue);
+
+    event ERC4626FacetChanged(address prevValue, address newValue);
 }

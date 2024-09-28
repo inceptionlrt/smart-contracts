@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.27;
 
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../InceptionVaultStorage_EL.sol";
 
+/**
+ * @title The InceptionVault_EL contract
+ * @notice Aims to maximize the profit of EigenLayer for a certain asset.
+ * @author The InceptionLRT team
+ */
 contract EigenLayerFacet is InceptionVaultStorage_EL {
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {

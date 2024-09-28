@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "../InceptionVaultStorage_EL.sol";
+import "../../InceptionVaultStorage_EL.sol";
 
 contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
@@ -15,9 +15,11 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         if (iShares == 0) revert DepositInconsistentResultedState();
     }
 
-    /// @dev Transfers the msg.sender's assets to the vault.
-    /// @dev Mints Inception tokens in accordance with the current ratio.
-    /// @dev Issues the tokens to the specified receiver address.
+    /**
+     * @dev Transfers the msg.sender's assets to the vault.
+     * @dev Mints Inception tokens in accordance with the current ratio.
+     * @dev Issues the tokens to the specified receiver address.
+     */
     function deposit(
         uint256 amount,
         address receiver
@@ -25,30 +27,30 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         return _deposit(amount, msg.sender, receiver);
     }
 
-    // /**
-    //  * @dev The `mint` function is used to mint the specified amount of shares
-    //  * in
-    //  * exchange of the corresponding assets amount from owner.
-    //  * @param shares The shares amount to be converted into underlying assets.
-    //  * @param receiver The address of the shares receiver.
-    //  * @return Amount of underlying assets deposited in exchange of the
-    //  * specified
-    //  * amount of shares.
-    //  */
-    // function mint(
-    //     uint256 shares,
-    //     address receiver
-    // ) public whenNotPaused returns (uint256) {
-    //     uint256 maxShares = maxMint(receiver);
-    //     if (shares > maxShares) {
-    //         //  revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-    //     }
+    /**
+     * @dev The `mint` function is used to mint the specified amount of shares
+     * in
+     * exchange of the corresponding assets amount from owner.
+     * @param shares The shares amount to be converted into underlying assets.
+     * @param receiver The address of the shares receiver.
+     * @return Amount of underlying assets deposited in exchange of the
+     * specified
+     * amount of shares.
+     */
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public whenNotPaused returns (uint256) {
+        uint256 maxShares = maxMint(receiver);
+        if (shares > maxShares) {
+            //  revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
+        }
 
-    //     uint256 assetsAmount = previewMint(shares);
-    //     _deposit(assetsAmount, msg.sender, receiver);
+        uint256 assetsAmount = previewMint(shares);
+        _deposit(assetsAmount, msg.sender, receiver);
 
-    //     return assetsAmount;
-    // }
+        return assetsAmount;
+    }
 
     /// @notice The deposit function but with a referral code
     function depositWithReferral(
@@ -206,5 +208,24 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         ) return false;
 
         return true;
+    }
+
+    /***
+     *
+     */
+
+    /// @dev The functions below serve the proper withdrawal and claiming operations
+    /// @notice Since a particular LST loses some wei on each transfer,
+    /// this needs to be taken into account
+    function _getAssetWithdrawAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
+        return amount;
+    }
+
+    function _getAssetReceivedAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
+        return amount;
     }
 }

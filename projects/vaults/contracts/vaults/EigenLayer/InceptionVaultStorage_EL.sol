@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.27;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -19,6 +19,12 @@ import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eig
 import {Convert} from "../../lib/Convert.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 
+/**
+ * @title InceptionVaultStorage_EL
+ * @notice Manages the storage variables and getter functions for the Inception Vault, which interacts with EigenLayer and manages delegation, withdrawals, and rewards.
+ * @dev This contract extends the Pausable, Ownable, and ReentrancyGuard patterns.
+ * @author The InceptionLRT team
+ */
 contract InceptionVaultStorage_EL is
     PausableUpgradeable,
     OwnableUpgradeable,
@@ -35,15 +41,14 @@ contract InceptionVaultStorage_EL is
 
     uint256 public epoch;
 
-    /// @dev inception operator
+    /// @dev Operator for the inception vault
     address internal _operator;
 
-    /// @dev represents the pending amount to be redeemed by claimers,
-    /// @notice + amount to undelegate from EigenLayer
+    /// @notice Represents the pending amount to be redeemed by claimers and to be undelegated from EigenLayer.
     uint256 public totalAmountToWithdraw;
 
-    /// @dev represents the amount pending processing until it is claimed
-    /// @dev amount measured in asset
+    /// @dev Represents the amount pending processing until claimed.
+    /// @notice Amount is measured in the vault's asset.
     uint256 internal _pendingWithdrawalAmount;
 
     IDelegationManager public delegationManager;
@@ -53,28 +58,27 @@ contract InceptionVaultStorage_EL is
     address internal constant _MOCK_ADDRESS =
         0x0000000000000000000000000012345000000000;
 
-    /// @dev heap reserved for the claimers
+    /// @dev Reserved for claimers' withdrawal requests.
     uint256 public redeemReservedAmount;
 
-    /// @dev EigenLayer operator -> inception staker
+    /// @dev Maps EigenLayer operators to Inception stakers.
     mapping(address => address) internal _operatorRestakers;
     address[] public restakers;
 
     uint256 public depositBonusAmount;
 
-    /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
+    /// @dev Target capacity for the vault, represented in percentage terms (max 100%).
     uint256 public targetCapacity;
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
     address public eigenLayerFacet;
-    address public userOperationFacet;
+    address public erc4626Facet;
     address public setterFacet;
 
     /// @dev constants are not stored in the storage
     uint256[50 - 16] private __reserver;
 
-    /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
@@ -82,16 +86,13 @@ contract InceptionVaultStorage_EL is
 
     mapping(address => Withdrawal) internal _claimerWithdrawals;
 
-    /// @dev the unique InceptionVault name
+    /// @dev Unique name of the InceptionVault.
     string public name;
 
-    /// @dev Factory variables
+    /// @dev Factory implementation address for creating stakers.
     address public stakerImplementation;
 
-    /**
-     *  @dev Flash withdrawal params
-     */
-
+    // Flash withdrawal parameters
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
@@ -99,34 +100,37 @@ contract InceptionVaultStorage_EL is
     address public treasury;
     uint64 public protocolFee;
 
-    /// @dev deposit bonus
     uint64 public maxBonusRate;
     uint64 public optimalBonusRate;
     uint64 public depositUtilizationKink;
 
-    /// @dev flash withdrawal fee
     uint64 public maxFlashFeeRate;
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
     uint256 public currentRewards;
-
-    /// @dev blockTime
     uint256 public startTimeline;
-
-    /// @dev in days
     uint256 public rewardsTimeline;
 
-    function __InceptionAssetsHandler_init(
+    mapping(bytes4 => FuncData) internal _selectorToTarget;
+
+    /**
+     * @notice Initializes the Inception Assets Handler
+     * @dev This function is called during contract deployment.
+     * @param assetAddress The address of the underlying ERC20 token.
+     */
+    function __InceptionVaultStorage_EL_init(
         IERC20 assetAddress
     ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
-
         _asset = assetAddress;
     }
 
-    /// @dev returns the total deposited into asset strategy
+    /**
+     * @notice Returns the total deposited amount in the vault strategy.
+     * @return The total assets delegated, held in the vault, and pending withdrawal.
+     */
     function getTotalDeposited() public view returns (uint256) {
         return
             getTotalDelegated() +
@@ -135,6 +139,10 @@ contract InceptionVaultStorage_EL is
             depositBonusAmount;
     }
 
+    /**
+     * @notice Returns the total amount delegated to all restakers in EigenLayer.
+     * @return total The total delegated amount.
+     */
     function getTotalDelegated() public view returns (uint256 total) {
         uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ++i) {
@@ -144,6 +152,10 @@ contract InceptionVaultStorage_EL is
         return total + strategy.userUnderlyingView(address(this));
     }
 
+    /**
+     * @notice Returns the available balance that can be used for flash withdrawals.
+     * @return total The total free balance available for flash withdrawals.
+     */
     function getFreeBalance() public view returns (uint256 total) {
         return
             getFlashCapacity() < _getTargetCapacity()
@@ -151,6 +163,10 @@ contract InceptionVaultStorage_EL is
                 : getFlashCapacity() - _getTargetCapacity();
     }
 
+    /**
+     * @notice Returns the amount pending withdrawal from EigenLayer.
+     * @return total The pending withdrawal amount.
+     */
     function getPendingWithdrawalAmountFromEL()
         public
         view
@@ -159,65 +175,16 @@ contract InceptionVaultStorage_EL is
         return _pendingWithdrawalAmount;
     }
 
-    function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - redeemReservedAmount - depositBonusAmount;
+    function implementation() external view returns (address) {
+        return stakerImplementation;
     }
 
-    function _getTargetCapacity() internal view returns (uint256) {
-        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
-    }
-
-    /// @dev returns the address of the underlying token used for the vault for accounting, depositing, withdrawing.
-    function asset() public view returns (address) {
-        return address(_asset);
-    }
-
-    /// @dev returns the balance of iVault in the asset
-    function totalAssets() public view returns (uint256) {
-        uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
-        uint256 totalDays = rewardsTimeline / 1 days;
-        if (dayNum > totalDays) return _asset.balanceOf(address(this));
-
-        uint256 reservedRewards = (currentRewards / totalDays) *
-            (totalDays - dayNum);
-
-        return (_asset.balanceOf(address(this)) - reservedRewards);
-    }
-
-    function _transferAssetFrom(
-        address staker,
-        uint256 amount
-    ) internal returns (uint256) {
-        uint256 depositedBefore = _asset.balanceOf(address(this));
-
-        if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed(address(_asset));
-
-        return _asset.balanceOf(address(this)) - depositedBefore;
-    }
-
-    function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount))
-            revert TransferAssetFailed(address(_asset));
-    }
-
+    /**
+     * @notice Returns the current vault-to-underlying token ratio from the InceptionRatioFeed.
+     * @return The ratio used for converting between vault shares and assets.
+     */
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
-    }
-
-    /// @dev The functions below serve the proper withdrawal and claiming operations
-    /// @notice Since a particular LST loses some wei on each transfer,
-    /// this needs to be taken into account
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
     }
 
     function getDelegatedTo(
@@ -232,6 +199,12 @@ contract InceptionVaultStorage_EL is
         return _claimerWithdrawals[claimer].amount;
     }
 
+    /**
+     * @notice Checks if the given claimer is able to redeem any withdrawals.
+     * @param claimer The address of the claimer.
+     * @return able Indicates whether the claimer can redeem withdrawals.
+     * @return availableWithdrawals The array of indices where the claimer has available withdrawals.
+     */
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool able, uint256[] memory) {
@@ -259,8 +232,31 @@ contract InceptionVaultStorage_EL is
         return (able, availableWithdrawals);
     }
 
-    function implementation() external view returns (address) {
-        return stakerImplementation;
+    /*********************************************************************
+     ****************************** ERC4626 ******************************
+     *********************************************************************/
+
+    /**
+     * @notice Returns the address of the asset used in the vault.
+     * @return The address of the underlying ERC20 token used for accounting, depositing, and withdrawing.
+     */
+    function asset() public view returns (address) {
+        return address(_asset);
+    }
+
+    /**
+     * @notice Returns the total assets held by the vault.
+     * @return The total balance of the vault in the underlying asset.
+     */
+    function totalAssets() public view returns (uint256) {
+        uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (dayNum > totalDays) return _asset.balanceOf(address(this));
+
+        uint256 reservedRewards = (currentRewards / totalDays) *
+            (totalDays - dayNum);
+
+        return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
     // @dev See {IERC4626-convertToShares}.
@@ -360,6 +356,18 @@ contract InceptionVaultStorage_EL is
         return _convertToAssets(shares);
     }
 
+    /***********************************************************************
+     ************************* FlashPool Functions *************************
+     ***********************************************************************/
+
+    /**
+     * @notice Returns the flash withdrawal capacity.
+     * @return total The total assets available for flash withdrawal.
+     */
+    function getFlashCapacity() public view returns (uint256 total) {
+        return totalAssets() - redeemReservedAmount - depositBonusAmount;
+    }
+
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
         uint256 amount
@@ -381,7 +389,6 @@ contract InceptionVaultStorage_EL is
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
-
         return
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
@@ -391,5 +398,81 @@ contract InceptionVaultStorage_EL is
                 maxFlashFeeRate,
                 _getTargetCapacity()
             );
+    }
+
+    /// TODO
+    function setSignature(
+        bytes4 sig,
+        FuncTarget _target,
+        FuncAccess _access
+    ) external {
+        _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
+        //  emit SignatureSet(target, sig);
+    }
+
+    /*********************************************************************
+     ************************* Internal function *************************
+     *********************************************************************/
+
+    /**
+     * @notice Returns the target capacity based on the vault's configuration.
+     * @dev This function calculates the vault's target capacity as a percentage of the total deposited amount.
+     * @return The target capacity.
+     */
+    function _getTargetCapacity() internal view returns (uint256) {
+        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
+    }
+
+    function _getSelectorToTarget(
+        bytes4 sig
+    ) internal view returns (address, FuncAccess) {
+        _requireNotPaused();
+        FuncData memory target = _selectorToTarget[sig];
+        if (target.facet == FuncTarget.ERC4626_FACET) {
+            return (erc4626Facet, target.access);
+        }
+        if (target.facet == FuncTarget.EIGEN_LAYER_FACET) {
+            return (eigenLayerFacet, target.access);
+        }
+        if (target.facet == FuncTarget.SETTER_FACET) {
+            return (setterFacet, target.access);
+        }
+        return (address(0), FuncAccess.EVERYONE);
+    }
+
+    function _verifyAccess(FuncAccess access) internal view {
+        if (access == FuncAccess.ONLY_OWNER) {
+            _checkOwner();
+        } else if (access == FuncAccess.ONLY_OPERATOR) {
+            if (msg.sender != _operator) revert OnlyOperatorAllowed();
+        }
+    }
+
+    /**
+     * @dev Internal function to transfer assets from the staker to the vault.
+     * @param staker The address of the staker.
+     * @param amount The amount to transfer.
+     * @return The actual amount transferred.
+     */
+    function _transferAssetFrom(
+        address staker,
+        uint256 amount
+    ) internal returns (uint256) {
+        uint256 depositedBefore = _asset.balanceOf(address(this));
+
+        if (!_asset.transferFrom(staker, address(this), amount))
+            revert TransferAssetFromFailed(address(_asset));
+
+        return _asset.balanceOf(address(this)) - depositedBefore;
+    }
+
+    /**
+     * @dev Internal function to transfer assets from the vault to the receiver.
+     * @param receiver The address to receive the assets.
+     * @param amount The amount to transfer.
+     */
+    function _transferAssetTo(address receiver, uint256 amount) internal {
+        if (!_asset.transfer(receiver, amount))
+            revert TransferAssetFailed(address(_asset));
     }
 }

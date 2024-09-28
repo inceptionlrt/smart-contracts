@@ -1,34 +1,36 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.27;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "./InceptionVaultStorage_EL.sol";
 
-import "hardhat/console.sol";
-
-/// @author The InceptionLRT team
-/// @title The InceptionVault_EL contract
-/// @notice Aims to maximize the profit of EigenLayer for a certain asset.
+/**
+ * @title The InceptionVault_EL contract
+ * @notice Aims to maximize the profit of EigenLayer for a certain asset.
+ * @author The InceptionLRT team
+ */
 contract InceptionVault_EL is InceptionVaultStorage_EL {
-    enum FuncTarget {
-        SETTER_FACET,
-        EIGEN_LAYER_FACET,
-        ERC4626_FACET
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() payable {
+        _disableInitializers();
     }
 
-    enum FuncAccess {
-        EVERYONE,
-        ONLY_OPERATOR,
-        ONLY_OWNER
+    function initialize(
+        string memory vaultName,
+        address operatorAddress,
+        IStrategyManager _strategyManager,
+        IInceptionToken _inceptionToken,
+        IStrategy _assetStrategy
+    ) external initializer {
+        __InceptionVault_init(
+            vaultName,
+            operatorAddress,
+            _strategyManager,
+            _inceptionToken,
+            _assetStrategy
+        );
     }
-
-    struct FuncData {
-        FuncTarget facet;
-        FuncAccess access;
-    }
-
-    mapping(bytes4 => FuncData) internal _selectorToTarget;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -61,10 +63,6 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
         treasury = msg.sender;
     }
 
-    /*//////////////////////////////
-    ////// Factory functions //////
-    ////////////////////////////*/
-
     function __EigenLayerHandler_init(
         IStrategyManager _strategyManager,
         IStrategy _assetStrategy
@@ -72,7 +70,7 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
         strategyManager = _strategyManager;
         strategy = _assetStrategy;
 
-        __InceptionAssetsHandler_init(_assetStrategy.underlyingToken());
+        __InceptionVaultStorage_EL_init(_assetStrategy.underlyingToken());
         // approve spending by strategyManager
         if (!_asset.approve(address(strategyManager), type(uint256).max))
             revert ApproveError();
@@ -83,14 +81,23 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
     ////////////////////////*/
 
     function setEigenLayerFacet(address newEigenLayerFacet) external {
+        if (!Address.isContract(newEigenLayerFacet)) revert NotContract();
+
+        emit EigenLayerFacetChanged(eigenLayerFacet, newEigenLayerFacet);
         eigenLayerFacet = newEigenLayerFacet;
     }
 
-    function setUserOperationFacet(address newUserOperationFacet) external {
-        userOperationFacet = newUserOperationFacet;
+    function setERC4626Facet(address newERC4626Facet) external {
+        if (!Address.isContract(newERC4626Facet)) revert NotContract();
+
+        emit ERC4626FacetChanged(erc4626Facet, newERC4626Facet);
+        erc4626Facet = newERC4626Facet;
     }
 
     function setSetterFacet(address newSetterFacet) external {
+        if (!Address.isContract(newSetterFacet)) revert NotContract();
+
+        emit SetterFacetChanged(setterFacet, newSetterFacet);
         setterFacet = newSetterFacet;
     }
 
@@ -113,42 +120,6 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
             default {
                 //    resultData := mload(0)
             }
-        }
-    }
-
-    /// TODO
-    function setSignature(
-        bytes4 sig,
-        FuncTarget _target,
-        FuncAccess _access
-    ) external {
-        // FuncData storage data =
-        _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
-        //  emit SignatureSet(target, sig);
-    }
-
-    function _getSelectorToTarget(
-        bytes4 sig
-    ) internal view returns (address, FuncAccess) {
-        _requireNotPaused();
-        FuncData memory target = _selectorToTarget[sig];
-        if (target.facet == FuncTarget.ERC4626_FACET) {
-            return (userOperationFacet, target.access);
-        }
-        if (target.facet == FuncTarget.EIGEN_LAYER_FACET) {
-            return (eigenLayerFacet, target.access);
-        }
-        if (target.facet == FuncTarget.SETTER_FACET) {
-            return (setterFacet, target.access);
-        }
-        return (address(0), FuncAccess.EVERYONE);
-    }
-
-    function _verifyAccess(FuncAccess access) internal view {
-        if (access == FuncAccess.ONLY_OWNER) {
-            _checkOwner();
-        } else if (access == FuncAccess.ONLY_OPERATOR) {
-            if (msg.sender != _operator) revert OnlyOperatorAllowed();
         }
     }
 
