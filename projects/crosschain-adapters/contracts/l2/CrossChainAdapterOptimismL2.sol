@@ -46,7 +46,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         uint256 tokensAmount,
         uint256 ethAmount,
         bytes[] calldata _gasData
-    ) external override returns (bool success) {
+    ) external payable override returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
         uint32 maxGas = _decodeGas(_gasData);
         bytes memory data = abi.encodeWithSignature(
@@ -56,7 +56,11 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
             ethAmount
         );
 
-        crossDomainMessenger.sendMessage(l1Target, data, maxGas);
+        crossDomainMessenger.sendMessage{value: msg.value}(
+            l1Target,
+            data,
+            maxGas
+        );
 
         emit AssetsInfoSentToL1(tokensAmount, ethAmount, 0);
         return true;

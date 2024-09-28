@@ -18,7 +18,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
         uint256 tokensAmount,
         uint256 ethAmount,
         bytes[] calldata
-    ) external override returns (bool success) {
+    ) external payable override returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
         bytes memory data = abi.encodeWithSignature(
             "receiveL2Info(uint256,uint256,uint256)",
@@ -27,7 +27,10 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
             ethAmount
         );
 
-        uint256 withdrawalId = arbsys.sendTxToL1(l1Target, data);
+        uint256 withdrawalId = arbsys.sendTxToL1{value: msg.value}(
+            l1Target,
+            data
+        );
 
         emit AssetsInfoSentToL1(tokensAmount, ethAmount, withdrawalId);
         return true;
