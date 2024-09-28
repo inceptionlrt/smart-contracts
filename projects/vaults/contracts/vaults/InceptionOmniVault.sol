@@ -296,7 +296,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
      */
     function sendAssetsInfoToL1(
         bytes[] calldata _gasData
-    ) external onlyOwnerOrOperator {
+    ) external payable onlyOwnerOrOperator {
         if (address(crossChainAdapter) == address(0)) {
             revert CrossChainAdapterNotSet();
         }
@@ -304,7 +304,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 ethAmount = getTotalDeposited();
 
         // Send the assets information (not the actual assets) to L1
-        bool success = crossChainAdapter.sendAssetsInfoToL1(
+        bool success = crossChainAdapter.sendAssetsInfoToL1{value: msg.value}(
             tokensAmount,
             ethAmount,
             _gasData
@@ -313,8 +313,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (!success) {
             revert MessageToL1Failed(tokensAmount, ethAmount);
         }
-
-        emit AssetsInfoSentToL1(tokensAmount, ethAmount);
     }
 
     /**
@@ -339,8 +337,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (!success) {
             revert EthToL1Failed(callValue);
         }
-
-        emit EthSentToL1(callValue);
     }
 
     /*//////////////////////////////

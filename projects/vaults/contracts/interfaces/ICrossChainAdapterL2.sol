@@ -9,7 +9,9 @@ interface ICrossChainAdapterL2 {
     error VaultNotSet();
     error L1TargetNotSet();
     error SettingZeroGas();
+    error GasDataTooShort();
     error SettingZeroAddress();
+    error SendingZeroValue();
     error OnlyVault();
     error InsufficientValueSent();
     error TransferToVaultFailed(uint256 amount);
@@ -28,7 +30,7 @@ interface ICrossChainAdapterL2 {
         uint256 tokensAmount,
         uint256 ethAmount,
         bytes[] calldata _gasData
-    ) external returns (bool success);
+    ) external payable returns (bool success);
 
     function sendEthToL1(
         uint256 _callValue,
