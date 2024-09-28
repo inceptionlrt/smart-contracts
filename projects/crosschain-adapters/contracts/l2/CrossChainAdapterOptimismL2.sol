@@ -6,28 +6,32 @@ import "./AbstractCrossChainAdapterL2.sol";
 import "@eth-optimism/contracts/L2/messaging/L2StandardBridge.sol";
 
 interface OptimismBridge {
-    function bridgeETHTo(
+    function sendMessage(
         address target,
-        bytes calldata message,
+        bytes calldata data,
         uint32 gasLimit
+    ) external payable;
+
+    function bridgeETHTo(
+        address _to,
+        uint32 _minGasLimit,
+        bytes calldata _extraData
     ) external payable;
 }
 
 contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
-    IL2CrossDomainMessenger public l2Messenger;
-    L2StandardBridge public l2StandardBridge;
-    OptimismBridge public bridge =
-        OptimismBridge(0x4200000000000000000000000000000000000010);
+    OptimismBridge public l2StandardBridge;
+
+    event BridgeChanged(address indexed oldBridge, address indexed newBridge);
 
     function initialize(
-        IL2CrossDomainMessenger _l2Messenger,
-        L2StandardBridge _l2StandardBridge,
         address _l1Target,
         address _operator
     ) public initializer {
         __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
-        l2Messenger = _l2Messenger;
-        l2StandardBridge = _l2StandardBridge;
+        l2StandardBridge = OptimismBridge(
+            0x4200000000000000000000000000000000000010
+        );
     }
 
     function sendAssetsInfoToL1(
@@ -43,29 +47,31 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
             ethAmount
         );
 
-        l2Messenger.sendMessage(l1Target, data, maxGas);
+        l2StandardBridge.sendMessage(l1Target, data, maxGas);
 
         emit AssetsInfoSentToL1(tokensAmount, ethAmount, 0);
         return true;
     }
 
     function sendEthToL1(
-        uint256 _callValue,
+        uint256,
         bytes[] calldata _gasData
     ) external payable override onlyVault returns (bool success) {
-        require(_callValue <= msg.value, InsufficientValueSent());
+        require(msg.value > 0, SendingZeroValue());
         require(l1Target != address(0), L1TargetNotSet());
-
+        require(_gasData[0].length >= 4, GasDataTooShort());
         uint32 maxGas = _decodeGas(_gasData);
 
-        bridge.bridgeETHTo{value: msg.value}({
-            target: l1Target,
-            message: "",
-            gasLimit: maxGas
-        });
+        l2StandardBridge.bridgeETHTo{value: msg.value}(l1Target, maxGas, "");
 
         emit EthSentToL1(msg.value, 0);
         return true;
+    }
+
+    function setBridge(address _newBridgeAddress) external onlyOwner {
+        require(_newBridgeAddress != address(0), SettingZeroAddress());
+        emit BridgeChanged(address(l2StandardBridge), _newBridgeAddress);
+        l2StandardBridge = OptimismBridge(_newBridgeAddress);
     }
 
     function _decodeGas(

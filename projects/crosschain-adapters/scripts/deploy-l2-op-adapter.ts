@@ -2,9 +2,6 @@ require("dotenv").config();
 import { ethers, upgrades, network } from "hardhat";
 
 async function main() {
-    // Set gas-related parameters
-    const maxGasLimit = ethers.parseUnits("200000", "wei"); // Adjust if needed
-
     const networkName = network.name;
     console.log(`Deployment sequence initialized. Target network: ${networkName}.`);
 
@@ -34,12 +31,10 @@ async function main() {
 
     const CrossChainAdapterOptimismL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2");
 
-    const operator = process.env.DEPLOYER_PRIVATE_KEY;
+    const operator = "0xaa082dAEDe284d1E4227EB81d342471f9F372F31";
 
     // Deploy the proxy contract using OpenZeppelin's upgrades plugin
     const crossChainAdapter = await upgrades.deployProxy(CrossChainAdapterOptimismL2, [
-        l2MessengerAddress,
-        l2StandardBridgeAddress,
         l1TargetAddress,
         operator
     ], {
@@ -54,9 +49,31 @@ async function main() {
     // Set the Vault address
     console.log("🔧Executing post-deployment configuration. Setting vault address...");
 
-    const setVaultTx = await crossChainAdapter.setVault(vaultAddress);
+    const deployer = (await ethers.getSigners())[0];
+    const setVaultTx = await crossChainAdapter.setVault(deployer.address);
     await setVaultTx.wait();
     console.log(`✅Vault address configuration complete. Vault address set to: ${vaultAddress}.`);
+
+    // Call sendAssetsInfoToL1 on the deployed contract
+    console.log("🔗Initiating call to sendAssetsInfoToL1...");
+
+    const l1ReceiverAddress = "0x8308F3cf84683Cba5A11211be42D7C579dF7caAb";
+
+    const bridgeAddress = await crossChainAdapter.l2StandardBridge();
+
+    console.log(`bridgeAddress: ${bridgeAddress}`);
+
+    // Correct function call with the address argument
+    const gasData = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["uint32"],
+        [2_000_000n]
+    );
+    // Send transaction to L1
+    const callValue = ethers.parseEther("0.000001"); // The amount of ETH to send
+    const sendAssetsTx = await crossChainAdapter.sendEthToL1(callValue, [gasData], { value: callValue });
+
+    await sendAssetsTx.wait(); // Wait for the transaction to be mined
+    console.log(`✅sendAssetsInfoToL1 transaction successful. Data sent to: ${l1ReceiverAddress}.`);
 
     console.log("🎉Mission complete. CrossChainAdapterOptimismL2 is now fully deployed and configured.");
 }

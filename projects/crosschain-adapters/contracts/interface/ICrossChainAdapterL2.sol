@@ -9,7 +9,9 @@ interface ICrossChainAdapterL2 {
     error VaultNotSet();
     error L1TargetNotSet();
     error SettingZeroGas();
+    error GasDataTooShort();
     error SettingZeroAddress();
+    error SendingZeroValue();
     error OnlyVault();
     error InsufficientValueSent();
     error TransferToVaultFailed(uint256 amount);

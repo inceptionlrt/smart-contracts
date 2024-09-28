@@ -7,8 +7,7 @@ async function main() {
 
     // const l1TargetAddress = process.env.L1_TARGET_ADDRESS;
     const l1TargetAddress = "0x8308F3cf84683Cba5A11211be42D7C579dF7caAb";
-    const deployer = (await ethers.getSigners())[0]; // Use the deployer as the owner
-
+    const deployer = (await ethers.getSigners())[0];
     console.log("🛠 Pre-deployment diagnostic initiated...");
 
     // Sanity check: Ensure L1 target address is set
