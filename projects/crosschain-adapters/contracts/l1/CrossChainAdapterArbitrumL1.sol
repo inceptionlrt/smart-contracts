@@ -7,20 +7,36 @@ import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
 import "./AbstractCrossChainAdapterL1.sol";
 
+/**
+ * @title CrossChainAdapterArbitrumL1
+ * @dev Cross-chain adapter implementation for interacting with Arbitrum contracts, deployed on Layer 1.
+ */
 contract CrossChainAdapterArbitrumL1 is
     Initializable,
     OwnableUpgradeable,
     AbstractCrossChainAdapterL1
 {
+    /// @notice Address of the Arbitrum inbox contract.
     IInbox public inbox;
+
+    /// @notice Arbitrum chain ID constant.
     uint24 public constant ARBITRUM_CHAIN_ID = 42161;
 
+    /// @param ticketId ID of the created retryable ticket.
     event RetryableTicketCreated(uint256 indexed ticketId);
 
+    /// @param prevInbox Previous inbox address.
+    /// @param newInbox New inbox address.
     event InboxChanged(address prevInbox, address newInbox);
 
     error ArbInboxNotSet();
 
+    /**
+     * @notice Initializes the contract with transaction storage, inbox and operator.
+     * @param _transactionStorage Address of the transaction storage contract.
+     * @param _inbox Address of the Arbitrum inbox contract.
+     * @param _operator Address of the operator.
+     */
     function initialize(
         address _transactionStorage,
         address _inbox,
@@ -31,10 +47,18 @@ contract CrossChainAdapterArbitrumL1 is
         setInbox(_inbox);
     }
 
+    /**
+     * @notice Returns the Arbitrum chain ID.
+     * @inheritdoc ICrossChainAdapterL1
+     */
     function getChainId() external pure override returns (uint24) {
         return ARBITRUM_CHAIN_ID;
     }
 
+    /**
+     * @notice Receives L2 transaction info from the Arbitrum bridge.
+     * @inheritdoc ICrossChainAdapterL1
+     */
     function receiveL2Info(
         uint256 _timestamp,
         uint256 _balance,
@@ -49,6 +73,11 @@ contract CrossChainAdapterArbitrumL1 is
         _handleL2Info(ARBITRUM_CHAIN_ID, _timestamp, _balance, _totalSupply);
     }
 
+    /**
+     * @notice Sends ETH to Layer 2 with specified Gas data.
+     * @param callValue Amount of ETH expected to be received on L2.
+     * @param _gasData Gas parameters bytes: max submission cost, max gas, and gas price bid.
+     */
     function sendEthToL2(
         uint256 callValue,
         bytes[] calldata _gasData
@@ -79,13 +108,21 @@ contract CrossChainAdapterArbitrumL1 is
         emit RetryableTicketCreated(ticketID);
     }
 
+    /**
+     * @notice Sets the Arbitrum inbox precompiled contract address.
+     * @dev Should be rarely if ever used (testing etc.).
+     * @param _inbox Address of the new inbox.
+     */
     function setInbox(address _inbox) public onlyOwner {
         require(_inbox != address(0), SettingZeroAddress());
+        emit InboxChanged(address(inbox), _inbox);
         inbox = IInbox(_inbox);
-        address prevInbox = address(inbox);
-        emit InboxChanged(prevInbox, _inbox);
     }
 
+    /**
+     * @notice Receives ETH from L2 and transfers it to the rebalancer.
+     * @inheritdoc ICrossChainAdapterL1
+     */
     function receiveL2Eth() external payable override {
         IBridge bridge = IInbox(inbox).bridge();
         require(msg.sender == address(bridge), NotBridge());

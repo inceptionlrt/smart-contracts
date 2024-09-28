@@ -9,6 +9,10 @@ import "openzeppelin-4/utils/Address.sol";
 import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
+/**
+ * @title AbstractCrossChainAdapterL1
+ * @dev Abstract base contract for handling cross-chain interactions on L1.
+ */
 abstract contract AbstractCrossChainAdapterL1 is
     Initializable,
     OwnableUpgradeable,
@@ -21,6 +25,11 @@ abstract contract AbstractCrossChainAdapterL1 is
     address public l2Sender;
     address public operator;
 
+    /**
+     * @dev Initializes the contract with transaction storage and operator.
+     * @param _transactionStorage Address of the transaction storage contract.
+     * @param _operator Address of the operator.
+     */
     function __AbstractCrossChainAdapterL1_init(
         address _transactionStorage,
         address _operator
@@ -31,6 +40,9 @@ abstract contract AbstractCrossChainAdapterL1 is
         operator = _operator;
     }
 
+    /**
+     * @dev Restricts access to the rebalancer.
+     */
     modifier onlyRebalancer() {
         if (msg.sender != rebalancer) {
             revert OnlyRebalancerCanCall(msg.sender);
@@ -38,6 +50,9 @@ abstract contract AbstractCrossChainAdapterL1 is
         _;
     }
 
+    /**
+     * @dev Restricts access to the operator.
+     */
     modifier onlyOperator() {
         if (msg.sender != operator) {
             revert OnlyOperatorCanCall(msg.sender);
@@ -45,6 +60,13 @@ abstract contract AbstractCrossChainAdapterL1 is
         _;
     }
 
+    /**
+     * @dev Handles L2 information and saves it in the transaction storage.
+     * @param _chainId The chain ID of the L2 network (Arbitrum, Optimism etc).
+     * @param _timestamp The block.timestamp of the original message.
+     * @param _balance The ETH balance of the L2 Vault.
+     * @param _totalSupply The total supply of inETH on L2 Vault.
+     */
     function _handleL2Info(
         uint256 _chainId,
         uint256 _timestamp,
@@ -62,40 +84,61 @@ abstract contract AbstractCrossChainAdapterL1 is
         );
     }
 
+    /**
+     * @notice Updates the Rebalancer address.
+     * @param _rebalancer Address of the new rebalancer.
+     */
     function setRebalancer(address _rebalancer) external virtual onlyOwner {
         require(_rebalancer != address(0), SettingZeroAddress());
+        emit RebalancerChanged(rebalancer, _rebalancer);
         rebalancer = _rebalancer;
-        address prevRebalancer = rebalancer;
-        emit RebalancerChanged(prevRebalancer, _rebalancer);
     }
 
+    /**
+     * @notice Updates the transaction storage address.
+     * @param _txStorage Address of the new transaction storage.
+     */
     function setTxStorage(address _txStorage) external virtual onlyOwner {
         require(_txStorage != address(0), SettingZeroAddress());
-        transactionStorage = _txStorage;
         address prevTxStorage = transactionStorage;
-        emit TxStorageChanged(prevTxStorage, transactionStorage);
+        transactionStorage = _txStorage;
+        emit TxStorageChanged(prevTxStorage, _txStorage);
     }
 
+    /**
+     * @notice Updates the L2 receiver address (Vault).
+     * @param _l2Receiver Address of the new L2 receiver.
+     */
     function setL2Receiver(address _l2Receiver) external onlyOwner {
         require(_l2Receiver != address(0), SettingZeroAddress());
-        l2Receiver = _l2Receiver;
         address prevL2Receiver = l2Receiver;
+        l2Receiver = _l2Receiver;
         emit L2ReceiverChanged(prevL2Receiver, _l2Receiver);
     }
 
+    /**
+     * @notice Updates the L2 sender address (L2 Crosschain adapter).
+     * @param _l2Sender Address of the new L2 sender.
+     */
     function setL2Sender(address _l2Sender) external onlyOwner {
         require(_l2Sender != address(0), SettingZeroAddress());
-        l2Sender = _l2Sender;
         address prevL2Sender = l2Sender;
+        l2Sender = _l2Sender;
         emit L2SenderChanged(prevL2Sender, _l2Sender);
     }
 
+    /**
+     * @notice Transfers contract funds to the rebalancer in the unlikely case of accumulation of dust ETH values.
+     */
     function recoverFunds() external onlyOperator {
         require(rebalancer != address(0), RebalancerNotSet());
         (bool ok, ) = rebalancer.call{value: address(this).balance}("");
         require(ok, TransferToRebalancerFailed());
     }
 
+    /**
+     * @notice Receive ETH and trigger an event.
+     */
     receive() external payable {
         emit ReceiveTriggered(msg.sender, msg.value);
     }
