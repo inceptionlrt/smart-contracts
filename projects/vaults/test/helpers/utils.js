@@ -114,6 +114,8 @@ const format = (bi) => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
 
+const day = 86400n;
+
 module.exports = {
   addRewardsToStrategy,
   withdrawDataFromTx,
@@ -130,4 +132,5 @@ module.exports = {
   randomAddress,
   format,
   e18,
+  day,
 };

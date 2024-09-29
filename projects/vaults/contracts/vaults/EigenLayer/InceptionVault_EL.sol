@@ -61,6 +61,9 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
         optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
+
+        /// rewards logic
+        rewardsTimeline = 7 days;
     }
 
     function __EigenLayerHandler_init(

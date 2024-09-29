@@ -4,6 +4,8 @@ pragma solidity ^0.8.23;
 import "../../InceptionVaultStorage_EL.sol";
 
 contract ERC4626Facet_EL is InceptionVaultStorage_EL {
+    constructor() payable {}
+
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);

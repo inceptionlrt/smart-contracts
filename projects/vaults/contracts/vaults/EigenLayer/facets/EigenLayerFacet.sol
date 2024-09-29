@@ -11,6 +11,8 @@ import "../InceptionVaultStorage_EL.sol";
  * @author The InceptionLRT team
  */
 contract EigenLayerFacet is InceptionVaultStorage_EL {
+    constructor() payable {}
+
     /// @dev checks whether it's still possible to deposit into the strategy
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         if (amount > getFreeBalance())

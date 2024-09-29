@@ -14,6 +14,7 @@ const {
   randomBIMax,
   randomAddress,
   e18,
+  day,
 } = require("./helpers/utils.js");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
@@ -144,7 +145,6 @@ const initVault = async (a) => {
   const setterFacet = await setterFacetFactory.deploy();
   await setterFacet.waitForDeployment();
   await iVault.setSetterFacet(await setterFacet.getAddress());
-  console.log("setterFacet.getAddress(): ", await setterFacet.getAddress());
 
   const eigenLayerFacetFactory = await ethers.getContractFactory("EigenLayerFacet", {
     libraries: { InceptionLibrary: await iLibrary.getAddress() },
@@ -152,15 +152,13 @@ const initVault = async (a) => {
   const eigenLayerFacet = await eigenLayerFacetFactory.deploy();
   await eigenLayerFacet.waitForDeployment();
   await iVault.setEigenLayerFacet(await eigenLayerFacet.getAddress());
-  console.log("eigenLayerFacet.getAddress(): ", await eigenLayerFacet.getAddress());
 
   const ERC4626FacetFactory = await ethers.getContractFactory(a.vaultFactory, {
     libraries: { InceptionLibrary: await iLibrary.getAddress() },
   });
-  const userOperationsFacet = await ERC4626FacetFactory.deploy();
-  await userOperationsFacet.waitForDeployment();
-  await iVault.setUserOperationFacet(await userOperationsFacet.getAddress());
-  console.log("userOperationsFacet.getAddress(): ", await userOperationsFacet.getAddress());
+  const erc4626Facet = await ERC4626FacetFactory.deploy();
+  await erc4626Facet.waitForDeployment();
+  await iVault.setERC4626Facet(await erc4626Facet.getAddress());
 
   /// =========================== SET SIGNATURE <-> TARGETs ===========================
 
@@ -438,6 +436,28 @@ const initVault = async (a) => {
     }
   };
 
+  funcSig = setterFacet.interface.getFunction("setRewardsTimeline").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
+  iVault.setRewardsTimeline = async function (owner, newValue) {
+    functionSignature = setterFacet.interface.getFunction("setRewardsTimeline").format();
+    iface = new ethers.Interface([`function ${functionSignature}`]);
+    data = iface.encodeFunctionData("setRewardsTimeline", [newValue]);
+    const tx = await owner.sendTransaction({ to: await iVault.getAddress(), data: data });
+    const receipt = await tx.wait();
+
+    for (const log of receipt.logs) {
+      try {
+        const event = setterFacet.interface.parseLog(log);
+        if (event != null && event.name == "RewardsTimelineChanged") {
+          return event;
+        }
+      } catch (error) {
+        console.error("Error parsing event log:", error);
+      }
+    }
+  };
+
   /// =============================== ################## ===============================
   /// =============================== EigenLayer Handler ===============================
   /// =============================== ################## ===============================
@@ -523,6 +543,28 @@ const initVault = async (a) => {
     iface = new ethers.Interface([`function ${functionSignature}`]);
     data = iface.encodeFunctionData("updateEpoch", []);
     await account.sendTransaction({ to: await iVault.getAddress(), data: data });
+  };
+
+  funcSig = eigenLayerFacet.interface.getFunction("addRewards").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
+  iVault.addRewards = async function (iVaultOperator, rewards) {
+    functionSignature = eigenLayerFacet.interface.getFunction("addRewards").format();
+    iface = new ethers.Interface([`function ${functionSignature}`]);
+    data = iface.encodeFunctionData("addRewards", [rewards]);
+    const tx = await iVaultOperator.sendTransaction({ to: await iVault.getAddress(), data: data });
+    const receipt = await tx.wait();
+
+    for (const log of receipt.logs) {
+      try {
+        const event = eigenLayerFacet.interface.parseLog(log);
+        if (event != null && event.name == "RewardsAdded") {
+          return event;
+        }
+      } catch (error) {
+        console.error("Error parsing event log:", error);
+      }
+    }
   };
 
   funcSig = eigenLayerFacet.interface.getFunction("forceUndelegateRecovery").selector;
@@ -1331,9 +1373,13 @@ assets.forEach(function (a) {
       it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
         const prevValue = await iVault.protocolFee();
         const newValue = randomBI(10);
-        await iVault.setProtocolFee(deployer, newValue);
+
+        const event = await iVault.setProtocolFee(deployer, newValue);
+        expect(event.args["prevValue"]).to.be.eq(prevValue);
+        expect(event.args["newValue"]).to.be.eq(newValue);
+
         // await expect(iVault.setProtocolFee(deployer, newValue)).to.emit(iVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
-        // expect(await iVault.protocolFee()).to.be.eq(newValue);
+        expect(await iVault.protocolFee()).to.be.eq(newValue);
       });
 
       it("setProtocolFee(): reverts when > MAX_PERCENT", async function () {
@@ -1346,6 +1392,29 @@ assets.forEach(function (a) {
       it("setProtocolFee(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(10);
         await expect(iVault.setProtocolFee(staker, newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("setRewardsTimeline(): only owner can", async function () {
+        const prevValue = await iVault.rewardsTimeline();
+        const newValue = randomBI(2) * day;
+        const event = await iVault.setRewardsTimeline(deployer, newValue);
+
+        expect(event.args["prevValue"]).to.be.eq(prevValue);
+        expect(event.args["newValue"]).to.be.eq(newValue);
+
+        //await expect(iVault.setRewardsTimeline(deployer, newValue)).to.emit(iVault, "RewardsTimelineChanged").withArgs(prevValue, newValue);
+
+        expect(prevValue).to.be.eq(day * 7n); //default value is 7d
+        expect(await iVault.rewardsTimeline()).to.be.eq(newValue);
+      });
+
+      it("setRewardsTimeline(): reverts when < 1 day", async function () {
+        await expect(iVault.setRewardsTimeline(deployer, day - 1n)).to.be.revertedWithCustomError(iVault, "InconsistentData");
+      });
+
+      it("setRewardsTimeline(): reverts when caller is not an owner", async function () {
+        const newValue = randomBI(6);
+        await expect(iVault.setRewardsTimeline(staker, newValue)).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
 
@@ -4110,6 +4179,117 @@ assets.forEach(function (a) {
 
         console.log(`iVault total assets: ${await iVault.totalAssets()}`);
         console.log(`Total deposited: ${await iVault.getTotalDeposited()}`);
+      });
+    });
+
+    describe("addRewards: gradually adds amount to the iVault", function () {
+      const totalDays = 7n;
+      let totalRewardsAmount;
+      before(async function () {
+        await snapshot.restore();
+        await asset.connect(staker3).transfer(iVaultOperator.address, 10n * e18);
+        const operatorBalance = await asset.balanceOf(iVaultOperator.address);
+        await asset.connect(iVaultOperator).approve(iVault.address, operatorBalance);
+        await iVault.setRewardsTimeline(deployer, totalDays * 86400n);
+      });
+
+      it("addRewards when there are no other rewards have been added", async function () {
+        const operatorBalanceBefore = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceBefore = await asset.balanceOf(iVault.address);
+        const totalAssetsBefore = await iVault.totalAssets();
+
+        const latestBlock = await ethers.provider.getBlock("latest");
+        const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBI(2);
+        await helpers.time.setNextBlockTimestamp(nextBlockTimestamp);
+
+        totalRewardsAmount = randomBI(17);
+        console.log("Amount:", totalRewardsAmount.format());
+
+        const event = await iVault.addRewards(iVaultOperator, totalRewardsAmount);
+        expect(event.args["amount"]).to.be.closeTo(totalRewardsAmount, transactErr);
+
+        // await expect()
+        //   .to.emit(iVault, "RewardsAdded")
+        //   .withArgs((amount) => {
+        //     expect(amount).to.be.closeTo(totalRewardsAmount, transactErr);
+        //     return true;
+        //   }, nextBlockTimestamp);
+
+        const operatorBalanceAfter = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceAfter = await asset.balanceOf(iVault.address);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+        console.log("iVault balance diff:", (iVaultBalanceAfter - iVaultBalanceBefore).format());
+        console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+
+        expect(operatorBalanceBefore - operatorBalanceAfter).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(iVaultBalanceAfter - iVaultBalanceBefore).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(0n, totalDays);
+      });
+
+      it("Can not add more rewards until the end of timeline", async function () {
+        const amount = randomBI(17);
+        await expect(iVault.addRewards(iVaultOperator, amount)).to.revertedWithCustomError(iVault, "TimelineNotOver");
+      });
+
+      it("Stake some amount", async function () {
+        await iVault.deposit(staker, 10n * e18, staker.address);
+      });
+
+      it("Check total assets every day", async function () {
+        let startTimeline = await iVault.startTimeline();
+        let latestBlock;
+        let daysPassed;
+        do {
+          const totalAssetsBefore = await iVault.totalAssets();
+          await helpers.time.increase(day);
+          latestBlock = await ethers.provider.getBlock("latest");
+          const currentTime = BigInt(latestBlock.timestamp);
+          daysPassed = (currentTime - startTimeline) / day;
+
+          const totalAssetsAfter = await iVault.totalAssets();
+          console.log("Total assets increased by:", (totalAssetsAfter - totalAssetsBefore).format());
+          console.log("Ratio:", await calculateRatio(iVault, iToken));
+          expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(totalRewardsAmount / totalDays, totalDays);
+        } while (daysPassed < totalDays);
+
+        console.log("Total assets after:\t\t", (await iVault.totalAssets()).format());
+        console.log("iVault balance after:\t", (await asset.balanceOf(iVault.address)).format());
+      });
+
+      it("Total assets does not change on a next day after timeline passed", async function () {
+        const totalAssetsBefore = await iVault.totalAssets();
+        await helpers.time.increase(day);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Total assets increased by:", (totalAssetsAfter - totalAssetsBefore).format());
+        expect(totalAssetsAfter).to.be.eq(totalAssetsBefore);
+      });
+
+      it("New rewards can be added", async function () {
+        const operatorBalanceBefore = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceBefore = await asset.balanceOf(iVault.address);
+        const totalAssetsBefore = await iVault.totalAssets();
+
+        const latestBlock = await ethers.provider.getBlock("latest");
+        const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBI(2);
+        await helpers.time.setNextBlockTimestamp(nextBlockTimestamp);
+
+        totalRewardsAmount = randomBI(17);
+        const event = await iVault.addRewards(iVaultOperator, totalRewardsAmount);
+        expect(event.args["amount"]).to.be.closeTo(totalRewardsAmount, transactErr);
+
+        const operatorBalanceAfter = await asset.balanceOf(iVaultOperator.address);
+        const iVaultBalanceAfter = await asset.balanceOf(iVault.address);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+        console.log("iVault balance diff:", (iVaultBalanceAfter - iVaultBalanceBefore).format());
+        console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+        expect(operatorBalanceBefore - operatorBalanceAfter).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(iVaultBalanceAfter - iVaultBalanceBefore).to.be.closeTo(totalRewardsAmount, transactErr);
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(0n, totalDays);
       });
     });
 

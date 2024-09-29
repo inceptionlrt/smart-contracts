@@ -132,9 +132,7 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     /**
      * @param newTimelineInSeconds is measured in seconds
      */
-    function setRewardsTimeline(
-        uint256 newTimelineInSeconds
-    ) external onlyOwner {
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external {
         if (newTimelineInSeconds < 1 days) revert InconsistentData();
 
         emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
