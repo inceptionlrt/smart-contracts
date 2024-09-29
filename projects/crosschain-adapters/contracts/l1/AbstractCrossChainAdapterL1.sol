@@ -132,8 +132,10 @@ abstract contract AbstractCrossChainAdapterL1 is
      */
     function recoverFunds() external onlyOperator {
         require(rebalancer != address(0), RebalancerNotSet());
-        (bool ok, ) = rebalancer.call{value: address(this).balance}("");
+        uint256 amount = address(this).balance;
+        (bool ok, ) = rebalancer.call{value: amount}("");
         require(ok, TransferToRebalancerFailed());
+        emit RecoverFundsInitiated(amount);
     }
 
     /**

@@ -28,6 +28,7 @@ interface ICrossChainAdapterL1 {
     event L2SenderChanged(address prevL2Sender, address newL2Sender);
     event TxStorageChanged(address prevTxStorage, address newTxStorage);
     event ReceiveTriggered(address caller, uint256 amount);
+    event RecoverFundsInitiated(uint256 amount);
 
     function receiveL2Info(
         uint256 _timestamp,

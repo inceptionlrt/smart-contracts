@@ -2,10 +2,14 @@
 pragma solidity 0.8.26;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-
 import "./Rebalancer.sol";
 import "./interfaces/ICrossChainAdapterL1.sol";
 
+/**
+ * @author The InceptionLRT team
+ * @title TransactionStorage
+ * @dev Stores and manages Layer 2 transaction data and chain-specific adapters.
+ */
 contract TransactionStorage is Ownable {
     struct Transaction {
         uint256 timestamp;
@@ -30,6 +34,7 @@ contract TransactionStorage is Ownable {
         address oldAdapterAddress,
         address newAdapterAddress
     );
+
     error MsgNotFromAdapter(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
     error AdapterAlreadyExists(uint256 chainId);
@@ -37,11 +42,16 @@ contract TransactionStorage is Ownable {
     error TimeCannotBeInFuture(uint256 timestamp);
     error TimeBeforePrevRecord(uint256 timestamp);
 
+    /**
+     * @dev Initializes the contract with the owner's address.
+     * @param _owner The address of the contract owner.
+     */
     constructor(address _owner) Ownable(_owner) {}
 
     /**
-     * @notice Add a new Chain ID to the storage
-     * @param _newChainId The new Chain ID to add
+     * @notice Adds a new Chain ID to the storage.
+     * @dev Ensures that the Chain ID does not already exist in the list.
+     * @param _newChainId The Chain ID to add.
      */
     function addChainId(uint32 _newChainId) external onlyOwner {
         for (uint i = 0; i < chainIds.length; i++) {
@@ -53,11 +63,12 @@ contract TransactionStorage is Ownable {
     }
 
     /**
-     * @notice Handle Layer 2 information and update transaction data
-     * @param _chainId The Chain ID of the transaction
-     * @param _timestamp The timestamp of the transaction
-     * @param _balance The balance of the transaction
-     * @param _totalSupply The total supply for the transaction
+     * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
+     * @dev Verifies that the caller is the correct adapter and that the timestamp is valid.
+     * @param _chainId The Chain ID of the transaction.
+     * @param _timestamp The timestamp when the transaction occurred.
+     * @param _balance The ETH balance involved in the transaction.
+     * @param _totalSupply The total inETH supply for the transaction.
      */
     function handleL2Info(
         uint256 _chainId,
@@ -94,9 +105,9 @@ contract TransactionStorage is Ownable {
     }
 
     /**
-     * @notice Get transaction data for a specific Chain ID
-     * @param _chainId The Chain ID to retrieve the transaction data for
-     * @return The transaction data for the specified Chain ID
+     * @notice Retrieves the transaction for a specific Chain ID. NB! Only one (last) transaction is stored.
+     * @param _chainId The Chain ID for which to retrieve the last transaction data.
+     * @return The transaction data (timestamp, ETH balance, inETH balance).
      */
     function getTransactionData(
         uint256 _chainId
@@ -105,17 +116,18 @@ contract TransactionStorage is Ownable {
     }
 
     /**
-     * @notice Get all stored Chain IDs
-     * @return An array of all stored Chain IDs
+     * @notice Returns all stored Chain IDs (and henceforth - all supported networks).
+     * @return An array containing all Chain IDs stored in the contract.
      */
     function getAllChainIds() external view returns (uint32[] memory) {
         return chainIds;
     }
 
     /**
-     * @notice Add a new adapter for a specific Chain ID
-     * @param _chainId The Chain ID associated with the adapter
-     * @param _adapterAddress The address of the adapter to add
+     * @notice Adds a new adapter for a specific Chain ID.
+     * @dev Ensures that no adapter is already assigned to the Chain ID.
+     * @param _chainId The Chain ID for which the adapter is added.
+     * @param _adapterAddress The address of the adapter.
      */
     function addAdapter(
         uint256 _chainId,
@@ -130,6 +142,12 @@ contract TransactionStorage is Ownable {
         emit AdapterAdded(_chainId, _adapterAddress);
     }
 
+    /**
+     * @notice Replaces an existing adapter for a specific Chain ID.
+     * @dev Ensures that an adapter already exists for the Chain ID before replacing it.
+     * @param _chainId The Chain ID for which the adapter is being replaced.
+     * @param _newAdapterAddress The new adapter address to replace the old one.
+     */
     function replaceAdapter(
         uint256 _chainId,
         address _newAdapterAddress

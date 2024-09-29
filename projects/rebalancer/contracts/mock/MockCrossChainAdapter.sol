@@ -45,13 +45,6 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
             _balance,
             _totalSupply
         );
-
-        emit L2InfoReceived(
-            ARBITRUM_CHAIN_ID,
-            _timestamp,
-            _balance,
-            _totalSupply
-        );
     }
 
     function sendEthToL2(
@@ -73,5 +66,9 @@ contract MockCrossChainAdapter is ICrossChainAdapterL1 {
             restakingPool.stake{value: msg.value}();
             emit L2EthDeposit(msg.value);
         }
+    }
+
+    function recoverFunds() external {
+        //placeholder for compilation
     }
 }

@@ -6,21 +6,22 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 
 import "../assets-handler/InceptionOmniAssetHandler.sol";
-
 import "../interfaces/IOwnable.sol";
 import "../interfaces/IInceptionVault.sol";
 import "../interfaces/IInceptionToken.sol";
 import "../interfaces/IInceptionRatioFeed.sol";
 import "../interfaces/ICrossChainAdapterL2.sol";
 
-/// @author The InceptionLRT team
-/// @title The InceptionOmniVault contract
+/// @title InceptionOmniVault
+/// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
+/// @notice Allows users to deposit ETH, receive inception tokens, and handle asset transfers between L1 and L2.
 contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     event TargetCapacityChanged(
         uint256 targetCapacity,
         uint256 newTargetCapacity
     );
 
+    /// @dev Modifier to restrict functions to owner or operator.
     modifier onlyOwnerOrOperator() {
         if (msg.sender != owner() && msg.sender != operator) {
             revert OnlyOwnerOrOperator();
@@ -28,39 +29,40 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         _;
     }
 
-    /// @dev Inception restaking token
+    /// @dev Inception token used for staking and rewards.
     IInceptionToken public inceptionToken;
 
-    /// @dev Reduces rounding issues
+    /// @dev Minimum amount required for deposits to avoid rounding issues.
     uint256 public minAmount;
 
-    /// @dev the unique InceptionVault name
+    /// @dev Unique name for the vault.
     string public name;
 
-    /**
-     *  @dev Flash withdrawal params
-     */
+    /// @dev Flash withdrawal parameters.
     address public treasuryAddress;
     address public operator;
     IInceptionRatioFeed public ratioFeed;
-
     ICrossChainAdapterL2 public crossChainAdapter;
 
+    /// @dev Various configuration settings for bonuses, fees, and capacity.
     uint256 public depositBonusAmount;
     uint256 public targetCapacity;
-
     uint256 public constant MAX_PERCENT = 100 * 1e8;
-
     uint256 public protocolFee;
-
     uint256 public maxBonusRate;
     uint256 public optimalBonusRate;
     uint256 public depositUtilizationKink;
-
     uint256 public maxFlashFeeRate;
     uint256 public optimalWithdrawalRate;
     uint256 public withdrawUtilizationKink;
 
+    /**
+     * @dev Initializes the vault with required parameters.
+     * @param vaultName Name of the vault.
+     * @param _operator Address of the operator.
+     * @param _inceptionToken Address of the Inception token.
+     * @param _crossChainAdapter Address of the cross-chain adapter.
+     */
     function __InceptionOmniVault_init(
         string memory vaultName,
         address _operator,
@@ -71,66 +73,75 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (_inceptionToken == address(0) || _operator == address(0)) {
             revert NullParams();
         }
-        // __InceptionAssetsHandler_init(IERC20(_inceptionToken));
         __InceptionOmniAssetsHandler_init();
 
         name = vaultName;
         operator = _operator;
         inceptionToken = IInceptionToken(_inceptionToken);
         crossChainAdapter = _crossChainAdapter;
-        /// TODO
         treasuryAddress = msg.sender;
         minAmount = 100;
 
         targetCapacity = 1;
         protocolFee = 50 * 1e8;
-
-        /// @dev deposit bonus
         depositUtilizationKink = 25 * 1e8;
         maxBonusRate = 1.5 * 1e8;
         optimalBonusRate = 0.25 * 1e8;
-
-        /// @dev withdrawal fee
         withdrawUtilizationKink = 25 * 1e8;
         maxFlashFeeRate = 3 * 1e8;
         optimalWithdrawalRate = 0.5 * 1e8;
     }
 
     /*//////////////////////////////
-    ////// Deposit functions //////
-    ////////////////////////////*/
+    ////// Deposit functions ////////
+    //////////////////////////////*/
 
+    /**
+     * @dev Ensures deposit parameters are valid.
+     * @param receiver Address receiving the deposit.
+     * @param amount Amount of assets to be deposited.
+     */
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
     }
 
+    /**
+     * @dev Ensures the calculated iShares is valid post-deposit.
+     * @param iShares Number of shares issued after the deposit.
+     */
     function __afterDeposit(uint256 iShares) internal pure {
         if (iShares == 0) {
             revert ResultISharesZero();
         }
     }
 
-    /// @dev Transfers the msg.sender's assets to the vault.
-    /// @dev Mints Inception tokens in accordance with the current ratio.
-    /// @dev Issues the tokens to the specified receiver address.
+    /**
+     * @notice Deposits ETH and mints corresponding inception tokens.
+     * @param receiver Address receiving the inception tokens.
+     * @return iShares Number of shares issued in exchange for the deposit.
+     */
     function deposit(
         address receiver
     ) public payable nonReentrant whenNotPaused returns (uint256) {
         return _deposit(msg.value, msg.sender, receiver);
     }
 
+    /**
+     * @dev Internal function to handle the actual deposit logic.
+     * @param amount Amount of ETH deposited.
+     * @param sender Address initiating the deposit.
+     * @param receiver Address receiving the inception tokens.
+     * @return iShares Number of inception tokens minted.
+     */
     function _deposit(
         uint256 amount,
         address sender,
         address receiver
     ) internal returns (uint256) {
         uint256 currentRatio = ratio();
-        // transfers assets from the sender and returns the received amount
-        // the actual received amount might slightly differ from the specified amount,
-        // approximately by -2 wei
-
         __beforeDeposit(receiver, amount);
+
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             uint256 capacity = getFlashCapacity();
@@ -153,14 +164,18 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
-
         return iShares;
     }
 
-    /*///////////////////////////////////////
-    ///////// Withdrawal functions /////////
-    /////////////////////////////////////*/
+    /*/////////////////////////////////////////////
+    ///////// Flash Withdrawal functions /////////
+    ///////////////////////////////////////////*/
 
+    /**
+     * @dev Ensures withdrawal parameters are valid.
+     * @param receiver Address receiving the withdrawal.
+     * @param iShares Number of shares to be withdrawn.
+     */
     function __beforeWithdraw(address receiver, uint256 iShares) internal pure {
         if (iShares == 0) {
             revert NullParams();
@@ -170,13 +185,11 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         }
     }
 
-    /*/////////////////////////////////////////////
-    ///////// Flash Withdrawal functions /////////
-    ///////////////////////////////////////////*/
-
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @notice Handles flash withdrawals by burning inception tokens and transferring ETH.
+     * @param iShares Number of shares to withdraw.
+     * @param receiver Address receiving the withdrawn ETH.
+     */
     function flashWithdraw(
         uint256 iShares,
         address receiver
@@ -194,7 +207,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (amount < minAmount) revert LowerMinAmount(minAmount);
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashUnstakeFee(amount);
@@ -202,15 +214,71 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
-        /// @notice instant transfer fee to the treasuryAddress
         _transferAssetTo(treasuryAddress, protocolWithdrawalFee);
-        /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
-    /// @notice Function to calculate deposit bonus based on the utilization rate
+    /*//////////////////////////////
+    ////// Cross-chain functions ///
+    //////////////////////////////*/
+
+    /**
+     * @notice Sends asset information (total token and ETH balances) to Layer 1.
+     * @param _gasData Gas parameters for the cross-chain transaction.
+     */
+    function sendAssetsInfoToL1(
+        bytes[] calldata _gasData
+    ) external payable onlyOwnerOrOperator {
+        if (address(crossChainAdapter) == address(0)) {
+            revert CrossChainAdapterNotSet();
+        }
+        uint256 tokensAmount = geTotalUnderlyingToken();
+        uint256 ethAmount = getTotalDeposited();
+
+        bool success = crossChainAdapter.sendAssetsInfoToL1{value: msg.value}(
+            tokensAmount,
+            ethAmount,
+            _gasData
+        );
+
+        if (!success) {
+            revert MessageToL1Failed(tokensAmount, ethAmount);
+        }
+    }
+
+    /**
+     * @notice Sends available ETH to Layer 1 via cross-chain adapter.
+     * @param _gasData Gas parameters for the cross-chain transaction.
+     */
+    function sendEthToL1(
+        bytes[] calldata _gasData
+    ) external payable onlyOwnerOrOperator {
+        uint256 callValue = getFreeBalance();
+        if (callValue == 0) {
+            revert FreeBalanceIsZero();
+        }
+
+        bool success = crossChainAdapter.sendEthToL1{value: callValue}(
+            callValue,
+            _gasData
+        );
+
+        if (!success) {
+            revert EthToL1Failed(callValue);
+        }
+    }
+
+    /*//////////////////////////////
+    ////// Utility functions ///////
+    //////////////////////////////*/
+
+    /**
+     * @notice Calculates the bonus for a deposit based on the current utilization rate.
+     * @param amount Amount of the deposit.
+     * @return bonus Calculated bonus.
+     */
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256 bonus) {
@@ -218,12 +286,18 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         return _calculateDepositBonus(amount, capacity);
     }
 
+    /**
+     * @dev Internal function to calculate the deposit bonus.
+     * @param amount Amount of the deposit.
+     * @param capacity Available capacity for the deposit.
+     * @return bonus Calculated bonus.
+     */
     function _calculateDepositBonus(
         uint256 amount,
         uint256 capacity
     ) internal view returns (uint256 bonus) {
         uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
-                    MAX_PERCENT;
+            MAX_PERCENT;
 
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
@@ -245,12 +319,15 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
             uint256 replenished = targetCapacity > capacity + amount
                 ? amount
                 : targetCapacity - capacity;
-
             bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
         }
     }
 
-    /// @dev Function to calculate flash withdrawal fee based on the utilization rate
+    /**
+     * @notice Calculates the fee for a flash withdrawal based on the current utilization rate.
+     * @param amount Amount of the withdrawal.
+     * @return fee Calculated fee.
+     */
     function calculateFlashUnstakeFee(
         uint256 amount
     ) public view returns (uint256 fee) {
@@ -258,7 +335,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
         uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) /
-                    MAX_PERCENT;
+            MAX_PERCENT;
 
         /// @dev the utilization rate is greater 1, [ :100] %
         if (amount > 0 && capacity > targetCapacity) {
@@ -287,53 +364,6 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
                 (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
-        }
-    }
-
-    /**
-     * @dev Sends the information about the total amount of tokens and ETH held by this contract to L1 using CrossChainAdapter.
-     * @notice This only sends the info, not the actual assets.
-     */
-    function sendAssetsInfoToL1(
-        bytes[] calldata _gasData
-    ) external payable onlyOwnerOrOperator {
-        if (address(crossChainAdapter) == address(0)) {
-            revert CrossChainAdapterNotSet();
-        }
-        uint256 tokensAmount = geTotalUnderlyingToken();
-        uint256 ethAmount = getTotalDeposited();
-
-        // Send the assets information (not the actual assets) to L1
-        bool success = crossChainAdapter.sendAssetsInfoToL1{value: msg.value}(
-            tokensAmount,
-            ethAmount,
-            _gasData
-        );
-
-        if (!success) {
-            revert MessageToL1Failed(tokensAmount, ethAmount);
-        }
-    }
-
-    /**
-     * @dev Sends a free amount of ETH to L1 using CrossChainAdapter.
-     * @notice This actually sends ETH, unlike sendAssetsInfoToL1 which only sends information. msg.value is used to pay tx fees
-     * @param _gasData used to decode Gas parameters by the L2 Adapter
-     */
-    function sendEthToL1(
-        bytes[] calldata _gasData
-    ) external payable onlyOwnerOrOperator {
-        uint256 callValue = getFreeBalance();
-
-        if (callValue == 0) {
-            revert FreeBalanceIsZero();
-        }
-
-        // remainder will be refunded
-        bool success = crossChainAdapter.sendEthToL1{value: callValue}(callValue, _gasData);
-
-        if (!success) {
-            revert EthToL1Failed(callValue);
         }
     }
 

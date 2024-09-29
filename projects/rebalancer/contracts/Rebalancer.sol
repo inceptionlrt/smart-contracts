@@ -11,6 +11,11 @@ import "./interfaces/IInceptionToken.sol";
 import "./interfaces/IInceptionRatioFeed.sol";
 import "./interfaces/ICrossChainAdapterL1.sol";
 
+/**
+ * @author The InceptionLRT team
+ * @title Rebalancer
+ * @dev This contract handles staking, manages treasury data and facilitates cross-chain ETH transfers.
+ */
 contract Rebalancer is Initializable, OwnableUpgradeable {
     address public inETHAddress;
     address public lockboxAddress;
@@ -20,7 +25,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     address public operator;
 
     uint256 public constant MULTIPLIER = 1e18;
-    // uint256 public constant maxDiff = 50000000000000000; // 0.05 * 1e18
 
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperator());
@@ -48,6 +52,15 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event LiqPoolChanged(address newLiqPool);
     event OperatorChanged(address newOperator);
 
+    /**
+     * @notice Initializes the contract with essential addresses and parameters.
+     * @param _inETHAddress The address of the inETH token.
+     * @param _lockbox The address of the lockbox.
+     * @param _liqPool The address of the liquidity pool.
+     * @param _transactionStorage The address of the transaction storage.
+     * @param _ratioFeed The address of the ratio feed contract.
+     * @param _operator The address of the operator who will manage this contract.
+     */
     function initialize(
         address _inETHAddress,
         address _lockbox,
@@ -73,6 +86,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         operator = _operator;
     }
 
+    /**
+     * @notice Updates the transaction storage address.
+     * @param _transactionStorage The new transaction storage address.
+     */
     function setTransactionStorage(
         address _transactionStorage
     ) external onlyOwner {
@@ -81,33 +98,51 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit TxStorageChanged(_transactionStorage);
     }
 
+    /**
+     * @notice Updates the inETH token address.
+     * @param _inETHAddress The new inETH address.
+     */
     function setInETHAddress(address _inETHAddress) external onlyOwner {
         require(_inETHAddress != address(0), SettingZeroAddress());
         inETHAddress = _inETHAddress;
         emit InEthChanged(_inETHAddress);
     }
 
+    /**
+     * @notice Updates the Lockbox address.
+     * @param _lockboxAddress The new Lockbox address.
+     */
     function setLockboxAddress(address _lockboxAddress) external onlyOwner {
         require(_lockboxAddress != address(0), SettingZeroAddress());
         lockboxAddress = _lockboxAddress;
         emit LockboxChanged(_lockboxAddress);
     }
 
+    /**
+     * @notice Updates the liquidity pool address.
+     * @param _liqPool The new liquidity pool address.
+     */
     function setLiqPool(address payable _liqPool) external onlyOwner {
         require(_liqPool != address(0), SettingZeroAddress());
         liqPool = _liqPool;
         emit LiqPoolChanged(_liqPool);
     }
 
+    /**
+     * @notice Updates the operator address.
+     * @param _operator The new operator address.
+     */
     function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0), SettingZeroAddress());
         operator = _operator;
         emit OperatorChanged(_operator);
     }
 
+    /**
+     * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
+     */
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
-        // uint256 total2ETH = 0; //TODO: to be used in later features
 
         TransactionStorage storageContract = TransactionStorage(
             transactionStorage
@@ -123,18 +158,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
                 MissingOneOrMoreL2Transactions(chainId)
             );
             totalL2InETH += txData.inEthBalance;
-            // total2ETH += txData.ethBalance; //TODO: to be used in later features
         }
-
-        // //TODO: to be used in later features
-        // uint256 l1Ratio = getRatioL1();
-        // uint256 l2Ratio = getRatioL2(totalL2InETH, total2ETH);
-        // int256 ratioDiff = int256(l2Ratio) - int256(l1Ratio);
-
-        // require(
-        //     !_isAGreaterThanB(ratioDiff, int256(MAX_DIFF)),
-        //     RatioDifferenceTooHigh()
-        // );
 
         uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
 
@@ -170,33 +194,15 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         emit TreasuryUpdateBurn(_amountToBurn);
     }
 
-    function _getRatioL1() internal view returns (uint256) {
-        return
-            IInceptionRatioFeed(ratioFeed).getRatioFor(address(inETHAddress));
-    }
-
-    // //TO BE USED LATER
-    // function getRatioL2(
-    //     uint256 _tokenAmount,
-    //     uint256 _ethAmount
-    // ) public pure returns (uint256) {
-    //     return (_tokenAmount * MULTIPLIER) / _ethAmount;
-    // }
-
     function _lastUpdateTotalL2InEth() internal view returns (uint256) {
         return IERC20(inETHAddress).balanceOf(lockboxAddress);
     }
 
-    function _abs(int256 x) internal pure returns (uint256) {
-        return x < 0 ? uint256(-x) : uint256(x);
-    }
-
-    function _isAGreaterThanB(int256 a, int256 b) internal pure returns (bool) {
-        uint256 absA = _abs(a);
-        uint256 absB = _abs(b);
-        return absA > absB;
-    }
-
+    /**
+     * @dev Trigger by a cron job.
+     * @notice Stakes a specified amount of ETH into the Liquidity Pool.
+     * @param _amount The amount of ETH to stake.
+     */
     function stake(uint256 _amount) external onlyOperator {
         require(liqPool != address(0), LiquidityPoolNotSet());
         require(
@@ -210,7 +216,6 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         IRestakingPool(liqPool).stake{value: _amount}();
 
         uint256 inEthBalance = IERC20(inETHAddress).balanceOf(address(this));
-
         require(
             IERC20(inETHAddress).transfer(lockboxAddress, inEthBalance),
             TransferToLockboxFailed()
@@ -219,23 +224,21 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Sends a specific amount of ETH to the L2 chain through a cross-chain bridge.
-     * @dev This function sends ETH to an L2 address and passes gas parameters required for the transaction execution.
-     * It requires that the total `msg.value` includes both the amount to be transferred to the recipient on L2 (`_callValue`)
-     * and the gas fees for the transaction. The gas parameters (e.g. `maxGas`, `gasPriceBid` and `maxSubmissionCost`)
-     * are passed dynamically as encoded `bytes[] _gasData`.
-     * @param _chainId The ID of the Layer 2 chain where the ETH will be sent (e.g., Arbitrum, Optimism).
-     * @param _callValue The amount of ETH that should be transferred to the recipient on the L2.
-     * @param _gasData Encoded gas parameters required for the cross-chain transaction, specific to the L2 network.
-     * @custom:note The `msg.value` must cover both `_callValue` and additional fees (for gas and submission costs).
+     * @dev msg.value is used to pay for cross-chain fees
+     * @notice Sends ETH to an L2 chain through a cross-chain adapter.
+     * @param _chainId The ID of the destination L2 chain.
+     * @param _callValue The amount of ETH to send to L2.
+     * @param _gasData Encoded gas parameters for the cross-chain transaction.
      */
     function sendEthToL2(
         uint256 _chainId,
-        uint256 _callValue, // The ETH amount to be sent to the recipient on L2
-        bytes[] calldata _gasData // Encoded gas parameters (e.g., maxGas, gasPriceBid, etc.)
+        uint256 _callValue,
+        bytes[] calldata _gasData
     ) external payable onlyOperator {
-
-        require(_callValue + msg.value <= address(this).balance, SendAmountExceedsEthBalance(_callValue));
+        require(
+            _callValue + msg.value <= address(this).balance,
+            SendAmountExceedsEthBalance(_callValue)
+        );
         address payable crossChainAdapterAddress = payable(
             TransactionStorage(transactionStorage).adapters(_chainId)
         );
@@ -249,6 +252,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         }(_callValue, _gasData);
     }
 
+    /**
+     * @notice Receives ETH sent to this contract, just in case.
+     */
     receive() external payable {
         emit ETHReceived(msg.sender, msg.value);
     }
