@@ -77,7 +77,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
-            depositBonus = 0;
+            depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
                 depositBonus = availableBonusAmount;
                 depositBonusAmount = 0;

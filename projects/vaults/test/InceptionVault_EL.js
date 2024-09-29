@@ -134,7 +134,6 @@ const initVault = async (a) => {
   iVault.address = await iVault.getAddress();
   await iVault.on("DelegatedTo", (restaker, elOperator) => {
     nodeOperatorToRestaker.set(elOperator, restaker);
-    console.log(`===Restaker to operator ${elOperator}, ${restaker}`);
   });
 
   /// =========================== FACETS ===========================
@@ -1910,7 +1909,6 @@ assets.forEach(function (a) {
 
       beforeEach(async function () {
         await snapshot.restore();
-        console.log("- Restaker");
         iVaultMock = staker2;
         trusteeManager = staker3;
         const factory = await ethers.getContractFactory("IEigenRestaker", iVaultMock);
@@ -2241,36 +2239,36 @@ assets.forEach(function (a) {
           amount: (targetCapacity) => randomBIMax(targetCapacity / 4n) + targetCapacity / 4n,
           receiver: () => staker.address,
         },
-        // {
-        //   name: "more",
-        //   predepositAmount: (targetCapacity) => targetCapacity / 3n,
-        //   amount: (targetCapacity) => randomBIMax(targetCapacity / 3n),
-        //   receiver: () => staker.address,
-        // },
-        // {
-        //   name: "up to target cap",
-        //   predepositAmount: (targetCapacity) => targetCapacity / 10n,
-        //   amount: (targetCapacity) => (targetCapacity * 9n) / 10n,
-        //   receiver: () => staker.address,
-        // },
-        // {
-        //   name: "all rewards",
-        //   predepositAmount: (targetCapacity) => 0n,
-        //   amount: (targetCapacity) => targetCapacity,
-        //   receiver: () => staker.address,
-        // },
-        // {
-        //   name: "up to target cap and above",
-        //   predepositAmount: (targetCapacity) => targetCapacity / 10n,
-        //   amount: (targetCapacity) => targetCapacity,
-        //   receiver: () => staker.address,
-        // },
-        // {
-        //   name: "above target cap",
-        //   predepositAmount: (targetCapacity) => targetCapacity,
-        //   amount: (targetCapacity) => randomBI(19),
-        //   receiver: () => staker.address,
-        // },
+        {
+          name: "more",
+          predepositAmount: (targetCapacity) => targetCapacity / 3n,
+          amount: (targetCapacity) => randomBIMax(targetCapacity / 3n),
+          receiver: () => staker.address,
+        },
+        {
+          name: "up to target cap",
+          predepositAmount: (targetCapacity) => targetCapacity / 10n,
+          amount: (targetCapacity) => (targetCapacity * 9n) / 10n,
+          receiver: () => staker.address,
+        },
+        {
+          name: "all rewards",
+          predepositAmount: (targetCapacity) => 0n,
+          amount: (targetCapacity) => targetCapacity,
+          receiver: () => staker.address,
+        },
+        {
+          name: "up to target cap and above",
+          predepositAmount: (targetCapacity) => targetCapacity / 10n,
+          amount: (targetCapacity) => targetCapacity,
+          receiver: () => staker.address,
+        },
+        {
+          name: "above target cap",
+          predepositAmount: (targetCapacity) => targetCapacity,
+          amount: (targetCapacity) => randomBI(19),
+          receiver: () => staker.address,
+        },
       ];
 
       states.forEach(function (state) {
@@ -2373,7 +2371,6 @@ assets.forEach(function (a) {
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         ratio = await iVault.ratio();
-        console.log(`Initial ratio: ${ratio.format()}`);
       });
 
       const args2 = [
