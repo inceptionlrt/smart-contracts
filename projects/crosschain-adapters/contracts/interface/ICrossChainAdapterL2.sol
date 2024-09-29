@@ -16,6 +16,7 @@ interface ICrossChainAdapterL2 {
     error InsufficientValueSent();
     error TransferToVaultFailed(uint256 amount);
     error OnlyOperatorCanCall(address caller);
+    event RecoverFundsInitiated(uint256 amount);
 
     event ReceiveTriggered(address indexed caller, uint256 amount);
     event AssetsInfoSentToL1(
@@ -23,6 +24,11 @@ interface ICrossChainAdapterL2 {
         uint256 indexed ethAmount,
         uint256 indexed withrawalId //revelant for Arbitrum, always 0 for Optimism
     );
+    event L1TargetChanged(
+        address indexed prevL1Target,
+        address indexed newL1Target
+    );
+    event VaultChanged(address indexed preVault, address indexed newVault);
 
     event EthSentToL1(uint256 indexed amount, uint256 indexed withrawalId); //revelant for Arbitrum, always 0 for Optimism
 

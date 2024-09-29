@@ -10,6 +10,8 @@ import "./AbstractCrossChainAdapterL2.sol";
  * This contract is responsible for sending assets and ETH from Arbitrum L2 to L1.
  */
 contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
+    event ArbSysChanged(address indexed prevArbSys, address indexed newArbSys);
+
     /// @notice Arbitrum system contract (ArbSys).
     ArbSys arbsys;
 
@@ -87,6 +89,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
      */
     function setArbSys(address _newArbSys) external onlyOwner {
         require(_newArbSys != address(0), SettingZeroAddress());
+        emit ArbSysChanged(address(arbsys), _newArbSys);
         arbsys = ArbSys(_newArbSys);
     }
 }

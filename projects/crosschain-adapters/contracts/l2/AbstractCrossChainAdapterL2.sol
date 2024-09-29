@@ -68,6 +68,7 @@ abstract contract AbstractCrossChainAdapterL2 is
      */
     function setL1Target(address _l1Target) external onlyOwner {
         require(_l1Target != address(0), SettingZeroAddress());
+        emit L1TargetChanged(l1Target, _l1Target);
         l1Target = _l1Target;
     }
 
@@ -78,6 +79,7 @@ abstract contract AbstractCrossChainAdapterL2 is
      */
     function setVault(address _vault) external onlyOwner {
         require(_vault != address(0), SettingZeroAddress());
+        emit VaultChanged(vault, _vault);
         vault = _vault;
     }
 
@@ -87,8 +89,10 @@ abstract contract AbstractCrossChainAdapterL2 is
      */
     function recoverFunds() external onlyOperator {
         require(vault != address(0), VaultNotSet());
-        (bool ok, ) = vault.call{value: address(this).balance}("");
-        require(ok, TransferToVaultFailed(address(this).balance));
+        uint256 amount = address(this).balance;
+        (bool ok, ) = vault.call{value: amount}("");
+        require(ok, TransferToVaultFailed(amount));
+        emit RecoverFundsInitiated(amount);
     }
 
     /**
