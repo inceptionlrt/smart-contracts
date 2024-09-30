@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IIEigenRestaker, IIEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
@@ -25,6 +25,8 @@ contract IEigenRestaker is
     IIEigenRestaker,
     IIEigenRestakerErrors
 {
+    using SafeERC20 for IERC20;
+
     IERC20 internal _asset;
     address internal _trusteeManager;
     address internal _vault;
@@ -72,7 +74,7 @@ contract IEigenRestaker is
 
     function depositAssetIntoStrategy(uint256 amount) external onlyTrustee {
         // transfer from the vault
-        _asset.transferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
     }
@@ -82,9 +84,7 @@ contract IEigenRestaker is
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) external onlyTrustee {
-        if (operator == address(0)) {
-            revert NullParams();
-        }
+        if (operator == address(0)) revert NullParams();
 
         _delegationManager.delegateTo(
             operator,
@@ -133,9 +133,7 @@ contract IEigenRestaker is
         uint256 withdrawnAmount = asset.balanceOf(address(this)) -
             balanceBefore;
 
-        if (!asset.transfer(_vault, withdrawnAmount)) {
-            revert TransferAssetFailed(address(asset));
-        }
+        asset.safeTransfer(_vault, withdrawnAmount);
 
         return withdrawnAmount;
     }
@@ -145,7 +143,7 @@ contract IEigenRestaker is
     }
 
     function getVersion() external pure returns (uint256) {
-        return 1;
+        return 2;
     }
 
     function setRewardCoordinator(

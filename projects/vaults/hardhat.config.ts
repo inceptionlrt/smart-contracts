@@ -15,7 +15,7 @@ import "./tasks/deposit-extra";
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   solidity: {
-    version: "0.8.27",
+    version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,

@@ -4,8 +4,6 @@ pragma solidity ^0.8.20;
 import "./eigen-core/IDelegationManager.sol";
 
 interface IIEigenRestakerErrors {
-    error TransferAssetFailed(address assetAddress);
-
     error InconsistentData();
 
     error WrongClaimWithdrawalParams();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.20;
 
+
 /**
  * @title IDefaultBondStrategy
  * @notice Interface defining the functions for managing bond strategies with deposits and withdrawals.

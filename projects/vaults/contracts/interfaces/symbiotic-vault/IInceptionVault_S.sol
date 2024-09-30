@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "../common/IInceptionToken.sol";
 
-interface IInceptionVault_SY {
+interface IInceptionVault_S {
     /*///////////////////
     ////// Events //////
     /////////////////*/
@@ -43,12 +43,6 @@ interface IInceptionVault_SY {
     event OperatorChanged(address prevValue, address newValue);
 
     event MinAmountChanged(uint256 prevValue, uint256 newValue);
-
-    event ELOperatorAdded(address indexed newELOperator);
-
-    event RestakerDeployed(address indexed restaker);
-
-    event ImplementationUpgraded(address prevValue, address newValue);
 
     event RatioFeedChanged(address prevValue, address newValue);
 
