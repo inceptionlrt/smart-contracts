@@ -339,7 +339,6 @@ assets.forEach(function (a) {
         it("DelegateAuto to Mellow", async function () {
           const amount = await iVault.getFreeBalance();
           expect(amount).to.be.gt(0n);
-          console.log(amount);
           const totalAssetsBefore = await iVault.totalAssets();
 
           // 1% FlashPool reserved
