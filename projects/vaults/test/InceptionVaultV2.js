@@ -126,12 +126,6 @@ const initVault = async (a) => {
   ]);
   mellowRestaker.address = await mellowRestaker.getAddress();
 
-  // // 4. Delegation manager
-  // console.log("- Delegation manager");
-  // const delegationManager = await ethers.getContractAt("IDelegationManager", a.delegationManager);
-  // await delegationManager.on("WithdrawalQueued", (newRoot, migratedWithdrawal) => {
-  //   console.log(`===Withdrawal queued: ${migratedWithdrawal.shares[0]}`);
-  // });
   // 5. Ratio feed
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
@@ -309,24 +303,6 @@ assets.forEach(function (a) {
         expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, 1n);
       });
 
-      // it("Delegate half of free balance to EL", async function () {
-      //   const totalAssetsBefore = await iVault.totalAssets();
-      //   const amount = (await iVault.getFreeBalance()) / 2n;
-      //   await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-      //   delegatedEL += amount;
-
-      //   const totalAssetsAfter = await iVault.totalAssets();
-      //   const totalDelegatedAfter = await iVault.getTotalDelegated();
-      //   const delegatedToAfter = await iVault.getDelegatedTo(nodeOperators[0]);
-      //   const totalDepositedAfter = await iVault.getTotalDeposited();
-
-      //   expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount, transactErr);
-      //   expect(totalDelegatedAfter).to.be.closeTo(delegatedEL, transactErr);
-      //   expect(delegatedToAfter).to.be.closeTo(delegatedEL, transactErr);
-      //   expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr);
-      //   expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, 1n);
-      // });
-
       //Only stEth supports Mellow
       if (a.assetName === "stETH") {
         it("Delegate all to Mellow", async function () {
@@ -358,39 +334,7 @@ assets.forEach(function (a) {
           expect(mellowBalance2).to.be.gt(amount / 4n); //Amount of shares is at least greater than half of delegated amount
           expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, ratioErr);
         });
-      } else {
-        //For other tokens delegate the rest to the EL
-        // it("Delegate all to EL", async function () {
-        //   const amount = await iVault.getFreeBalance();
-        //   expect(amount).to.be.gt(0n);
-        //   const totalAssetsBefore = await iVault.totalAssets();
-        //   await iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
-        //   delegatedEL += amount;
-        //   const totalAssetsAfter = await iVault.totalAssets();
-        //   const totalDelegatedAfter = await iVault.getTotalDelegated();
-        //   const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
-        //   const totalDepositedAfter = await iVault.getTotalDeposited();
-        //   expect(totalAssetsBefore - totalAssetsAfter).to.be.eq(amount);
-        //   expect(totalDelegatedAfter).to.be.closeTo(delegatedEL, transactErr);
-        //   expect(delegatedTo).to.be.closeTo(delegatedEL, transactErr);
-        //   expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr);
-        //   expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, ratioErr);
-        // });
-      }
-
-      // it("Add rewards to EL strategy and estimate ratio", async function () {
-      //   const ratioBefore = await calculateRatio(iVault, iToken);
-      //   const totalDelegatedBefore = await iVault.getDelegatedTo(nodeOperators[0]);
-      //   await addRewardsToStrategy(a.assetStrategy, e18, staker3);
-      //   const ratioAfter = await calculateRatio(iVault, iToken);
-      //   const totalDelegatedAfter = await iVault.getDelegatedTo(nodeOperators[0]);
-      //   rewardsEL += totalDelegatedAfter - totalDelegatedBefore;
-
-      //   console.log(`Calculated ratio:\t\t\t${ratioAfter.format()}`);
-      //   console.log(`EL rewards:\t\t\t\t${rewardsEL.format()}`);
-      //   expect(ratioAfter).lt(ratioBefore);
-      //   expect(ratioAfter).lt(e18);
-      // });
+      } else {}
 
       it("Update ratio", async function () {
         const ratio = await calculateRatio(iVault, iToken);
@@ -494,38 +438,6 @@ assets.forEach(function (a) {
         });
       }
 
-      // it("Withdraw from EigenLayer", async function () {
-      //   const totalAssetsBefore = await iVault.totalAssets();
-      //   const totalDepositedBefore = await iVault.getTotalDeposited();
-      //   const totalDelegatedBefore = await iVault.getTotalDelegated();
-      //   console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
-      //   console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
-      //   console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
-
-      //   const amount = await iVault.getDelegatedTo(nodeOperators[0]);
-      //   const tx = await iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount);
-      //   const restaker = nodeOperatorToRestaker.get(nodeOperators[0]);
-      //   expect(restaker).to.be.properAddress;
-      //   withdrawalData = await withdrawDataFromTx(tx, nodeOperators[0], restaker);
-
-      //   const totalAssetsAfter = await iVault.totalAssets();
-      //   const totalDelegatedAfter = await iVault.getTotalDelegated();
-      //   const totalDelegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
-      //   const totalDepositedAfter = await iVault.getTotalDeposited();
-      //   const pendingWithdrawalsELAfter = await iVault.getPendingWithdrawalAmountFromEL();
-
-      //   console.log(`Total assets after:\t\t${totalAssetsAfter.format()}`);
-      //   console.log(`Total delegated after:\t${totalDelegatedAfter.format()}`);
-      //   console.log(`Total deposited after:\t${totalDepositedAfter.format()}`);
-      //   console.log(`Pending from EL:\t\t${pendingWithdrawalsELAfter.format()}`);
-
-      //   expect(totalAssetsAfter).to.be.eq(totalAssetsBefore); //Nothing has come to the iVault yet
-      //   expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr);
-      //   expect(totalDelegatedTo).to.be.closeTo(0n, transactErr);
-      //   expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr); //Total deposited amount did not change
-      //   expect(pendingWithdrawalsELAfter).to.be.closeTo(amount, transactErr);
-      // });
-
       if (a.assetName === "stETH") {
         it("Process request from the Mellow", async function () {
           const totalDepositedBefore = await iVault.getTotalDeposited();
@@ -561,23 +473,6 @@ assets.forEach(function (a) {
           expect(pendingWithdrawalsMellowAfter).to.be.eq(0n);
         });
       }
-
-      // it("Claim from EigenLayer", async function () {
-      //   await mineBlocks(minWithdrawalDelayBlocks);
-      //   const totalAssetsBefore = await iVault.totalAssets();
-      //   const totalDepositedBefore = await iVault.getTotalDeposited();
-      //   const pendingWithdrawalsELBefore = await iVault.getPendingWithdrawalAmountFromEL();
-
-      //   await iVault.connect(iVaultOperator).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]);
-
-      //   const totalAssetsAfter = await iVault.totalAssets();
-      //   const totalDepositedAfter = await iVault.getTotalDeposited();
-      //   const pendingWithdrawalsElAfter = await iVault.getPendingWithdrawalAmountFromEL();
-
-      //   expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsELBefore, transactErr);
-      //   expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-      //   expect(pendingWithdrawalsElAfter).to.be.eq(0n);
-      // });
 
       it("Staker is able to redeem", async function () {
         extra = 0n;
