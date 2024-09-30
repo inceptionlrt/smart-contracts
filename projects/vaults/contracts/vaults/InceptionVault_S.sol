@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import {MellowHandler, IMellowRestaker, IERC20} from "../mellow-handler/MellowHandler.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
@@ -12,6 +14,8 @@ import {Convert} from "../lib/Convert.sol";
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
 contract InceptionVault_S is IInceptionVault, MellowHandler {
+
+    using SafeERC20 for IERC20;
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -167,7 +171,7 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
     function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
-        _asset.approve(address(mellowRestaker), getFreeBalance());
+        _asset.safeApprove(address(mellowRestaker), getFreeBalance());
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(block.timestamp);
 
         emit Delegated(address(0), amount, lpAmount);

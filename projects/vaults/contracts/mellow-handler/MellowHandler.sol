@@ -36,7 +36,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    uint256[50 - 15] private __reserver;
+    uint256[50 - 15] private __gap;
 
     modifier onlyOperator() {
         if (msg.sender != _operator) revert OnlyOperatorAllowed();
