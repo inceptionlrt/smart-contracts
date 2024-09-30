@@ -92,6 +92,12 @@ contract RestakingPool is
     uint64 public unstakeUtilizationKink;
     uint64 public protocolFee;
 
+    uint256 public currentRewards;
+    /// @dev blockTime
+    uint256 public startTimeline;
+    /// @dev in days
+    uint256 public rewardsTimeline;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -486,6 +492,17 @@ contract RestakingPool is
                         VIEW FUNCTIONS
     *******************************************************************************/
 
+    function totalAssets() public view returns (uint256) {
+        uint256 elapsedDays = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (elapsedDays > totalDays) return address(this).balance;
+
+        uint256 reservedRewards = (currentRewards / totalDays) *
+            (totalDays - elapsedDays);
+
+        return (address(this).balance - reservedRewards);
+    }
+
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 balance = address(this).balance;
         uint256 claimable = getTotalClaimable();
@@ -551,7 +568,7 @@ contract RestakingPool is
      * @notice Get pending to calculate ratio.
      */
     function getPending() public view returns (uint256) {
-        uint256 balance = address(this).balance;
+        uint256 balance = totalAssets();
         uint256 claimable = getTotalClaimable();
         uint256 stakeBonus = stakeBonusAmount;
 
@@ -719,6 +736,33 @@ contract RestakingPool is
                 maxFlashFeeRate,
                 targetCap
             );
+    }
+
+    /*******************************************************************************
+                        Rewards
+    *******************************************************************************/
+    /// @dev addRewards
+    function addRewards() external payable onlyOperator {
+        uint256 amount = msg.value;
+        /// @dev verify whether the prev timeline is over
+        if (currentRewards > 0) {
+            uint256 totalDays = rewardsTimeline / 1 days;
+            uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+            if (dayNum < totalDays) revert TimelineNotOver();
+        }
+        currentRewards = amount;
+        startTimeline = block.timestamp;
+
+        emit RewardsAdded(amount, startTimeline);
+    }
+
+    /// @dev setRewardsTimeline ...
+    /// @dev newTimelineInDays is measured in seconds
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOperator {
+        if (newTimelineInSeconds < 1 days) revert InconsistentData();
+
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
+        rewardsTimeline = newTimelineInSeconds;
     }
 
     /*******************************************************************************
