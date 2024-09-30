@@ -47,10 +47,8 @@ contract IMellowRestaker is
     mapping(address => uint256) public allocations;
 
     modifier onlyTrustee() {
-        require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
-            "InceptionRestaker: only vault or trustee manager"
-        );
+        if(msg.sender != _vault && msg.sender != _trusteeManager) 
+            revert NotVaultOrTrusteeManager();
         _;
     }
 
@@ -70,10 +68,8 @@ contract IMellowRestaker is
         __Ownable_init();
         __ERC165_init();
 
-        require(
-            _mellowDepositWrapper.length == _mellowVault.length,
-            "length mismatch"
-        );
+        if(_mellowDepositWrapper.length != _mellowVault.length) revert LengthMismatch();
+
         for (uint256 i = 0; i < _mellowDepositWrapper.length; i++) {
             mellowDepositWrappers[
                 address(_mellowVault[i])
@@ -89,9 +85,9 @@ contract IMellowRestaker is
         uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
-    ) external onlyTrustee returns (uint256 lpAmount) {
+    ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
-        require(address(wrapper) != address(0), "MellowRestaker/inactive");
+        if(address(wrapper) == address(0)) revert InactiveWrapper();
         // transfer from the vault
         _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
@@ -108,7 +104,7 @@ contract IMellowRestaker is
 
     function delegate(
         uint256 deadline
-    ) external onlyTrustee returns (uint256 amount, uint256 lpAmount) {
+    ) external onlyTrustee whenNotPaused returns (uint256 amount, uint256 lpAmount) {
         uint256 MAX_TARGET_PERCENT = IMellowHandler(_vault)
             .MAX_TARGET_PERCENT();
         uint256 total = IMellowHandler(_vault).getTotalDeposited();
@@ -148,17 +144,15 @@ contract IMellowRestaker is
         address _mellowVault,
         uint256 amount,
         bool closePrevious
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = amountToLpAmount(amount, mellowVault);
         uint256[] memory minAmounts = new uint256[](1);
         minAmounts[0] = amount - 5; // dust
 
-        require(
-            address(mellowDepositWrappers[_mellowVault]) != address(0),
-            "MellowRestaker/invalid-vault"
-        );
+        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+
         mellowVault.registerWithdrawal(
             address(this),
             lpAmount,
@@ -206,10 +200,10 @@ contract IMellowRestaker is
         address mellowVault,
         uint256 newAllocation
     ) external onlyOwner {
-        require(mellowVault != address(0));
+        if (mellowVault == address(0)) revert ZeroAddress();
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
-        require(_isValidAllocation(), "MellowStaker/>100%");
+        if (!_isValidAllocation()) revert InvalidAllocation();
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }

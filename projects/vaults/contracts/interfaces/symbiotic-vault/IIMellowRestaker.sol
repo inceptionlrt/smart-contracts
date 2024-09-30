@@ -17,6 +17,18 @@ interface IIEigenRestakerErrors {
     error WrongClaimWithdrawalParams();
 
     error NullParams();
+
+    error NotVaultOrTrusteeManager();
+
+    error LengthMismatch();
+
+    error InactiveWrapper();
+
+    error InvalidVault();
+
+    error ZeroAddress();
+
+    error InvalidAllocation();
 }
 
 interface IIMellowRestaker {
