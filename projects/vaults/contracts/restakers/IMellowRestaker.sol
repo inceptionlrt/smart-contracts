@@ -85,7 +85,7 @@ contract IMellowRestaker is
         uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
-    ) external onlyTrustee returns (uint256 lpAmount) {
+    ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
         if(address(wrapper) == address(0)) revert InactiveWrapper();
         // transfer from the vault
@@ -203,7 +203,7 @@ contract IMellowRestaker is
         if (mellowVault == address(0)) revert ZeroAddress();
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
-        require(_isValidAllocation(), "MellowStaker/>100%");
+        if (!_isValidAllocation()) revert InvalidAllocation();
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
