@@ -3,6 +3,16 @@ const { ethers, network } = require("hardhat");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
 };
+
+const addRewardsToStrategyEigen = async (strategyAddress, amount, staker) => {
+  //const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
+  const asset = await ethers.getContractAt("Eigen", "0x3B78576F7D6837500bA3De27A60c7f594934027E");
+  await asset.connect(staker).unwrap(amount);
+  const bEigen = await ethers.getContractAt("BackingEigen", "0x275cCf9Be51f4a6C94aBa6114cdf2a4c45B9cb27");
+
+  await bEigen.connect(staker).transfer(strategyAddress, amount);
+};
+
 const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
   const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
@@ -113,8 +123,8 @@ const randomBIMax = (max) => {
   return random;
 };
 async function sleep(msec) {
-  return new Promise(resolve => setTimeout(resolve, msec));
-};
+  return new Promise((resolve) => setTimeout(resolve, msec));
+}
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
