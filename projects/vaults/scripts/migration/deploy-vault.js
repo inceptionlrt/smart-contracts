@@ -21,7 +21,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
 
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
-  let strategyAddress;
+  let strategyAddress, assetAddress;
   let vaultFactory = "InVault_E1";
   switch (vaultName) {
     case "InstEthVault":
@@ -62,15 +62,48 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     case "InlsEthVault":
       strategyAddress = addresses.LiquidStrategy;
       break;
+    /// Basic Strategy Assets
+    case "InEigenVault":
+      vaultFactory = "InBasicStrategyVault_E1";
+      assetAddress = addresses.EigenAddress;
+      strategyAddress = addresses.EigenStrategy;
+      break;
+    case "InsFraxVault":
+      vaultFactory = "InBasicStrategyVault_E1";
+      assetAddress = addresses.sFraxAddress;
+      strategyAddress = addresses.sFraxStrategy;
+      break;
+    case "InslisBnbVault":
+      vaultFactory = "InBasicStrategyVault_E1";
+      assetAddress = addresses.ListaAddress;
+      strategyAddress = addresses.ListaStrategy;
+      break;
+    case "IntBtcVault":
+      vaultFactory = "InBasicStrategyVault_E1";
+      assetAddress = addresses.tBTCAddress;
+      strategyAddress = addresses.tBTCStrategy;
+      break;
   }
 
   // 2. Inception vault
+  let iVault;
   const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory);
-  const iVault = await upgrades.deployProxy(
-    InceptionVaultFactory,
-    [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
-    { kind: "transparent" }
-  );
+  if (a.vaultFactory === "InBasicStrategyVault_E1" || a.vaultFactory === "InBasicStrategyVault_E2") {
+    iVault = await upgrades.deployProxy(
+      InceptionVaultFactory,
+      [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress, assetAddress],
+      { unsafeAllowLinkedLibraries: true }
+    );
+  } else if (a.vaultFactory === "InVault_E1" || a.vaultFactory === "InVault_E2") {
+    iVault = await upgrades.deployProxy(
+      InceptionVaultFactory,
+      [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
+      { unsafeAllowLinkedLibraries: true }
+    );
+  } else {
+    console.error("Wrong iVaultFactory: ", a.vaultFactory);
+    return;
+  }
   await iVault.waitForDeployment();
   const iVaultAddress = await iVault.getAddress();
   console.log(`InceptionVault address: ${iVaultAddress}`);

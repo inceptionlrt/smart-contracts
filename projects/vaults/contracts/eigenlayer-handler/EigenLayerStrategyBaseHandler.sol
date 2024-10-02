@@ -8,15 +8,11 @@ import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
 import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
 
-interface IBEigen {
-    function EIGEN() external view returns (IERC20);
-}
-
 /// @author The InceptionLRT team
-/// @title The EigenLayerBasicStrategyHandler contract
+/// @title The EigenLayerStrategyBaseHandler contract
 /// @dev Serves communication with external EigenLayer protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract EigenLayerBasicStrategyHandler is
+contract EigenLayerStrategyBaseHandler is
     InceptionAssetsHandler,
     IEigenLayerHandler
 {

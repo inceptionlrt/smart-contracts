@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {InceptionStrategyBaseVault, IStrategyManager, IInceptionToken, IStrategy, IERC20} from "../InceptionBasicStrategyVault.sol";
 
 /// @author The InceptionLRT team
-contract InStrategyBaseVault_E1 is InceptionStrategyBaseVault {
+contract InStrategyBaseVault_E2 is InceptionStrategyBaseVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -31,12 +31,12 @@ contract InStrategyBaseVault_E1 is InceptionStrategyBaseVault {
     function _getAssetWithdrawAmount(
         uint256 amount
     ) internal pure override returns (uint256) {
-        return amount + 1;
+        return amount + 2;
     }
 
     function _getAssetReceivedAmount(
         uint256 amount
     ) internal pure override returns (uint256) {
-        return amount - 1;
+        return amount - 2;
     }
 }

@@ -14,9 +14,16 @@ const addRewardsToStrategyEigen = async (strategyAddress, amount, staker) => {
 };
 
 const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
-  const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
-  const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
-  await asset.connect(staker).transfer(strategyAddress, amount);
+  // const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
+  // const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
+  // await asset.connect(staker).transfer(strategyAddress, amount);
+
+  //const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
+  const asset = await ethers.getContractAt("Eigen", "0xec53bf9167f50cdeb3ae105f56099aaab9061f83");
+  await asset.connect(staker).unwrap(amount);
+  const bEigen = await ethers.getContractAt("BackingEigen", "0x83E9115d334D248Ce39a6f36144aEaB5b3456e75");
+
+  await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
 const calculateRatio = async (vault, token) => {
@@ -114,14 +121,15 @@ const randomBI = (length) => {
     return 0n;
   }
 };
-
 const randomBIMax = (max) => {
   let random = 0n;
   if (max > 0n) {
-    random += BigInt(Math.random() * Number(max));
+    // Use Math.floor to ensure the result is an integer
+    random += BigInt(Math.floor(Math.random() * Number(max)));
   }
   return random;
 };
+
 async function sleep(msec) {
   return new Promise((resolve) => setTimeout(resolve, msec));
 }

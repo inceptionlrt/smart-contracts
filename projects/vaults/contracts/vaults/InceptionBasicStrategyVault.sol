@@ -8,14 +8,14 @@ import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerBasicStrategyHandler.sol";
+import "../eigenlayer-handler/EigenLayerStrategyBaseHandler.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionBasicStrategyVault contract
+/// @title The InceptionStrategyBaseVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionBasicStrategyVault is
+contract InceptionStrategyBaseVault is
     IInceptionVault,
-    EigenLayerBasicStrategyHandler
+    EigenLayerStrategyBaseHandler
 {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -69,6 +69,7 @@ contract InceptionBasicStrategyVault is
 
         minAmount = 100;
 
+        /// TODO
         protocolFee = 50 * 1e8;
 
         /// @dev deposit bonus
@@ -439,9 +440,8 @@ contract InceptionBasicStrategyVault is
         return true;
     }
 
-    function maxDeposit(address /*receiver*/) external view returns (uint256) {
-        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
-        return maxPerDeposit;
+    function maxDeposit(address /*receiver*/) external pure returns (uint256) {
+        return type(uint256).max;
     }
 
     function maxRedeem(
