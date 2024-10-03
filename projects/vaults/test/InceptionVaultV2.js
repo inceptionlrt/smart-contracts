@@ -350,7 +350,7 @@ assets.forEach(function (a) {
       it("Initial ratio is 1e18", async function () {
         const ratio = await iVault.ratio();
         console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
-        expect(await iVault.asset()).to.be.eq(await asset.getAddress());
+        expect((await iVault.asset()).toLowerCase()).to.be.eq((await asset.getAddress()).toLowerCase());
         expect(ratio).to.be.eq(e18);
       });
 
