@@ -71,6 +71,7 @@ contract InceptionStrategyBaseVault is
 
         /// TODO
         protocolFee = 50 * 1e8;
+        targetCapacity = 5 * 1e18;
 
         /// @dev deposit bonus
         depositUtilizationKink = 25 * 1e8;
