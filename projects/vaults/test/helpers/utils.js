@@ -14,16 +14,16 @@ const addRewardsToStrategyEigen = async (strategyAddress, amount, staker) => {
 };
 
 const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
-  // const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
-  // const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
-  // await asset.connect(staker).transfer(strategyAddress, amount);
+  const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
+  const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
+  await asset.connect(staker).transfer(strategyAddress, amount);
 
   //const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
-  const asset = await ethers.getContractAt("Eigen", "0xec53bf9167f50cdeb3ae105f56099aaab9061f83");
-  await asset.connect(staker).unwrap(amount);
-  const bEigen = await ethers.getContractAt("BackingEigen", "0x83E9115d334D248Ce39a6f36144aEaB5b3456e75");
+  // const asset = await ethers.getContractAt("Eigen", "0xec53bf9167f50cdeb3ae105f56099aaab9061f83");
+  // await asset.connect(staker).unwrap(amount);
+  // const bEigen = await ethers.getContractAt("BackingEigen", "0x83E9115d334D248Ce39a6f36144aEaB5b3456e75");
 
-  await bEigen.connect(staker).transfer(strategyAddress, amount);
+  // await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
 const calculateRatio = async (vault, token) => {

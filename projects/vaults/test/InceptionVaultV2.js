@@ -20,58 +20,58 @@ BigInt.prototype.format = function () {
 };
 
 assets = [
-  {
-    network: "mainnet",
-    assetName: "Eigen",
-    assetAddress: "0xec53bf9167f50cdeb3ae105f56099aaab9061f83",
-    /// ----- mock -----
-    assetPoolName: "RocketMockPool",
-    assetPool: "0x320f3aAB9405e38b955178BBe75c477dECBA0C27",
-    /// ----- #### -----
-    vaultName: "InEigenVault",
-    vaultFactory: "InStrategyBaseVault_E1",
-    strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
-    assetStrategy: "0xaCB55C530Acdb2849e6d4f36992Cd8c9D50ED8F7",
-    iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-    delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
-    withdrawalDelayBlocks: 50400,
-    ratioErr: 2n,
-    transactErr: 5n,
-    impersonateStaker: async (staker, iVault, asset, assetPool) => {
-      const donor = await impersonateWithEth("0xe7d40d9a77caddd8e8b4b484ed14c42f3b8d763a", toWei(1));
-      console.log(`balance of the donor: ${(await asset.balanceOf(donor.address)).toString()}`);
-      await asset.connect(donor).transfer(staker.address, toWei(1000));
-      const balanceAfter = await asset.balanceOf(staker.address);
-      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-      return staker;
-    },
-  },
   // {
   //   network: "mainnet",
-  //   assetName: "slisBNB",
-  //   assetAddress: "0xf9B24C9364457Ea85792179D285855753549eBAa",
+  //   assetName: "Eigen",
+  //   assetAddress: "0xec53bf9167f50cdeb3ae105f56099aaab9061f83",
   //   /// ----- mock -----
   //   assetPoolName: "RocketMockPool",
   //   assetPool: "0x320f3aAB9405e38b955178BBe75c477dECBA0C27",
   //   /// ----- #### -----
-  //   vaultName: "lbtcInVault",
+  //   vaultName: "InEigenVault",
   //   vaultFactory: "InStrategyBaseVault_E1",
   //   strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
-  //   assetStrategy: "0x0650435080A9C606F92b2996c5D5e9554A713898",
+  //   assetStrategy: "0xaCB55C530Acdb2849e6d4f36992Cd8c9D50ED8F7",
   //   iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
   //   delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
   //   withdrawalDelayBlocks: 50400,
   //   ratioErr: 2n,
   //   transactErr: 5n,
   //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
-  //     const donor = await impersonateWithEth("0x96314EF6e4285C68931491158f3102C0f7eA6863", toWei(1));
+  //     const donor = await impersonateWithEth("0xe7d40d9a77caddd8e8b4b484ed14c42f3b8d763a", toWei(1));
   //     console.log(`balance of the donor: ${(await asset.balanceOf(donor.address)).toString()}`);
-  //     await asset.connect(donor).transfer(staker.address, toWei(0.2));
+  //     await asset.connect(donor).transfer(staker.address, toWei(1000));
   //     const balanceAfter = await asset.balanceOf(staker.address);
   //     await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
   //     return staker;
   //   },
   // },
+  {
+    network: "mainnet",
+    assetName: "slisBNB",
+    assetAddress: "0xf9B24C9364457Ea85792179D285855753549eBAa",
+    /// ----- mock -----
+    assetPoolName: "RocketMockPool",
+    assetPool: "0x320f3aAB9405e38b955178BBe75c477dECBA0C27",
+    /// ----- #### -----
+    vaultName: "lbtcInVault",
+    vaultFactory: "InStrategyBaseVault_E1",
+    strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategy: "0x0650435080A9C606F92b2996c5D5e9554A713898",
+    iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+    delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+    withdrawalDelayBlocks: 50400,
+    ratioErr: 2n,
+    transactErr: 5n,
+    impersonateStaker: async (staker, iVault, asset, assetPool) => {
+      const donor = await impersonateWithEth("0x96314EF6e4285C68931491158f3102C0f7eA6863", toWei(1));
+      console.log(`balance of the donor: ${(await asset.balanceOf(donor.address)).toString()}`);
+      await asset.connect(donor).transfer(staker.address, toWei(0.2));
+      const balanceAfter = await asset.balanceOf(staker.address);
+      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+      return staker;
+    },
+  },
   // {
   //   network: "mainnet",
   //   assetName: "tBTC",
