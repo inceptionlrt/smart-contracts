@@ -2,7 +2,6 @@ import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
-import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 
 // Hardhat tasks

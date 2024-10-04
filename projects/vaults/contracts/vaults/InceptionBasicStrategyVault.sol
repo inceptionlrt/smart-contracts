@@ -69,8 +69,7 @@ contract InceptionStrategyBaseVault is
 
         minAmount = 100;
 
-        /// TODO
-        protocolFee = 50 * 1e8;
+        protocolFee = 70 * 1e8;
         targetCapacity = 5 * 1e18;
 
         /// @dev deposit bonus
