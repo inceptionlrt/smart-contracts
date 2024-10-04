@@ -1,7 +1,8 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
-import path from "path";
+import "@nomicfoundation/hardhat-verify";
+import { resolve } from "path";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 const config: HardhatUserConfig = {
@@ -48,13 +49,25 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: "YOUR_ETHERSCAN_API_KEY"
+  },
   paths: {
-    sources: "./contracts",
-    tests: "./test",
+    sources: "./contracts", // default path for contracts
     cache: "./cache",
     artifacts: "./artifacts",
-    imports: path.join(__dirname, "../restaking-pool/contracts")
-  }
+  },
+  external: {
+    contracts: [
+      {
+        artifacts: resolve(__dirname, "./node_modules/genesis-smart-contracts/artifacts"),
+        sources: resolve(__dirname, "./node_modules/genesis-smart-contracts/contracts"),
+      },
+    ],
+  },
+  include: [resolve(__dirname, "./contracts"), resolve(__dirname, "./genesis-smart-contracts")],
 };
 
 export default config;

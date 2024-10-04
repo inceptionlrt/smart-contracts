@@ -9,7 +9,11 @@ import "./TransactionStorage.sol";
 import "./interfaces/IRestakingPool.sol";
 import "./interfaces/IInceptionToken.sol";
 import "./interfaces/IInceptionRatioFeed.sol";
-import "./interfaces/ICrossChainAdapterL1.sol";
+import "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
+
+// import "./interfaces/ICrossChainAdapterL1.sol";
+
+// projects/crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol
 
 /**
  * @author The InceptionLRT team

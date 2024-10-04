@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "../interfaces/ICrossChainAdapterL1.sol";
+import "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
 import "../interfaces/IRestakingPool.sol";
 import "../TransactionStorage.sol";
 
