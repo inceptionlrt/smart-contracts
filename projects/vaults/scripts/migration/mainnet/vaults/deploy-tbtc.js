@@ -10,7 +10,7 @@ const VaultName = "IntBtcVault",
   TokenSymbol = "intBTC";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol);
+  await deployVault(addresses, "0x1AEe5EC60fc79B669f11FE368fDe789E267649e2", VaultName, TokenName, TokenSymbol);
 }
 
 main()

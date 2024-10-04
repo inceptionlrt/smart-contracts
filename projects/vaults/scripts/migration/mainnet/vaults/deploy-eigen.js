@@ -10,7 +10,7 @@ const VaultName = "InEigenVault",
   TokenSymbol = "inEIGEN";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol);
+  await deployVault(addresses, "0xf21014B114bb976F890E15c19900cE9bE5Fb1e12", VaultName, TokenName, TokenSymbol);
 }
 
 main()

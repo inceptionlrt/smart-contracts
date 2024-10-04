@@ -10,7 +10,7 @@ const VaultName = "InslisBnbVault",
   TokenSymbol = "inslisBNB";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol);
+  await deployVault(addresses, "0x74D1984A64F447371Be4019920180b52A33aDAdD", VaultName, TokenName, TokenSymbol);
 }
 
 main()

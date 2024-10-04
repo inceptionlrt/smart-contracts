@@ -1,9 +1,9 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const RESTAKER_ADDRESS = "";
+const RESTAKER_ADDRESS = "0x02e2fcE3EFE6619Ad882b159E7d897A9c03a33f0";
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
+const deployVault = async (addresses, inceptionTokenAddress, vaultName, tokenName, tokenSymbol) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -14,12 +14,11 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
 
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
-  const iToken = await upgrades.deployProxy(iTokenFactory, [tokenName, tokenSymbol], { kind: "transparent" });
-  await iToken.deployed();
-  const iTokenAddress = iToken.address;
+  const iToken = iTokenFactory.attach(inceptionTokenAddress);
+  const iTokenAddress = inceptionTokenAddress;
   console.log(`InceptionToken address: ${iTokenAddress}`);
 
-  const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
+  // const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
   let strategyAddress, assetAddress;
   let vaultFactory = "InVault_E1";
@@ -96,13 +95,13 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress, assetAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { kind: "transparent", unsafeAllowLinkedLibraries: true }
     );
   } else if (vaultFactory === "InVault_E1" || vaultFactory === "InVault_E2") {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { kind: "transparent", unsafeAllowLinkedLibraries: true }
     );
   } else {
     console.error("Wrong iVaultFactory: ", vaultFactory);
@@ -150,7 +149,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVaultAddress: iVaultAddress,
     //    iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
-    iTokenImpl: iTokenImplAddress,
+    //  iTokenImpl: iTokenImplAddress,
     RestakerImpl: RESTAKER_ADDRESS,
   };
 

@@ -10,7 +10,7 @@ const VaultName = "InsFraxVault",
   TokenSymbol = "insFRAX";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol);
+  await deployVault(addresses, "0x50253dc4a01c6408Fab9646e804FCbFDb74e3E4c", VaultName, TokenName, TokenSymbol);
 }
 
 main()
