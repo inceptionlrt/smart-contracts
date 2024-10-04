@@ -19,7 +19,26 @@ async function main() {
     const chainId = Number(networkData.chainId);
     console.log(`chainId is ${chainId}`);
 
-    // ------------ Transaction 1: InceptionToken Deployment ------------
+    // ------------ Transaction 1: ProtocolConfig Deployment ------------
+    if (!checkpoint.ProtocolConfig) {
+        console.log("Deploying ProtocolConfig...");
+        const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig");
+        const protocolConfig = await upgrades.deployProxy(
+            ProtocolConfig,
+            [
+                deployer.address,   // Governance
+                deployer.address,   // Operator
+                deployer.address    // Treasury
+            ],
+            { initializer: "initialize" }
+        );
+        await protocolConfig.waitForDeployment();
+        checkpoint.ProtocolConfig = await protocolConfig.getAddress();
+        saveCheckpoint(checkpoint);
+        console.log("ProtocolConfig deployed at:", checkpoint.ProtocolConfig);
+    }
+
+    // ------------ Transaction 2: InceptionToken Deployment ------------
     if (!checkpoint.InceptionToken) {
         console.log("Deploying InceptionToken...");
         const InceptionToken = await ethers.getContractFactory("InceptionToken");
@@ -38,7 +57,7 @@ async function main() {
         console.log("InceptionToken deployed at:", checkpoint.InceptionToken);
     }
 
-    // ------------ Transaction 2: InceptionOmniVault Deployment ------------
+    // ------------ Transaction 3: InceptionOmniVault Deployment ------------
     if (!checkpoint.InceptionOmniVault) {
         console.log("Deploying InceptionOmniVault...");
         const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
@@ -66,7 +85,7 @@ async function main() {
         console.log("Vault set in InceptionToken:", checkpoint.InceptionOmniVault);
     }
 
-    // ------------ Transaction 3: CrossChainAdapterArbitrumL2 Deployment ------------
+    // ------------ Transaction 4: CrossChainAdapterArbitrumL2 Deployment ------------
     if (!checkpoint.CrossChainAdapterArbitrumL2) {
         console.log("Deploying CrossChainAdapterArbitrumL2...");
         const CrossChainAdapterArbitrumL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
@@ -91,13 +110,40 @@ async function main() {
         console.log("Vault set in CrossChainAdapterArbitrumL2:", checkpoint.InceptionOmniVault);
     }
 
+    // ------------ Transaction 5: RatioFeed Deployment ------------
+    if (!checkpoint.RatioFeed) {
+        console.log("Deploying RatioFeed...");
+        const RatioFeed = await ethers.getContractFactory("RatioFeed");
+
+        const ratioFeed = await upgrades.deployProxy(
+            RatioFeed,
+            [
+                checkpoint.ProtocolConfig, // ProtocolConfig address
+                1000000                   // Ratio threshold (1% in parts per million)
+            ],
+            { initializer: "initialize" }
+        );
+
+        await ratioFeed.waitForDeployment();
+        checkpoint.RatioFeed = await ratioFeed.getAddress();
+        saveCheckpoint(checkpoint);
+        console.log("RatioFeed deployed at:", checkpoint.RatioFeed);
+
+        // Update the ratio for InceptionToken (setting a ratio different from 1.0)
+        const updateRatioTx = await ratioFeed.updateRatio(checkpoint.InceptionToken, ethers.utils.parseUnits("0.9", 18));  // Setting ratio to 0.9
+        await updateRatioTx.wait();
+        console.log("Ratio updated for InceptionToken in RatioFeed to 0.9.");
+    }
+
     // Verifications for the contracts deployed
     await verifyContracts(
         chainId,
         supportedChains,
+        checkpoint.ProtocolConfig,
         checkpoint.InceptionToken,
         checkpoint.InceptionOmniVault,
         checkpoint.CrossChainAdapterArbitrumL2,
+        checkpoint.RatioFeed,
         deployer
     );
 
@@ -125,6 +171,8 @@ async function verifyContracts(
     address1: string,
     address2: string | null,
     address3: string | null,
+    address4: string | null,
+    address5: string | null,
     deployer: any
 ) {
     if (supportedChains.includes(chainId) && process.env.ETHERSCAN_API_KEY) {
@@ -161,6 +209,30 @@ async function verifyContracts(
                 });
             } catch (error) {
                 console.error(`Verification failed for ${address3}:`, error);
+            }
+        }
+
+        if (address4) {
+            try {
+                console.log(`Verifying contract at ${address4}`);
+                await run("verify:verify", {
+                    address: address4,
+                    constructorArguments: [],
+                });
+            } catch (error) {
+                console.error(`Verification failed for ${address4}:`, error);
+            }
+        }
+
+        if (address5) {
+            try {
+                console.log(`Verifying contract at ${address5}`);
+                await run("verify:verify", {
+                    address: address5,
+                    constructorArguments: [],
+                });
+            } catch (error) {
+                console.error(`Verification failed for ${address5}:`, error);
             }
         }
     } else {
