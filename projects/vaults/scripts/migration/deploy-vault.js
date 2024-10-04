@@ -141,6 +141,10 @@ const deployVault = async (addresses, inceptionTokenAddress, vaultName, tokenNam
   tx = await iVault.transferOwnership(addresses.TreasuryAddress);
   await tx.wait();
 
+  // 10. transferOwnerShip
+  tx = await iToken.transferOwnership(addresses.TreasuryAddress);
+  await tx.wait();
+
   const fininalBalance = await deployer.provider.getBalance(deployer.address);
   console.log(`deployed spent: ${initBalance - fininalBalance}`);
 
