@@ -405,7 +405,7 @@ contract InceptionVaultStorage_EL is
         bytes4 sig,
         FuncTarget _target,
         FuncAccess _access
-    ) external {
+    ) external onlyOwner {
         _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
         //  emit SignatureSet(target, sig);
     }

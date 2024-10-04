@@ -83,21 +83,21 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setEigenLayerFacet(address newEigenLayerFacet) external {
+    function setEigenLayerFacet(address newEigenLayerFacet) external onlyOwner {
         if (!Address.isContract(newEigenLayerFacet)) revert NotContract();
 
         emit EigenLayerFacetChanged(eigenLayerFacet, newEigenLayerFacet);
         eigenLayerFacet = newEigenLayerFacet;
     }
 
-    function setERC4626Facet(address newERC4626Facet) external {
+    function setERC4626Facet(address newERC4626Facet) external onlyOwner {
         if (!Address.isContract(newERC4626Facet)) revert NotContract();
 
         emit ERC4626FacetChanged(erc4626Facet, newERC4626Facet);
         erc4626Facet = newERC4626Facet;
     }
 
-    function setSetterFacet(address newSetterFacet) external {
+    function setSetterFacet(address newSetterFacet) external onlyOwner {
         if (!Address.isContract(newSetterFacet)) revert NotContract();
 
         emit SetterFacetChanged(setterFacet, newSetterFacet);
