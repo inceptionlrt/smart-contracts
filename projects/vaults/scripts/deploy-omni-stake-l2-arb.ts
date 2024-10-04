@@ -4,6 +4,8 @@ require("dotenv").config();
 
 const CHECKPOINT_FILE = "deployment_checkpoint.json";
 
+const CROSS_CHAIN_ADAPTER_L1_ADDRESS = "0xA6485be0890EB9231873f75af4B8d9447d7f3f88";
+
 async function main() {
     const [deployer] = await ethers.getSigners();
     console.log(`Deployer Address: ${deployer.address}`);
@@ -17,7 +19,26 @@ async function main() {
     const chainId = Number(networkData.chainId);
     console.log(`chainId is ${chainId}`);
 
-    // ------------ Transaction 1: InceptionOmniVault Deployment ------------
+    // ------------ Transaction 1: InceptionToken Deployment ------------
+    if (!checkpoint.InceptionToken) {
+        console.log("Deploying InceptionToken...");
+        const InceptionToken = await ethers.getContractFactory("InceptionToken");
+        const inceptionToken = await upgrades.deployProxy(
+            InceptionToken,
+            [
+                "Inception Token",
+                "InETH"
+            ],
+            { initializer: "initialize" }
+        );
+
+        await inceptionToken.waitForDeployment();
+        checkpoint.InceptionToken = await inceptionToken.getAddress();
+        saveCheckpoint(checkpoint);
+        console.log("InceptionToken deployed at:", checkpoint.InceptionToken);
+    }
+
+    // ------------ Transaction 2: InceptionOmniVault Deployment ------------
     if (!checkpoint.InceptionOmniVault) {
         console.log("Deploying InceptionOmniVault...");
         const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
@@ -25,10 +46,10 @@ async function main() {
         const inceptionOmniVault = await upgrades.deployProxy(
             InceptionOmniVault,
             [
-                "Inception Vault",         // Vault name
+                "Inception Vault",
                 deployer.address,          // Operator
-                "0xYourInceptionToken",    // InceptionToken Address (replace with actual address)
-                checkpoint.CrossChainAdapterArbitrumL2  // CrossChainAdapterL2 Address from a previous deployment
+                checkpoint.InceptionToken,
+                checkpoint.CrossChainAdapterArbitrumL2
             ],
             { initializer: "__InceptionOmniVault_init" }
         );
@@ -37,9 +58,15 @@ async function main() {
         checkpoint.InceptionOmniVault = await inceptionOmniVault.getAddress();
         saveCheckpoint(checkpoint);
         console.log("InceptionOmniVault deployed at:", checkpoint.InceptionOmniVault);
+
+        // Set the vault in InceptionToken
+        const InceptionToken = await ethers.getContractAt("InceptionToken", checkpoint.InceptionToken);
+        const setVaultTx = await InceptionToken.setVault(checkpoint.InceptionOmniVault);
+        await setVaultTx.wait();
+        console.log("Vault set in InceptionToken:", checkpoint.InceptionOmniVault);
     }
 
-    // ------------ Transaction 2: CrossChainAdapterArbitrumL2 Deployment ------------
+    // ------------ Transaction 3: CrossChainAdapterArbitrumL2 Deployment ------------
     if (!checkpoint.CrossChainAdapterArbitrumL2) {
         console.log("Deploying CrossChainAdapterArbitrumL2...");
         const CrossChainAdapterArbitrumL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
@@ -47,8 +74,8 @@ async function main() {
         const crossChainAdapterArbitrumL2 = await upgrades.deployProxy(
             CrossChainAdapterArbitrumL2,
             [
-                checkpoint.InceptionOmniVault,  // L1 Target (InceptionOmniVault in this case)
-                deployer.address               // Operator
+                CROSS_CHAIN_ADAPTER_L1_ADDRESS,
+                deployer.address
             ],
             { initializer: "initialize" }
         );
@@ -68,9 +95,9 @@ async function main() {
     await verifyContracts(
         chainId,
         supportedChains,
+        checkpoint.InceptionToken,
         checkpoint.InceptionOmniVault,
         checkpoint.CrossChainAdapterArbitrumL2,
-        null,
         deployer
     );
 
