@@ -12,7 +12,7 @@ async function main() {
     let checkpoint: any = loadCheckpoint();
 
     // Supported chains for verification
-    const supportedChains = [1, 4, 5, 42, 56, 137, 17000];
+    const supportedChains = [1, 4, 5, 42, 56, 137, 17000, 11155111];
     const networkData = await ethers.provider.getNetwork();
     const chainId = Number(networkData.chainId);
     console.log(`chainId is ${chainId}`);
