@@ -45,13 +45,11 @@ contract InceptionAssetsHandler is
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
-        if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed(address(_asset));
+        _asset.safeTransferFrom(staker, address(this), amount);
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount))
-            revert TransferAssetFailed(address(_asset));
+        _asset.safeTransfer(receiver, amount);
     }
 
     /// @dev The functions below serve the proper withdrawal and claiming operations

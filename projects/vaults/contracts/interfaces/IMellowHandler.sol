@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IStrategyManager.sol";
-
-interface IEigenLayerHandler {
+interface IMellowHandler {
     /// @dev Epoch represents the period of the rebalancing process
     /// @dev Receiver is a receiver of assets in claim()
     /// @dev Amount represents the exact amount of the asset to be claimed
@@ -13,21 +11,10 @@ interface IEigenLayerHandler {
         uint256 amount;
     }
 
-    event StartWithdrawal(
-        address indexed stakerAddress,
-        IStrategy strategy,
-        uint256 shares,
-        uint32 withdrawalStartBlock,
-        address delegatedAddress,
-        uint256 nonce
-    );
-
     event StartMellowWithdrawal(
         address indexed stakerAddress,
         uint256 amount
     );
-
-    event DepositedToEL(address indexed stakerAddress, uint256 amount);
 
     event DelegatedTo(
         address indexed stakerAddress,
@@ -35,9 +22,13 @@ interface IEigenLayerHandler {
         uint256 amount
     );
 
-    event WithdrawalClaimed(uint256 totalAmount);
+    event Delegated(
+        address indexed stakerAddress,
+        uint256 amount,
+        uint256 lpAmount
+    );
 
-    event DelegationManagerChanged(address prevValue, address newValue);
+    event WithdrawalClaimed(uint256 totalAmount);
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 }

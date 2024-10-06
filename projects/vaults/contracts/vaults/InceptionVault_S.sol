@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {MellowHandler, IMellowRestaker, IERC20} from "../mellow-handler/MellowHandler.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IOwnable} from "../interfaces/IOwnable.sol";
+import {MellowHandler, IMellowRestaker, IERC20} from "../mellow-handler/MellowHandler.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-
 import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of EigenLayer for a certain asset.
+/// @notice Aims to maximize the profit of Mellow asset.
 contract InceptionVault_S is IInceptionVault, MellowHandler {
+
+    using SafeERC20 for IERC20;
+
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -154,17 +155,26 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
+    /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount
     ) external nonReentrant whenNotPaused onlyOperator {
-        if (mellowVault == address(0)) revert NullParams();
+        if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount);
+        _depositAssetIntoMellow(amount, mellowVault);
 
         emit DelegatedTo(address(0), mellowVault, amount);
         return;
+    }
+
+    /// @dev Sends all underlying to all mellow vaults based on allocation
+    function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
+        _asset.safeApprove(address(mellowRestaker), getFreeBalance());
+        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(block.timestamp);
+
+        emit Delegated(address(0), amount, lpAmount);
     }
 
     /*///////////////////////////////////////
@@ -348,11 +358,10 @@ contract InceptionVault_S is IInceptionVault, MellowHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    /// TODO
     function getDelegatedTo(
         address mellowVault
     ) external view returns (uint256) {
-        return mellowRestaker.getDeposited();
+        return mellowRestaker.getDeposited(mellowVault);
     }
 
     function getPendingWithdrawalOf(

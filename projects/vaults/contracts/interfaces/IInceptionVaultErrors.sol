@@ -2,9 +2,6 @@
 pragma solidity ^0.8.20;
 
 interface IInceptionVaultErrors {
-    error TransferAssetFailed(address assetAddress);
-
-    error TransferAssetFromFailed(address assetAddress);
 
     error InsufficientCapacity(uint256 capacity);
 
