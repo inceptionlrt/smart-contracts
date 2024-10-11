@@ -20,6 +20,8 @@ interface IRestakingPool {
     error AmbiguousFee(uint256 claimed, uint256 fee);
     error InsufficientCapacity(uint256 capacity);
     error TargetCapacityNotSet();
+    error TimelineNotOver();
+    error InconsistentData();
 
     /**
      * @dev A call to an address target failed. The target may have reverted.
@@ -115,6 +117,10 @@ interface IRestakingPool {
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
+
+    event RewardsAdded(uint256 amount, uint256 startTimeline);
+
+    event RewardsTimelineChanged(uint256 rewardsTimeline, uint256 newTimelineInSeconds);
 
     /* functions */
 
