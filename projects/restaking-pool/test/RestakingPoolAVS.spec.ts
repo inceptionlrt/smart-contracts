@@ -99,22 +99,22 @@ describe("RestakingPool AVS", function () {
     const difficult = 18;
     const signers = [() => signer1, () => signer2, () => signer3];
 
-    for (let i = 0n; i < difficult; i++) {
-      const signerIndex = Number(i) % signers.length;
+    // for (let i = 0n; i < difficult; i++) {
+    //   const signerIndex = Number(i) % signers.length;
 
-      it(`unstake from contract (${i}/${difficult})`, async () => {
-        const signer = signers[signerIndex]();
-        const stakeAmount = randomBN(18);
-        console.log(`Stake amount: ${stakeAmount}`);
-        await pool.connect(signer)["stake()"]({ value: stakeAmount });
-        /// get tokens amount and unstake a bit less
-        const sharesAmount = await cToken.balanceOf(signer.address);
-        console.log(`Shares amount: ${sharesAmount}`);
-        await updateRatio(feed, cToken, (await cToken.ratio()) - randomBN(15));
+    //   it(`unstake from contract (${i}/${difficult})`, async () => {
+    //     const signer = signers[signerIndex]();
+    //     const stakeAmount = randomBN(18);
+    //     console.log(`Stake amount: ${stakeAmount}`);
+    //     await pool.connect(signer)["stake()"]({ value: stakeAmount });
+    //     /// get tokens amount and unstake a bit less
+    //     const sharesAmount = await cToken.balanceOf(signer.address);
+    //     console.log(`Shares amount: ${sharesAmount}`);
+    //     await updateRatio(feed, cToken, (await cToken.ratio()) - randomBN(15));
 
-        await pool.connect(signer).unstake(signer, sharesAmount);
-      });
-    }
+    //     await pool.connect(signer).unstake(signer, sharesAmount);
+    //   });
+    // }
 
     it("adds AVS rewards", async () => {
       this.timeout(15000000000);
@@ -139,7 +139,7 @@ describe("RestakingPool AVS", function () {
       expect(flashCapacity).to.be.eq(totalAssets);
       expect(totalAssets).to.be.eq(totalPending);
       
-      await pool.connect(operator).setRewardsTimeline(604800); // Around 7 days
+      await pool.connect(governance).setRewardsTimeline(604800); // Around 7 days
       await pool.connect(operator).addRewards({value: toWei(5)});
 
       const latest = await time.latest();

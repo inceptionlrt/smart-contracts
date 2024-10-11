@@ -758,7 +758,7 @@ contract RestakingPool is
 
     /// @dev setRewardsTimeline ...
     /// @dev newTimelineInDays is measured in seconds
-    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOperator {
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyGovernance {
         if (newTimelineInSeconds < 1 days) revert InconsistentData();
 
         emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
