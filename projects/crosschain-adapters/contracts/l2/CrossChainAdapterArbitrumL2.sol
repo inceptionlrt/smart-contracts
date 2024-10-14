@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
+import "@arbitrum/nitro-contracts/src/precompiles/ArbRetryableTx.sol";
 import "./AbstractCrossChainAdapterL2.sol";
 
 /**
@@ -11,9 +12,12 @@ import "./AbstractCrossChainAdapterL2.sol";
  */
 contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     event ArbSysChanged(address indexed prevArbSys, address indexed newArbSys);
+    event RetryableTicketCreated(uint256 indexed retryableTicketId);
+    event RedemptionFailed(uint256 indexed retryableTicketId);
 
     /// @notice Arbitrum system contract (ArbSys).
     ArbSys arbsys;
+    ArbRetryableTx arbRetryableTx;
 
     /**
      * @notice Initializes the contract with the L1 target and operator addresses. Sets the default ArbSys address.
@@ -25,7 +29,10 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
         address _operator
     ) public initializer {
         __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
-        arbsys = ArbSys(address(100));
+        arbsys = ArbSys(address(100)); // ArbSys precompile
+        arbRetryableTx = ArbRetryableTx(
+            address(0x000000000000000000000000000000000000006E)
+        ); // ArbRetryableTx precompile
     }
 
     /**
@@ -34,7 +41,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
      * @param _ethAmount The amount of ETH to send to L1.
      * @return success True if the message was successfully sent.
      *
-     * Emits an {AssetsInfoSentToL1} event on success.
+     * Emits an {RetryableTicketCreated} event on success.
      */
     function sendAssetsInfoToL1(
         uint256 _tokensAmount,
@@ -57,7 +64,17 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
             data
         );
 
-        emit AssetsInfoSentToL1(_tokensAmount, _ethAmount, withdrawalId);
+        // Convert withdrawalId (uint256) to bytes32 to use in redeem
+        bytes32 retryableTicketId = bytes32(withdrawalId);
+
+        // Attempt to redeem the retryable ticket immediately after it is created
+        try arbRetryableTx.redeem(retryableTicketId) {
+            emit RetryableTicketCreated(withdrawalId);
+        } catch {
+            // Handle redemption failure (log it, retry later, etc.)
+            emit RedemptionFailed(withdrawalId);
+        }
+
         return true;
     }
 
@@ -65,7 +82,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
      * @notice Sends ETH from L2 to L1. Empty parameters are reserved for future L2 Implementations.
      * @return success True if the ETH was successfully sent.
      *
-     * Emits an {EthSentToL1} event on success.
+     * Emits an {RetryableTicketCreated} event on success.
      *
      * Reverts if insufficient ETH is sent or the L1 target is not set.
      */
@@ -75,17 +92,23 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     ) external payable override onlyVault returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
 
-        // Withdraw ETH to L1 via ArbSys precompile
         uint256 withdrawalId = arbsys.withdrawEth{value: msg.value}(l1Target);
 
-        // Emit event with the withdrawal details
-        emit EthSentToL1(msg.value, withdrawalId);
+        bytes32 retryableTicketId = bytes32(withdrawalId);
+
+        // Attempt to redeem the retryable ticket immediately
+        try arbRetryableTx.redeem(retryableTicketId) {
+            emit RetryableTicketCreated(withdrawalId);
+        } catch {
+            emit RedemptionFailed(withdrawalId);
+        }
+
         return true;
     }
 
     /**
      * @notice Used mainly for testing purposes. Should unlikely be called on the Mainnet.
-     * @param _newArbSys new ARbSys address
+     * @param _newArbSys new ArbSys address
      */
     function setArbSys(address _newArbSys) external onlyOwner {
         require(_newArbSys != address(0), SettingZeroAddress());
