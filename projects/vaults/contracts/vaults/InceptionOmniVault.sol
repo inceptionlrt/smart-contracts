@@ -513,6 +513,11 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         name = newVaultName;
     }
 
+    function setOperator(address _newOperator) external onlyOwner {
+        emit OperatorChanged(operator, _newOperator);
+        operator = _newOperator;
+    }
+
     /*///////////////////////////////
     ////// Pausable functions //////
     /////////////////////////////*/

@@ -95,6 +95,11 @@ abstract contract AbstractCrossChainAdapterL2 is
         emit RecoverFundsInitiated(amount);
     }
 
+    function setOperator(address _newOperator) external onlyOwner {
+        emit OperatorChanged(operator, _newOperator);
+        operator = _newOperator;
+    }
+
     /**
      * @notice Fallback function to handle incoming ETH, just in case it will be needed for fee refund.
      * @dev Emits the `ReceiveTriggered` event.

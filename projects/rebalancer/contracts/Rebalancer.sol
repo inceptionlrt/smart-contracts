@@ -45,6 +45,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     error SendAmountExceedsEthBalance(uint256 amountToSend);
     error StakeAmountExceedsMaxTVL();
     error OnlyOperator();
+    error NoRebalancingRequired();
 
     event ETHReceived(address sender, uint256 amount);
     event InETHDepositedToLockbox(uint256 mintAmount);
@@ -172,6 +173,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         } else if (lastUpdateTotalL2InEth > totalL2InETH) {
             uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
             _burnInceptionToken(amountToBurn);
+        } else {
+            revert NoRebalancingRequired();
         }
 
         uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));

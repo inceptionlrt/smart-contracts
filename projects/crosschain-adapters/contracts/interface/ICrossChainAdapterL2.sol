@@ -29,8 +29,11 @@ interface ICrossChainAdapterL2 {
         address indexed newL1Target
     );
     event VaultChanged(address indexed preVault, address indexed newVault);
-
     event EthSentToL1(uint256 indexed amount, uint256 indexed withrawalId); //revelant for Arbitrum, always 0 for Optimism
+    event OperatorChanged(
+        address indexed prevOperator,
+        address indexed newOperator
+    );
 
     function sendAssetsInfoToL1(
         uint256 tokensAmount,
