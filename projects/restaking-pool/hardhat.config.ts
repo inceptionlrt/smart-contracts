@@ -6,6 +6,7 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import "@nomicfoundation/hardhat-verify";
+import "hardhat-dependency-compiler";
 
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
@@ -24,14 +25,14 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545/",
     },
-    hardhat: {
-      forking: {
-        url: process.env.RPC_URL_SEPOLIA || "",
-        blockNumber: 6813320,
-      },
-      accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "365467355464286459" }],
-      chainId: 1337,  // Local chain ID for Hardhat network
-    },
+    // hardhat: {
+    //   forking: {
+    //     url: process.env.RPC_URL_SEPOLIA || "",
+    //     blockNumber: 6813320,
+    //   },
+    //   accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "365467355464286459" }],
+    //   chainId: 1337,  // Local chain ID for Hardhat network
+    // },
     ethereum: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_ETHEREUM}`,
@@ -41,8 +42,13 @@ const config: HardhatUserConfig = {
     sepolia: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_SEPOLIA}`,
-      chainId: 11155111.,
+      chainId: 11155111,
       gas: 8000000,
+    },
+    holesky: {
+      accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+      url: `${process.env.RPC_URL_HOLESKY}`,
+      chainId: 17000,
     }
   },
   etherscan: {
@@ -50,7 +56,15 @@ const config: HardhatUserConfig = {
   },
   sourcify: {
     enabled: true
-  }
+  },
+  dependencyCompiler: {
+    paths: [
+      "crosschain-adapters/contracts/l1/CrossChainAdapterArbitrumL1.sol",
+      "crosschain-adapters/contracts/l1/CrossChainAdapterOptimismL1.sol",
+      "rebalancer/contracts/TransactionStorage.sol",
+      "rebalancer/contracts/Rebalancer.sol"
+    ],
+  },
 };
 
 export default config;

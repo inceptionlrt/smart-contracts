@@ -1,5 +1,6 @@
 import { ethers, upgrades, run } from "hardhat";
 import * as fs from 'fs';
+import { rebalancer } from "../typechain-types";
 require("dotenv").config();
 
 const CHECKPOINT_FILE = "deployment_checkpoint.json";
@@ -7,6 +8,7 @@ const CHECKPOINT_FILE = "deployment_checkpoint.json";
 async function main() {
     const [deployer] = await ethers.getSigners();
     console.log(`Deployer Address: ${deployer.address}`);
+    const operatorAddress = process.env.OPERATOR_ADDRESS
 
     // Load checkpoint data (if it exists)
     let checkpoint: any = loadCheckpoint();
@@ -22,7 +24,7 @@ async function main() {
         console.log("Deploying ProtocolConfig...");
         const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig");
         const protocolConfig = await upgrades.deployProxy(ProtocolConfig, [
-            deployer.address, deployer.address, deployer.address
+            deployer.address, operatorAddress, deployer.address
         ], { initializer: "initialize" });
         await protocolConfig.waitForDeployment();
         checkpoint.ProtocolConfig = await protocolConfig.getAddress();
@@ -49,7 +51,7 @@ async function main() {
         const cToken = await ethers.getContractFactory("cToken");
         const cTokenDeployed = await upgrades.deployProxy(
             cToken,
-            [checkpoint.ProtocolConfig, "cETH", "cETH"],
+            [checkpoint.ProtocolConfig, "inETH", "inETH"],
             { initializer: "initialize" }
         );
         await cTokenDeployed.waitForDeployment();
@@ -100,10 +102,12 @@ async function main() {
         console.log("RestakingPool deployed at:", checkpoint.RestakingPool);
     }
 
+    let transactionStorage;
+
     if (!checkpoint.TransactionStorage) {
         console.log("Deploying TransactionStorage...");
         const TransactionStorage = await ethers.getContractFactory("TransactionStorage");
-        const transactionStorage = await TransactionStorage.deploy(deployer.address);
+        transactionStorage = await TransactionStorage.deploy(deployer.address);
         await transactionStorage.waitForDeployment();
         checkpoint.TransactionStorage = await transactionStorage.getAddress();
         saveCheckpoint(checkpoint);
@@ -146,7 +150,7 @@ async function main() {
                 checkpoint.RestakingPool,
                 checkpoint.TransactionStorage,
                 checkpoint.RatioFeed,
-                deployer.address
+                operatorAddress
             ],
             { initializer: 'initialize' }
         );
@@ -162,6 +166,67 @@ async function main() {
         supportedChains,
         checkpoint.XERC20Lockbox,
         checkpoint.Rebalancer,
+        null,
+        deployer
+    );
+
+    // ------------ Transaction 4: CrossChainAdapterArbitrumL1, CrossChainAdapterOptimismL1 ------------
+    if (!checkpoint.CrossChainAdapterArbitrumL1) {
+        console.log("Deploying CrossChainAdapterArbitrumL1...");
+        const CrossChainAdapterArbitrumL1 = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
+        const arbitrumAdapter = await upgrades.deployProxy(
+            CrossChainAdapterArbitrumL1,
+            [checkpoint.TransactionStorage, `${process.env.ARB_INBOX_SEPOLIA}`, operatorAddress],
+            { initializer: "initialize" }
+        );
+        await arbitrumAdapter.waitForDeployment();
+        checkpoint.CrossChainAdapterArbitrumL1 = await arbitrumAdapter.getAddress();
+        saveCheckpoint(checkpoint);
+        console.log("CrossChainAdapterArbitrumL1 deployed at:", checkpoint.CrossChainAdapterArbitrumL1);
+
+        //Add Rebalancer to CrossChainAdapterArbitrumL1
+        await arbitrumAdapter.setRebalancer(checkpoint.Rebalancer);
+
+        // Add the Arbitrum adapter to TransactionStorage
+        console.log("Adding Arbitrum Adapter to TransactionStorage...");
+        const addArbitrumChainTx = await transactionStorage.addChainId(42161);  // Arbitrum Chain ID = 42161
+        await addArbitrumChainTx.wait();
+        const addArbitrumAdapterTx = await transactionStorage.addAdapter(42161, checkpoint.CrossChainAdapterArbitrumL1);
+        await addArbitrumAdapterTx.wait();
+        console.log("Arbitrum adapter added to TransactionStorage.");
+    }
+
+    if (!checkpoint.CrossChainAdapterOptimismL1) {
+        console.log("Deploying CrossChainAdapterOptimismL1...");
+        const CrossChainAdapterOptimismL1 = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
+        const optimismAdapter = await upgrades.deployProxy(
+            CrossChainAdapterOptimismL1,
+            [`${process.env.OPT_X_DOMAIN_MESSENGER_L1_SEPOLIA}`, `${process.env.OPT_L1_BRIDGE_SEPOLIA}`, checkpoint.TransactionStorage, operatorAddress],
+            { initializer: "initialize" }
+        );
+        await optimismAdapter.waitForDeployment();
+        checkpoint.CrossChainAdapterOptimismL1 = await optimismAdapter.getAddress();
+        saveCheckpoint(checkpoint);
+        console.log("CrossChainAdapterOptimismL1 deployed at:", checkpoint.CrossChainAdapterOptimismL1);
+
+        //Add Rebalancer to CrossChainAdapterOptimismL1
+        await optimismAdapter.setRebalancer(checkpoint.Rebalancer);
+
+        // Add the Optimism adapter to TransactionStorage
+        console.log("Adding Optimism Adapter to TransactionStorage...");
+        const addOptimismChainTx = await transactionStorage.addChainId(10n);
+        await addOptimismChainTx.wait();
+        const addOptimismAdapterTx = await transactionStorage.addAdapter(10n, checkpoint.CrossChainAdapterOptimismL1);
+        await addOptimismAdapterTx.wait();
+        console.log("Optimism adapter added to TransactionStorage.");
+    }
+
+    // Verifications for contracts deployed in Transaction 4
+    await verifyContracts(
+        chainId,
+        supportedChains,
+        checkpoint.CrossChainAdapterArbitrumL1,
+        checkpoint.CrossChainAdapterOptimismL1,
         null,
         deployer
     );

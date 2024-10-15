@@ -32,6 +32,7 @@
     "ethers": "^6.4.0",
     "hardhat": "^2.22.12",
     "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-dependency-compiler": "^1.2.1",
     "hardhat-deploy": "^0.12.4",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-storage-layout": "^0.1.7",

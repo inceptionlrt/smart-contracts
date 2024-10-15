@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
 import "@eth-optimism/contracts/L1/messaging/IL1CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L1/messaging/IL1StandardBridge.sol";

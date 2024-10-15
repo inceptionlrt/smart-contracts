@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Rebalancer.sol";
-import "./interfaces/ICrossChainAdapterL1.sol";
+import "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
 
 /**
  * @author The InceptionLRT team

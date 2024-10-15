@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.20;
 
 import "../interfaces/IRestakingPool.sol";
 import "../interfaces/IInceptionToken.sol";
@@ -40,7 +40,7 @@ contract MockRestakingPool is IRestakingPool {
         return 1;
     }
 
-    function availableToStake() external view returns (uint256) {
+    function availableToStake() external pure returns (uint256) {
         return type(uint256).max;
     }
 }

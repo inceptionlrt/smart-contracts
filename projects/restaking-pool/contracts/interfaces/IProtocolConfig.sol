@@ -6,7 +6,7 @@ import "./ICToken.sol";
 import "./IRestakingPool.sol";
 import "./IEigenPodManager.sol";
 import "../restaker/IRestakerDeployer.sol";
-import "./IRebalancer.sol";
+import "rebalancer/contracts/interfaces/IRebalancer.sol";
 
 interface IProtocolConfig {
     /* errors */
@@ -24,10 +24,7 @@ interface IProtocolConfig {
         IRestakingPool prevValue,
         IRestakingPool newValue
     );
-    event RebalancerChanged(
-        IRebalancer prevValue,
-        IRebalancer newValue
-    );
+    event RebalancerChanged(IRebalancer prevValue, IRebalancer newValue);
     event EigenManagerChanged(
         IEigenPodManager prevValue,
         IEigenPodManager newValue

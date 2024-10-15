@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -10,10 +10,6 @@ import "./interfaces/IRestakingPool.sol";
 import "./interfaces/IInceptionToken.sol";
 import "./interfaces/IInceptionRatioFeed.sol";
 import "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
-
-// import "./interfaces/ICrossChainAdapterL1.sol";
-
-// projects/crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol
 
 /**
  * @author The InceptionLRT team
