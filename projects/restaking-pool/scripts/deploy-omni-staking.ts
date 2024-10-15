@@ -1,14 +1,19 @@
 import { ethers, upgrades, run } from "hardhat";
+import axios from "axios";
 import * as fs from 'fs';
-import { rebalancer } from "../typechain-types";
 require("dotenv").config();
 
 const CHECKPOINT_FILE = "deployment_checkpoint.json";
 
+// Utility function to introduce delay
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function main() {
     const [deployer] = await ethers.getSigners();
     console.log(`Deployer Address: ${deployer.address}`);
-    const operatorAddress = process.env.OPERATOR_ADDRESS
+    const operatorAddress = process.env.OPERATOR_ADDRESS;
 
     // Load checkpoint data (if it exists)
     let checkpoint: any = loadCheckpoint();
@@ -17,6 +22,7 @@ async function main() {
     const supportedChains = [1, 4, 5, 42, 56, 137, 17000, 11155111];
     const networkData = await ethers.provider.getNetwork();
     const chainId = Number(networkData.chainId);
+    const networkName = networkData.name;
     console.log(`chainId is ${chainId}`);
 
     // ------------ Transaction 1: ProtocolConfig, RatioFeed, cToken ------------
@@ -67,7 +73,8 @@ async function main() {
         checkpoint.ProtocolConfig,
         checkpoint.RatioFeed,
         checkpoint.cToken,
-        deployer
+        [],
+        networkName
     );
 
     // ------------ Transaction 2: InceptionLibrary, RestakingPool, TransactionStorage ------------
@@ -121,7 +128,8 @@ async function main() {
         checkpoint.InceptionLibrary,
         checkpoint.RestakingPool,
         checkpoint.TransactionStorage,
-        deployer
+        [deployer.address],
+        networkName
     );
 
     // ------------ Transaction 3: XERC20Lockbox, Rebalancer ------------
@@ -138,6 +146,17 @@ async function main() {
         saveCheckpoint(checkpoint);
         console.log("XERC20Lockbox deployed at:", checkpoint.XERC20Lockbox);
     }
+
+    // Correctly verify XERC20Lockbox by passing constructor arguments
+    await verifyContracts(
+        chainId,
+        supportedChains,
+        checkpoint.XERC20Lockbox,
+        null,
+        [],
+        [checkpoint.cToken, deployer.address, true],
+        networkName
+    );
 
     if (!checkpoint.Rebalancer) {
         console.log("Deploying Rebalancer...");
@@ -167,7 +186,8 @@ async function main() {
         checkpoint.XERC20Lockbox,
         checkpoint.Rebalancer,
         null,
-        deployer
+        [],
+        networkName
     );
 
     // ------------ Transaction 4: CrossChainAdapterArbitrumL1, CrossChainAdapterOptimismL1 ------------
@@ -184,7 +204,7 @@ async function main() {
         saveCheckpoint(checkpoint);
         console.log("CrossChainAdapterArbitrumL1 deployed at:", checkpoint.CrossChainAdapterArbitrumL1);
 
-        //Add Rebalancer to CrossChainAdapterArbitrumL1
+        // Add Rebalancer to CrossChainAdapterArbitrumL1
         await arbitrumAdapter.setRebalancer(checkpoint.Rebalancer);
 
         // Add the Arbitrum adapter to TransactionStorage
@@ -209,7 +229,7 @@ async function main() {
         saveCheckpoint(checkpoint);
         console.log("CrossChainAdapterOptimismL1 deployed at:", checkpoint.CrossChainAdapterOptimismL1);
 
-        //Add Rebalancer to CrossChainAdapterOptimismL1
+        // Add Rebalancer to CrossChainAdapterOptimismL1
         await optimismAdapter.setRebalancer(checkpoint.Rebalancer);
 
         // Add the Optimism adapter to TransactionStorage
@@ -228,7 +248,8 @@ async function main() {
         checkpoint.CrossChainAdapterArbitrumL1,
         checkpoint.CrossChainAdapterOptimismL1,
         null,
-        deployer
+        [],
+        networkName
     );
 
     console.log("Deployment completed successfully! 🥳");
@@ -252,49 +273,105 @@ function loadCheckpoint(): any {
 async function verifyContracts(
     chainId: number,
     supportedChains: number[],
-    address1: string,
-    address2: string | null,
-    address3: string | null,
-    deployer: any
+    proxyAddress: string,
+    implementationAddress: string | null,
+    adminAddress: string | null,
+    constructorArgs: any[],
+    networkName: string
 ) {
     if (supportedChains.includes(chainId) && process.env.ETHERSCAN_API_KEY) {
-        if (address1) {
-            try {
-                console.log(`Verifying contract at ${address1}`);
-                await run("verify:verify", {
-                    address: address1,
-                    constructorArguments: [],
-                });
-            } catch (error) {
-                console.error(`Verification failed for ${address1}:`, error);
+        // Check and verify the implementation contract (no constructor args for upgradeable contracts)
+        if (implementationAddress) {
+            const isVerified = await isContractVerified(implementationAddress, networkName);
+            if (!isVerified) {
+                try {
+                    console.log(`Verifying implementation: ${implementationAddress}`);
+                    await run("verify:verify", {
+                        address: implementationAddress,
+                        constructorArguments: [], // Implementation should not have constructor args
+                    });
+                } catch (error) {
+                    console.error(`Failed to verify implementation contract at ${implementationAddress}:`, error);
+                }
+            } else {
+                console.log(`Implementation at ${implementationAddress} is already verified.`);
             }
         }
 
-        if (address2) {
-            try {
-                console.log(`Verifying contract at ${address2}`);
-                await run("verify:verify", {
-                    address: address2,
-                    constructorArguments: [],
-                });
-            } catch (error) {
-                console.error(`Verification failed for ${address2}:`, error);
+        // Check and verify the proxy contract
+        if (proxyAddress) {
+            const isVerified = await isContractVerified(proxyAddress, networkName);
+            if (!isVerified) {
+                try {
+                    console.log(`Verifying proxy: ${proxyAddress}`);
+                    await run("verify:verify", {
+                        address: proxyAddress,
+                        constructorArguments: constructorArgs,
+                    });
+                } catch (error) {
+                    console.error(`Verification failed for ${proxyAddress}:`, error);
+                }
+            } else {
+                console.log(`Proxy at ${proxyAddress} is already verified.`);
             }
         }
 
-        if (address3) {
-            try {
-                console.log(`Verifying contract at ${address3}`);
-                await run("verify:verify", {
-                    address: address3,
-                    constructorArguments: [],
-                });
-            } catch (error) {
-                console.error(`Verification failed for ${address3}:`, error);
+        // Check and verify the ProxyAdmin contract
+        if (adminAddress) {
+            const isVerified = await isContractVerified(adminAddress, networkName);
+            if (!isVerified) {
+                try {
+                    console.log(`Verifying proxy admin: ${adminAddress}`);
+                    await run("verify:verify", {
+                        address: adminAddress,
+                    });
+                } catch (error) {
+                    console.error(`Failed to verify ProxyAdmin contract at ${adminAddress}:`, error);
+                }
+            } else {
+                console.log(`ProxyAdmin at ${adminAddress} is already verified.`);
             }
         }
     } else {
         console.log("Skipping verification - unsupported chain or missing API key");
+    }
+
+    async function isContractVerified(address: string, network: string): Promise<boolean> {
+        const apiUrl = getEtherscanApiUrl(network);
+
+        try {
+            const response = await axios.get(apiUrl, {
+                params: {
+                    module: "contract",
+                    action: "getsourcecode",
+                    address: address,
+                    apikey: process.env.ETHERSCAN_API_KEY,
+                },
+            });
+
+            const { data } = response;
+            if (data.status === "1" && data.result && data.result[0].ABI !== "Contract source code not verified") {
+                return true; // Contract is verified
+            }
+            return false; // Contract is not verified
+        } catch (error) {
+            console.error(`Error checking verification status for ${address}:`, error);
+            return false; // Assume not verified on error
+        }
+    }
+
+    function getEtherscanApiUrl(network: string): string {
+        switch (network) {
+            case "mainnet":
+                return "https://api.etherscan.io/api";
+            case "goerli":
+                return "https://api-goerli.etherscan.io/api";
+            case "holesky":
+                return "https://api-holesky.etherscan.io/api";
+            // Add other network URLs if needed
+            default:
+                throw new Error(`Unsupported network: ${network}`);
+        }
     }
 }
 

@@ -40,6 +40,16 @@ export const CONFIG = {
       },
     },
   },
+  solidity: {
+    version: "0.8.26",
+    settings: {
+      viaIR: true,
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   mocha: {
     enableTimeouts: false,
     before_timeout: 120000,
