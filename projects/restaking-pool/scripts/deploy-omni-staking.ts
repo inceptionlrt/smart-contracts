@@ -4,7 +4,9 @@ import * as fs from 'fs';
 require("dotenv").config();
 
 const CHECKPOINT_FILE = "deployment_checkpoint.json";
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY; // Ensure you have the Etherscan API key in your .env
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+
+const verifiedContracts = new Set<string>();
 
 // Utility function to introduce delay
 function delay(ms: number) {
@@ -101,6 +103,7 @@ async function main() {
         checkpoint.RestakingPool = await restakingPool.getAddress();
         saveCheckpoint(checkpoint);
         console.log("RestakingPool deployed at:", checkpoint.RestakingPool);
+        await verifyNonUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
     }
 
     let transactionStorage;
@@ -134,7 +137,6 @@ async function main() {
         console.log("XERC20Lockbox deployed at:", checkpoint.XERC20Lockbox);
     }
 
-    // Verify XERC20Lockbox by passing constructor arguments
     await verifyNonUpgradeableContract(checkpoint.XERC20Lockbox, [checkpoint.cToken, deployer.address, true]);
 
     if (!checkpoint.Rebalancer) {
@@ -159,7 +161,7 @@ async function main() {
     }
 
     // Add a delay before verifying the Rebalancer
-    await delay(30000); // Wait for 30 seconds to ensure the deployment is confirmed
+    await delay(30000);
 
     // Verifications for contracts deployed in Transaction 3
     await verifyUpgradeableContract(checkpoint.Rebalancer, [checkpoint.cToken, checkpoint.XERC20Lockbox, checkpoint.RestakingPool, checkpoint.TransactionStorage, checkpoint.RatioFeed, operatorAddress]);
@@ -223,7 +225,6 @@ async function main() {
     console.log("Checkpoint saved:", checkpoint);
 }
 
-// Save deployment checkpoint
 function saveCheckpoint(checkpoint: any) {
     fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(checkpoint, null, 2));
 }
@@ -236,8 +237,13 @@ function loadCheckpoint(): any {
     return {};
 }
 
-// Function to check if a contract is already verified
 async function isContractVerified(contractAddress: string): Promise<boolean> {
+    // Check the cached verified contracts first
+    if (verifiedContracts.has(contractAddress)) {
+        console.log(`Contract ${contractAddress} is already in the verified cache.`);
+        return true;
+    }
+
     const apiUrl = `https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
 
     try {
@@ -246,7 +252,11 @@ async function isContractVerified(contractAddress: string): Promise<boolean> {
 
         // Check if the response is successful and has the expected structure
         if (data.status === "1" && Array.isArray(data.result) && data.result.length > 0) {
-            return data.result[0].ABI !== "Contract source code not verified";
+            const isVerified = data.result[0].ABI !== "Contract source code not verified";
+            if (isVerified) {
+                verifiedContracts.add(contractAddress); // Add to the cache if verified
+            }
+            return isVerified;
         }
         console.error(`Verification status for ${contractAddress} not found or invalid response:`, data);
         return false; // Assume not verified on invalid response
@@ -256,7 +266,6 @@ async function isContractVerified(contractAddress: string): Promise<boolean> {
     }
 }
 
-// Function to verify upgradeable contracts (Transparent Proxy)
 async function verifyUpgradeableContract(proxyAddress: string, constructorArguments: any[]) {
     const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
@@ -299,7 +308,6 @@ async function verifyUpgradeableContract(proxyAddress: string, constructorArgume
     console.log(`Finished verification for upgradeable contract at: ${proxyAddress}`);
 }
 
-// Function to verify non-upgradeable contracts
 async function verifyNonUpgradeableContract(contractAddress: string, constructorArguments: any[]) {
     // Check if contract is already verified
     const isVerified = await isContractVerified(contractAddress);
@@ -312,7 +320,7 @@ async function verifyNonUpgradeableContract(contractAddress: string, constructor
         console.log(`Verifying non-upgradeable contract at: ${contractAddress}`);
         await run("verify:verify", {
             address: contractAddress,
-            constructorArguments: constructorArguments // Pass constructor arguments for non-upgradeable contracts
+            constructorArguments: constructorArguments
         });
         console.log(`Successfully verified non-upgradeable contract at: ${contractAddress}`);
     } catch (error) {
