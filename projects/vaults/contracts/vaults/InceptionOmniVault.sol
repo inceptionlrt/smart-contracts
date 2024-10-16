@@ -246,6 +246,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (!success) {
             revert MessageToL1Failed(tokensAmount, ethAmount);
         }
+
+        emit MessageToL1Sent(tokensAmount, ethAmount);
     }
 
     /**
@@ -268,6 +270,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         if (!success) {
             revert EthToL1Failed(callValue);
         }
+
+        emit EthToL1Sent(callValue);
     }
 
     /*//////////////////////////////
