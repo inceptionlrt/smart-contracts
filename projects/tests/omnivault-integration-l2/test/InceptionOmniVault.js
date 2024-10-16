@@ -105,9 +105,9 @@ async function init(owner, operator, targetL1, adapterInfo) {
   const arbSysMock = await ethers.deployContract("ArbSysMock", [])
   arbSysMock.address = await arbSysMock.getAddress();
 
-  if(adapterInfo.tag === "arb"){
-    await adapter.setArbSys(arbSysMock.address)
-  }
+  // if(adapterInfo.tag === "arb"){
+  //   await adapter.setArbSys(arbSysMock.address)
+  // }
 
   return [iToken, omniVault, ratioFeed, adapter, arbSysMock];
 }
