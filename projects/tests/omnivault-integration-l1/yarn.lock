@@ -2008,6 +2008,10 @@ cross-spawn@^6.0.5:
     shebang-command "^1.2.0"
     which "^1.2.9"
 
+crosschain-adapters@../../crosschain-adapters/crosschain-adapters-v1.0.3.tgz:
+  version "1.0.3"
+  resolved "../../crosschain-adapters/crosschain-adapters-v1.0.3.tgz#1b8448b49dd28bd7f39be4ada90316ecad14cb5b"
+
 "crypt@>= 0.0.1":
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/crypt/-/crypt-0.0.2.tgz#88d7ff7ec0dfb86f713dc87bbb42d044d3e6c41b"
@@ -4042,6 +4046,10 @@ readdirp@~3.6.0:
   integrity sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==
   dependencies:
     picomatch "^2.2.1"
+
+rebalancer@../../rebalancer/rebalancer-v1.0.0.tgz:
+  version "1.0.0"
+  resolved "../../rebalancer/rebalancer-v1.0.0.tgz#b63bce2c8a49d8641a63a1832586f7ac48b078a7"
 
 rechoir@^0.6.2:
   version "0.6.2"
