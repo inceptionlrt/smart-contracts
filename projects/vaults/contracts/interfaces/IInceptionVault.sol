@@ -76,6 +76,11 @@ interface IInceptionVault {
 
     event TreasuryUpdated(address indexed newTreasury);
     event CrossChainAdapterChanged(address newCrossChainAdapter);
+    event MessageToL1Sent(
+        uint256 indexed tokensAmount,
+        uint256 indexed ethAmount
+    );
+    event EthToL1Sent(uint256 callValue);
 
     error OnlyOwnerOrOperator();
     error ResultISharesZero();

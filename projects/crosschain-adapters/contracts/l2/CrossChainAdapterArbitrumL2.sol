@@ -12,8 +12,12 @@ import "./AbstractCrossChainAdapterL2.sol";
  */
 contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     event ArbSysChanged(address indexed prevArbSys, address indexed newArbSys);
-    event RetryableTicketCreated(uint256 indexed retryableTicketId);
-    event RedemptionFailed(uint256 indexed retryableTicketId);
+    event RetryableTicketCreated(
+        uint256 indexed retryableTicketId,
+        uint256 _tokensAmount,
+        uint256 _ethAmount
+    );
+    // event RedemptionFailed(uint256 indexed retryableTicketId); // TODO: guess gonna clean it later
 
     /// @notice Arbitrum system contract (ArbSys).
     ArbSys arbsys;
@@ -67,13 +71,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
         // Convert withdrawalId (uint256) to bytes32 to use in redeem
         bytes32 retryableTicketId = bytes32(withdrawalId);
 
-        // Attempt to redeem the retryable ticket immediately after it is created
-        try arbRetryableTx.redeem(retryableTicketId) {
-            emit RetryableTicketCreated(withdrawalId);
-        } catch {
-            // Handle redemption failure (log it, retry later, etc.)
-            emit RedemptionFailed(withdrawalId);
-        }
+        emit TicketCreated(_tokensAmount, _ethAmount, withdrawalId);
 
         return true;
     }
