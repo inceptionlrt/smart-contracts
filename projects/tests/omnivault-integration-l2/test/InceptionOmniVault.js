@@ -32,7 +32,7 @@ const adapters = [
       console.log("- Arbitrum adapter");
       const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
-        args.targetL1.address,
+        args.targetL1,
         args.operator.address
       ]);
       adapter.address = await adapter.getAddress();
@@ -51,7 +51,7 @@ const adapters = [
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
         args.optMessenger,
         args.optBridge,
-        args.targetL1.address,
+        args.targetL1,
         args.operator.address,
       ]);
       adapter.address = await adapter.getAddress();
@@ -82,7 +82,7 @@ async function init(owner, operator, targetL1, adapterInfo) {
   await ratioFeed.updateRatioBatch([iToken.address], [e18]);
 
   const adapter = await adapterInfo.deploy({
-    targetL1,
+    "targetL1": targetL1.address,
     owner,
     operator,
     "optMessenger": adapterInfo.optMessenger,
@@ -1376,11 +1376,18 @@ adapters.forEach(function (adapterInfo) {
         })
 
         it("Reverts when there is no free balance", async function() {
-          await omniVault.connect(staker1).deposit(staker1, { value: TARGET });
+          await omniVault.connect(staker1).deposit(staker1, { value: TARGET - 1n });
 
           const feeParams = adapterInfo.feesFunc();
           await expect(omniVault.connect(operator).sendEthToL1(feeParams, { value: 0n }))
             .to.revertedWithCustomError(omniVault, "FreeBalanceIsZero");
+        })
+
+        it("Reverts when called by not an operator", async function () {
+          await omniVault.connect(staker1).deposit(staker1, { value: TARGET * 2n });
+          const feeParams = adapterInfo.feesFunc();
+          await expect(omniVault.connect(staker1).sendEthToL1(feeParams, { value: 0n }))
+            .revertedWithCustomError(omniVault, "OnlyOwnerOrOperator");
         })
       })
     })
@@ -1455,11 +1462,45 @@ adapters.forEach(function (adapterInfo) {
             .to.be.revertedWithCustomError(adapter, "OnlyVault");
         })
 
+        it("sendAssetsInfoToL1 reverts when l1 target is not set", async function () {
+          const adapter = await adapterInfo.deploy({
+            "targetL1": ethers.ZeroAddress,
+            owner,
+            operator,
+            "optMessenger": adapterInfo.optMessenger,
+            "optBridge": adapterInfo.optBridge,
+          });
+          const amount = randomBI(18);
+          await staker1.sendTransaction({to: adapter.address, value: amount});
+          await adapter.setVault(staker1.address);
+
+          const tokensAmount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendAssetsInfoToL1(tokensAmount, ethAmount, []))
+            .to.be.revertedWithCustomError(adapter, "L1TargetNotSet");
+        })
+
         it("sendEthToL1 reverts when called by not vault", async function () {
           const amount = randomBI(18);
           const ethAmount = randomBI(18);
           await expect(adapter.connect(staker1).sendEthToL1(amount, [], {value: ethAmount}))
             .to.be.revertedWithCustomError(adapter, "OnlyVault");
+        })
+
+        it("sendEthToL1 reverts when l1 target is not set", async function () {
+          const adapter = await adapterInfo.deploy({
+            "targetL1": ethers.ZeroAddress,
+            owner,
+            operator,
+            "optMessenger": adapterInfo.optMessenger,
+            "optBridge": adapterInfo.optBridge,
+          });
+          await adapter.setVault(staker1.address);
+
+          const amount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendEthToL1(amount, [], {value: ethAmount}))
+            .to.be.revertedWithCustomError(adapter, "L1TargetNotSet");
         })
       })
 
@@ -1489,7 +1530,7 @@ adapters.forEach(function (adapterInfo) {
 
         it("Cannot recover when vault is not set", async function() {
           const adapter = await adapterInfo.deploy({
-            targetL1,
+            "targetL1": targetL1.address,
             owner,
             operator,
             "optMessenger": adapterInfo.optMessenger,
