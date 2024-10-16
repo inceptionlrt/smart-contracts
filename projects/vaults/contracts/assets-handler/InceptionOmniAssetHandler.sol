@@ -20,8 +20,6 @@ contract InceptionOmniAssetsHandler is
     IInceptionVaultErrors,
     IInceptionAssetHandler
 {
-    address internal bridge;
-
     uint256[50] private __reserver;
 
     function __InceptionOmniAssetsHandler_init() internal onlyInitializing {
@@ -62,14 +60,5 @@ contract InceptionOmniAssetsHandler is
         return amount;
     }
 
-
-    function setBridge(
-        address newBridge
-    ) external onlyOwner {
-        if (address(newBridge) == address(0)) revert NullParams();
-        bridge = newBridge;
-    }
-
-    receive() external payable { require(msg.sender == bridge, "InceptionOmniAssetsHandler: sender is not an inception bridge"); }
+    receive() external payable {}
 }
-
