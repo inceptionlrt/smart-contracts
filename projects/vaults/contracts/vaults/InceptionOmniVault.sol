@@ -522,6 +522,8 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         operator = _newOperator;
     }
 
+    receive() external payable override {}
+
     /*///////////////////////////////
     ////// Pausable functions //////
     /////////////////////////////*/
