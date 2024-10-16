@@ -15,24 +15,12 @@ async function main() {
     console.log(`Deployer Address: ${deployer.address}`);
 
     const inceptionOmniVaultAddress = checkpoint.InceptionOmniVault;
-    const crossChainAdapterAddress = checkpoint.CrossChainAdapterArbitrumL2;
     console.log(`InceptionOmniVault Address: ${inceptionOmniVaultAddress}`);
-    console.log(`CrossChainAdapter Address: ${crossChainAdapterAddress}`);
 
     const InceptionOmniVault = await ethers.getContractAt(
         "InceptionOmniVault",
         inceptionOmniVaultAddress
     );
-
-    const CrossChainAdapter = await ethers.getContractAt(
-        "CrossChainAdapterArbitrumL2",
-        crossChainAdapterAddress
-    );
-
-    console.log("Setting InceptionOmniVault as the vault in CrossChainAdapter...");
-    const setVaultTx = await CrossChainAdapter.setVault(inceptionOmniVaultAddress);
-    await setVaultTx.wait();
-    console.log(`Vault set to InceptionOmniVault address: ${inceptionOmniVaultAddress}`);
 
     // Check the free balance in the vault
     let freeBalance = await InceptionOmniVault.getFreeBalance();
@@ -43,7 +31,7 @@ async function main() {
         console.log("No free balance available. Depositing ETH into the vault...");
 
         try {
-            const depositAmount = ethers.parseEther("0.01");
+            const depositAmount = ethers.parseEther("0.001");
             const depositTx = await deployer.sendTransaction({
                 to: inceptionOmniVaultAddress,
                 value: depositAmount

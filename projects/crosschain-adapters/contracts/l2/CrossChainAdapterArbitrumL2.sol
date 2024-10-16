@@ -47,7 +47,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
         uint256 _tokensAmount,
         uint256 _ethAmount,
         bytes[] calldata
-    ) external payable override onlyOperator returns (bool success) {
+    ) external payable override onlyVault returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
 
         // Encode the data for sending the assets info to L1
