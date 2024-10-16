@@ -20,6 +20,8 @@ contract InceptionOmniAssetsHandler is
     IInceptionVaultErrors,
     IInceptionAssetHandler
 {
+    address internal bridge;
+
     uint256[50] private __reserver;
 
     function __InceptionOmniAssetsHandler_init() internal onlyInitializing {
