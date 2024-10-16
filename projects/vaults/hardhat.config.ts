@@ -20,7 +20,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: process.env.RPC_URL_ARBITRUM_TESTNET || "",
-        blockNumber: 88842859,
+        blockNumber: 89177226,
       },
       accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "10000365467355464286459" }],
       chainId: 1337,  // Local chain ID for Hardhat network
