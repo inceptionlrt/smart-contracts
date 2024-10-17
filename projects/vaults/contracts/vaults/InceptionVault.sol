@@ -3,12 +3,14 @@ pragma solidity ^0.8.24;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
+import {IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {EigenLayerHandler, IStrategyManager, IStrategy} from "../eigenlayer-handler/EigenLayerHandler.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract

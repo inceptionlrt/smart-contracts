@@ -2,10 +2,12 @@
 pragma solidity ^0.8.26;
 
 import "@arbitrum/nitro-contracts/src/precompiles/ArbSys.sol";
-import "@arbitrum/nitro-contracts/src/precompiles/ArbRetryableTx.sol";
-import "./AbstractCrossChainAdapterL2.sol";
+
+import {AbstractCrossChainAdapterL2} from "./AbstractCrossChainAdapterL2.sol";
+import {ARBSYS_ADDRESS} from "../config/Constants.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title CrossChainAdapterArbitrumL2
  * @dev Implementation of the L2 cross-chain adapter for Arbitrum.
  * This contract is responsible for sending assets and ETH from Arbitrum L2 to L1.
@@ -13,11 +15,9 @@ import "./AbstractCrossChainAdapterL2.sol";
 contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     event ArbSysChanged(address indexed prevArbSys, address indexed newArbSys);
     event RetryableTicketCreated(uint256 indexed retryableTicketId);
-    // event RedemptionFailed(uint256 indexed retryableTicketId); // TODO: guess gonna clean it later
 
     /// @notice Arbitrum system contract (ArbSys).
-    ArbSys arbsys;
-    ArbRetryableTx arbRetryableTx;
+    ArbSys public arbsys;
 
     /**
      * @notice Initializes the contract with the L1 target and operator addresses. Sets the default ArbSys address.
@@ -29,10 +29,7 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
         address _operator
     ) public initializer {
         __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
-        arbsys = ArbSys(address(100)); // ArbSys precompile
-        arbRetryableTx = ArbRetryableTx(
-            address(0x000000000000000000000000000000000000006E)
-        ); // ArbRetryableTx precompile
+        arbsys = ArbSys(ARBSYS_ADDRESS); // ArbSys precompile
     }
 
     /**

@@ -2,8 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Rebalancer.sol";
-import "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
+
+import {Rebalancer} from "./Rebalancer.sol";
+import {ICrossChainAdapterL1} from "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
 
 /**
  * @author The InceptionLRT team

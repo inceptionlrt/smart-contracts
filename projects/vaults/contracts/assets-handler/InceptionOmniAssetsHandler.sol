@@ -5,10 +5,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "../interfaces/IInceptionAssetHandler.sol";
-import "../interfaces/IInceptionVaultErrors.sol";
+import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
+import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
 
-import "../lib/Convert.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionOmniAssetsHandler contract

@@ -6,10 +6,11 @@ import "openzeppelin-4-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin-4/utils/Address.sol";
 
-import "../interface/ICrossChainAdapterL1.sol";
-import "../interface/ITransactionStorage.sol";
+import {ICrossChainAdapterL1} from "../interface/ICrossChainAdapterL1.sol";
+import {ITransactionStorage} from "../interface/ITransactionStorage.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title AbstractCrossChainAdapterL1
  * @dev Abstract base contract for handling cross-chain interactions on L1.
  */
@@ -100,9 +101,8 @@ abstract contract AbstractCrossChainAdapterL1 is
      */
     function setTxStorage(address _txStorage) external virtual onlyOwner {
         require(_txStorage != address(0), SettingZeroAddress());
-        address prevTxStorage = transactionStorage;
+        emit TxStorageChanged(transactionStorage, _txStorage);
         transactionStorage = _txStorage;
-        emit TxStorageChanged(prevTxStorage, _txStorage);
     }
 
     /**
