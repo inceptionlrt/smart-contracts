@@ -2,7 +2,8 @@ module.exports = {
   skipFiles: [
     "crosschain-adapters/l1/",
     "crosschain-adapters/mock/",
-    "vaults/assets-handler",
+    "vaults/assets-handler/InceptionERC20OmniAssetHandler.sol",
+    "vaults/assets-handler/InceptionAssetsHandler.sol",
     "vaults/eigenlayer-handler",
     "vaults/interfaces",
     "vaults/lib",

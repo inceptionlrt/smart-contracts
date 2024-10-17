@@ -30,11 +30,12 @@ const adapters = [
     tag: "arb",
     deploy: async (args) => {
       console.log("- Arbitrum adapter");
-      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
+      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2", args.owner);
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
-        args.targetL1.address,
+        args.targetL1,
         args.operator.address
       ]);
+      await adapter.waitForDeployment();
       adapter.address = await adapter.getAddress();
       return adapter;
     },
@@ -47,13 +48,12 @@ const adapters = [
     tag: "opt",
     deploy: async (args) => {
       console.log("- Optimism adapter");
-      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2");
+      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2", args.owner);
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
-        args.optMessenger,
-        args.optBridge,
-        args.targetL1.address,
+        args.targetL1,
         args.operator.address,
       ]);
+      await adapter.waitForDeployment();
       adapter.address = await adapter.getAddress();
       return adapter;
     },
@@ -63,45 +63,56 @@ const adapters = [
   },
 ]
 
+let tx;
 async function init(owner, operator, targetL1, adapterInfo) {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
 
   console.log("- iToken");
-  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken", owner);
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+  await iToken.waitForDeployment();
   iToken.address = await iToken.getAddress();
 
   console.log("- Ratio feed");
-  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
+  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
-  await ratioFeed.updateRatioBatch([await iToken.getAddress()], [e18]);
+  await ratioFeed.waitForDeployment();
   ratioFeed.address = await ratioFeed.getAddress();
 
   console.log("- Update Mock Ratio Feed with Mock Token");
-  await ratioFeed.updateRatioBatch([iToken.address], [e18]);
+  await (await ratioFeed.updateRatioBatch([iToken.address], [e18])).wait();
 
   const adapter = await adapterInfo.deploy({
-    targetL1,
+    "targetL1": targetL1.address,
     owner,
     operator,
     "optMessenger": adapterInfo.optMessenger,
     "optBridge": adapterInfo.optBridge,
-  })
+  });
 
   // Deploy the OmniVault
   console.log("- Deploying OmniVault");
-  const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+  const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault", owner);
   const omniVault = await upgrades.deployProxy(omniVaultFactory,
     ["Omnivault", operator.address, iToken.address, adapter.address],
     { initializer: '__InceptionOmniVault_init' });
+  await omniVault.waitForDeployment();
   omniVault.address = await omniVault.getAddress();
-  await adapter.setVault(omniVault.address);
+  await (await adapter.setVault(omniVault.address)).wait();
 
-  await omniVault.setRatioFeed(ratioFeed.address);
-  await iToken.setVault(omniVault.address);
+  await (await omniVault.setRatioFeed(ratioFeed.address)).wait();
+  await (await iToken.setVault(omniVault.address)).wait();
 
-  return [iToken, omniVault, ratioFeed, adapter];
+  console.log("- Arbsys mock");
+  const arbSysMock = await ethers.deployContract("ArbSysMock", [])
+  arbSysMock.address = await arbSysMock.getAddress();
+
+  if(adapterInfo.tag === "arb"){
+    await adapter.setArbSys(arbSysMock.address)
+  }
+
+  return [iToken, omniVault, ratioFeed, adapter, arbSysMock];
 }
 
 adapters.forEach(function (adapterInfo) {
@@ -110,7 +121,7 @@ adapters.forEach(function (adapterInfo) {
     const optBridge = network.config.addresses.OPT_BRIDGE;
 
     this.timeout(150000);
-    let omniVault, iToken, ratioFeed, adapter;
+    let omniVault, iToken, ratioFeed, adapter, arbSysMock;
     let owner, operator, targetL1, staker1, staker2, staker3, treasury;
     let snapshot;
     let TARGET;
@@ -118,12 +129,12 @@ adapters.forEach(function (adapterInfo) {
     async function addReplenishBonus(amount) {
       let collectedFee = 0n;
       if (amount > 0n) {
-        await omniVault.connect(staker3).deposit(staker3.address, { value: amount });
+        await (await omniVault.connect(staker3).deposit(staker3.address, { value: amount })).wait();
         const shares = await iToken.balanceOf(staker3.address);
         const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
         const rec = await tx.wait();
         collectedFee += (rec.logs.find((l) => l.eventName === 'FlashWithdraw')?.args.fee || 0n) / 2n;
-        console.log(`collectedFee: ${collectedFee.format()}`);
+        console.log("Collected bonus:\t", collectedFee.format());
       }
       return collectedFee;
     }
@@ -151,7 +162,7 @@ adapters.forEach(function (adapterInfo) {
       [owner, operator, targetL1, staker1, staker2, staker3] = await ethers.getSigners();
       adapterInfo.optMessenger = optMessenger;
       adapterInfo.optBridge = optBridge;
-      [iToken, omniVault, ratioFeed, adapter] = await init(owner, operator, targetL1, adapterInfo);
+      [iToken, omniVault, ratioFeed, adapter, arbSysMock] = await init(owner, operator, targetL1, adapterInfo);
       treasury = await omniVault.treasuryAddress();
       snapshot = await takeSnapshot();
     })
@@ -1076,6 +1087,48 @@ adapters.forEach(function (adapterInfo) {
           .to.be.revertedWith("Ownable: caller is not the owner");
       });
 
+      it("setOperator(): only owner can", async function () {
+        const newValue = ethers.Wallet.createRandom().address;
+        await expect(omniVault.setOperator(newValue))
+          .to.emit(omniVault, "OperatorChanged")
+          .withArgs(operator.address, newValue);
+        expect(await omniVault.operator()).to.be.eq(newValue);
+      })
+
+      it("setOperator(): reverts when caller is not an owner", async function () {
+        await expect(omniVault.connect(staker1).setOperator(staker1.address))
+          .to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("ratio() reverts when ratioFeed is 0 address", async function() {
+        const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+        const omniVault = await upgrades.deployProxy(omniVaultFactory,
+          ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
+          { initializer: '__InceptionOmniVault_init' });
+        omniVault.address = await omniVault.getAddress();
+        await iToken.setVault(omniVault.address);
+        await expect(omniVault.ratio())
+          .revertedWithCustomError(omniVault, "RatioFeedNotSet");
+      })
+
+      it("setCrossChainAdapter(): only owner can", async function () {
+        const newValue = ethers.Wallet.createRandom().address;
+        await expect(omniVault.setCrossChainAdapter(newValue))
+          .to.emit(omniVault, "CrossChainAdapterChanged")
+          .withArgs(newValue);
+        expect(await omniVault.crossChainAdapter()).to.be.eq(newValue);
+      })
+
+      it("setCrossChainAdapter(): reverts when set to zero address", async function () {
+        await expect(omniVault.setCrossChainAdapter(ethers.ZeroAddress))
+          .to.be.revertedWithCustomError(omniVault, "NullParams");
+      });
+
+      it("setCrossChainAdapter(): reverts when caller is not an owner", async function () {
+        await expect(omniVault.connect(staker1).setCrossChainAdapter(staker1.address))
+          .to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
       it("setMinAmount(): only owner can", async function () {
         const prevValue = await omniVault.minAmount();
         const newMinAmount = randomBI(4);
@@ -1189,36 +1242,44 @@ adapters.forEach(function (adapterInfo) {
 
     describe("Bridge", function () {
       describe("Send info", function () {
-        let TARGET = toWei(10);
+        let TARGET = 10n ** 12n;
 
         beforeEach(async function () {
           await snapshot.restore();
           await omniVault.setTargetFlashCapacity(TARGET);
         })
 
+        it("Adapter is set", async function() {
+          expect(await omniVault.crossChainAdapter()).to.be.eq(adapter.address);
+        })
+
         const args = [
           {
             name: "When there are no eth and shares",
-            depositAmount: () => 0n
+            depositAmount: () => 0n,
+            msgSender: () => operator
           },
           {
             name: "After deposit",
-            depositAmount: () => randomBI(18)
+            depositAmount: () => randomBI(11),
+            msgSender: () => operator
           },
           {
             name: "After deposit when deposit bonus > 0",
-            depositAmount: () => randomBI(18),
-            depositBonus: true
+            depositAmount: () => randomBI(11),
+            depositBonus: true,
+            msgSender: () => operator
           },
           {
             name: "When there are shares, but eth was sent to L1",
-            depositAmount: () => TARGET + randomBI(18),
+            depositAmount: () => TARGET + randomBI(11),
             depositBonus: true,
             sentToL1: (amount) => amount - TARGET,
+            msgSender: () => operator
           },
           {
             name: "Owner can call",
-            depositAmount: () => TARGET + randomBI(18),
+            depositAmount: () => TARGET + randomBI(11),
             depositBonus: true,
             sentToL1: (amount) => amount - TARGET,
             msgSender: () => owner
@@ -1226,9 +1287,7 @@ adapters.forEach(function (adapterInfo) {
         ];
         args.forEach(function (arg) {
           it(`sendAssetsInfoToL1 ${arg.name}`, async function () {
-            const msgSender = arg.msgSender ? arg.msgSender() : operator;
-
-            console.log(await omniVault.crossChainAdapter());
+            const msgSender = arg.msgSender();
 
             let amount = arg.depositAmount();
             if (amount > 0n) {
@@ -1237,33 +1296,38 @@ adapters.forEach(function (adapterInfo) {
 
             let depositBonus = 0n;
             if (arg.depositBonus) {
-              expect(await omniVault.depositBonusAmount()).to.be.eq(depositBonus);
+              let collectedBonus = await addReplenishBonus(TARGET);
+              expect(await omniVault.depositBonusAmount()).to.be.closeTo(collectedBonus, 1n);
+              depositBonus = await omniVault.depositBonusAmount();
             }
 
             let sentToL1Amount = 0n;
             if (arg.sentToL1) {
-              console.log("free balance:", await omniVault.getFreeBalance())
               sentToL1Amount = arg.sentToL1(amount);
               const feeParams = adapterInfo.feesFunc();
               const fees = 3n * 10n ** 16n;
               await expect(omniVault.connect(msgSender).sendEthToL1(feeParams, { value: fees }))
-                .to.emit(omniVault, "EthSentToL1")
+                .to.emit(omniVault, "EthToL1Sent")
                 .withArgs(sentToL1Amount + fees);
             }
 
-            console.log("Vault balance:", await ethers.provider.getBalance(omniVault.address));
-            console.log("deposit bonus:", depositBonus);
-            console.log("amount:", amount);
-            console.log("sentL1:", sentToL1Amount);
-
+            const freeBalance = await omniVault.getFreeBalance();
+            const vaultBalance = await ethers.provider.getBalance(omniVault.address);
             const totalSupply = await iToken.totalSupply();
-            const expectedEth = amount + depositBonus - sentToL1Amount;
-            expect(await ethers.provider.getBalance(omniVault.address)).to.be.eq(expectedEth);
+            const expectedVaultBalance = amount + depositBonus - sentToL1Amount;
+            console.log("Deposited amt:\t\t", amount.format());
+            console.log("Vault balance:\t\t", vaultBalance.format());
+            console.log("Free balance:\t\t", freeBalance.format())
+            console.log("Deposit bonus:\t\t", depositBonus.format());
+            console.log("Actual sent:\t\t", sentToL1Amount.format());
+            console.log("Total deposited:\t\t", (await omniVault.getTotalDeposited()).format());
+
+            expect(vaultBalance).to.be.eq(expectedVaultBalance);
 
             const feeParams = adapterInfo.feesFunc();
             await expect(omniVault.connect(msgSender).sendAssetsInfoToL1(feeParams))
-              .to.emit(adapter, "AssetsInfoSentToL1")
-              .withArgs(totalSupply, expectedEth, 0n)
+              .to.emit(omniVault, "MessageToL1Sent")
+              .withArgs(totalSupply, amount - sentToL1Amount);
           })
         })
 
@@ -1271,6 +1335,20 @@ adapters.forEach(function (adapterInfo) {
           const feeParams = adapterInfo.feesFunc();
           await expect(omniVault.connect(staker1).sendAssetsInfoToL1(feeParams))
             .revertedWithCustomError(omniVault, "OnlyOwnerOrOperator");
+        })
+
+        it("Reverts when crosschain adapter is 0 address", async function() {
+          const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+          const omniVault = await upgrades.deployProxy(omniVaultFactory,
+            ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
+            { initializer: '__InceptionOmniVault_init' });
+          omniVault.address = await omniVault.getAddress();
+          await omniVault.setRatioFeed(ratioFeed.address);
+          await iToken.setVault(omniVault.address);
+
+          const feeParams = adapterInfo.feesFunc();
+          await expect(omniVault.connect(operator).sendAssetsInfoToL1(feeParams))
+            .revertedWithCustomError(omniVault, "CrossChainAdapterNotSet");
         })
       })
 
@@ -1300,19 +1378,178 @@ adapters.forEach(function (adapterInfo) {
 
             const feeParams = adapterInfo.feesFunc();
             await expect(omniVault.connect(operator).sendEthToL1(feeParams, {value: arg.value}))
-              .to.emit(omniVault, "EthSentToL1")
+              .to.emit(omniVault, "EthToL1Sent")
               .withArgs(freeBalance + arg.value);
           })
         })
 
         it("Reverts when there is no free balance", async function() {
-          await omniVault.connect(staker1).deposit(staker1, { value: TARGET });
+          await omniVault.connect(staker1).deposit(staker1, { value: TARGET - 1n });
 
           const feeParams = adapterInfo.feesFunc();
           await expect(omniVault.connect(operator).sendEthToL1(feeParams, { value: 0n }))
             .to.revertedWithCustomError(omniVault, "FreeBalanceIsZero");
         })
 
+        it("Reverts when called by not an operator", async function () {
+          await omniVault.connect(staker1).deposit(staker1, { value: TARGET * 2n });
+          const feeParams = adapterInfo.feesFunc();
+          await expect(omniVault.connect(staker1).sendEthToL1(feeParams, { value: 0n }))
+            .revertedWithCustomError(omniVault, "OnlyOwnerOrOperator");
+        })
+      })
+    })
+
+    describe("Adapter", function() {
+      describe("Getters and setters", function () {
+        beforeEach(async function () {
+          await snapshot.restore();
+        })
+
+        const setters = [
+          {
+            name: "operator address",
+            setter: "setOperator",
+            getter: "operator",
+            event: "OperatorChanged"
+          },
+          {
+            name: "l1 target address",
+            setter: "setL1Target",
+            getter: "l1Target",
+            event: "L1TargetChanged"
+          },
+          {
+            name: "vault address",
+            setter: "setVault",
+            getter: "vault",
+            event: "VaultChanged"
+          },
+          {
+            name: "arbsys",
+            setter: "setArbSys",
+            getter: "arbsys",
+            event: "ArbSysChanged"
+          },
+        ]
+
+        setters.forEach(function (arg) {
+          it(`Set new ${arg.name}`, async function () {
+            const prevValue = await adapter[arg.getter]()
+            const newValue = ethers.Wallet.createRandom().address;
+            await expect(adapter[arg.setter](newValue))
+              .to.emit(adapter, arg.event)
+              .withArgs(prevValue, newValue);
+
+            expect(await adapter[arg.getter]()).to.be.eq(newValue);
+          })
+
+          it(`Reverts: ${arg.setter} when called by not an owner`, async function () {
+            const newValue = ethers.Wallet.createRandom().address;
+            await expect(adapter.connect(staker1)[arg.setter](newValue))
+              .to.be.revertedWith("Ownable: caller is not the owner");
+          })
+
+          it(`Reverts: ${arg.setter} new value is 0 address`, async function () {
+            const newValue = ethers.ZeroAddress;
+            await expect(adapter[arg.setter](newValue))
+              .to.be.revertedWithCustomError(adapter, "SettingZeroAddress");
+          })
+        })
+
+        it("Owner", async function () {
+          expect(await adapter.owner()).to.be.eq(owner.address);
+        })
+      })
+
+      describe("Send permissions", function() {
+        it("sendAssetsInfoToL1 reverts when called by not vault", async function () {
+          const tokensAmount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendAssetsInfoToL1(tokensAmount, ethAmount, []))
+            .to.be.revertedWithCustomError(adapter, "OnlyVault");
+        })
+
+        it("sendAssetsInfoToL1 reverts when l1 target is not set", async function () {
+          const adapter = await adapterInfo.deploy({
+            "targetL1": ethers.ZeroAddress,
+            owner,
+            operator,
+            "optMessenger": adapterInfo.optMessenger,
+            "optBridge": adapterInfo.optBridge,
+          });
+          const amount = randomBI(18);
+          await staker1.sendTransaction({to: adapter.address, value: amount});
+          await adapter.setVault(staker1.address);
+
+          const tokensAmount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendAssetsInfoToL1(tokensAmount, ethAmount, []))
+            .to.be.revertedWithCustomError(adapter, "L1TargetNotSet");
+        })
+
+        it("sendEthToL1 reverts when called by not vault", async function () {
+          const amount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendEthToL1(amount, [], {value: ethAmount}))
+            .to.be.revertedWithCustomError(adapter, "OnlyVault");
+        })
+
+        it("sendEthToL1 reverts when l1 target is not set", async function () {
+          const adapter = await adapterInfo.deploy({
+            "targetL1": ethers.ZeroAddress,
+            owner,
+            operator,
+            "optMessenger": adapterInfo.optMessenger,
+            "optBridge": adapterInfo.optBridge,
+          });
+          await adapter.setVault(staker1.address);
+
+          const amount = randomBI(18);
+          const ethAmount = randomBI(18);
+          await expect(adapter.connect(staker1).sendEthToL1(amount, [], {value: ethAmount}))
+            .to.be.revertedWithCustomError(adapter, "L1TargetNotSet");
+        })
+      })
+
+      describe("Recover funds", function() {
+        beforeEach(async function () {
+          await snapshot.restore();
+        })
+
+        it("recoverFunds sends eth back to vault", async function() {
+          const amount = randomBI(18);
+          await staker1.sendTransaction({to: adapter.address, value: amount});
+
+          const tx = await adapter.connect(operator).recoverFunds()
+          await expect(tx).changeEtherBalance(adapter.address, -amount);
+          await expect(tx).changeEtherBalance(omniVault.address, amount);
+          await expect(tx).emit(adapter, "RecoverFundsInitiated").withArgs(amount);
+        })
+
+        it("recoverFunds reverts when called by not an operator", async function() {
+          const amount = randomBI(18);
+          await staker1.sendTransaction({to: adapter.address, value: amount});
+
+          await expect(adapter.connect(staker1).recoverFunds())
+            .to.be.revertedWithCustomError(adapter, "OnlyOperatorCanCall")
+            .withArgs(staker1.address)
+        })
+
+        it("Cannot recover when vault is not set", async function() {
+          const adapter = await adapterInfo.deploy({
+            "targetL1": targetL1.address,
+            owner,
+            operator,
+            "optMessenger": adapterInfo.optMessenger,
+            "optBridge": adapterInfo.optBridge,
+          });
+          const amount = randomBI(18);
+          await staker1.sendTransaction({to: adapter.address, value: amount});
+
+          await expect(adapter.connect(operator).recoverFunds())
+            .to.be.revertedWithCustomError(adapter, "VaultNotSet");
+        })
       })
     })
   })

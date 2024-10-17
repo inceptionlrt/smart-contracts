@@ -151,11 +151,6 @@ describe("Omnivault integration tests", function () {
         optAdapter.address = await optAdapter.getAddress();
         await optBridgeMock.setAdapter(optAdapter.address);
 
-
-        // console.log('=== MockLockbox');
-        // const lockboxMock = await ethers.deployContract("MockLockbox", [cToken.address, cToken.address, true]);
-        // lockboxMock.address = await lockboxMock.getAddress();
-
         console.log('=== Rebalancer');
         const Rebalancer = await ethers.getContractFactory("Rebalancer");
         const rebalancer = await upgrades.deployProxy(Rebalancer, [
@@ -380,39 +375,14 @@ describe("Omnivault integration tests", function () {
 
             const args = [
                 {
-                    name: "Sync for the first time",
-                    arb: {
-                        l2BalanceDiff: () => 0n,
-                        l2TotalSupplyDiff: () => 0n,
-                    },
-                    opt: {
-                        l2BalanceDiff: () => 0n,
-                        l2TotalSupplyDiff: () => 0n,
-                    },
-                },
-                {
                     name: "Increase amount and supply ARB and OPT",
                     arb: {
-                        l2BalanceDiff: () => e18,
+                        l2BalanceDiff: () => ethers.parseEther("1.5"),
                         l2TotalSupplyDiff: () => e18,
                     },
                     opt: {
-                        l2BalanceDiff: () => e18,
+                        l2BalanceDiff: () => ethers.parseEther("1.5"),
                         l2TotalSupplyDiff: () => e18,
-                    }
-                },
-                {
-                    name: "Increase only eth amount ARB",
-                    arb: {
-                        l2BalanceDiff: () => ethers.parseEther("1.5"),
-                        l2TotalSupplyDiff: () => 0n,
-                    }
-                },
-                {
-                    name: "Increase only eth amount OPT",
-                    opt: {
-                        l2BalanceDiff: () => ethers.parseEther("1.5"),
-                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
@@ -430,17 +400,6 @@ describe("Omnivault integration tests", function () {
                     }
                 },
                 {
-                    name: "Update to the same values ARB and OPT",
-                    arb: {
-                        l2BalanceDiff: () => 0n,
-                        l2TotalSupplyDiff: () => 0n,
-                    },
-                    opt: {
-                        l2BalanceDiff: () => 0n,
-                        l2TotalSupplyDiff: () => 0n,
-                    }
-                },
-                {
                     name: "Decrease amount and total supply ARB only",
                     arb: {
                         l2BalanceDiff: () => -ethers.parseEther("0.5"),
@@ -452,17 +411,6 @@ describe("Omnivault integration tests", function () {
                     opt: {
                         l2BalanceDiff: () => -ethers.parseEther("0.5"),
                         l2TotalSupplyDiff: () => -ethers.parseEther("0.5"),
-                    }
-                },
-                {
-                    name: "Decrease only eth amount ARB and OPT",
-                    arb: {
-                        l2BalanceDiff: () => -e18,
-                        l2TotalSupplyDiff: () => 0n,
-                    },
-                    opt: {
-                        l2BalanceDiff: () => -e18,
-                        l2TotalSupplyDiff: () => 0n,
                     }
                 },
                 {
@@ -521,6 +469,7 @@ describe("Omnivault integration tests", function () {
                         initialOptSupply += arg.opt.l2TotalSupplyDiff();
                         await optBridgeMock.receiveL2Info(timestamp, initialOptAmount, initialOptSupply);
                     }
+                    console.log(`Total supply diff: ${expectedTotalSupplyDiff.format()}`);
                     const expectedLockboxBalance = initialArbSupply + initialOptSupply;
                     const totalSupplyBefore = await inEth.totalSupply();
 
@@ -547,43 +496,42 @@ describe("Omnivault integration tests", function () {
                 })
             })
 
-            it("Repeated call for updateTreasuryData takes no effect", async function () {
+            it("updateTreasuryData reverts when total supply is the same", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
                 await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
                 await optBridgeMock.receiveL2Info(timestamp, e18, e18);
                 await rebalancer.updateTreasuryData();
 
-                const totalSupplyBefore = await inEth.totalSupply();
-                const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
-                await rebalancer.updateTreasuryData();
-
-                const totalSupplyAfter = await inEth.totalSupply();
-                const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
-                expect(lockboxBalanceAfter).to.be.eq(lockboxBalanceBefore);
+                await expect(rebalancer.updateTreasuryData())
+                    .to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
             })
 
             it("inEth leftover on rebalancer will be transferred to the lockbox", async function () {
+                await snapshot.restore();
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
-                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
-                await optBridgeMock.receiveL2Info(timestamp, e18, e18);
-                await rebalancer.updateTreasuryData();
+                await restakingPool.connect(signer1)["stake()"]({value: 2n * e18});
+
+                const totalSupplyBefore = await inEth.totalSupply();
+                const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
+                //Report L2 info
+                const l2SupplyChange = e18;
+                await arbBridgeMock.receiveL2Info(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
+                await optBridgeMock.receiveL2Info(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
 
                 const amount = randomBI(17);
                 await inEth.connect(signer1).transfer(rebalancer.address, amount);
 
-                const totalSupplyBefore = await inEth.totalSupply();
-                const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
                 await expect(rebalancer.updateTreasuryData())
                     .to.emit(rebalancer, "InETHDepositedToLockbox")
                     .withArgs(amount);
+                console.log(`Total supply: ${(await inEth.totalSupply()).format()}`)
 
                 const totalSupplyAfter = await inEth.totalSupply();
                 const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-                expect(totalSupplyAfter).to.be.eq(totalSupplyBefore);
-                expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(amount);
+                expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(l2SupplyChange * 2n, 1n);
+                expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(l2SupplyChange * 2n + amount, 1n);
             })
         })
 
@@ -895,10 +843,11 @@ describe("Omnivault integration tests", function () {
 
             setters.forEach(function (arg) {
                 it(`Set new ${arg.name}`, async function () {
+                    const prevValue = await arbAdapter[arg.getter]()
                     const newValue = ethers.Wallet.createRandom().address;
                     await expect(arbAdapter[arg.setter](newValue))
                         .to.emit(arbAdapter, arg.event)
-                        .withArgs(newValue);
+                        .withArgs(prevValue, newValue);
 
                     expect(await arbAdapter[arg.getter]()).to.be.eq(newValue);
                 })
@@ -1084,7 +1033,7 @@ describe("Omnivault integration tests", function () {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: arbAdapter.address, value: amount}))
                     .to.emit(arbAdapter, "ReceiveTriggered")
-                    .withArgs(amount);
+                    .withArgs(signer1.address, amount);
 
                 const tx = arbAdapter.connect(operator).recoverFunds();
                 await expect(tx).to.changeEtherBalance(arbAdapter, -amount);
@@ -1095,7 +1044,7 @@ describe("Omnivault integration tests", function () {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: arbAdapter.address, value: amount}))
                     .to.emit(arbAdapter, "ReceiveTriggered")
-                    .withArgs(amount);
+                    .withArgs(signer1.address, amount);
 
                 await expect(arbAdapter.connect(signer1).recoverFunds())
                     .to.be.revertedWithCustomError(arbAdapter, "OnlyOperatorCanCall");
@@ -1140,10 +1089,11 @@ describe("Omnivault integration tests", function () {
 
             setters.forEach(function (arg) {
                 it(`Set new ${arg.name}`, async function () {
+                    const prevValue = await optAdapter[arg.getter]()
                     const newValue = ethers.Wallet.createRandom().address;
                     await expect(optAdapter[arg.setter](newValue))
                         .to.emit(optAdapter, arg.event)
-                        .withArgs(newValue);
+                        .withArgs(prevValue, newValue);
 
                     expect(await optAdapter[arg.getter]()).to.be.eq(newValue);
                 })
@@ -1337,7 +1287,7 @@ describe("Omnivault integration tests", function () {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: optAdapter.address, value: amount}))
                     .to.emit(optAdapter, "ReceiveTriggered")
-                    .withArgs(amount);
+                    .withArgs(signer1.address, amount);
 
                 const tx = optAdapter.connect(operator).recoverFunds();
                 await expect(tx).to.changeEtherBalance(optAdapter, -amount);
@@ -1348,7 +1298,7 @@ describe("Omnivault integration tests", function () {
                 const amount = e18;
                 await expect(signer1.sendTransaction({to: optAdapter.address, value: amount}))
                     .to.emit(optAdapter, "ReceiveTriggered")
-                    .withArgs(amount);
+                    .withArgs(signer1.address, amount);
 
                 await expect(optAdapter.connect(signer1).recoverFunds())
                     .to.be.revertedWithCustomError(optAdapter, "OnlyOperatorCanCall");
