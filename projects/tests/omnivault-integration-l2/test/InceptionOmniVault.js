@@ -30,11 +30,12 @@ const adapters = [
     tag: "arb",
     deploy: async (args) => {
       console.log("- Arbitrum adapter");
-      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
+      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2", args.owner);
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
         args.targetL1,
         args.operator.address
       ]);
+      await adapter.waitForDeployment();
       adapter.address = await adapter.getAddress();
       return adapter;
     },
@@ -47,13 +48,12 @@ const adapters = [
     tag: "opt",
     deploy: async (args) => {
       console.log("- Optimism adapter");
-      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2");
+      const CrossChainAdapterL2 = await ethers.getContractFactory("CrossChainAdapterOptimismL2", args.owner);
       const adapter = await upgrades.deployProxy(CrossChainAdapterL2, [
-        args.optMessenger,
-        args.optBridge,
         args.targetL1,
         args.operator.address,
       ]);
+      await adapter.waitForDeployment();
       adapter.address = await adapter.getAddress();
       return adapter;
     },
@@ -63,23 +63,25 @@ const adapters = [
   },
 ]
 
+let tx;
 async function init(owner, operator, targetL1, adapterInfo) {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
 
   console.log("- iToken");
-  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken", owner);
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+  await iToken.waitForDeployment();
   iToken.address = await iToken.getAddress();
 
   console.log("- Ratio feed");
-  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
+  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
-  await ratioFeed.updateRatioBatch([await iToken.getAddress()], [e18]);
+  await ratioFeed.waitForDeployment();
   ratioFeed.address = await ratioFeed.getAddress();
 
   console.log("- Update Mock Ratio Feed with Mock Token");
-  await ratioFeed.updateRatioBatch([iToken.address], [e18]);
+  await (await ratioFeed.updateRatioBatch([iToken.address], [e18])).wait();
 
   const adapter = await adapterInfo.deploy({
     "targetL1": targetL1.address,
@@ -87,27 +89,28 @@ async function init(owner, operator, targetL1, adapterInfo) {
     operator,
     "optMessenger": adapterInfo.optMessenger,
     "optBridge": adapterInfo.optBridge,
-  })
+  });
 
   // Deploy the OmniVault
   console.log("- Deploying OmniVault");
-  const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+  const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault", owner);
   const omniVault = await upgrades.deployProxy(omniVaultFactory,
     ["Omnivault", operator.address, iToken.address, adapter.address],
     { initializer: '__InceptionOmniVault_init' });
+  await omniVault.waitForDeployment();
   omniVault.address = await omniVault.getAddress();
-  await adapter.setVault(omniVault.address);
+  await (await adapter.setVault(omniVault.address)).wait();
 
-  await omniVault.setRatioFeed(ratioFeed.address);
-  await iToken.setVault(omniVault.address);
+  await (await omniVault.setRatioFeed(ratioFeed.address)).wait();
+  await (await iToken.setVault(omniVault.address)).wait();
 
   console.log("- Arbsys mock");
   const arbSysMock = await ethers.deployContract("ArbSysMock", [])
   arbSysMock.address = await arbSysMock.getAddress();
 
-  // if(adapterInfo.tag === "arb"){
-  //   await adapter.setArbSys(arbSysMock.address)
-  // }
+  if(adapterInfo.tag === "arb"){
+    await adapter.setArbSys(arbSysMock.address)
+  }
 
   return [iToken, omniVault, ratioFeed, adapter, arbSysMock];
 }
@@ -126,12 +129,12 @@ adapters.forEach(function (adapterInfo) {
     async function addReplenishBonus(amount) {
       let collectedFee = 0n;
       if (amount > 0n) {
-        await omniVault.connect(staker3).deposit(staker3.address, { value: amount });
+        await (await omniVault.connect(staker3).deposit(staker3.address, { value: amount })).wait();
         const shares = await iToken.balanceOf(staker3.address);
         const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
         const rec = await tx.wait();
         collectedFee += (rec.logs.find((l) => l.eventName === 'FlashWithdraw')?.args.fee || 0n) / 2n;
-        console.log(`collectedFee: ${collectedFee.format()}`);
+        console.log("Collected bonus:\t", collectedFee.format());
       }
       return collectedFee;
     }
@@ -1239,7 +1242,7 @@ adapters.forEach(function (adapterInfo) {
 
     describe("Bridge", function () {
       describe("Send info", function () {
-        let TARGET = toWei(10);
+        let TARGET = 10n ** 12n;
 
         beforeEach(async function () {
           await snapshot.restore();
@@ -1258,25 +1261,25 @@ adapters.forEach(function (adapterInfo) {
           },
           {
             name: "After deposit",
-            depositAmount: () => randomBI(18),
+            depositAmount: () => randomBI(11),
             msgSender: () => operator
           },
           {
             name: "After deposit when deposit bonus > 0",
-            depositAmount: () => randomBI(18),
+            depositAmount: () => randomBI(11),
             depositBonus: true,
             msgSender: () => operator
           },
           {
             name: "When there are shares, but eth was sent to L1",
-            depositAmount: () => TARGET + randomBI(18),
+            depositAmount: () => TARGET + randomBI(11),
             depositBonus: true,
             sentToL1: (amount) => amount - TARGET,
             msgSender: () => operator
           },
           {
             name: "Owner can call",
-            depositAmount: () => TARGET + randomBI(18),
+            depositAmount: () => TARGET + randomBI(11),
             depositBonus: true,
             sentToL1: (amount) => amount - TARGET,
             msgSender: () => owner
@@ -1293,12 +1296,13 @@ adapters.forEach(function (adapterInfo) {
 
             let depositBonus = 0n;
             if (arg.depositBonus) {
-              expect(await omniVault.depositBonusAmount()).to.be.eq(depositBonus);
+              let collectedBonus = await addReplenishBonus(TARGET);
+              expect(await omniVault.depositBonusAmount()).to.be.closeTo(collectedBonus, 1n);
+              depositBonus = await omniVault.depositBonusAmount();
             }
 
             let sentToL1Amount = 0n;
             if (arg.sentToL1) {
-              console.log("Free balance:", await omniVault.getFreeBalance())
               sentToL1Amount = arg.sentToL1(amount);
               const feeParams = adapterInfo.feesFunc();
               const fees = 3n * 10n ** 16n;
@@ -1307,19 +1311,23 @@ adapters.forEach(function (adapterInfo) {
                 .withArgs(sentToL1Amount + fees);
             }
 
-            console.log("Vault balance:", await ethers.provider.getBalance(omniVault.address));
-            console.log("Deposit bonus:", depositBonus);
-            console.log("Amount:", amount);
-            console.log("SentL1:", sentToL1Amount);
-
+            const freeBalance = await omniVault.getFreeBalance();
+            const vaultBalance = await ethers.provider.getBalance(omniVault.address);
             const totalSupply = await iToken.totalSupply();
-            const expectedEth = amount + depositBonus - sentToL1Amount;
-            expect(await ethers.provider.getBalance(omniVault.address)).to.be.eq(expectedEth);
+            const expectedVaultBalance = amount + depositBonus - sentToL1Amount;
+            console.log("Deposited amt:\t\t", amount.format());
+            console.log("Vault balance:\t\t", vaultBalance.format());
+            console.log("Free balance:\t\t", freeBalance.format())
+            console.log("Deposit bonus:\t\t", depositBonus.format());
+            console.log("Actual sent:\t\t", sentToL1Amount.format());
+            console.log("Total deposited:\t\t", (await omniVault.getTotalDeposited()).format());
+
+            expect(vaultBalance).to.be.eq(expectedVaultBalance);
 
             const feeParams = adapterInfo.feesFunc();
             await expect(omniVault.connect(msgSender).sendAssetsInfoToL1(feeParams))
               .to.emit(omniVault, "MessageToL1Sent")
-              .withArgs(totalSupply, expectedEth);
+              .withArgs(totalSupply, amount - sentToL1Amount);
           })
         })
 
