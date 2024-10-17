@@ -2,7 +2,7 @@
   "devDependencies": {
     "@types/node": "^20.14.10",
     "dotenv": "^16.3.1",
-    "hardhat": "^2.22.6",
+    "hardhat": "^2.22.10",
     "prettier": "^3.1.0",
     "prettier-plugin-solidity": "^1.2.0",
     "ts-node": "^10.9.2",
