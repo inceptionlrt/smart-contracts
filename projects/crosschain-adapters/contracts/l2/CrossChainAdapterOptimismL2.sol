@@ -88,7 +88,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         uint256 tokensAmount,
         uint256 ethAmount,
         bytes[] calldata _gasData
-    ) external payable override returns (bool success) {
+    ) external payable override onlyVault returns (bool success) {
         require(l1Target != address(0), L1TargetNotSet());
         uint32 maxGas = _decodeGas(_gasData);
 
