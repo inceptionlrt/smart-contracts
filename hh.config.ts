@@ -34,10 +34,10 @@ export const CONFIG = {
       gas: 6721975,
     },
     hardhat: {
-      forking: {
-        url: `${process.env.RPC_URL_HOLESKY}`,
-        blockNumber: 1442030,
-      },
+      // forking: {
+      //   url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
+      //   blockNumber: 1442030,
+      // },
     },
   },
   mocha: {

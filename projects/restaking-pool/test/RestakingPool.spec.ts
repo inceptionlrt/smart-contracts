@@ -1291,6 +1291,51 @@ describe("RestakingPool", function () {
       });
     }
 
+    it("adds AVS rewards", async () => {
+      this.timeout(15000000000);
+      let freeBalance = await pool.getFreeBalance();
+      let targetCap = await getTargetCapacity();
+      let flashCapacity = await pool.getFlashCapacity();
+      let totalAssets = await pool.totalAssets();
+      let totalPendingB4 = await pool.getPending();
+      const totalPendingUnstakes = await pool.getTotalPendingUnstakes();
+      const signer1Expected = await pool.getTotalUnstakesOf(signers[0]());
+      const signer2Expected = await pool.getTotalUnstakesOf(signers[1]());
+      const signer3Expected = await pool.getTotalUnstakesOf(signers[2]());
+      console.log(`Total assets:\t\t\t\t${(await cToken.totalAssets()).format()}`);
+      console.log(`Free balance:\t\t\t\t${freeBalance.format()}`);
+      console.log(`Target capacity:\t\t\t${targetCap.format()}`);
+      console.log(`Total pending unstakes:\t\t${totalPendingUnstakes.format()}`);
+      console.log(`signer1 pending unstakes:\t${signer1Expected.format()}`);
+      console.log(`signer2 pending unstakes:\t${signer2Expected.format()}`);
+      console.log(`signer3 pending unstakes:\t${signer3Expected.format()}`);
+      
+      expect(freeBalance).to.be.lt(flashCapacity);
+      expect(flashCapacity).to.be.eq(totalAssets);
+      expect(totalAssets).to.be.eq(totalPendingB4);
+      console.log(totalPendingB4);
+
+      await pool.connect(governance).setRewardsTimeline(604900); // Around 7 days
+      await pool.connect(operator).addRewards({value: toWei(5)});
+
+      const latest = await time.latest();
+      await time.increaseTo(latest + 345700) // Jump 4 days
+
+      freeBalance = await pool.getFreeBalance();
+      targetCap = await getTargetCapacity();
+      flashCapacity = await pool.getFlashCapacity();
+      totalAssets = await pool.totalAssets();
+      let totalPending = await pool.getPending();
+
+      console.log(freeBalance);
+      console.log(flashCapacity);
+      console.log(totalAssets);
+      console.log(totalPending);
+      
+      // Approximately pool.balance(Original) + 4 days of rewards
+      expect(totalPending).to.be.approximately(totalPendingB4 + ((5n*10n**18n / 7n) * 4n), "100000000000000000");
+    });
+
     it("distributeUnstakes", async () => {
       const freeBalance = await pool.getPending();
       const targetCap = await getTargetCapacity();
@@ -1344,7 +1389,7 @@ describe("RestakingPool", function () {
 
     it("Simulate unstakes transfer to the pool and distribute", async function () {
       const totalPendingUnstakesBefore = await pool.getTotalPendingUnstakes();
-      const poolBalanceBefore = await ethers.provider.getBalance(pool.address);
+      const poolBalanceBefore = await pool.getFreeBalance();
 
       //Transfer amount + rewards to the pool
       const transferAmount = totalPendingUnstakesBefore - poolBalanceBefore;
@@ -1353,14 +1398,13 @@ describe("RestakingPool", function () {
       await pool.connect(operator).distributeUnstakes();
 
       const totalPendingUnstakesAfter = await pool.getTotalPendingUnstakes();
-      const poolBalanceAfter = await ethers.provider.getBalance(pool.address);
+      const poolBalanceAfter = await pool.getFreeBalance();
       const claimableAfter = await pool.claimableOf(signer4.address);
       const pendingUnstakesAfter = await pool.getUnstakes();
       console.log(`Pool balance after:\t\t\t\t${poolBalanceAfter.format()}`);
       console.log(`Total pending unstakes after:\t${totalPendingUnstakesAfter.format()}`);
       console.log(`Claimable after:\t\t\t\t${claimableAfter.format()}`);
 
-      expect(poolBalanceAfter).to.be.eq(totalPendingUnstakesBefore);
       expect(totalPendingUnstakesAfter).to.be.eq(0n);
       expect(claimableAfter).to.be.eq(totalPendingUnstakesBefore);
       expect(pendingUnstakesAfter).to.be.empty;
@@ -1380,7 +1424,7 @@ describe("RestakingPool", function () {
 
       expect(signerBalanceAfter - signerBalanceBefore).to.be.eq(claimableBefore);
       expect(claimableAfter).to.be.eq(0n);
-      expect(poolBalanceAfter).to.be.eq(0n);
+      expect(poolBalanceAfter).to.be.eq((5n*10n**18n / 7n) * 3n);  //  Remaining 3 days of AVS rewards
     });
   });
 
