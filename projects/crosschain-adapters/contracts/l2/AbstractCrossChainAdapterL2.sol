@@ -3,7 +3,8 @@ pragma solidity ^0.8.26;
 
 import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
 import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
-import "../interface/ICrossChainAdapterL2.sol";
+
+import {ICrossChainAdapterL2} from "../interface/ICrossChainAdapterL2.sol";
 
 /**
  * @author The InceptionLRT team

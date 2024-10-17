@@ -5,7 +5,10 @@ import "@eth-optimism/contracts/L1/messaging/IL1CrossDomainMessenger.sol";
 import "@eth-optimism/contracts/L1/messaging/IL1StandardBridge.sol";
 import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
 import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
-import "./AbstractCrossChainAdapterL1.sol";
+import "openzeppelin-4/utils/Address.sol";
+
+import {AbstractCrossChainAdapterL1} from "./AbstractCrossChainAdapterL1.sol";
+import {OPTIMISM_CHAIN_ID} from "../config/Constants.sol";
 
 interface PayableCrossDomainMessenger {
     function sendMessage(
@@ -28,9 +31,6 @@ contract CrossChainAdapterOptimismL1 is
     /// @notice Emitted when a cross-chain transaction to L2 Optimism is sent.
     /// @param amountSent The amount of ETH sent.
     event CrossChainTxOptimismSent(uint256 indexed amountSent);
-
-    /// @notice Optimism chain ID constant.
-    uint24 public constant OPTIMISM_CHAIN_ID = 10;
 
     /// @notice Address of the L1 cross-domain messenger.
     IL1CrossDomainMessenger public l1CrossDomainMessenger;
@@ -60,7 +60,6 @@ contract CrossChainAdapterOptimismL1 is
 
     /**
      * @notice Returns the Optimism chain ID.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function getChainId() external pure override returns (uint24) {
         return OPTIMISM_CHAIN_ID;
@@ -68,7 +67,6 @@ contract CrossChainAdapterOptimismL1 is
 
     /**
      * @notice Receives L2 transaction information via the Optimism bridge.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function receiveL2Info(
         uint256 _timestamp,
@@ -116,7 +114,6 @@ contract CrossChainAdapterOptimismL1 is
 
     /**
      * @notice Receives ETH from Layer 2 and transfers it to the rebalancer.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function receiveL2Eth() external payable override {
         require(msg.sender == address(l1CrossDomainMessenger), NotBridge());

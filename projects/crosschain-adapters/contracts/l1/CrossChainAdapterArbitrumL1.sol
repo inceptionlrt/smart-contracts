@@ -5,7 +5,10 @@ import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IOutbox.sol";
 import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
-import "./AbstractCrossChainAdapterL1.sol";
+import "openzeppelin-4/utils/Address.sol";
+
+import {AbstractCrossChainAdapterL1} from "./AbstractCrossChainAdapterL1.sol";
+import {ARBITRUM_CHAIN_ID} from "../config/Constants.sol";
 
 /**
  * @author The InceptionLRT team
@@ -19,9 +22,6 @@ contract CrossChainAdapterArbitrumL1 is
 {
     /// @notice Address of the Arbitrum inbox contract.
     IInbox public inbox;
-
-    /// @notice Arbitrum chain ID constant.
-    uint24 public constant ARBITRUM_CHAIN_ID = 42161;
 
     /// @param ticketId ID of the created retryable ticket.
     event RetryableTicketCreated(uint256 indexed ticketId);
@@ -50,7 +50,6 @@ contract CrossChainAdapterArbitrumL1 is
 
     /**
      * @notice Returns the Arbitrum chain ID.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function getChainId() external pure override returns (uint24) {
         return ARBITRUM_CHAIN_ID;
@@ -58,7 +57,6 @@ contract CrossChainAdapterArbitrumL1 is
 
     /**
      * @notice Receives L2 transaction info from the Arbitrum bridge.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function receiveL2Info(
         uint256 _timestamp,
@@ -122,7 +120,6 @@ contract CrossChainAdapterArbitrumL1 is
 
     /**
      * @notice Receives ETH from L2 and transfers it to the rebalancer.
-     * @inheritdoc ICrossChainAdapterL1
      */
     function receiveL2Eth() external payable override {
         IBridge bridge = IInbox(inbox).bridge();

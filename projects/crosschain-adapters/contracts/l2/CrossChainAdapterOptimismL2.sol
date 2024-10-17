@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "./AbstractCrossChainAdapterL2.sol";
+import {AbstractCrossChainAdapterL2} from "./AbstractCrossChainAdapterL2.sol";
+import {OPTIMISM_L2_STANDARD_BRIDGE_ADDRESS, OPTIMISM_CROSS_DOMAIN_MESSENGER_ADDRESS} from "../config/Constants.sol";
 
 /**
  * @author The InceptionLRT team
@@ -69,10 +70,10 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
     ) public initializer {
         __AbstractCrossChainAdapterL1_init(_l1Target, _msgSender(), _operator);
         l2StandardBridge = L2StandardBridge(
-            0x4200000000000000000000000000000000000010
+            OPTIMISM_L2_STANDARD_BRIDGE_ADDRESS
         );
         crossDomainMessenger = CrossDomainMessenger(
-            0x4200000000000000000000000000000000000007
+            OPTIMISM_CROSS_DOMAIN_MESSENGER_ADDRESS
         );
     }
 
@@ -94,6 +95,7 @@ contract CrossChainAdapterOptimismL2 is AbstractCrossChainAdapterL2 {
         uint32 maxGas = _decodeGas(_gasData);
 
         // Encode the data to send the assets info to L1
+        //TODO signature might not be working - consider changing to simply receive()
         bytes memory data = abi.encodeWithSignature(
             "receiveL2Info(uint256,uint256,uint256)",
             block.timestamp,

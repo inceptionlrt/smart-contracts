@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+//Chain IDs
+uint24 constant ARBITRUM_CHAIN_ID = 42161;
+uint24 constant OPTIMISM_CHAIN_ID = 10;
+
+//Chain-specific addresses - Arbitrum
+address constant ARBSYS_ADDRESS = 0x0000000000000000000000000000000000000064;
+
+//Chain-specific addresses - Optimism
+address constant OPTIMISM_L2_STANDARD_BRIDGE_ADDRESS = 0x4200000000000000000000000000000000000010;
+address constant OPTIMISM_CROSS_DOMAIN_MESSENGER_ADDRESS = 0x4200000000000000000000000000000000000007;
