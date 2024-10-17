@@ -50,6 +50,7 @@ contract InceptionRestaker is
         address delegationManager,
         address strategyManager,
         address strategy,
+        address asset,
         address trusteeManager
     ) public initializer {
         __Pausable_init();
@@ -61,7 +62,7 @@ contract InceptionRestaker is
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _asset = _strategy.underlyingToken();
+        _asset = IERC20(asset);
         _trusteeManager = trusteeManager;
         _vault = msg.sender;
 
@@ -118,8 +119,7 @@ contract InceptionRestaker is
         uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
-        IERC20 asset = _strategy.underlyingToken();
-        uint256 balanceBefore = asset.balanceOf(address(this));
+        uint256 balanceBefore = _asset.balanceOf(address(this));
 
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
@@ -129,12 +129,11 @@ contract InceptionRestaker is
         );
 
         // send tokens to the vault
-        uint256 withdrawnAmount = asset.balanceOf(address(this)) -
+        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
             balanceBefore;
 
-        if (!asset.transfer(_vault, withdrawnAmount)) {
-            revert TransferAssetFailed(address(asset));
-        }
+        if (!_asset.transfer(_vault, withdrawnAmount))
+            revert TransferAssetFailed(address(_asset));
 
         return withdrawnAmount;
     }

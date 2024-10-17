@@ -15,13 +15,13 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, [tokenName, tokenSymbol], { kind: "transparent" });
-  await iToken.waitForDeployment();
-  const iTokenAddress = await iToken.getAddress();
+  await iToken.deployed();
+  const iTokenAddress = iToken.address;
   console.log(`InceptionToken address: ${iTokenAddress}`);
 
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
-  let strategyAddress;
+  let strategyAddress, assetAddress;
   let vaultFactory = "InVault_E1";
   switch (vaultName) {
     case "InstEthVault":
@@ -62,19 +62,57 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     case "InlsEthVault":
       strategyAddress = addresses.LiquidStrategy;
       break;
+    /// Basic Strategy Assets
+    case "InEigenVault":
+      vaultFactory = "InStrategyBaseVault_E1";
+      assetAddress = addresses.EigenAddress;
+      strategyAddress = addresses.EigenStrategy;
+      break;
+    case "InsFraxVault":
+      vaultFactory = "InStrategyBaseVault_E1";
+      assetAddress = addresses.sFraxAddress;
+      strategyAddress = addresses.sFraxStrategy;
+      break;
+    case "InslisBnbVault":
+      vaultFactory = "InStrategyBaseVault_E1";
+      assetAddress = addresses.ListaAddress;
+      strategyAddress = addresses.ListaStrategy;
+      break;
+    case "IntBtcVault":
+      vaultFactory = "InStrategyBaseVault_E1";
+      assetAddress = addresses.tBTCAddress;
+      strategyAddress = addresses.tBTCStrategy;
+      break;
   }
 
   // 2. Inception vault
-  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory);
-  const iVault = await upgrades.deployProxy(
-    InceptionVaultFactory,
-    [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
-    { kind: "transparent" }
-  );
-  await iVault.waitForDeployment();
-  const iVaultAddress = await iVault.getAddress();
+  let iVault;
+  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, {
+    libraries: {
+      InceptionLibrary: addresses.InceptionLibrary,
+    },
+  });
+  if (vaultFactory === "InStrategyBaseVault_E1" || vaultFactory === "InStrategyBaseVault_E2") {
+    iVault = await upgrades.deployProxy(
+      InceptionVaultFactory,
+      [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress, assetAddress],
+      { unsafeAllowLinkedLibraries: true }
+    );
+  } else if (vaultFactory === "InVault_E1" || vaultFactory === "InVault_E2") {
+    iVault = await upgrades.deployProxy(
+      InceptionVaultFactory,
+      [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
+      { unsafeAllowLinkedLibraries: true }
+    );
+  } else {
+    console.error("Wrong iVaultFactory: ", vaultFactory);
+    return;
+  }
+  await iVault.deployed();
+  const iVaultAddress = iVault.address;
   console.log(`InceptionVault address: ${iVaultAddress}`);
-  const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
+
+  //const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
 
   // 3. set the vault
   tx = await iToken.setVault(iVaultAddress);
@@ -88,8 +126,20 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   tx = await iVault.upgradeTo(RESTAKER_ADDRESS);
   await tx.wait();
 
-  // 6. add Ankr Operator
-  tx = await iVault.addELOperator(addresses.AnkrOperator);
+  // 6. set RatioFeed
+  tx = await iVault.setRatioFeed(addresses.RatioFeedAddress);
+  await tx.wait();
+
+  // 7. add an EigenLayer Operator
+  tx = await iVault.addELOperator(addresses.P2POperator);
+  await tx.wait();
+
+  // 8. set Treasury
+  tx = await iVault.setTreasuryAddress(addresses.TreasuryAddress);
+  await tx.wait();
+
+  // 9. transferOwnerShip
+  tx = await iVault.transferOwnership(addresses.TreasuryAddress);
   await tx.wait();
 
   const fininalBalance = await deployer.provider.getBalance(deployer.address);
@@ -98,7 +148,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   // 4. save addresses localy
   const iAddresses = {
     iVaultAddress: iVaultAddress,
-    iVaultImpl: iVaultImplAddress,
+    //    iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
     RestakerImpl: RESTAKER_ADDRESS,
