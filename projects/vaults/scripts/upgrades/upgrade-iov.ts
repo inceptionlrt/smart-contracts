@@ -1,38 +1,50 @@
 import { ethers, upgrades } from "hardhat";
 import * as fs from 'fs';
+import hre from 'hardhat'; // Import hre
 
 const CHECKPOINT_FILE = "deployment_checkpoint.json";
 
 async function main() {
     // Load checkpoint data (if it exists)
     const checkpoint = loadCheckpoint();
-    const existingAddress = checkpoint.CrossChainAdapterArbitrumL2;
+    const existingAddress = checkpoint.InceptionOmniVault;
 
     if (!existingAddress) {
-        console.error("CrossChainAdapterArbitrumL2 address not found in checkpoint.");
+        console.error("InceptionOmniVault address not found in checkpoint.");
         process.exit(1);
     }
 
     // Get the contract factory for the upgraded version
-    const CrossChainAdapterArbitrumL2 = await ethers.getContractFactory("CrossChainAdapterArbitrumL2");
+    const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
 
     // Check the existing implementation address before upgrading
     const currentImplementationAddress = await upgrades.erc1967.getImplementationAddress(existingAddress);
     console.log(`Current implementation address before upgrade: ${currentImplementationAddress}`);
 
     // Upgrade the contract
-    console.log(`Upgrading CrossChainAdapterArbitrumL2 at address: ${existingAddress}...`);
-    const upgradedContract = await upgrades.upgradeProxy(existingAddress, CrossChainAdapterArbitrumL2);
+    console.log(`Upgrading InceptionOmniVault at address: ${existingAddress}...`);
+    const upgradedContract = await upgrades.upgradeProxy(existingAddress, InceptionOmniVault);
 
     // Wait for the upgrade to complete
     await upgradedContract.waitForDeployment();
+
+    // Wait for the upgrade to complete (using waitForDeployment is incorrect here)
+    console.log("Contract upgraded successfully");
 
     // Check the implementation address after upgrading
     const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(existingAddress);
     console.log(`New implementation address after upgrade: ${newImplementationAddress}`);
 
     // Log the address of the upgraded contract
-    console.log(`Successfully upgraded CrossChainAdapterArbitrumL2. Proxy address remains: ${existingAddress}`);
+    console.log(`Successfully upgraded InceptionOmniVault. Proxy address remains: ${existingAddress}`);
+
+    // Verify the new implementation on Etherscan
+    console.log(`Verifying new implementation on Etherscan...`);
+    await hre.run("verify:verify", {
+        address: newImplementationAddress,
+    });
+
+
 }
 
 // Load deployment checkpoint

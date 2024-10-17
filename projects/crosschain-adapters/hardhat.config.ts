@@ -10,9 +10,10 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       forking: {
-        url: process.env.RPC_URL_OPTIMISM_SEPOLIA || "",
-        blockNumber: 15000000,
+        url: process.env.RPC_URL_ARBITRUM_SEPOLIA || "",
+        blockNumber: 89177226,
       },
+      accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "10000365467355464286459" }],
       chainId: 1337,  // Local chain ID for Hardhat network
     },
     ethereum: {
@@ -51,6 +52,9 @@ const config: HardhatUserConfig = {
       chainId: 11155420,
       gas: 8000000,
     },
+  },
+  etherscan: {
+    apiKey: { sepolia: `${process.env.ETHERSCAN_API_KEY}`, arbitrumSepolia: `${process.env.ARBISCAN_API_KEY}` }
   },
   solidity: {
     compilers: [

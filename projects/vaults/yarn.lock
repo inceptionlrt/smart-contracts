@@ -2388,9 +2388,9 @@ cross-spawn@^6.0.5:
     shebang-command "^1.2.0"
     which "^1.2.9"
 
-crosschain-adapters@../crosschain-adapters/crosschain-adapters-v1.0.4.tgz:
-  version "1.0.4"
-  resolved "../crosschain-adapters/crosschain-adapters-v1.0.4.tgz#68d680a45d9214c17c8a55e402c1cf6aa5c7d8a3"
+crosschain-adapters@../crosschain-adapters/crosschain-adapters-v1.0.5.tgz:
+  version "1.0.5"
+  resolved "../crosschain-adapters/crosschain-adapters-v1.0.5.tgz#d8c3fc7f6a96ccf6604491817adbf2f839f6ce07"
 
 "crypt@>= 0.0.1":
   version "0.0.2"

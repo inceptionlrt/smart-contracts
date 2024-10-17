@@ -143,5 +143,6 @@ abstract contract AbstractCrossChainAdapterL1 is
      */
     receive() external payable {
         emit ReceiveTriggered(msg.sender, msg.value);
+        Address.sendValue(payable(rebalancer), msg.value);
     }
 }
