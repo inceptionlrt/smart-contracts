@@ -1,28 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionVault, IStrategyManager, IInceptionToken, IStrategy} from "../InceptionVault.sol";
+import {InceptionVault_S, IInceptionToken, IERC20} from "../InceptionVault_S.sol";
+import {IMellowRestaker} from "../../interfaces/IMellowRestaker.sol";
 
 /// @author The InceptionLRT team
-contract InVault_E2 is InceptionVault {
+contract InVault_E2 is InceptionVault_S {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 
     function initialize(
         string memory vaultName,
         address operatorAddress,
-        IStrategyManager _strategyManager,
+        IERC20 assetAddress,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IMellowRestaker _mellowRestaker
     ) external initializer {
         __InceptionVault_init(
             vaultName,
             operatorAddress,
-            _strategyManager,
+            assetAddress,
             _inceptionToken,
-            _assetStrategy
+            _mellowRestaker
         );
     }
 
