@@ -17,8 +17,8 @@ contract CrossChainAdapterArbitrumL2 is AbstractCrossChainAdapterL2 {
     // event RedemptionFailed(uint256 indexed retryableTicketId); // TODO: guess gonna clean it later
 
     /// @notice Arbitrum system contract (ArbSys).
-    ArbSys arbsys;
-    ArbRetryableTx arbRetryableTx;
+    ArbSys public arbsys;
+    ArbRetryableTx public arbRetryableTx;
 
     /**
      * @notice Initializes the contract with the L1 target and operator addresses. Sets the default ArbSys address.
