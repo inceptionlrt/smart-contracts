@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import "./AbstractCrossChainAdapterL2.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title CrossChainAdapterOptimismL2
  * @dev Interface for calling Optimism L2StandardBridge.
  */

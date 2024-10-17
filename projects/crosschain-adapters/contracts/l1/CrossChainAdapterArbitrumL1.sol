@@ -8,6 +8,7 @@ import "openzeppelin-4-upgradeable/access/OwnableUpgradeable.sol";
 import "./AbstractCrossChainAdapterL1.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title CrossChainAdapterArbitrumL1
  * @dev Cross-chain adapter implementation for interacting with Arbitrum contracts, deployed on Layer 1.
  */

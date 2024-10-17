@@ -6,6 +6,7 @@ import "openzeppelin-4-upgradeable/proxy/utils/Initializable.sol";
 import "../interface/ICrossChainAdapterL2.sol";
 
 /**
+ * @author The InceptionLRT team
  * @dev Abstract base contract for Layer 2 cross-chain adapters.
  */
 abstract contract AbstractCrossChainAdapterL2 is

@@ -12,6 +12,7 @@ import "../interfaces/IInceptionToken.sol";
 import "../interfaces/IInceptionRatioFeed.sol";
 import "../interfaces/ICrossChainAdapterL2.sol";
 
+/// @author The InceptionLRT team
 /// @title InceptionOmniVault
 /// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
 /// @notice Allows users to deposit ETH, receive inception tokens, and handle asset transfers between L1 and L2.

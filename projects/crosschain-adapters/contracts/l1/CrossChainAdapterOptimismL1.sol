@@ -16,6 +16,7 @@ interface PayableCrossDomainMessenger {
 }
 
 /**
+ * @author The InceptionLRT team
  * @title CrossChainAdapterOptimismL1
  * @dev Cross-chain adapter implementation for Optimism Layer 1.
  */

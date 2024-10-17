@@ -10,6 +10,7 @@ import "../interface/ICrossChainAdapterL1.sol";
 import "../interface/ITransactionStorage.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title AbstractCrossChainAdapterL1
  * @dev Abstract base contract for handling cross-chain interactions on L1.
  */

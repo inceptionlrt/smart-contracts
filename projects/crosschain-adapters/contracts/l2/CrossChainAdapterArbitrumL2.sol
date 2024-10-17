@@ -6,6 +6,7 @@ import "@arbitrum/nitro-contracts/src/precompiles/ArbRetryableTx.sol";
 import "./AbstractCrossChainAdapterL2.sol";
 
 /**
+ * @author The InceptionLRT team
  * @title CrossChainAdapterArbitrumL2
  * @dev Implementation of the L2 cross-chain adapter for Arbitrum.
  * This contract is responsible for sending assets and ETH from Arbitrum L2 to L1.
