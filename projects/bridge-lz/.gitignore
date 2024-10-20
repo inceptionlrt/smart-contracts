@@ -12,5 +12,6 @@ artifacts
 *.abi
 
 # Inception LRT custom ignore
+deployment_checkpoint.json
 *.tgz
 deployments
