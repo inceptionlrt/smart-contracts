@@ -46,6 +46,8 @@ contract IMellowRestaker is
 
     mapping(address => uint256) public allocations;
 
+    uint256 public requestDeadline;
+
     modifier onlyTrustee() {
         if(msg.sender != _vault && msg.sender != _trusteeManager) 
             revert NotVaultOrTrusteeManager();
@@ -78,6 +80,8 @@ contract IMellowRestaker is
         }
         _asset = asset;
         _trusteeManager = trusteeManager;
+
+        requestDeadline = 15 days;
     }
 
     function delegateMellow(
@@ -158,7 +162,7 @@ contract IMellowRestaker is
             lpAmount,
             minAmounts,
             block.timestamp + 15 days,
-            block.timestamp + 15 days,
+            block.timestamp + requestDeadline,
             closePrevious
         );
 
@@ -173,6 +177,27 @@ contract IMellowRestaker is
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
         return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
+    }
+
+    function withdrawEmergencyMellow(
+        address _mellowVault,
+        uint256 amount
+    ) external override onlyTrustee whenNotPaused returns(uint256) {
+        IMellowVault mellowVault = IMellowVault(_mellowVault);
+        amount = IWSteth(wsteth).getWstETHByStETH(amount);
+        uint256[] memory minAmounts = new uint256[](2);
+        minAmounts[0] = amount - 5; // dust
+
+        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+
+        uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(
+            minAmounts,
+            block.timestamp + 15 days
+        );
+
+        uint256 actualAmount;
+        if (actualAmounts.length > 0) actualAmount = actualAmounts[0];
+        return IWSteth(wsteth).getStETHByWstETH(actualAmount);
     }
 
     function claimableAmount() external view returns (uint256) {
@@ -340,6 +365,10 @@ contract IMellowRestaker is
 
     function setVault(address vault) external onlyOwner {
         _vault = vault;
+    }
+
+    function setRequestDeadline(uint256 _days) external onlyOwner {
+        requestDeadline = _days * 1 days;
     }
 
     function pause() external onlyOwner {

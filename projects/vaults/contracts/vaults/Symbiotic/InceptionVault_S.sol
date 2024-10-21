@@ -62,7 +62,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        minAmount = 100;
+        minAmount = 10000000000000;
 
         protocolFee = 50 * 1e8;
 
