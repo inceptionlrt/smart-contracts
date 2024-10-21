@@ -27,7 +27,7 @@ interface ICrossChainBridge {
         bytes calldata _payload,
         bytes memory _options,
         bool _payInLzToken
-    ) external returns (uint256);
+    ) external view returns (uint256);
 
     function quoteSendEth(uint256 _chainId) external view returns (uint256);
 

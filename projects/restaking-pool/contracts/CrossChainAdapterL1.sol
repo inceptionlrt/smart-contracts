@@ -31,7 +31,6 @@ contract CrossChainAdapterL1 is
         _;
     }
 
-    /// @dev This replaces the constructor, and can be called only once during initialization
     function initialize(
         address _crosschainBridge,
         address _rebalancer,

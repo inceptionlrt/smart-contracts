@@ -1,43 +1,54 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * @title ICrossChainAdapterL2
- * @dev Paul Fomichov
- */
-interface ICrossChainAdapterL2 {
-    error VaultNotSet();
-    error L1TargetNotSet();
-    error SettingZeroGas();
-    error GasDataTooShort();
-    error SettingZeroAddress();
-    error SendingZeroValue();
-    error OnlyVault();
-    error InsufficientValueSent();
-    error TransferToVaultFailed(uint256 amount);
-    error OnlyOperatorCanCall(address caller);
+import {ICrossChainAdapter} from "./ICrossChainAdapter.sol";
 
-    event ReceiveTriggered(address indexed caller, uint256 amount);
-    event AssetsInfoSentToL1(
-        uint256 indexed tokensAmount,
-        uint256 indexed ethAmount,
-        uint256 indexed withrawalId //revelant for Arbitrum, always 0 for Optimism
+interface ICrossChainAdapterL2 is ICrossChainAdapter {
+    error SettingZeroAddress();
+    error InvalidValue();
+    error OnlyOmniVaultCanCall(address caller);
+    error OnlyOperatorCanCall(address caller);
+    error OmniVaultNotSet();
+    error BridgeNotSet();
+    error TransferToOmniVaultFailed();
+    error Unimplemented();
+
+    event L1EthDeposit(uint256 amount);
+    event RecoverFundsInitiated(uint256 amount);
+    event ReceiveTriggered(address sender, uint256 value);
+
+    event CrossChainBridgeChanged(
+        address prevCrossChainBridge,
+        address newCrossChainBridge
     );
 
-    event EthSentToL1(uint256 indexed amount, uint256 indexed withrawalId); //revelant for Arbitrum, always 0 for Optimism
+    event OmniVaultChanged(address prevOmniVault, address newOmniVault);
 
-    function sendAssetsInfoToL1(
-        uint256 tokensAmount,
-        uint256 ethAmount,
-        bytes[] calldata _gasData
-    ) external payable returns (bool success);
+    function sendEthToL1() external payable;
 
-    function sendEthToL1(
-        uint256 _callValue,
-        bytes[] calldata _gasData
-    ) external payable returns (bool success);
+    function sendDataToL1(
+        uint256 _timestamp,
+        uint256 _balance,
+        uint256 _totalSupply
+    ) external payable;
+
+    function quote(
+        uint256 _timestamp,
+        uint256 _balance,
+        uint256 _totalSupply
+    ) external view returns (uint256);
+
+    function quoteSendEth() external view returns (uint256);
 
     function recoverFunds() external;
+
+    function receiveCrosschainEth(uint256 _chainId) external payable;
+
+    function setCrossChainBridge(address _newCrossChainBridge) external;
+
+    function setOmniVault(address _newOmniVault) external;
+
+    function omniVault() external view returns (address);
 
     receive() external payable;
 }

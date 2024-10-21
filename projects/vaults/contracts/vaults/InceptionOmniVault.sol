@@ -228,52 +228,65 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
 
     /**
      * @notice Sends asset information (total token and ETH balances) to Layer 1.
-     * @param _gasData Gas parameters for the cross-chain transaction.
      */
-    function sendAssetsInfoToL1(
-        bytes[] calldata _gasData
-    ) external payable onlyOwnerOrOperator {
+    function sendAssetsInfoToL1() external payable onlyOwnerOrOperator {
         if (address(crossChainAdapter) == address(0)) {
             revert CrossChainAdapterNotSet();
         }
         uint256 tokensAmount = geTotalUnderlyingToken();
         uint256 ethAmount = getTotalDeposited();
 
-        bool success = crossChainAdapter.sendAssetsInfoToL1{value: msg.value}(
+        crossChainAdapter.sendDataToL1{value: msg.value}(
+            block.timestamp,
             tokensAmount,
-            ethAmount,
-            _gasData
+            ethAmount
         );
-
-        if (!success) {
-            revert MessageToL1Failed(tokensAmount, ethAmount);
-        }
 
         emit MessageToL1Sent(tokensAmount, ethAmount);
     }
 
     /**
-     * @notice Sends available ETH to Layer 1 via cross-chain adapter.
-     * @param _gasData Gas parameters for the cross-chain transaction.
+     * @notice Calculates price to send data message to Layer 1.
      */
-    function sendEthToL1(
-        bytes[] calldata _gasData
-    ) external payable onlyOwnerOrOperator {
-        uint256 callValue = getFreeBalance();
-        if (callValue == 0) {
+    function quoteSendAssetsInfoToL1() external view returns (uint256 fees) {
+        require(
+            address(crossChainAdapter) != address(0),
+            CrossChainAdapterNotSet()
+        );
+        uint256 tokensAmount = geTotalUnderlyingToken();
+        uint256 ethAmount = getTotalDeposited();
+
+        fees = crossChainAdapter.quote(
+            block.timestamp,
+            tokensAmount,
+            ethAmount
+        );
+    }
+
+    /**
+     * @notice Sends available ETH to Layer 1 via cross-chain adapter.
+     * @dev msg.value is used to pay for the cross-chain fees
+     */
+    function sendEthToL1() external payable onlyOwnerOrOperator {
+        uint256 freeBalance = getFreeBalance();
+        if (freeBalance == 0) {
             revert FreeBalanceIsZero();
         }
 
-        bool success = crossChainAdapter.sendEthToL1{value: callValue}(
-            callValue,
-            _gasData
+        crossChainAdapter.sendEthToL1{value: freeBalance + msg.value}();
+
+        emit EthToL1Sent(freeBalance);
+    }
+
+    /**
+     * @notice Calculates fees to send data message to Layer 1.
+     */
+    function quoteSendEthToL1() external view returns (uint256) {
+        require(
+            address(crossChainAdapter) != address(0),
+            CrossChainAdapterNotSet()
         );
-
-        if (!success) {
-            revert EthToL1Failed(callValue);
-        }
-
-        emit EthToL1Sent(callValue);
+        return crossChainAdapter.quoteSendEth();
     }
 
     /*//////////////////////////////
