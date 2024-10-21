@@ -13,5 +13,6 @@ interface IRestaker {
     event Claimed(address indexed recipient, uint256 amount);
 
     function initialize(address owner, IRestakerFacets facets) external;
+
     function __claim() external;
 }
