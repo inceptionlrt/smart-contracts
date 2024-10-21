@@ -364,11 +364,14 @@ contract IMellowRestaker is
     }
 
     function setVault(address vault) external onlyOwner {
+        emit VaultSet(_vault, vault);
         _vault = vault;
     }
 
     function setRequestDeadline(uint256 _days) external onlyOwner {
-        requestDeadline = _days * 1 days;
+        uint256 newDealine = _days * 1 days;
+        emit RequestDealineSet(requestDeadline, newDealine);
+        requestDeadline = newDealine;
     }
 
     function pause() external onlyOwner {

@@ -38,6 +38,10 @@ interface IIMellowRestaker {
         uint256 newAllocation
     );
 
+    event VaultSet(address indexed oldVault, address indexed newVault);
+    
+    event RequestDealineSet(uint256 indexed oldDeadline, uint256 indexed newDealine);
+
     function getDeposited(address _mellowVault) external view returns (uint256);
 
     function getTotalDeposited() external view returns (uint256);
