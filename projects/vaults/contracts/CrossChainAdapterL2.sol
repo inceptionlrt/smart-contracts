@@ -44,7 +44,7 @@ contract CrossChainAdapterL2 is
                 _operator != address(0),
             SettingZeroAddress()
         );
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         crosschainBridge = _crosschainBridge;
         omniVault = _omniVault;
         operator = _operator;

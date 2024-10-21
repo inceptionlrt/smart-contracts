@@ -54,7 +54,7 @@ contract InceptionERC20OmniVault is
         IInceptionToken _inceptionToken,
         IERC20 wrappedAsset
     ) internal {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __InceptionERC20OmniAssetsHandler_init(wrappedAsset);
 
         name = vaultName;

@@ -71,7 +71,7 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
         address _inceptionToken,
         ICrossChainAdapterL2 _crossChainAdapter
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         if (_inceptionToken == address(0) || _operator == address(0)) {
             revert NullParams();
         }

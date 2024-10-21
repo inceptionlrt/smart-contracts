@@ -47,17 +47,16 @@ contract InceptionToken is
         string calldata name,
         string calldata symbol
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __ERC20_init_unchained(name, symbol);
     }
 
-    function _beforeTokenTransfer(
-        address from,
+    function transfer(
         address to,
         uint256 amount
-    ) internal override {
-        super._beforeTokenTransfer(from, to, amount);
+    ) public override returns (bool) {
         require(!paused(), "InceptionToken: token transfer while paused");
+        return super.transfer(to, amount);
     }
 
     function burn(address account, uint256 amount) external override onlyVault {
