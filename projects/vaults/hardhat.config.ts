@@ -4,7 +4,6 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
-import "hardhat-dependency-compiler";
 
 // Hardhat tasks
 import "./tasks/get-free-balances";
@@ -78,13 +77,6 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: `${process.env.ETHERSCAN_API_KEY}`
-  },
-  dependencyCompiler: {
-    paths: [
-      "crosschain-adapters/contracts/l2/CrossChainAdapterArbitrumL2.sol",
-      "restaking-pool/contracts/ProtocolConfig.sol",
-      "restaking-pool/contracts/RatioFeed.sol"
-    ]
   }
 
 };
