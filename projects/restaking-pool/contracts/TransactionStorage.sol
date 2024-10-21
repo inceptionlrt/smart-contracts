@@ -107,7 +107,7 @@ contract TransactionStorage is Ownable, ITransactionStorage {
      * @dev Replaces the crosschain adapters
      * @param _newAdapter The address of the adapter.
      */
-    function setAdapter(address _newAdapter) external onlyOwner {
+    function setAdapter(address payable _newAdapter) external onlyOwner {
         require(_newAdapter != address(0), SettingZeroAddress());
 
         emit AdapterChanged(adapter, _newAdapter);

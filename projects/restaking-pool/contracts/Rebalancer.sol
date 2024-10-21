@@ -10,30 +10,45 @@ import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {IInceptionToken} from "./interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "./interfaces/IInceptionRatioFeed.sol";
 import {ICrossChainAdapterL1} from "./interfaces/ICrossChainAdapterL1.sol";
+import {ITransactionStorage} from "./interfaces/ITransactionStorage.sol";
 
 /**
  * @author The InceptionLRT team
  * @title Rebalancer
  * @dev This contract handles staking, manages treasury data and facilitates cross-chain ETH transfers.
  */
-contract Rebalancer is Initializable, OwnableUpgradeable {
+contract Rebalancer is Initializable, OwnableUpgradeable, ITransactionStorage {
+    //------------- REBALANCER FIELDS -------------//
     address public inETHAddress;
     address public lockboxAddress;
     address payable public liqPool;
-    address public transactionStorage;
     address public ratioFeed;
     address public operator;
-
     uint256 public constant MULTIPLIER = 1e18;
 
+    //------------- TX STORAGE FIELDS -------------//
+    mapping(uint256 => Transaction) public txs;
+    address payable public adapter;
+    uint32[] public chainIds;
+
     modifier onlyOperator() {
-        require(msg.sender == operator, OnlyOperator());
+        require(
+            msg.sender == operator || msg.sender == owner(),
+            OnlyOperator()
+        );
+        _;
+    }
+
+    modifier onlyAdapter() {
+        require(
+            msg.sender == adapter || msg.sender == owner(),
+            MsgNotFromAdapter(msg.sender)
+        );
         _;
     }
 
     error TransferToLockboxFailed();
     error InETHAddressNotSet();
-    error SettingZeroAddress();
     error LiquidityPoolNotSet();
     error CrosschainAdapterNotSet();
     error MissingOneOrMoreL2Transactions(uint256 chainId);
@@ -47,18 +62,17 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     event InETHDepositedToLockbox(uint256 mintAmount);
     event TreasuryUpdateMint(uint256 mintAmount);
     event TreasuryUpdateBurn(uint256 mintAmount);
-    event LockboxChanged(address newLockbox);
-    event InEthChanged(address newInEth);
-    event TxStorageChanged(address newTxStorage);
-    event LiqPoolChanged(address newLiqPool);
-    event OperatorChanged(address newOperator);
+    event LockboxChanged(address prevLockbox, address newLockbox);
+    event InEthChanged(address prevInEth, address newInEth);
+    event LiqPoolChanged(address prevLiqPool, address newLiqPool);
+    event OperatorChanged(address prevOperator, address newOperator);
 
     /**
      * @notice Initializes the contract with essential addresses and parameters.
      * @param _inETHAddress The address of the inETH token.
      * @param _lockbox The address of the lockbox.
      * @param _liqPool The address of the liquidity pool.
-     * @param _transactionStorage The address of the transaction storage.
+     * @param _adapter The address of the CrossChainAdapterL1.
      * @param _ratioFeed The address of the ratio feed contract.
      * @param _operator The address of the operator who will manage this contract.
      */
@@ -66,7 +80,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         address _inETHAddress,
         address _lockbox,
         address payable _liqPool,
-        address _transactionStorage,
+        address payable _adapter,
         address _ratioFeed,
         address _operator
     ) public initializer {
@@ -75,28 +89,16 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         require(_inETHAddress != address(0), SettingZeroAddress());
         require(_lockbox != address(0), SettingZeroAddress());
         require(_liqPool != address(0), SettingZeroAddress());
-        require(_transactionStorage != address(0), SettingZeroAddress());
+        require(_adapter != address(0), SettingZeroAddress());
         require(_ratioFeed != address(0), SettingZeroAddress());
         require(_operator != address(0), SettingZeroAddress());
 
         inETHAddress = _inETHAddress;
         lockboxAddress = _lockbox;
         liqPool = _liqPool;
-        transactionStorage = _transactionStorage;
+        adapter = _adapter;
         ratioFeed = _ratioFeed;
         operator = _operator;
-    }
-
-    /**
-     * @notice Updates the transaction storage address.
-     * @param _transactionStorage The new transaction storage address.
-     */
-    function setTransactionStorage(
-        address _transactionStorage
-    ) external onlyOwner {
-        require(_transactionStorage != address(0), SettingZeroAddress());
-        transactionStorage = _transactionStorage;
-        emit TxStorageChanged(_transactionStorage);
     }
 
     /**
@@ -105,8 +107,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
      */
     function setInETHAddress(address _inETHAddress) external onlyOwner {
         require(_inETHAddress != address(0), SettingZeroAddress());
+        emit InEthChanged(inETHAddress, _inETHAddress);
         inETHAddress = _inETHAddress;
-        emit InEthChanged(_inETHAddress);
     }
 
     /**
@@ -115,8 +117,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
      */
     function setLockboxAddress(address _lockboxAddress) external onlyOwner {
         require(_lockboxAddress != address(0), SettingZeroAddress());
+        emit LockboxChanged(lockboxAddress, _lockboxAddress);
         lockboxAddress = _lockboxAddress;
-        emit LockboxChanged(_lockboxAddress);
     }
 
     /**
@@ -126,7 +128,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     function setLiqPool(address payable _liqPool) external onlyOwner {
         require(_liqPool != address(0), SettingZeroAddress());
         liqPool = _liqPool;
-        emit LiqPoolChanged(_liqPool);
+        emit LiqPoolChanged(liqPool, _liqPool);
     }
 
     /**
@@ -135,8 +137,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
      */
     function setOperator(address _operator) external onlyOwner {
         require(_operator != address(0), SettingZeroAddress());
+        emit OperatorChanged(operator, _operator);
         operator = _operator;
-        emit OperatorChanged(_operator);
     }
 
     /**
@@ -145,15 +147,11 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
 
-        TransactionStorage storageContract = TransactionStorage(
-            transactionStorage
-        );
-        uint32[] memory allChainIds = storageContract.getAllChainIds();
+        uint32[] memory allChainIds = getAllChainIds();
 
         for (uint i = 0; i < allChainIds.length; i++) {
             uint32 chainId = allChainIds[i];
-            TransactionStorage.Transaction memory txData = storageContract
-                .getTransactionData(chainId);
+            Transaction memory txData = getTransactionData(chainId);
             require(
                 txData.timestamp != 0,
                 MissingOneOrMoreL2Transactions(chainId)
@@ -236,19 +234,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
         uint256 _chainId,
         uint256 _callValue
     ) external payable onlyOperator {
+        require(adapter != address(0), CrosschainAdapterNotSet());
         require(
             _callValue + msg.value <= address(this).balance,
             SendAmountExceedsEthBalance(_callValue)
         );
-        address payable crossChainAdapterAddress = payable(
-            TransactionStorage(transactionStorage).adapter()
-        );
-        require(
-            crossChainAdapterAddress != address(0),
-            CrosschainAdapterNotSet()
-        );
 
-        ICrossChainAdapterL1(crossChainAdapterAddress).sendEthToL2{
+        ICrossChainAdapterL1(adapter).sendEthToL2{
             value: _callValue + msg.value
         }(_chainId);
     }
@@ -256,16 +248,93 @@ contract Rebalancer is Initializable, OwnableUpgradeable {
     function quoteSendEthToL2(
         uint256 _chainId
     ) external view returns (uint256) {
-        ICrossChainAdapterL1 crossChainAdapter = ICrossChainAdapterL1(
-            payable(TransactionStorage(transactionStorage).adapter())
-        );
+        require(adapter != address(0), CrosschainAdapterNotSet());
+        return ICrossChainAdapterL1(adapter).quoteSendEth(_chainId);
+    }
 
+    //------------------------ TX STORAGE FUNCTIONS ------------------------//
+
+    /**
+     * @notice Adds a new Chain ID to the storage.
+     * @dev Ensures that the Chain ID does not already exist in the list.
+     * @param _newChainId The Chain ID to add.
+     */
+    function addChainId(uint32 _newChainId) external onlyOwner {
+        for (uint i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == _newChainId) {
+                revert ChainIdAlreadyExists(chainIds[i]);
+            }
+        }
+        chainIds.push(_newChainId);
+    }
+
+    /**
+     * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
+     * @dev Verifies that the caller is the correct adapter and that the timestamp is valid.
+     * @param _chainId The Chain ID of the transaction.
+     * @param _timestamp The timestamp when the transaction occurred.
+     * @param _balance The ETH balance involved in the transaction.
+     * @param _totalSupply The total inETH supply for the transaction.
+     */
+    function handleL2Info(
+        uint256 _chainId,
+        uint256 _timestamp,
+        uint256 _balance,
+        uint256 _totalSupply
+    ) external onlyAdapter {
         require(
-            address(crossChainAdapter) != address(0),
-            CrosschainAdapterNotSet()
+            _timestamp <= block.timestamp,
+            TimeCannotBeInFuture(_timestamp)
         );
 
-        return crossChainAdapter.quoteSendEth(_chainId);
+        Transaction memory lastUpdate = txs[_chainId];
+
+        if (lastUpdate.timestamp != 0) {
+            require(
+                _timestamp > lastUpdate.timestamp,
+                TimeBeforePrevRecord(_timestamp)
+            );
+        }
+
+        Transaction memory newUpdate = Transaction({
+            timestamp: _timestamp,
+            ethBalance: _balance,
+            inEthBalance: _totalSupply
+        });
+
+        txs[_chainId] = newUpdate;
+
+        emit L2InfoReceived(_chainId, _timestamp, _balance, _totalSupply);
+    }
+
+    /**
+     * @notice Retrieves the transaction for a specific Chain ID. NB! Only one (last) transaction is stored.
+     * @param _chainId The Chain ID for which to retrieve the last transaction data.
+     * @return The transaction data (timestamp, ETH balance, inETH balance).
+     */
+    function getTransactionData(
+        uint256 _chainId
+    ) public view returns (Transaction memory) {
+        return txs[_chainId];
+    }
+
+    /**
+     * @notice Returns all stored Chain IDs (and henceforth - all supported networks).
+     * @return An array containing all Chain IDs stored in the contract.
+     */
+    function getAllChainIds() public view returns (uint32[] memory) {
+        return chainIds;
+    }
+
+    /**
+     * @dev Replaces the crosschain adapters
+     * @param _newAdapter The address of the adapter.
+     */
+    function setAdapter(address payable _newAdapter) external onlyOwner {
+        require(_newAdapter != address(0), SettingZeroAddress());
+
+        emit AdapterChanged(adapter, _newAdapter);
+        adapter = _newAdapter;
     }
 
     /**

@@ -40,5 +40,5 @@ interface ITransactionStorage {
 
     function getAllChainIds() external view returns (uint32[] memory);
 
-    function setAdapter(address _newAdapter) external;
+    function setAdapter(address payable _newAdapter) external;
 }
