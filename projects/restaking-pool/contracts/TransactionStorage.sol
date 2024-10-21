@@ -4,43 +4,24 @@ pragma solidity 0.8.27;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import {Rebalancer} from "./Rebalancer.sol";
-import {ICrossChainAdapterL1} from "crosschain-adapters/contracts/interface/ICrossChainAdapterL1.sol";
+import {ITransactionStorage} from "./interfaces/ITransactionStorage.sol";
+import {ICrossChainAdapterL1} from "./interfaces/ICrossChainAdapterL1.sol";
 
 /**
  * @author The InceptionLRT team
  * @title TransactionStorage
  * @dev Stores and manages Layer 2 transaction data and chain-specific adapters.
  */
-contract TransactionStorage is Ownable {
-    struct Transaction {
-        uint256 timestamp;
-        uint256 ethBalance;
-        uint256 inEthBalance;
-    }
-
+contract TransactionStorage is Ownable, ITransactionStorage {
     mapping(uint256 => Transaction) public txs;
     address public adapter;
     uint32[] public chainIds;
 
-    event L2InfoReceived(
-        uint256 indexed networkId,
-        uint256 timestamp,
-        uint256 ethBalance,
-        uint256 inEthBalance
-    );
-
-    event AdapterReplaced(address oldAdapterAddress, address newAdapterAddress);
-
-    error MsgNotFromAdapter(address caller);
-    error ChainIdAlreadyExists(uint256 chainId);
-    error AdapterAlreadyExists(uint256 chainId);
-    error NoAdapterForThisChainId(uint256 chainId);
-    error TimeCannotBeInFuture(uint256 timestamp);
-    error TimeBeforePrevRecord(uint256 timestamp);
-    error SettingZeroAddress();
-
     modifier onlyAdapter() {
-        require(msg.sender == adapter, MsgNotFromAdapter(msg.sender));
+        require(
+            msg.sender == adapter || msg.sender == owner(),
+            MsgNotFromAdapter(msg.sender)
+        );
         _;
     }
 
@@ -84,6 +65,7 @@ contract TransactionStorage is Ownable {
         );
 
         Transaction memory lastUpdate = txs[_chainId];
+
         if (lastUpdate.timestamp != 0) {
             require(
                 _timestamp > lastUpdate.timestamp,
@@ -122,15 +104,13 @@ contract TransactionStorage is Ownable {
     }
 
     /**
-     * @notice Adds a new adapter for a specific Chain ID.
-     * @dev Ensures that no adapter is already assigned to the Chain ID.
-     * @param _chainId The Chain ID for which the adapter is added.
-     * @param _adapterAddress The address of the adapter.
+     * @dev Replaces the crosschain adapters
+     * @param _newAdapter The address of the adapter.
      */
     function setAdapter(address _newAdapter) external onlyOwner {
         require(_newAdapter != address(0), SettingZeroAddress());
 
-        emit AdapterChanged(adapter, _adapterAddress);
+        emit AdapterChanged(adapter, _newAdapter);
         adapter = _newAdapter;
     }
 }

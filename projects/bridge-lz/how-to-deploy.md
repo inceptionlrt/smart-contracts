@@ -14,7 +14,7 @@
 
 5. Verify contracts on Etherscan:
 > npx hardhat flatten contracts/LZCrossChainBridge.sol > FlattenedLZBridge.sol
-6. Deploy all other contracts:
+6. Deploy all other contracts (in restaking pool):
 >yarn hardhat run scripts/deploy-l1/all-test.ts --network sepolia
 7. Now it's time to fire the test:
 >npx hardhat run scripts/call-on-opt_modified.ts --network optimism-sepolia

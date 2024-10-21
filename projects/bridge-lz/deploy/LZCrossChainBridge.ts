@@ -15,11 +15,16 @@ const deploy: DeployFunction = async (hre) => {
 
     const endpointV2Deployment = await hre.deployments.get('EndpointV2')
 
+    const eIds = [40161, 40231, 40232]
+    const chainIds = [11155111, 421614, 11155420]
+
     const { address } = await deploy(contractName, {
         from: deployer,
         args: [
             endpointV2Deployment.address, // LayerZero's EndpointV2 address
             deployer, // owner
+            eIds,
+            chainIds
         ],
         log: true,
         skipIfAlreadyDeployed: false,

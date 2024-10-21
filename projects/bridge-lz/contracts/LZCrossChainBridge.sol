@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.26;
+pragma solidity 0.8.27;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
@@ -9,10 +9,17 @@ import { ICrossChainBridge } from "./interfaces/ICrossChainBridge.sol";
 import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
 
 contract LZCrossChainBridge is ICrossChainBridge, OApp {
-    constructor(address _endpoint, address _delegate) OApp(_endpoint, _delegate) Ownable(_delegate) {
-        setChainIdFromEid(40161, 11155111);
-        setChainIdFromEid(40231, 421614);
-        setChainIdFromEid(40232, 11155420);
+    constructor(
+        address _endpoint,
+        address _delegate,
+        uint32[] memory _eIds,
+        uint256[] memory _chainIds
+    ) OApp(_endpoint, _delegate) Ownable(_delegate) {
+        require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
+
+        for (uint256 i = 0; i < _eIds.length; i++) {
+            setChainIdFromEid(_eIds[i], _chainIds[i]);
+        }
     }
 
     address public adapter;
@@ -68,6 +75,23 @@ contract LZCrossChainBridge is ICrossChainBridge, OApp {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
         MessagingFee memory fee = _quote(dstEid, _payload, _options, _payInLzToken);
+        return fee.nativeFee;
+    }
+
+    /**
+     * @notice Quote the fee required to send ETH cross-chain.
+     * @param _chainId The chain ID of the destination chain.
+     * @return fee The estimated fee to send ETH cross-chain.
+     */
+    function quoteSendEth(uint256 _chainId) external view override returns (uint256) {
+        uint32 dstEid = getEidFromChainId(_chainId);
+        if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
+
+        // Since we're just sending ETH, payload and options can be empty
+        bytes memory emptyPayload = "";
+        bytes memory emptyOptions = "";
+
+        MessagingFee memory fee = _quote(dstEid, emptyPayload, emptyOptions, false);
         return fee.nativeFee;
     }
 

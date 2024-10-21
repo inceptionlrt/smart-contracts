@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.27;
 
 interface ICrossChainBridge {
     event CrossChainMessageReceived(uint256 indexed chainId, uint256 value, bytes data);
@@ -12,6 +12,7 @@ interface ICrossChainBridge {
     error NoAdapterSet();
     error Unauthorized(address caller);
     error NoDestEidFoundForChainId(uint256 chainId);
+    error ArraysLengthsMismatch();
 
     function adapter() external view returns (address);
 
@@ -27,6 +28,8 @@ interface ICrossChainBridge {
         bytes memory _options,
         bool _payInLzToken
     ) external returns (uint256);
+
+    function quoteSendEth(uint256 _chainId) external view returns (uint256);
 
     function setChainIdFromEid(uint32 _eid, uint256 _chainId) external;
 

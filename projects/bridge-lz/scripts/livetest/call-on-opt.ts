@@ -5,7 +5,7 @@ const options = Options.newOptions().addExecutorLzReceiveOption(200000, 0).toHex
 
 async function main() {
     // const myOAppAddressA = "0xB9B9AfA6B41c26A4EC360248ebC7787d60f85AFd";
-    const myOAppAddressA = "0x160cC2E8A0f27D8DE07Df1Ac9ea5b7582ae23605";
+    const myOAppAddressA = "0x9FfCcD2684236AA029e3EE2aFD36f785CB7cF4E2";
     // const MyOAppA = await ethers.getContractAt("MyOApp", myOAppAddressA);
     const MyOAppA = await ethers.getContractAt("LZCrossChainBridge", myOAppAddressA);
 
@@ -23,7 +23,7 @@ async function main() {
     // Define message and options
 
     // Define the message with BigInt values
-    const timestamp = BigInt(Math.floor(Date.now() / 1000)); // Current timestamp in seconds
+    const timestamp = Math.floor(Date.now() / 1000) - 200; // Current timestamp in seconds
     const balance = ethers.utils.parseUnits("1000", 18);   // BigInt Balance
     const totalSupply = ethers.utils.parseUnits("50000", 18); // BigInt Total supply
 

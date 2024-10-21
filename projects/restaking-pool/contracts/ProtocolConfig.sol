@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-import "rebalancer/contracts/interfaces/IRebalancer.sol";
+import "./interfaces/IRebalancer.sol";
 import "./interfaces/IProtocolConfig.sol";
 import "./restaker/IRestakerDeployer.sol";
 

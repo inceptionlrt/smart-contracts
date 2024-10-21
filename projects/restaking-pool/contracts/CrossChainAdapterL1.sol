@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.27;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -41,7 +41,7 @@ contract CrossChainAdapterL1 is
             _crosschainBridge != address(0) &&
                 _rebalancer != address(0) &&
                 _transactionStorage != address(0),
-            "Zero address not allowed"
+            SettingZeroAddress()
         );
         __Ownable_init(msg.sender);
         crosschainBridge = _crosschainBridge;
@@ -49,38 +49,28 @@ contract CrossChainAdapterL1 is
         transactionStorage = _transactionStorage;
     }
 
-    //--------------------------------------------------------
-
     /// @dev Called by Rebalancer to send ETH to L2.
     function sendEthToL2(
         uint256 _chainId
     ) external payable override onlyRebalancer {
-        ICrossChainBridge bridge = ICrossChainBridge(crosschainBridge);
+        ICrossChainBridge(crosschainBridge).sendCrosschain{value: msg.value}(
+            _chainId,
+            "",
+            ""
+        );
+    }
 
-        try bridge.quote(_chainId, "", "", false) returns (uint256 fee) {
-            emit QuoteSuccess(_chainId);
-            uint256 totalEthSent = fee + msg.value;
-            ICrossChainBridge(crosschainBridge).sendCrosschain{
-                value: totalEthSent
-            }(_chainId, "", "");
-        } catch Error(string memory reason) {
-            emit QuoteError(_chainId, reason);
-            ICrossChainBridge(crosschainBridge).sendCrosschain{
-                value: msg.value
-            }(_chainId, "", "");
-        } catch (bytes memory lowLevelData) {
-            emit QuoteErrorLowLevel(_chainId, lowLevelData);
-            ICrossChainBridge(crosschainBridge).sendCrosschain{
-                value: msg.value
-            }(_chainId, "", "");
-        }
+    function quoteSendEth(
+        uint256 _chainId
+    ) external view override returns (uint256) {
+        return ICrossChainBridge(crosschainBridge).quoteSendEth(_chainId);
     }
 
     /// @dev Receives the decoded L2 info and calls the storage handler.
     function handleCrossChainData(
         uint256 _chainId,
         bytes calldata _payload
-    ) public override onlyCrosschainBridge {
+    ) public override {
         require(transactionStorage != address(0), TxStorageNotSet());
         (
             uint256 timestamp,
@@ -90,6 +80,7 @@ contract CrossChainAdapterL1 is
         if (timestamp > block.timestamp) {
             revert FutureTimestamp();
         }
+
         ITransactionStorage(transactionStorage).handleL2Info(
             _chainId,
             timestamp,

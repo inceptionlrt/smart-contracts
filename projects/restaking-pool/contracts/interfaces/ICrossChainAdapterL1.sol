@@ -28,7 +28,10 @@ interface ICrossChainAdapterL1 is ICrossChainAdapter {
     );
     event ReceiveTriggered(address caller, uint256 amount);
 
-    event CrossChainBridgeChanged(address prevCrossChainBridge, address newCrossChainBridge);
+    event CrossChainBridgeChanged(
+        address prevCrossChainBridge,
+        address newCrossChainBridge
+    );
     event RebalancerChanged(address prevRebalancer, address newRebalancer);
     event L2ReceiverChanged(address prevL2Receiver, address newL2Receiver);
     event L2SenderChanged(address prevL2Sender, address newL2Sender);
@@ -36,6 +39,8 @@ interface ICrossChainAdapterL1 is ICrossChainAdapter {
     event RecoverFundsInitiated(uint256 amount);
 
     function sendEthToL2(uint256 _chainId) external payable;
+
+    function quoteSendEth(uint256 _chainId) external view returns (uint256);
 
     function handleCrossChainData(
         uint256 _chainId,
@@ -51,6 +56,12 @@ interface ICrossChainAdapterL1 is ICrossChainAdapter {
     function setRebalancer(address _newRebalancer) external;
 
     function setTransactionStorage(address _newTxStorage) external;
+
+    function crosschainBridge() external view returns (address);
+
+    function rebalancer() external view returns (address);
+
+    function transactionStorage() external view returns (address);
 
     receive() external payable;
 }

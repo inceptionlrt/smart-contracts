@@ -6,7 +6,7 @@ import "./ICToken.sol";
 import "./IRestakingPool.sol";
 import "./IEigenPodManager.sol";
 import "../restaker/IRestakerDeployer.sol";
-import "rebalancer/contracts/interfaces/IRebalancer.sol";
+import "./IRebalancer.sol";
 
 interface IProtocolConfig {
     /* errors */
