@@ -35,7 +35,7 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
         uint256[] memory _chainIds
     ) public initializer {
         require(_vault != address(0), SettingZeroAddress());
-        __Ownable_init(msg.sender); 
+        __Ownable_init(msg.sender);
         __OAppUpgradeable_init(_endpoint, _delegate);
 
         vault = _vault;
@@ -63,6 +63,18 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
         );
         uint256 fee = receipt.fee.nativeFee;
         emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
+    }
+
+    function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
+        sendCrosschain(_chainId, new bytes(0), new bytes(0));
+    }
+
+    function recoverFunds() external override onlyOwner {
+        require(vault != address(0), VaultNotSet());
+        uint256 amount = address(this).balance;
+        (bool success, ) = vault.call{ value: amount }("");
+        require(success, TransferToVaultFailed());
+        emit RecoverFundsInitiated(amount);
     }
 
     function quote(
@@ -103,32 +115,6 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
 
     // ================= Cross-Chain Adapter Functions ======================
 
-    function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
-        sendCrosschain(_chainId, new bytes(0), new bytes(0));
-    }
-
-    function handleCrossChainData(uint256 _chainId, bytes calldata _payload) public override {
-        require(vault != address(0), VaultNotSet());
-        (uint256 timestamp, uint256 balance, uint256 totalSupply) = _decodeCalldata(_payload);
-        if (timestamp > block.timestamp) {
-            revert FutureTimestamp();
-        }
-        ITransactionStorage(vault).handleL2Info(_chainId, timestamp, balance, totalSupply);
-    }
-
-    function receiveCrossChainEth(uint256 _chainId) public payable override {
-        emit L2EthDeposit(_chainId, msg.value);
-        Address.sendValue(payable(vault), msg.value);
-    }
-
-    function recoverFunds() external override onlyOwner {
-        require(vault != address(0), VaultNotSet());
-        uint256 amount = address(this).balance;
-        (bool success, ) = vault.call{ value: amount }("");
-        require(success, TransferToVaultFailed());
-        emit RecoverFundsInitiated(amount);
-    }
-
     function setVault(address _newVault) external onlyOwner {
         require(_newVault != address(0), SettingZeroAddress());
         emit VaultChanged(vault, _newVault);
@@ -158,11 +144,26 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
         emit CrossChainMessageReceived(chainId, msg.value, payload);
 
         if (msg.value > 0) {
-            receiveCrossChainEth(chainId);
+            _handleCrossChainEth(chainId);
         }
 
         if (payload.length > 0) {
-            handleCrossChainData(chainId, payload);
+            _handleCrossChainData(chainId, payload);
         }
+    }
+
+    function _handleCrossChainData(uint256 _chainId, bytes calldata _payload) internal {
+        require(vault != address(0), VaultNotSet());
+        (uint256 timestamp, uint256 balance, uint256 totalSupply) = _decodeCalldata(_payload);
+        if (timestamp > block.timestamp) {
+            revert FutureTimestamp();
+        }
+        ITransactionStorage(vault).handleL2Info(_chainId, timestamp, balance, totalSupply);
+        emit CrossChainInfoReceived(_chainId, timestamp, balance, totalSupply);
+    }
+
+    function _handleCrossChainEth(uint256 _chainId) internal {
+        emit CrossChainEthDeposit(_chainId, msg.value);
+        Address.sendValue(payable(vault), msg.value);
     }
 }
