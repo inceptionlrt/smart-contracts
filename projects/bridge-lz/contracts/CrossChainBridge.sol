@@ -14,7 +14,6 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradeable, Initializable, OwnableUpgradeable {
-    address public adapter;
     address public vault;
 
     mapping(uint32 => uint256) public eidToChainId;
@@ -36,8 +35,8 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
         uint256[] memory _chainIds
     ) public initializer {
         require(_vault != address(0), SettingZeroAddress());
-        __Ownable_init(msg.sender); // Initialize OwnableUpgradeable
-        __OAppUpgradeable_init(_endpoint, _delegate); // Initialize OApp contract
+        __Ownable_init(msg.sender); 
+        __OAppUpgradeable_init(_endpoint, _delegate);
 
         vault = _vault;
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
@@ -49,15 +48,11 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
 
     // ================= Cross-Chain Bridge Functions ======================
 
-    function sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) public payable override {
-        if (msg.sender != owner() && msg.sender != adapter) {
-            revert Unauthorized(msg.sender);
-        }
-
-        if (adapter == address(0)) {
-            revert NoAdapterSet();
-        }
-
+    function sendCrosschain(
+        uint256 _chainId,
+        bytes memory _payload,
+        bytes memory _options
+    ) public payable override onlyVault {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
@@ -106,18 +101,9 @@ contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradea
         return chainIdToEid[_chainId];
     }
 
-    function setAdapter(address _adapter) external override onlyOwner {
-        if (_adapter == address(0)) {
-            revert SettingZeroAddress();
-        }
-        adapter = _adapter;
-    }
-
     // ================= Cross-Chain Adapter Functions ======================
 
     function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
-        require(adapter != address(0), NoAdapterSet());
-
         sendCrosschain(_chainId, new bytes(0), new bytes(0));
     }
 

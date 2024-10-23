@@ -14,8 +14,6 @@ interface ICrossChainBridge {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
 
-    function adapter() external view returns (address);
-
     function eidToChainId(uint32 _eid) external view returns (uint256);
 
     function chainIdToEid(uint256 _chainId) external view returns (uint32);
@@ -32,8 +30,6 @@ interface ICrossChainBridge {
     function quoteSendEth(uint256 _chainId) external view returns (uint256);
 
     function setChainIdFromEid(uint32 _eid, uint256 _chainId) external;
-
-    function setAdapter(address _adapter) external;
 
     function getChainIdFromEid(uint32 _eid) external view returns (uint256);
 
