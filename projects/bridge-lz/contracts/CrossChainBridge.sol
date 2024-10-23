@@ -7,28 +7,23 @@ import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oa
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { ICrossChainBridge } from "./interfaces/ICrossChainBridge.sol";
 import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
-import { ICrossChainAdapterL1 } from "./interfaces/ICrossChainAdapterL1.sol";
+import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
 import { ITransactionStorage } from "./interfaces/ITransactionStorage.sol";
 import { OAppUpgradeable } from "./OAppUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-contract CrossChainBridge is
-    ICrossChainBridge,
-    ICrossChainAdapterL1,
-    OAppUpgradeable,
-    Initializable,
-    OwnableUpgradeable
-{
+contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradeable, Initializable, OwnableUpgradeable {
     address public adapter;
-    address public rebalancer;
+    address public vault;
 
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
 
-    modifier onlyRebalancer() {
-        if (msg.sender != rebalancer && msg.sender != owner()) {
-            revert NotRebalancer(msg.sender);
+    // Note that "vault" is a general term here encompassing both InceptionOmniVault and Vault
+    modifier onlyVault() {
+        if (msg.sender != vault && msg.sender != owner()) {
+            revert NotVault(msg.sender);
         }
         _;
     }
@@ -36,15 +31,15 @@ contract CrossChainBridge is
     function initialize(
         address _endpoint,
         address _delegate,
-        address _rebalancer,
+        address _vault,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
-        require(_rebalancer != address(0), SettingZeroAddress());
+        require(_vault != address(0), SettingZeroAddress());
         __Ownable_init(msg.sender); // Initialize OwnableUpgradeable
         __OAppUpgradeable_init(_endpoint, _delegate); // Initialize OApp contract
 
-        rebalancer = _rebalancer;
+        vault = _vault;
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
 
         for (uint256 i = 0; i < _eIds.length; i++) {
@@ -120,38 +115,38 @@ contract CrossChainBridge is
 
     // ================= Cross-Chain Adapter Functions ======================
 
-    function sendEthToL2(uint256 _chainId) external payable override onlyRebalancer {
+    function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
         require(adapter != address(0), NoAdapterSet());
 
         sendCrosschain(_chainId, new bytes(0), new bytes(0));
     }
 
     function handleCrossChainData(uint256 _chainId, bytes calldata _payload) public override {
-        require(rebalancer != address(0), RebalancerNotSet());
+        require(vault != address(0), VaultNotSet());
         (uint256 timestamp, uint256 balance, uint256 totalSupply) = _decodeCalldata(_payload);
         if (timestamp > block.timestamp) {
             revert FutureTimestamp();
         }
-        ITransactionStorage(rebalancer).handleL2Info(_chainId, timestamp, balance, totalSupply);
+        ITransactionStorage(vault).handleL2Info(_chainId, timestamp, balance, totalSupply);
     }
 
-    function receiveCrosschainEth(uint256 _chainId) external payable override {
+    function receiveCrossChainEth(uint256 _chainId) public payable override {
         emit L2EthDeposit(_chainId, msg.value);
-        Address.sendValue(payable(rebalancer), msg.value);
+        Address.sendValue(payable(vault), msg.value);
     }
 
     function recoverFunds() external override onlyOwner {
-        require(rebalancer != address(0), RebalancerNotSet());
+        require(vault != address(0), VaultNotSet());
         uint256 amount = address(this).balance;
-        (bool success, ) = rebalancer.call{ value: amount }("");
-        require(success, TransferToRebalancerFailed());
+        (bool success, ) = vault.call{ value: amount }("");
+        require(success, TransferToVaultFailed());
         emit RecoverFundsInitiated(amount);
     }
 
-    function setRebalancer(address _newRebalancer) external onlyOwner {
-        require(_newRebalancer != address(0), SettingZeroAddress());
-        emit RebalancerChanged(rebalancer, _newRebalancer);
-        rebalancer = _newRebalancer;
+    function setVault(address _newVault) external onlyOwner {
+        require(_newVault != address(0), SettingZeroAddress());
+        emit VaultChanged(vault, _newVault);
+        vault = _newVault;
     }
 
     function _decodeCalldata(bytes calldata payload) internal pure returns (uint256, uint256, uint256) {
@@ -161,7 +156,7 @@ contract CrossChainBridge is
 
     receive() external payable override {
         emit ReceiveTriggered(msg.sender, msg.value);
-        Address.sendValue(payable(rebalancer), msg.value);
+        Address.sendValue(payable(vault), msg.value);
     }
 
     // ================== LayerZero Message Receiver ======================
@@ -177,15 +172,11 @@ contract CrossChainBridge is
         emit CrossChainMessageReceived(chainId, msg.value, payload);
 
         if (msg.value > 0) {
-            ICrossChainAdapter(adapter).receiveCrosschainEth{ value: msg.value }(chainId);
+            receiveCrossChainEth(chainId);
         }
 
         if (payload.length > 0) {
-            try ICrossChainAdapter(adapter).handleCrossChainData(chainId, payload) {
-                emit CrossChainDataSuccessfullyRelayed(chainId);
-            } catch Error(string memory reason) {
-                emit CrossChainDataProcessingFailed(chainId, reason);
-            }
+            handleCrossChainData(chainId, payload);
         }
     }
 }
