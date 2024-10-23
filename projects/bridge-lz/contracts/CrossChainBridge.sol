@@ -6,14 +6,12 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { ICrossChainBridge } from "./interfaces/ICrossChainBridge.sol";
-import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
-import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
 import { ITransactionStorage } from "./interfaces/ITransactionStorage.sol";
 import { OAppUpgradeable } from "./OAppUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-contract CrossChainBridge is ICrossChainBridge, ICrossChainAdapter, OAppUpgradeable, Initializable, OwnableUpgradeable {
+contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, OwnableUpgradeable {
     address public vault;
 
     mapping(uint32 => uint256) public eidToChainId;
