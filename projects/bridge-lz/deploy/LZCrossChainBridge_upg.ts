@@ -16,7 +16,7 @@ const deploy: DeployFunction = async (hre) => {
     console.log('Deploying implementation contract...');
     const implementationDeployment = await deploy(contractName, {
         from: deployer,
-        args: [], // No constructor arguments for upgradeable contracts
+        args: [],
         log: true,
         skipIfAlreadyDeployed: false,
     });
@@ -32,7 +32,7 @@ const deploy: DeployFunction = async (hre) => {
         try {
             const proxyAdminDeployment = await deploy('ProxyAdmin', {
                 from: deployer,
-                args: [deployer], // ProxyAdmin has no constructor arguments
+                args: [deployer],
                 log: true,
                 skipIfAlreadyDeployed: true,
             });
@@ -47,7 +47,7 @@ const deploy: DeployFunction = async (hre) => {
         console.log(`ProxyAdmin already deployed at: ${proxyAdminAddress}`);
     }
 
-    // 3. Get the address of the EndpointV2 contract (assuming it's deployed)
+    // 3. Get the address of the EndpointV2 contract
     console.log('Fetching EndpointV2 contract...');
     const endpointV2Deployment = await deployments.get('EndpointV2');
     console.log(`EndpointV2 Address: ${endpointV2Deployment.address}`);
@@ -70,7 +70,7 @@ const deploy: DeployFunction = async (hre) => {
     );
     console.log(`Encoded initialize data: ${initializeData}`);
 
-    // 5. Deploy the TransparentUpgradeableProxy using the fully qualified name
+    // 5. Deploy the TransparentUpgradeableProxy
     console.log('Deploying TransparentUpgradeableProxy...');
     console.log(`Implementation Address: ${implementationAddress}`);
     console.log(`ProxyAdmin Address: ${proxyAdminAddress}`);
@@ -80,7 +80,7 @@ const deploy: DeployFunction = async (hre) => {
         const proxyDeployment = await deploy('TransparentUpgradeableProxy', {
             contract: 'contracts/proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy', // Fully qualified name
             from: deployer,
-            args: [implementationAddress, proxyAdminAddress, initializeData], // Correct constructor arguments
+            args: [implementationAddress, proxyAdminAddress, initializeData],
             log: true,
             skipIfAlreadyDeployed: false,
         });
