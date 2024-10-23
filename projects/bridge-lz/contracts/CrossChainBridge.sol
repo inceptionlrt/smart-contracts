@@ -7,24 +7,44 @@ import { OApp, MessagingFee, Origin } from "@layerzerolabs/oapp-evm/contracts/oa
 import { MessagingReceipt } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
 import { ICrossChainBridge } from "./interfaces/ICrossChainBridge.sol";
 import { ICrossChainAdapter } from "./interfaces/ICrossChainAdapter.sol";
+import { ICrossChainAdapterL1 } from "./interfaces/ICrossChainAdapterL1.sol";
+import { ITransactionStorage } from "./interfaces/ITransactionStorage.sol";
 import { OAppUpgradeable } from "./OAppUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, OwnableUpgradeable {
+contract CrossChainBridge is
+    ICrossChainBridge,
+    ICrossChainAdapterL1,
+    OAppUpgradeable,
+    Initializable,
+    OwnableUpgradeable
+{
     address public adapter;
+    address public rebalancer;
+
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
 
-    // New initialize function to replace constructor
+    modifier onlyRebalancer() {
+        if (msg.sender != rebalancer && msg.sender != owner()) {
+            revert NotRebalancer(msg.sender);
+        }
+        _;
+    }
+
     function initialize(
         address _endpoint,
         address _delegate,
+        address _rebalancer,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
+        require(_rebalancer != address(0), SettingZeroAddress());
         __Ownable_init(msg.sender); // Initialize OwnableUpgradeable
         __OAppUpgradeable_init(_endpoint, _delegate); // Initialize OApp contract
 
+        rebalancer = _rebalancer;
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
 
         for (uint256 i = 0; i < _eIds.length; i++) {
@@ -32,18 +52,9 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
         }
     }
 
-    /**
-     * @notice Sends a message from the source chain to a destination chain.
-     * @param _chainId The chain ID of the destination.
-     * @param _payload The byte data to be sent.
-     * @param _options Additional options for message execution.
-     * @dev Encodes the message as bytes and sends it using the `_lzSend` internal function.
-     */
-    function sendCrosschain(
-        uint256 _chainId,
-        bytes calldata _payload,
-        bytes calldata _options
-    ) external payable override {
+    // ================= Cross-Chain Bridge Functions ======================
+
+    function sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) public payable override {
         if (msg.sender != owner() && msg.sender != adapter) {
             revert Unauthorized(msg.sender);
         }
@@ -64,14 +75,6 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
         emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
     }
 
-    /**
-     * @notice Quotes the gas needed to pay for the full omnichain transaction in native gas or ZRO token.
-     * @param _chainId Destination chain ID.
-     * @param _payload The byte data to be sent.
-     * @param _options Message execution options (e.g., for sending gas to destination).
-     * @param _payInLzToken Whether to return fee in ZRO token.
-     * @return fee A `MessagingFee` struct containing the calculated gas fee in either the native token or ZRO token.
-     */
     function quote(
         uint256 _chainId,
         bytes calldata _payload,
@@ -84,19 +87,12 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
         return fee.nativeFee;
     }
 
-    /**
-     * @notice Quote the fee required to send ETH cross-chain.
-     * @param _chainId The chain ID of the destination chain.
-     * @return fee The estimated fee to send ETH cross-chain.
-     */
     function quoteSendEth(uint256 _chainId) external view override returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
 
-        // Since we're just sending ETH, payload and options can be empty
         bytes memory emptyPayload = "";
         bytes memory emptyOptions = "";
-
         MessagingFee memory fee = _quote(dstEid, emptyPayload, emptyOptions, false);
         return fee.nativeFee;
     }
@@ -122,18 +118,54 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
         adapter = _adapter;
     }
 
-    /**
-     * @dev Internal function override to handle incoming messages from another chain.
-     * @dev _origin A struct containing information about the message sender.
-     * @dev _guid A unique global packet identifier for the message.
-     * @param payload The encoded message payload being received.
-     *
-     * @dev The following params are unused in the current implementation of the OApp.
-     * @dev _executor The address of the Executor responsible for processing the message.
-     * @dev _extraData Arbitrary data appended by the Executor to the message.
-     *
-     * Decodes the received payload and processes it as per the business logic defined in the function.
-     */
+    // ================= Cross-Chain Adapter Functions ======================
+
+    function sendEthToL2(uint256 _chainId) external payable override onlyRebalancer {
+        require(adapter != address(0), NoAdapterSet());
+
+        sendCrosschain(_chainId, new bytes(0), new bytes(0));
+    }
+
+    function handleCrossChainData(uint256 _chainId, bytes calldata _payload) public override {
+        require(rebalancer != address(0), RebalancerNotSet());
+        (uint256 timestamp, uint256 balance, uint256 totalSupply) = _decodeCalldata(_payload);
+        if (timestamp > block.timestamp) {
+            revert FutureTimestamp();
+        }
+        ITransactionStorage(rebalancer).handleL2Info(_chainId, timestamp, balance, totalSupply);
+    }
+
+    function receiveCrosschainEth(uint256 _chainId) external payable override {
+        emit L2EthDeposit(_chainId, msg.value);
+        Address.sendValue(payable(rebalancer), msg.value);
+    }
+
+    function recoverFunds() external override onlyOwner {
+        require(rebalancer != address(0), RebalancerNotSet());
+        uint256 amount = address(this).balance;
+        (bool success, ) = rebalancer.call{ value: amount }("");
+        require(success, TransferToRebalancerFailed());
+        emit RecoverFundsInitiated(amount);
+    }
+
+    function setRebalancer(address _newRebalancer) external onlyOwner {
+        require(_newRebalancer != address(0), SettingZeroAddress());
+        emit RebalancerChanged(rebalancer, _newRebalancer);
+        rebalancer = _newRebalancer;
+    }
+
+    function _decodeCalldata(bytes calldata payload) internal pure returns (uint256, uint256, uint256) {
+        (uint256 timestamp, uint256 balance, uint256 totalSupply) = abi.decode(payload, (uint256, uint256, uint256));
+        return (timestamp, balance, totalSupply);
+    }
+
+    receive() external payable override {
+        emit ReceiveTriggered(msg.sender, msg.value);
+        Address.sendValue(payable(rebalancer), msg.value);
+    }
+
+    // ================== LayerZero Message Receiver ======================
+
     function _lzReceive(
         Origin calldata origin,
         bytes32 /*_guid*/,

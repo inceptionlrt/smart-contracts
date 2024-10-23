@@ -9,8 +9,6 @@ interface ICrossChainAdapterL1 is ICrossChainAdapter {
     error FutureTimestamp();
     error UnauthorizedOriginalSender();
     error TransferToRebalancerFailed();
-    error SettingZeroAddress();
-    error SettingZeroGas();
     error RebalancerNotSet();
     error TxStorageNotSet();
     error InvalidValue();
