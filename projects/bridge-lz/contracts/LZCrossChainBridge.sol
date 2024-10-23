@@ -14,7 +14,7 @@ contract LZCrossChainBridge is ICrossChainBridge, OApp {
         address _delegate,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
-    ) OApp(_endpoint, _delegate) Ownable(_delegate) {
+    ) OApp(_endpoint, _delegate) Ownable(msg.sender) {
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
 
         for (uint256 i = 0; i < _eIds.length; i++) {
