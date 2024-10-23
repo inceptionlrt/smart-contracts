@@ -28,13 +28,6 @@ const config: HardhatUserConfig = {
         ],
     },
     networks: {
-        hardhat: {
-            forking: {
-                url: process.env.RPC_URL_OPTIMISM_SEPOLIA || ""
-            },
-            accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "10000365467355464286459" }],
-            chainId: 1337,  // Local chain ID for Hardhat network
-        },
         'sepolia': {
             eid: 40161,
             url: process.env.RPC_URL_SEPOLIA,

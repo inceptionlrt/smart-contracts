@@ -33,6 +33,6 @@ const deploy: DeployFunction = async (hre) => {
     console.log(`Deployed contract: ${contractName}, network: ${network.name}, address: ${address}`)
 }
 
-deploy.tags = [contractName]
+deploy.tags = ["old"]
 
 export default deploy
