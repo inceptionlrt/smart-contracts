@@ -20,6 +20,7 @@ const TOKEN_NAME = "Token Name",
   MIN_UNSTAKE = 10_000_000_000n,
   MIN_STAKE = 1000_000_000n,
   MAX_TVL = 32n * _1E18;
+const day = 86400n;
 
 const ceilN = (n: bigint, d: bigint) => n / d + (n % d ? 1n : 0n);
 
@@ -164,7 +165,30 @@ describe("RestakingPool", function () {
 
     it("setProtocolFee(): reverts when caller is not an owner", async function () {
       const newValue = randomBN(10);
-      await expect(pool.connect(signer1).setProtocolFee(newValue)).to.be.revertedWithCustomError(pool, "OnlyGovernanceAllowed");
+      await expect(pool.connect(signer1).setProtocolFee(newValue))
+          .to.be.revertedWithCustomError(pool, "OnlyGovernanceAllowed");
+    });
+
+    it("setRewardsTimeline(): only owner can", async function () {
+      const prevValue = await pool.rewardsTimeline();
+      const newValue = randomBN(2) * day;
+      await expect(pool.connect(governance).setRewardsTimeline(newValue))
+          .to.emit(pool, "RewardsTimelineChanged")
+          .withArgs(prevValue, newValue);
+
+      expect(prevValue).to.be.eq(day * 7n); //default value is 7d
+      expect(await pool.rewardsTimeline()).to.be.eq(newValue);
+    })
+
+    it("setRewardsTimeline(): reverts when < 1 day", async function () {
+      await expect(pool.connect(governance).setRewardsTimeline(day - 1n))
+          .to.be.revertedWithCustomError(pool, "InconsistentData");
+    })
+
+    it("setRewardsTimeline(): reverts when caller is not an owner", async function () {
+      const newValue = randomBN(6);
+      await expect(pool.connect(signer1).setRewardsTimeline(newValue))
+          .to.be.revertedWithCustomError(pool, "OnlyGovernanceAllowed");
     });
   });
 
@@ -1474,6 +1498,118 @@ describe("RestakingPool", function () {
         .withArgs(0, "1000");
     });
   });
+
+  describe("addRewards: gradually adds rewards during timeline period", function () {
+    const totalDays = 7n;
+    let totalRewardsAmount;
+    before(async function () {
+      await snapshot.restore();
+      await pool.connect(governance).setRewardsTimeline(totalDays * 86400n);
+    });
+
+    it("addRewards when there are no other rewards have been added", async function () {
+      const operatorBalanceBefore = await ethers.provider.getBalance(operator.address);
+      const poolBalanceBefore = await ethers.provider.getBalance(pool.address);
+      const totalAssetsBefore = await pool.totalAssets();
+
+      const latestBlock = await ethers.provider.getBlock('latest');
+      const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBN(2);
+      await time.setNextBlockTimestamp(nextBlockTimestamp);
+
+      totalRewardsAmount = randomBN(17);
+      console.log("Amount:", totalRewardsAmount.format());
+      const tx = await pool.connect(operator).addRewards({value: totalRewardsAmount});
+
+      const operatorBalanceAfter = await ethers.provider.getBalance(operator.address);
+      const poolBalanceAfter = await ethers.provider.getBalance(pool.address);
+      const totalAssetsAfter = await pool.totalAssets();
+      console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+      console.log("pool balance diff:", (poolBalanceAfter - poolBalanceBefore).format());
+      console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+
+      await expect(tx).emit(pool, "RewardsAdded").withArgs(totalRewardsAmount, nextBlockTimestamp);
+      await expect(tx).changeEtherBalance(operator, -totalRewardsAmount, {includeFee: false});
+      await expect(tx).changeEtherBalance(pool, totalRewardsAmount);
+      expect(totalAssetsAfter).to.be.closeTo(totalAssetsBefore, totalDays);
+    })
+
+    it("Can not add more rewards until the end of timeline", async function () {
+      await expect(pool.connect(operator).addRewards({value: randomBN(18)}))
+          .to.revertedWithCustomError(pool, "TimelineNotOver");
+    })
+
+    it("User can stake", async function() {
+      const totalAssetsBefore = await pool.totalAssets();
+
+      const amount = 10n * _1E18;
+      await pool.connect(signer1)["stake()"]({ value: amount});
+
+      const totalAssetsAfter = await pool.totalAssets();
+      expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount, totalDays);
+    })
+
+    it("Check total assets every day", async function () {
+      let startTimeline = await pool.startTimeline();
+      let latestBlock;
+      let daysPassed;
+      do {
+        const totalAssetsBefore = await pool.totalAssets();
+        const freeBalanceBefore = await pool.getFreeBalance();
+        await time.increase(day);
+        latestBlock = await ethers.provider.getBlock('latest');
+        const currentTime = BigInt(latestBlock.timestamp);
+        daysPassed = (currentTime - startTimeline) / day;
+
+        const totalAssetsAfter = await pool.totalAssets();
+        const freeBalanceAfter = await pool.getFreeBalance();
+        const unlockedAmount = totalAssetsAfter - totalAssetsBefore;
+        console.log(`${daysPassed}. Total assets increased by:`, unlockedAmount.format());
+        expect(totalRewardsAmount / totalDays).to.be.closeTo(unlockedAmount, totalDays);
+        expect(freeBalanceAfter - freeBalanceBefore).to.be.closeTo(unlockedAmount, totalDays);
+      } while (daysPassed < totalDays)
+
+      console.log("Total assets after:\t\t", (await pool.totalAssets()).format());
+      console.log("pool balance after:\t", (await ethers.provider.getBalance(pool.address)).format());
+
+      expect(await ethers.provider.getBalance(pool.address)).to.be.eq(await pool.totalAssets());
+    })
+
+    it("Total assets does not change on the next day after timeline passed", async function() {
+      const totalAssetsBefore = await pool.totalAssets();
+      await time.increase(day);
+      const totalAssetsAfter = await pool.totalAssets();
+
+      console.log("Total assets increased by:", (totalAssetsAfter - totalAssetsBefore).format());
+      expect(totalAssetsAfter).to.be.eq(totalAssetsBefore);
+      expect(await ethers.provider.getBalance(pool.address)).to.be.eq(await pool.totalAssets());
+    })
+
+    it("New rewards can be added", async function() {
+      const operatorBalanceBefore = await ethers.provider.getBalance(operator.address);
+      const poolBalanceBefore = await ethers.provider.getBalance(pool.address);
+      const totalAssetsBefore = await pool.totalAssets();
+
+      const latestBlock = await ethers.provider.getBlock('latest');
+      const nextBlockTimestamp = BigInt(latestBlock.timestamp) + randomBN(2);
+      await time.setNextBlockTimestamp(nextBlockTimestamp);
+
+      totalRewardsAmount = randomBN(17);
+      console.log("Amount:", totalRewardsAmount.format());
+      const tx = await pool.connect(operator).addRewards({value: totalRewardsAmount});
+
+      const operatorBalanceAfter = await ethers.provider.getBalance(operator.address);
+      const poolBalanceAfter = await ethers.provider.getBalance(pool.address);
+      const totalAssetsAfter = await pool.totalAssets();
+      console.log("Operator balance diff:", (operatorBalanceBefore - operatorBalanceAfter).format());
+      console.log("pool balance diff:", (poolBalanceAfter - poolBalanceBefore).format());
+      console.log("Total assets diff:", (totalAssetsAfter - totalAssetsBefore).format());
+
+      await expect(tx).emit(pool, "RewardsAdded").withArgs(totalRewardsAmount, nextBlockTimestamp);
+      await expect(tx).changeEtherBalance(operator, -totalRewardsAmount, {includeFee: false});
+      await expect(tx).changeEtherBalance(pool, totalRewardsAmount);
+      expect(totalAssetsAfter).to.be.closeTo(totalAssetsBefore, totalDays);
+    })
+  })
 });
 
 async function updateRatio(ratioFeed: RatioFeed, token: CToken, ratio: BigInt) {
