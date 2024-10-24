@@ -22,19 +22,19 @@ async function main() {
     const checkpointDataArbitrum = JSON.parse(fs.readFileSync(checkpointArbitrumFilePath, 'utf8'));
 
     // Fetch addresses from the checkpoint files
-    const LZCrossChainBridgeSepoliaAddress = checkpointDataSepolia.LZCrossChainBridge;
-    const LZCrossChainBridgeArbitrumSepoliaAddress = checkpointDataArbitrum.LZCrossChainBridge;
+    const CrossChainBridgeSepoliaAddress = checkpointDataSepolia.CrossChainBridge;
+    const CrossChainBridgeArbitrumSepoliaAddress = checkpointDataArbitrum.CrossChainBridge;
 
-    if (!LZCrossChainBridgeSepoliaAddress || !LZCrossChainBridgeArbitrumSepoliaAddress) {
-        throw new Error("LZCrossChainBridge addresses not found in the checkpoint files.");
+    if (!CrossChainBridgeSepoliaAddress || !CrossChainBridgeArbitrumSepoliaAddress) {
+        throw new Error("CrossChainBridge addresses not found in the checkpoint files.");
     }
 
     // Get contract instances
-    const LZCrossChainBridgeSepolia = await ethers.getContractAt("LZCrossChainBridge", LZCrossChainBridgeArbitrumSepoliaAddress);
+    const CrossChainBridgeSepolia = await ethers.getContractAt("CrossChainBridge", CrossChainBridgeArbitrumSepoliaAddress);
     const eIdSepolia = 40161; // Endpoint ID for Sepolia
 
     // Set peer for Sepolia
-    await LZCrossChainBridgeSepolia.connect(deployer).setPeer(eIdSepolia, ethers.utils.zeroPad(LZCrossChainBridgeSepoliaAddress, 32));
+    await CrossChainBridgeSepolia.connect(deployer).setPeer(eIdSepolia, ethers.utils.zeroPad(CrossChainBridgeSepoliaAddress, 32));
     console.log("Peers set successfully");
 }
 

@@ -2,17 +2,17 @@ import type { OAppOmniGraphHardhat, OmniPointHardhat } from '@layerzerolabs/tool
 
 const sepoliaContract: OmniPointHardhat = {
     eid: 40161,
-    contractName: 'LZCrossChainBridge',
+    contractName: 'CrossChainBridge',
 }
 
 const arbitrumContract: OmniPointHardhat = {
     eid: 40231,
-    contractName: 'LZCrossChainBridge',
+    contractName: 'CrossChainBridge',
 }
 
 const optimismContract: OmniPointHardhat = {
     eid: 40232,
-    contractName: 'LZCrossChainBridge',
+    contractName: 'CrossChainBridge',
 }
 
 

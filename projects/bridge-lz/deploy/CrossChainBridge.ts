@@ -75,6 +75,7 @@ const deploy: DeployFunction = async (hre) => {
     console.log(`Implementation Address: ${implementationAddress}`);
     // console.log(`ProxyAdmin Address: ${proxyAdminAddress}`);
 
+
     let proxyDeployment;
     try {
         proxyDeployment = await deploy('TransparentUpgradeableProxy', {
@@ -84,6 +85,7 @@ const deploy: DeployFunction = async (hre) => {
             log: true,
             skipIfAlreadyDeployed: false,
         });
+
 
         // console.log(`Deployed TransparentUpgradeableProxy at: ${proxyDeployment.address}`);
 
