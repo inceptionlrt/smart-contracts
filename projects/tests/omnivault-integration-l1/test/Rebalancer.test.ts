@@ -7,7 +7,7 @@ import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 import {
     ArbBridgeMock,
     CrossChainAdapterArbitrumL1, CrossChainAdapterL1, CrossChainAdapterOptimismL1,
-    CToken,
+    CToken, EndpointMock, LZCrossChainAdapterL1, LZCrossChainAdapterL2,
     OptBridgeMock, ProtocolConfig,
     Rebalancer,
     RestakingPool,
@@ -18,8 +18,12 @@ BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
 };
 
-const ARB_ID = 42161;
-const OPT_ID = 10;
+const ARB_ID = 42161n;
+const OPT_ID = 10n;
+const ETH_ID = 1n;
+const ARB_EID = 30101n;
+const OPT_EID = 30110n;
+const ETH_EID = 30111n;
 const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
 const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
@@ -36,7 +40,12 @@ describe("Omnivault integration tests", function () {
     let optBridgeMock: OptBridgeMock;
     let optAdapter: CrossChainAdapterOptimismL1;
     let restakingPoolConfig: ProtocolConfig;
-    let adapter: CrossChainAdapterL1;
+    let adapterEth: LZCrossChainAdapterL1;
+    let adapterArb: LZCrossChainAdapterL2;
+    let adapterOpt: LZCrossChainAdapterL2;
+    let ethEndpoint: EndpointMock;
+    let arbEndpoint: EndpointMock;
+    let optEndpoint: EndpointMock;
 
     let owner, operator, treasury, signer1, signer2, signer3, target;
     let MAX_THRESHOLD, ratioThresh;
@@ -63,6 +72,7 @@ describe("Omnivault integration tests", function () {
               cToken.address = await cToken.getAddress();*/
 
         //===Restaking pool config upgrade
+        console.log("=== ProtocolConfig");
         const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
         let slot = "0x" + (0).toString(16);
         let value = ethers.zeroPadValue(owner.address, 32);
@@ -76,6 +86,7 @@ describe("Omnivault integration tests", function () {
         await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, value]);
 
         //===Restaking pool upgrade
+        console.log("=== RestakingPool");
         const restakingPoolAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPool);
         slot = "0x" + (0).toString(16);
         value = ethers.zeroPadValue(owner.address, 32);
@@ -92,6 +103,7 @@ describe("Omnivault integration tests", function () {
         restakingPool.address = await restakingPool.getAddress();
 
         //===cToken
+        console.log("=== cToken");
         const cTokenAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.cToken);
         slot = "0x" + (0).toString(16);
         value = ethers.zeroPadValue(owner.address, 32);
@@ -101,6 +113,7 @@ describe("Omnivault integration tests", function () {
         cToken.address = await cToken.getAddress();
 
         //===RatioFeed
+        console.log("=== RatioFeed");
         const ratioFeedAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.ratioFeed);
         slot = "0x" + (0).toString(16);
         value = ethers.zeroPadValue(owner.address, 32);
@@ -109,48 +122,107 @@ describe("Omnivault integration tests", function () {
         const ratioFeed = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
         ratioFeed.address = await ratioFeed.getAddress();
 
-        console.log('=== TransactionStorage');
-        const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
-        txStorage.address = await txStorage.getAddress();
+        // console.log('=== TransactionStorage');
+        // const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
+        // txStorage.address = await txStorage.getAddress();
 
-        //===Arbitrum
-        console.log('=== ArbInboxMock');
-        const arbInboxMock = await ethers.deployContract("ArbInboxMock", []);
-        arbInboxMock.address = await arbInboxMock.getAddress();
+        // //===Arbitrum
+        // console.log('=== ArbInboxMock');
+        // const arbInboxMock = await ethers.deployContract("ArbInboxMock", []);
+        // arbInboxMock.address = await arbInboxMock.getAddress();
+        //
+        // console.log('=== ArbOutboxMock');
+        // const arbOutboxMock = await ethers.deployContract("ArbOutboxMock", [target]);
+        // arbOutboxMock.address = await arbOutboxMock.getAddress();
+        //
+        // console.log('=== CrossChainAdapterArbitrumL1');
+        // const ArbAdapter = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
+        // const arbAdapter = await upgrades.deployProxy(ArbAdapter, [
+        //     txStorage.address,
+        //     arbInboxMock.address,
+        //     operator.address
+        // ]);
+        // arbAdapter.address = await arbAdapter.getAddress();
+        //
+        // console.log('=== ArbBridgeMock');
+        // const arbBridgeMock = await ethers.deployContract("ArbBridgeMock", [arbAdapter.address, arbOutboxMock.address]);
+        // arbBridgeMock.address = await arbBridgeMock.getAddress();
+        // await arbInboxMock.setBridge(arbBridgeMock.address);
+        //
+        // //===Optimism
+        // console.log('=== OptimismBridgeMock');
+        // const optBridgeMock = await ethers.deployContract("OptBridgeMock", [target.address]);
+        // optBridgeMock.address = await optBridgeMock.getAddress();
+        //
+        // console.log('=== CrossChainAdapterOptimismL1');
+        // const OptAdapter = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
+        // const optAdapter = await upgrades.deployProxy(OptAdapter, [
+        //     optBridgeMock.address,
+        //     optimismStandardBridge,
+        //     txStorage.address,
+        //     operator.address
+        // ]);
+        // optAdapter.address = await optAdapter.getAddress();
+        // await optBridgeMock.setAdapter(optAdapter.address);
 
-        console.log('=== ArbOutboxMock');
-        const arbOutboxMock = await ethers.deployContract("ArbOutboxMock", [target]);
-        arbOutboxMock.address = await arbOutboxMock.getAddress();
-
-        console.log('=== CrossChainAdapterArbitrumL1');
-        const ArbAdapter = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
-        const arbAdapter = await upgrades.deployProxy(ArbAdapter, [
-            txStorage.address,
-            arbInboxMock.address,
-            operator.address
+        console.log("=== Eth endpoint mock");
+        const ethEndpoint = await ethers.deployContract("EndpointMock", [ETH_EID]);
+        ethEndpoint.address = await ethEndpoint.getAddress();
+        const eIds = [ETH_EID, ARB_EID, OPT_EID];
+        const chainIds = [ETH_ID, ARB_ID, OPT_ID];
+        console.log("=== CrossChainAdapterL1");
+        const LZCrossChainAdapterL1 = await ethers.getContractFactory("LZCrossChainAdapterL1");
+        const adapterEth = await upgrades.deployProxy(LZCrossChainAdapterL1, [
+            ethEndpoint.address,
+            owner.address,
+            eIds,
+            chainIds
         ]);
-        arbAdapter.address = await arbAdapter.getAddress();
+        adapterEth.address = await adapterEth.getAddress();
 
-        console.log('=== ArbBridgeMock');
-        const arbBridgeMock = await ethers.deployContract("ArbBridgeMock", [arbAdapter.address, arbOutboxMock.address]);
-        arbBridgeMock.address = await arbBridgeMock.getAddress();
-        await arbInboxMock.setBridge(arbBridgeMock.address);
-
-        //===Optimism
-        console.log('=== OptimismBridgeMock');
-        const optBridgeMock = await ethers.deployContract("OptBridgeMock", [target.address]);
-        optBridgeMock.address = await optBridgeMock.getAddress();
-
-        console.log('=== CrossChainAdapterOptimismL1');
-        const OptAdapter = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
-        const optAdapter = await upgrades.deployProxy(OptAdapter, [
-            optBridgeMock.address,
-            optimismStandardBridge,
-            txStorage.address,
-            operator.address
+        console.log("=== Arb endpoint mock");
+        const arbEndpoint = await ethers.deployContract("EndpointMock", [ARB_EID]);
+        arbEndpoint.address = await arbEndpoint.getAddress();
+        const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
+        const adapterArb = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+            arbEndpoint.address,
+            owner.address,
+            eIds,
+            chainIds
         ]);
-        optAdapter.address = await optAdapter.getAddress();
-        await optBridgeMock.setAdapter(optAdapter.address);
+        adapterArb.address = await adapterEth.getAddress();
+
+        console.log("=== Opt endpoint mock");
+        const optEndpoint = await ethers.deployContract("EndpointMock", [OPT_EID]);
+        optEndpoint.address = await optEndpoint.getAddress();
+        const adapterOpt = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+            optEndpoint.address,
+            owner.address,
+            eIds,
+            chainIds
+        ]);
+        adapterOpt.address = await adapterEth.getAddress();
+
+        // ethEndpoint.receivePayloadShort = async function (fromEid, fromAddress, timestamp, balance, totalSupply) {
+        //     const abiCoder = new AbiCoder();
+        //     const message = abiCoder.encode(
+        //         ["uint256", "uint256", "uint256"],
+        //         [timestamp, balance, totalSupply]);
+        //
+        //     return await this.receivePayload(
+        //         {
+        //             srcEid: fromEid,
+        //             sender: ethers.zeroPadValue(fromAddress, 32),
+        //             nonce: randomBI(6)
+        //         },
+        //         adapter.address,
+        //         ethers.ZeroHash,
+        //         message,
+        //         100_000n * 10n ** 9n,
+        //         0n,
+        //         ethers.ZeroHash,
+        //     );
+        // }
 
         console.log('=== Rebalancer');
         const Rebalancer = await ethers.getContractFactory("Rebalancer");
@@ -158,48 +230,31 @@ describe("Omnivault integration tests", function () {
             cToken.address,
             lockboxAddress,
             restakingPool.address,
-            txStorage.address,
+            adapterEth.address,
             ratioFeed.address,
             operator.address
         ]);
         rebalancer.address = await rebalancer.getAddress();
 
-        console.log("=== LZ crosschain bridge");
-        const eIds = [30101, 30110, 30111]
-        const chainIds = [1, 42161, 10]
-        const crosschainBridge = await ethers.deployContract(
-            "LZCrossChainBridge",
-            [
-                "0x1a44076050125825900e736c501f859c50fE728c", //TODO move to config https://docs.layerzero.network/v2/developers/evm/technical-reference/deployed-contracts
-                owner.address,
-                eIds,
-                chainIds
-            ]);
-        crosschainBridge.address = await crosschainBridge.getAddress();
-
-        console.log("=== CrossChainAdapterL1");
-        const Adapter = await ethers.getContractFactory("CrossChainAdapterL1");
-        const adapter = await upgrades.deployProxy(Adapter, [
-            crosschainBridge.address,
-            rebalancer.address,
-            txStorage.address
-        ]);
-        adapter.address = await adapter.getAddress();
-
         return [
             cToken,
-            arbAdapter,
+            // arbAdapter,
             rebalancer,
-            txStorage,
+            // txStorage,
             ratioFeed,
             restakingPool,
-            arbBridgeMock,
-            arbInboxMock,
-            arbOutboxMock,
+            // arbBridgeMock,
+            // arbInboxMock,
+            // arbOutboxMock,
             restakingPoolConfig,
-            optAdapter,
-            optBridgeMock,
-            adapter
+            // optAdapter,
+            // optBridgeMock,
+            adapterEth,
+            ethEndpoint,
+            adapterArb,
+            arbEndpoint,
+            adapterOpt,
+            optEndpoint
         ]
     }
 
@@ -207,26 +262,34 @@ describe("Omnivault integration tests", function () {
         [owner, operator, treasury, signer1, signer2, signer3, target] = await ethers.getSigners();
         [
             inEth,
-            arbAdapter,
+            // arbAdapter,
             rebalancer,
-            txStorage,
+            // txStorage,
             ratioFeed,
             restakingPool,
-            arbBridgeMock,
-            arbInboxMock,
-            arbOutboxMock,
+            // arbBridgeMock,
+            // arbInboxMock,
+            // arbOutboxMock,
             restakingPoolConfig,
-            optAdapter,
-            optBridgeMock,
-            adapter
+            // optAdapter,
+            // optBridgeMock,
+            adapterEth,
+            ethEndpoint,
+            adapterArb,
+            arbEndpoint,
+            adapterOpt,
+            optEndpoint
         ] = await init(owner, operator, treasury, target);
         clean_snapshot = await takeSnapshot();
 
-        await rebalancer.connect(owner).setAdapter(adapter.address);
-        await txStorage.connect(owner).addChainId(ARB_ID);
+        // await rebalancer.connect(owner).addChainId(ETH_ID);
+        await rebalancer.connect(owner).addChainId(ARB_ID);
+        await rebalancer.connect(owner).addChainId(OPT_ID);
+
+
         // await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
-        await txStorage.connect(owner).addChainId(OPT_ID);
-        await txStorage.connect(owner).setAdapter(adapter.address);
+        // await txStorage.connect(owner).addChainId(OPT_ID);
+        // await txStorage.connect(owner).setAdapter(adapter.address);
         // await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
 
 
@@ -236,12 +299,19 @@ describe("Omnivault integration tests", function () {
         // await ratioFeed.connect(operator).updateRatio(inEth.address, e18); //Default ratio 1
 
         //Arbitrum adapter
-        await arbAdapter.setL2Sender(target);
-        await arbAdapter.setRebalancer(rebalancer.address);
-        await arbAdapter.setL2Receiver(target.address);
-        await optAdapter.setL2Sender(target);
-        await optAdapter.setRebalancer(rebalancer.address);
-        await optAdapter.setL2Receiver(target.address);
+        // await arbAdapter.setL2Sender(target);
+        // await arbAdapter.setRebalancer(rebalancer.address);
+        // await arbAdapter.setL2Receiver(target.address);
+        // await optAdapter.setL2Sender(target);
+        // await optAdapter.setRebalancer(rebalancer.address);
+        // await optAdapter.setL2Receiver(target.address);
+        await adapterEth.setVault(restakingPool.address);
+        await adapterEth.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
+        await adapterEth.setPeer(OPT_EID, ethers.zeroPadValue(adapterOpt.address, 32));
+        await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+        await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+        // await arbEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
+        // await optEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
 
         //Restaking pool
         await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
@@ -308,7 +378,7 @@ describe("Omnivault integration tests", function () {
             })
 
             it("transaction storage address", async function () {
-                expect(await rebalancer.transactionStorage()).to.be.eq(txStorage.address);
+                expect(await rebalancer.bridge()).to.be.eq(adapterEth.address);
             })
         })
 
@@ -395,7 +465,42 @@ describe("Omnivault integration tests", function () {
                     .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
-                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
+                const balance = randomBI(19);
+                const totalSupply = randomBI(19);
+                const abiCoder = new AbiCoder();
+                const message = abiCoder.encode(
+                    ["uint256", "uint256", "uint256"],
+                    [timestamp, balance, totalSupply]
+                );
+
+                // await endpointMock.receivePayload(
+                //     {
+                //         srcEid: ARB_ID,
+                //         sender: ethers.zeroPadValue(target.address, 32),
+                //         nonce: randomBI(6)
+                //     },
+                //     adapter.address,
+                //     ethers.ZeroHash,
+                //     message,
+                //     100_000n * 10n ** 9n,
+                //     0n,
+                //     ethers.ZeroHash,
+                // );
+
+                // await ethEndpoint.receivePayloadShort(
+                //     ARB_ID, target.address, timestamp, balance, totalSupply
+                // );
+
+                // await adapter.connect(target).lzReceive(
+                //     {
+                //         srcEid: ARB_ID,
+                //         sender: ethers.zeroPadValue(target.address, 32),
+                //         nonce: randomBI(6)
+                //     },
+                //     ethers.ZeroHash,
+                //     message,
+                //     ethers.ZeroAddress,
+                //     "0x");
 
                 await expect(rebalancer.updateTreasuryData())
                     .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
@@ -483,19 +588,63 @@ describe("Omnivault integration tests", function () {
                 it(`updateTreasuryData: ${arg.name}`, async () => {
                     const block = await ethers.provider.getBlock("latest");
                     const timestamp = block.timestamp;
-
+                    const options = "0x00030100110100000000000000000000000000030d40";
                     let expectedTotalSupplyDiff = 0n;
                     if (arg.arb) {
                         expectedTotalSupplyDiff += arg.arb.l2TotalSupplyDiff();
                         initialArbAmount += arg.arb.l2BalanceDiff();
                         initialArbSupply += arg.arb.l2TotalSupplyDiff();
-                        await arbBridgeMock.receiveL2Info(timestamp, initialArbAmount, initialArbSupply);
+                        // await arbBridgeMock.receiveL2Info(timestamp, initialArbAmount, initialArbSupply);
+                        // let tx = await ethEndpoint.receivePayloadShort(
+                        //     ARB_ID, target.address, timestamp, initialArbAmount, initialArbSupply
+                        // );
+
+                        const abiCoder = new AbiCoder();
+                        const message = abiCoder.encode(
+                            ["uint256", "uint256", "uint256"],
+                            [timestamp, initialArbAmount, initialArbSupply]);
+                        // let tx = await arbEndpoint.send(
+                        //     {
+                        //         dstEid: ETH_EID,
+                        //         receiver: ethers.zeroPadValue(adapterEth.address, 32),
+                        //         message: message,
+                        //         options: "0x00030100110100000000000000000000000000030d40",
+                        //         payInLzToken: false,
+                        //     },
+                        //     target.address,
+                        //     {value: 10n ** 17n}
+                        // );
+
+                        let tx = await adapterArb.sendDataL1(message, options);
+                        let rec = await tx.wait();
+                        console.log(rec)
                     }
                     if (arg.opt) {
                         expectedTotalSupplyDiff += arg.opt.l2TotalSupplyDiff();
                         initialOptAmount += arg.opt.l2BalanceDiff();
                         initialOptSupply += arg.opt.l2TotalSupplyDiff();
-                        await optBridgeMock.receiveL2Info(timestamp, initialOptAmount, initialOptSupply);
+                        // await optBridgeMock.receiveL2Info(timestamp, initialOptAmount, initialOptSupply);
+                        // let tx = await ethEndpoint.receivePayloadShort(
+                        //     OPT_ID, target.address, timestamp, initialArbAmount, initialArbSupply
+                        // );
+
+                        const abiCoder = new AbiCoder();
+                        const message = abiCoder.encode(
+                            ["uint256", "uint256", "uint256"],
+                            [timestamp, initialOptAmount, initialOptSupply]);
+                        let tx = await adapterOpt.sendDataL1(message, options);
+
+                        // let tx = await arbEndpoint.send(
+                        //     {
+                        //         dstEid: ETH_EID,
+                        //         receiver: ethers.zeroPadValue(adapterEth.address, 32),
+                        //         message: message,
+                        //         options: "0x00030100110100000000000000000000000000030d40",
+                        //         payInLzToken: false,
+                        //     },
+                        //     target.address,
+                        //     {value: 10n ** 17n}
+                        // );
                     }
                     console.log(`Total supply diff: ${expectedTotalSupplyDiff.format()}`);
                     const expectedLockboxBalance = initialArbSupply + initialOptSupply;
