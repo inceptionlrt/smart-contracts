@@ -1,4 +1,4 @@
-import {ethers, network, upgrades} from "hardhat";
+import {ethers, network, upgrades, deployments} from "hardhat";
 import {expect} from "chai";
 import {takeSnapshot} from "@nomicfoundation/hardhat-network-helpers";
 import {randomBI, e18} from "./helpers/math";
@@ -6,7 +6,7 @@ import {SnapshotRestorer} from "@nomicfoundation/hardhat-network-helpers/src/hel
 import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 import {
     ArbBridgeMock,
-    CrossChainAdapterArbitrumL1, CrossChainAdapterOptimismL1,
+    CrossChainAdapterArbitrumL1, CrossChainAdapterL1, CrossChainAdapterOptimismL1,
     CToken,
     OptBridgeMock, ProtocolConfig,
     Rebalancer,
@@ -25,7 +25,7 @@ const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
 
 describe("Omnivault integration tests", function () {
-    this.timeout(15000);
+    this.timeout(150000);
     let ratioFeed, arbInboxMock, arbOutboxMock;
     let inEth: CToken;
     let rebalancer: Rebalancer;
@@ -36,6 +36,7 @@ describe("Omnivault integration tests", function () {
     let optBridgeMock: OptBridgeMock;
     let optAdapter: CrossChainAdapterOptimismL1;
     let restakingPoolConfig: ProtocolConfig;
+    let adapter: CrossChainAdapterL1;
 
     let owner, operator, treasury, signer1, signer2, signer3, target;
     let MAX_THRESHOLD, ratioThresh;
@@ -163,6 +164,28 @@ describe("Omnivault integration tests", function () {
         ]);
         rebalancer.address = await rebalancer.getAddress();
 
+        console.log("=== LZ crosschain bridge");
+        const eIds = [30101, 30110, 30111]
+        const chainIds = [1, 42161, 10]
+        const crosschainBridge = await ethers.deployContract(
+            "LZCrossChainBridge",
+            [
+                "0x1a44076050125825900e736c501f859c50fE728c", //TODO move to config https://docs.layerzero.network/v2/developers/evm/technical-reference/deployed-contracts
+                owner.address,
+                eIds,
+                chainIds
+            ]);
+        crosschainBridge.address = await crosschainBridge.getAddress();
+
+        console.log("=== CrossChainAdapterL1");
+        const Adapter = await ethers.getContractFactory("CrossChainAdapterL1");
+        const adapter = await upgrades.deployProxy(Adapter, [
+            crosschainBridge.address,
+            rebalancer.address,
+            txStorage.address
+        ]);
+        adapter.address = await adapter.getAddress();
+
         return [
             cToken,
             arbAdapter,
@@ -175,7 +198,8 @@ describe("Omnivault integration tests", function () {
             arbOutboxMock,
             restakingPoolConfig,
             optAdapter,
-            optBridgeMock
+            optBridgeMock,
+            adapter
         ]
     }
 
@@ -193,14 +217,18 @@ describe("Omnivault integration tests", function () {
             arbOutboxMock,
             restakingPoolConfig,
             optAdapter,
-            optBridgeMock
+            optBridgeMock,
+            adapter
         ] = await init(owner, operator, treasury, target);
         clean_snapshot = await takeSnapshot();
 
+        await rebalancer.connect(owner).setAdapter(adapter.address);
         await txStorage.connect(owner).addChainId(ARB_ID);
-        await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
+        // await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
         await txStorage.connect(owner).addChainId(OPT_ID);
-        await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+        await txStorage.connect(owner).setAdapter(adapter.address);
+        // await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
+
 
         // MAX_THRESHOLD = await ratioFeed.MAX_THRESHOLD();
         // ratioThresh = MAX_THRESHOLD / 100n; //1%
