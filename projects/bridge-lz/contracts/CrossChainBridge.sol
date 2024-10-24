@@ -17,7 +17,7 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
 
-    // Note that "vault" is a general term here encompassing both InceptionOmniVault and Vault
+    // Note that "vault" is a general term here encompassing both InceptionOmniVault and Rebalancer
     modifier onlyVault() {
         if (msg.sender != vault && msg.sender != owner()) {
             revert NotVault(msg.sender);
@@ -28,15 +28,12 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
     function initialize(
         address _endpoint,
         address _delegate,
-        address _vault,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
-        require(_vault != address(0), SettingZeroAddress());
         __Ownable_init(msg.sender);
         __OAppUpgradeable_init(_endpoint, _delegate);
 
-        vault = _vault;
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
 
         for (uint256 i = 0; i < _eIds.length; i++) {
