@@ -43,11 +43,11 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
 
     // ================= Cross-Chain Bridge Functions ======================
 
-    function sendCrosschain(
+    function _sendCrosschain(
         uint256 _chainId,
         bytes memory _payload,
         bytes memory _options
-    ) public payable override onlyVault {
+    ) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
@@ -61,7 +61,7 @@ contract CrossChainBridge is ICrossChainBridge, OAppUpgradeable, Initializable, 
     }
 
     function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
-        sendCrosschain(_chainId, new bytes(0), new bytes(0));
+        _sendCrosschain(_chainId, new bytes(0), new bytes(0));
     }
 
     function recoverFunds() external override onlyOwner {
