@@ -27,9 +27,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
     //------------- TX STORAGE FIELDS -------------//
     mapping(uint256 => Transaction) public txs;
-    mapping(uint256 => address) adapters;
-    address payable public bridge;
-    uint32[] public chainIds;
+    mapping(uint256 => address payable) adapters;
+    address payable public defaultAdapter;
+    uint256[] public chainIds;
 
     modifier onlyOperator() {
         require(
@@ -39,20 +39,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         _;
     }
 
-    modifier onlyBridge() {
-        require(
-            msg.sender == bridge || msg.sender == owner(),
-            MsgNotFromBridge(msg.sender)
-        );
-        _;
-    }
-
     /**
      * @notice Initializes the contract with essential addresses and parameters.
      * @param _inETHAddress The address of the inETH token.
      * @param _lockbox The address of the lockbox.
      * @param _liqPool The address of the liquidity pool.
-     * @param _bridge The address of the CrossChainBridgeL1.
+     * @param _defaultAdapter The address of the CrossChainBridgeL1.
      * @param _ratioFeed The address of the ratio feed contract.
      * @param _operator The address of the operator who will manage this contract.
      */
@@ -60,7 +52,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         address _inETHAddress,
         address _lockbox,
         address payable _liqPool,
-        address payable _bridge,
+        address payable _defaultAdapter,
         address _ratioFeed,
         address _operator
     ) public initializer {
@@ -69,14 +61,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         require(_inETHAddress != address(0), SettingZeroAddress());
         require(_lockbox != address(0), SettingZeroAddress());
         require(_liqPool != address(0), SettingZeroAddress());
-        require(_bridge != address(0), SettingZeroAddress());
+        require(_defaultAdapter != address(0), SettingZeroAddress());
         require(_ratioFeed != address(0), SettingZeroAddress());
         require(_operator != address(0), SettingZeroAddress());
 
         inETHAddress = _inETHAddress;
         lockboxAddress = _lockbox;
         liqPool = _liqPool;
-        bridge = _bridge;
+        defaultAdapter = _defaultAdapter;
         ratioFeed = _ratioFeed;
         operator = _operator;
     }
@@ -127,10 +119,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
 
-        uint32[] memory allChainIds = getAllChainIds();
+        uint256[] memory allChainIds = chainIds;
 
         for (uint i = 0; i < allChainIds.length; i++) {
-            uint32 chainId = allChainIds[i];
+            uint256 chainId = allChainIds[i];
             Transaction memory txData = getTransactionData(chainId);
             require(
                 txData.timestamp != 0,
@@ -206,7 +198,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
     /**
      * @dev msg.value is used to pay for cross-chain fees (calculated externally)
-     * @notice Sends ETH to an L2 chain through a cross-chain bridge.
+     * @notice Sends ETH to an L2 chain through a cross-chain defaultAdapter.
      * @param _chainId The ID of the destination L2 chain.
      * @param _callValue The amount of ETH to send to L2.
      */
@@ -214,13 +206,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         uint256 _chainId,
         uint256 _callValue
     ) external payable onlyOperator {
-        require(bridge != address(0), CrosschainBridgeNotSet());
+        address payable adapter = payable(_getAdapter(_chainId));
+        require(adapter != address(0), CrosschainBridgeNotSet());
         require(
             _callValue + msg.value <= address(this).balance,
             SendAmountExceedsEthBalance(_callValue)
         );
 
-        ICrossChainBridge(bridge).sendEthCrossChain{
+        ICrossChainBridge(defaultAdapter).sendEthCrossChain{
             value: _callValue + msg.value
         }(_chainId);
     }
@@ -228,29 +221,16 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     function quoteSendEthToL2(
         uint256 _chainId
     ) external view returns (uint256) {
-        require(bridge != address(0), CrosschainBridgeNotSet());
-        return ICrossChainBridge(bridge).quoteSendEth(_chainId);
+        address payable adapter = payable(_getAdapter(_chainId));
+        require(adapter != address(0), CrosschainBridgeNotSet());
+        return ICrossChainBridge(defaultAdapter).quoteSendEth(_chainId);
     }
 
     //------------------------ TX STORAGE FUNCTIONS ------------------------//
 
     /**
-     * @notice Adds a new Chain ID to the storage.
-     * @dev Ensures that the Chain ID does not already exist in the list.
-     * @param _newChainId The Chain ID to add.
-     */
-    function addChainId(uint32 _newChainId) external onlyOwner {
-        for (uint i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == _newChainId) {
-                revert ChainIdAlreadyExists(chainIds[i]);
-            }
-        }
-        chainIds.push(_newChainId);
-    }
-
-    /**
      * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
-     * @dev Verifies that the caller is the correct bridge and that the timestamp is valid.
+     * @dev Verifies that the caller is the correct defaultAdapter and that the timestamp is valid.
      * @param _chainId The Chain ID of the transaction.
      * @param _timestamp The timestamp when the transaction occurred.
      * @param _balance The ETH balance involved in the transaction.
@@ -261,7 +241,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         uint256 _timestamp,
         uint256 _balance,
         uint256 _totalSupply
-    ) external onlyBridge {
+    ) external {
         require(
             _timestamp <= block.timestamp,
             TimeCannotBeInFuture(_timestamp)
@@ -299,22 +279,52 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     }
 
     /**
-     * @notice Returns all stored Chain IDs (and henceforth - all supported networks).
-     * @return An array containing all Chain IDs stored in the contract.
+     * @dev Replaces the crosschain bridges
+     * @param _newAdapter The address of the defaultAdapter.
      */
-    function getAllChainIds() public view returns (uint32[] memory) {
-        return chainIds;
+    function addAdapter(
+        uint256 _chainId,
+        address payable _newAdapter
+    ) external onlyOwner {
+        require(_newAdapter != address(0), SettingZeroAddress());
+        adapters[_chainId] = _newAdapter;
+        _addChainId(_chainId);
+
+        emit BridgeAdded(_chainId, _newAdapter);
+    }
+
+    function setDefaultAdapter(
+        address payable _newDefaultAdapter
+    ) external override onlyOwner {
+        require(_newDefaultAdapter != address(0), SettingZeroAddress());
+
+        emit DefaultBridgeChanged(defaultAdapter, _newDefaultAdapter);
+        defaultAdapter = _newDefaultAdapter;
+    }
+
+    function _getAdapter(
+        uint256 _chainId
+    ) internal view returns (address payable adapter) {
+        adapter = adapters[_chainId];
+        if (adapter == address(0)) {
+            adapter = defaultAdapter;
+        }
+
+        require(adapter != address(0), NoAdapterAvailable(_chainId));
     }
 
     /**
-     * @dev Replaces the crosschain bridges
-     * @param _newBridge The address of the bridge.
+     * @notice Adds a new Chain ID to the storage.
+     * @dev Ensures that the Chain ID does not already exist in the list.
+     * @param _newChainId The Chain ID to add.
      */
-    function setBridge(address payable _newBridge) external onlyOwner {
-        require(_newBridge != address(0), SettingZeroAddress());
-
-        emit BridgeChanged(bridge, _newBridge);
-        bridge = _newBridge;
+    function _addChainId(uint256 _newChainId) internal {
+        for (uint i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == _newChainId) {
+                return;
+            }
+        }
+        chainIds.push(_newChainId);
     }
 
     /**
