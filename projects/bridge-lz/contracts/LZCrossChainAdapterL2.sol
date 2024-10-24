@@ -26,13 +26,9 @@ contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter {
     function quote(
         uint256 _chainId,
         bytes calldata _payload,
-        bytes memory _options,
-        bool _payInLzToken
+        bytes memory _options
     ) public view onlyOwner returns (uint256) {
-        uint32 dstEid = getEidFromChainId(_chainId);
-        if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
-        MessagingFee memory fee = _quote(dstEid, _payload, _options, _payInLzToken);
-        return fee.nativeFee;
+        return _quote(_chainId, _payload, _options);
     }
 
     function sendDataL1(bytes calldata _payload, bytes memory _options) external {
