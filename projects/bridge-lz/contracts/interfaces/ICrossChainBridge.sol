@@ -22,7 +22,7 @@ interface ICrossChainBridge {
 
     function quoteSendEth(uint256 _chainId, bytes memory _options) external view returns (uint256);
 
-    function sendEthCrossChain(uint256 _chainId, uint256 _sendValue) external payable;
+    function sendEthCrossChain(uint256 _chainId, bytes memory _options) external payable;
 
     receive() external payable;
 }
