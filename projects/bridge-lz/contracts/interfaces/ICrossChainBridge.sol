@@ -2,6 +2,7 @@
 pragma solidity 0.8.27;
 
 interface ICrossChainBridge {
+    
     event VaultChanged(address prevVault, address newVault);
     event RecoverFundsInitiated(uint256 amount);
     event ReceiveTriggered(address caller, uint256 amount);

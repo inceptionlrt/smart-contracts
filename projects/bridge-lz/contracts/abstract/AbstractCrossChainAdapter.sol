@@ -8,24 +8,26 @@ import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
-abstract contract AbstractCrossChainAdapter is ICrossChainBridge, OwnableUpgradeable, OAppUpgradeable {
+abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     //NOTE: vault is a term encompassing both Rebalancer on L1 or InceptionOmniVault on L2
     address public vault;
 
+    modifier onlyOwnerRestricted() virtual;
+
     modifier onlyVault() {
-        if (msg.sender != vault && msg.sender != owner()) {
+        if (msg.sender != vault) {
             revert NotVault(msg.sender);
         }
         _;
     }
 
-    function setVault(address _newVault) external override onlyOwner {
+    function setVault(address _newVault) external override onlyOwnerRestricted {
         require(_newVault != address(0), SettingZeroAddress());
         emit VaultChanged(vault, _newVault);
         vault = _newVault;
     }
 
-    function recoverFunds() external override onlyOwner {
+    function recoverFunds() external override onlyOwnerRestricted {
         require(vault != address(0), VaultNotSet());
         uint256 amount = address(this).balance;
         (bool success, ) = vault.call{ value: amount }("");
