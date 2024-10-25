@@ -29,7 +29,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     mapping(uint256 => Transaction) public txs;
     mapping(uint256 => address payable) adapters;
     address payable public defaultAdapter;
-    uint256[] public chainIds;
+    uint32[] public chainIds;
 
     modifier onlyOperator() {
         require(
@@ -119,10 +119,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
 
-        uint256[] memory allChainIds = chainIds;
+        uint32[] memory allChainIds = chainIds;
 
         for (uint i = 0; i < allChainIds.length; i++) {
-            uint256 chainId = allChainIds[i];
+            uint32 chainId = allChainIds[i];
             Transaction memory txData = getTransactionData(chainId);
             require(
                 txData.timestamp != 0,
@@ -283,7 +283,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      * @param _newAdapter The address of the defaultAdapter.
      */
     function addAdapter(
-        uint256 _chainId,
+        uint32 _chainId,
         address payable _newAdapter
     ) external onlyOwner {
         require(_newAdapter != address(0), SettingZeroAddress());
@@ -302,6 +302,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         defaultAdapter = _newDefaultAdapter;
     }
 
+    function addChainId(uint32 _newChainId) external onlyOwner {
+        _addChainId(_newChainId);
+    }
+
     function _getAdapter(
         uint256 _chainId
     ) internal view returns (address payable adapter) {
@@ -318,7 +322,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      * @dev Ensures that the Chain ID does not already exist in the list.
      * @param _newChainId The Chain ID to add.
      */
-    function _addChainId(uint256 _newChainId) internal {
+    function _addChainId(uint32 _newChainId) internal {
         for (uint i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _newChainId) {
                 return;
