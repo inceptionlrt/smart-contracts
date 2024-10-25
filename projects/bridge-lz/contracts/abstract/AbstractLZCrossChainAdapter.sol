@@ -10,6 +10,8 @@ import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
+import "hardhat/console.sol";
+
 abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
@@ -20,6 +22,7 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
     modifier onlyOwnerRestricted() virtual;
 
     function sendEthCrossChain(uint256 _chainId, uint256 _sendValue) external payable override onlyOwnerRestricted {
+        console.log("msg.value in sendEthCrossChain: ", msg.value);
         _sendCrosschain(_chainId, new bytes(0), new bytes(0), _sendValue);
     }
 
@@ -71,6 +74,10 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
             MessagingFee(msg.value + _sendValue, 0),
             payable(msg.sender)
         );
+
+        console.log("receipt.fee.nativeFee in _lzSend: ", receipt.fee.nativeFee);
+        console.log("msg.value in _sendCrosschain: ", msg.value);
+
         uint256 fee = receipt.fee.nativeFee;
         emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
     }
