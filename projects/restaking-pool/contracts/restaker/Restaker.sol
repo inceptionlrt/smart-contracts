@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../interfaces/IEigenPodManager.sol";
-import "../interfaces/IDelegationManager.sol";
+import "../interfaces/IRewardsCoordinator.sol";
 import "./IRestaker.sol";
 import "./IRestakerFacets.sol";
 
@@ -17,6 +17,7 @@ import "./IRestakerFacets.sol";
 contract Restaker is OwnableUpgradeable, IRestaker {
     IRestakerFacets internal _facets;
     address internal _signer;
+    address internal _rewardCoordinator;
 
     /*******************************************************************************
                         CONSTRUCTOR
@@ -57,6 +58,21 @@ contract Restaker is OwnableUpgradeable, IRestaker {
             }
             emit Claimed(recipient, amount);
         }
+    }
+
+    /**
+     * @notice Sets new RewardCoordinator
+     * @dev __ at begining used to not override selectors accidentally.
+     */
+    function __setRewardCoordinator(
+        IRewardsCoordinator newRewardCoordinator
+    ) external onlyOwner {
+        newRewardCoordinator.setClaimerFor(owner());
+        emit RewardCoordinatorChanged(
+            address(_rewardCoordinator),
+            address(newRewardCoordinator)
+        );
+        _rewardCoordinator = address(newRewardCoordinator);
     }
 
     /**
