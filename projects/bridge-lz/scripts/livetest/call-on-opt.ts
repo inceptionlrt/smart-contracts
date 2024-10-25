@@ -38,7 +38,7 @@ async function main() {
         [timestamp, balance, totalSupply]
     );
 
-    const options = Options.newOptions().addExecutorLzReceiveOption(200000, 0).toHex().toString();
+    const options = Options.newOptions().addExecutorLzReceiveOption(200000, 2000).toHex().toString();
 
 
     // Estimate fees
