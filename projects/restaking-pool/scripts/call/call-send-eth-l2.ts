@@ -1,4 +1,3 @@
-// scripts/sendEthCrossChain.js
 import { ethers } from "hardhat";
 import fs from "fs";
 import path from "path";
@@ -31,7 +30,6 @@ async function main() {
 
     const destinationChainId = 11155111;
 
-    // Call sendEthCrossChain with the desired ETH amount and options
     const tx = await LZCrossChainAdapterL2.sendEthCrossChain(destinationChainId, options, {
         value: ethers.parseEther("0.1") // Adjust ETH amount as needed
     });
@@ -41,7 +39,6 @@ async function main() {
     console.log("sendEthCrossChain transaction complete:", tx.hash);
 }
 
-// Execute the main function
 main().catch((error) => {
     console.error(error);
     process.exit(1);
