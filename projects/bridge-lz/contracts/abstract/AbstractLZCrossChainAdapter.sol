@@ -1,22 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Origin, MessagingReceipt, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter.sol";
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
-import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
-abstract contract AbstractLZCrossChainAdapter is
-    ICrossChainBridge,
-    OAppUpgradeable,
-    AbstractCrossChainAdapter,
-    Initializable,
-    OwnableUpgradeable
-{
+abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, AbstractCrossChainAdapter {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
 

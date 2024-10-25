@@ -5,6 +5,7 @@ import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
 import { AbstractCrossChainAdapterL1 } from "./abstract/AbstractCrossChainAdapterL1.sol";
+import { OAppReceiverUpgradeable } from "./OAppReceiverUpgradeable.sol";
 
 contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL1 {
     function initialize(
@@ -29,7 +30,7 @@ contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter, AbstractCrossChai
         bytes calldata payload,
         address /*_executor*/,
         bytes calldata /*_extraData*/
-    ) internal virtual override {
+    ) internal virtual override(AbstractLZCrossChainAdapter, OAppReceiverUpgradeable) {
         uint256 chainId = getChainIdFromEid(origin.srcEid);
 
         if (msg.value > 0) {

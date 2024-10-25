@@ -24,7 +24,7 @@ contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChai
         }
     }
 
-    function quote(bytes calldata _payload, bytes memory _options) public view override onlyOwner returns (uint256) {
+    function quote(bytes calldata _payload, bytes memory _options) external view override onlyOwner returns (uint256) {
         return _quote(l1ChainId, _payload, _options);
     }
 
