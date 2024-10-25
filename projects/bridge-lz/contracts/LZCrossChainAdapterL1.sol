@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import "./abstract/AbstractLZCrossChainAdapter.sol";
+import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
-contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter {
-    uint256 private l1ChainId;
+import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
+import { AbstractCrossChainAdapterL1 } from "./abstract/AbstractCrossChainAdapterL1.sol";
+import { OAppReceiverUpgradeable } from "./OAppReceiverUpgradeable.sol";
 
+contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL1 {
     function initialize(
         address _endpoint,
         address _delegate,
@@ -22,4 +24,21 @@ contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter {
         }
     }
 
+    function _lzReceive(
+        Origin calldata origin,
+        bytes32 /*_guid*/,
+        bytes calldata payload,
+        address /*_executor*/,
+        bytes calldata /*_extraData*/
+    ) internal virtual override(AbstractLZCrossChainAdapter, OAppReceiverUpgradeable) {
+        uint256 chainId = getChainIdFromEid(origin.srcEid);
+
+        if (msg.value > 0) {
+            _handleCrossChainEth(chainId);
+        }
+
+        if (payload.length > 0) {
+            _handleCrossChainData(chainId, payload);
+        }
+    }
 }

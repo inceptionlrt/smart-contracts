@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import "../interfaces/ICrossChainBridge.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
-abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
-    //NOTE: vault is a terming meaning InceptionOmniVault on L2 or Rebalancer on L1
+import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
+
+abstract contract AbstractCrossChainAdapter is ICrossChainBridge, OwnableUpgradeable, OAppUpgradeable {
+    //NOTE: vault is a term encompassing both Rebalancer on L1 or InceptionOmniVault on L2
     address public vault;
 
     modifier onlyVault() {
-        if (msg.sender != vault) {
+        if (msg.sender != vault && msg.sender != owner()) {
             revert NotVault(msg.sender);
         }
         _;
     }
 
-    function setVault(address _newVault) external override {
+    function setVault(address _newVault) external override onlyOwner {
         require(_newVault != address(0), SettingZeroAddress());
         emit VaultChanged(vault, _newVault);
         vault = _newVault;
     }
 
-    function recoverFunds() external override {
+    function recoverFunds() external override onlyOwner {
         require(vault != address(0), VaultNotSet());
         uint256 amount = address(this).balance;
         (bool success, ) = vault.call{ value: amount }("");

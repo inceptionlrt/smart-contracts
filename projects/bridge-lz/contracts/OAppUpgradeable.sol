@@ -10,13 +10,11 @@ import { OAppSenderUpgradeable, MessagingFee, MessagingReceipt } from "./OAppSen
 import { OAppReceiverUpgradeable, Origin } from "./OAppReceiverUpgradeable.sol";
 import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
 
-
 /**
  * @title OApp
  * @dev Abstract contract serving as the base for OApp implementation, combining OAppSender and OAppReceiver functionality.
  */
 abstract contract OAppUpgradeable is OAppSenderUpgradeable, OAppReceiverUpgradeable {
-
     /**
      * @dev Initializer to initialize the OApp with the provided endpoint and owner.
      * @param _endpoint The address of the LOCAL LayerZero endpoint.

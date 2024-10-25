@@ -25,6 +25,11 @@ interface IRebalancer {
     event InEthChanged(address prevInEth, address newInEth);
     event LiqPoolChanged(address prevLiqPool, address newLiqPool);
     event OperatorChanged(address prevOperator, address newOperator);
+    event BridgeAdded(uint256 indexed chainId, address newAdapter);
+    event DefaultBridgeChanged(
+        address indexed prevDefaultAdapter,
+        address indexed newDefaultAdapter
+    );
 
     // Errors
     error MsgNotFromBridge(address caller);
@@ -44,9 +49,7 @@ interface IRebalancer {
     error StakeAmountExceedsMaxTVL();
     error OnlyOperator();
     error NoRebalancingRequired();
-
-    // Functions
-    function addChainId(uint32 _newChainId) external;
+    error NoAdapterAvailable(uint256 _chainId);
 
     function handleL2Info(
         uint256 _chainId,
@@ -59,9 +62,7 @@ interface IRebalancer {
         uint256 _chainId
     ) external view returns (Transaction memory);
 
-    function getAllChainIds() external view returns (uint32[] memory);
-
-    function setBridge(address payable _newBridge) external;
+    function setDefaultAdapter(address payable _newDefaultAdapter) external;
 
     function setInETHAddress(address _inETHAddress) external;
 
@@ -79,5 +80,5 @@ interface IRebalancer {
 
     function operator() external view returns (address);
 
-    function bridge() external view returns (address payable);
+    function defaultAdapter() external view returns (address payable);
 }
