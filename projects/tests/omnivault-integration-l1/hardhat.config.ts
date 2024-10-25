@@ -2,6 +2,7 @@ import "dotenv";
 import {HardhatUserConfig} from "hardhat/config";
 import {CONFIG} from "../../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
+import "@layerzerolabs/test-devtools-evm-hardhat";
 import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
@@ -11,8 +12,7 @@ import path from "path";
 
 const TARGET_DIR = "./contracts";
 const EXTERNAL_PROJECTS = [
-    "../../crosschain-adapters",
-    "../../rebalancer",
+    "../../bridge-lz",
     "../../restaking-pool"
 ]
 
@@ -72,9 +72,8 @@ const config: HardhatUserConfig = {
         },
     },
     solidity: {
-        version: "0.8.26",
+        version: "0.8.27",
         settings: {
-            viaIR: true,
             optimizer: {
                 enabled: true,
                 runs: 200,
