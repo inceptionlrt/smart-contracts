@@ -8,7 +8,7 @@ import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
-abstract contract AbstractCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
+abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     //NOTE: vault is a term encompassing both Rebalancer on L1 or InceptionOmniVault on L2
     address public vault;
 
