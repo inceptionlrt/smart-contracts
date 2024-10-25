@@ -4,8 +4,6 @@ pragma solidity 0.8.27;
 import "./abstract/AbstractLZCrossChainAdapter.sol";
 
 contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter {
-    uint256 private l1ChainId;
-
     function initialize(
         address _endpoint,
         address _delegate,
@@ -21,5 +19,4 @@ contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter {
             setChainIdFromEid(_eIds[i], _chainIds[i]);
         }
     }
-
 }

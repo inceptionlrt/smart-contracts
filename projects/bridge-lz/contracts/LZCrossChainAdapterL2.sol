@@ -10,13 +10,14 @@ contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter {
     function initialize(
         address _endpoint,
         address _delegate,
+        uint256 _l1ChainId,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
         __Ownable_init(msg.sender);
         __OAppUpgradeable_init(_endpoint, _delegate);
-
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
+        l1ChainId = _l1ChainId;
 
         for (uint256 i = 0; i < _eIds.length; i++) {
             setChainIdFromEid(_eIds[i], _chainIds[i]);
