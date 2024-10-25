@@ -2,7 +2,6 @@
 pragma solidity 0.8.27;
 
 interface ICrossChainBridge {
-    
     event TargetReceiverChanged(address prevTargetReceiver, address newTargetReceiver);
     event RecoverFundsInitiated(uint256 amount);
     event ReceiveTriggered(address caller, uint256 amount);
@@ -21,7 +20,7 @@ interface ICrossChainBridge {
 
     function recoverFunds() external;
 
-    function quoteSendEth(uint256 _chainId) external view returns (uint256);
+    function quoteSendEth(uint256 _chainId, bytes memory _options) external view returns (uint256);
 
     function sendEthCrossChain(uint256 _chainId) external payable;
 

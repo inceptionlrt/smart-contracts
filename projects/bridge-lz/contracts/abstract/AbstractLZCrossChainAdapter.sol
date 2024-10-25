@@ -30,13 +30,12 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return fee.nativeFee;
     }
 
-    function quoteSendEth(uint256 _chainId) external view override returns (uint256) {
+    function quoteSendEth(uint256 _chainId, bytes memory _options) external view override returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
 
         bytes memory emptyPayload = "";
-        bytes memory emptyOptions = "";
-        MessagingFee memory fee = _quote(dstEid, emptyPayload, emptyOptions, false);
+        MessagingFee memory fee = _quote(dstEid, emptyPayload, _options, false);
         return fee.nativeFee;
     }
 

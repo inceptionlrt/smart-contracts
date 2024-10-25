@@ -76,7 +76,10 @@ interface ICrossChainBridge {
         bool _payInLzToken
     ) external view returns (uint256);
 
-    function quoteSendEth(uint256 _chainId) external view returns (uint256);
+    function quoteSendEth(
+        uint256 _chainId,
+        bytes memory _options
+    ) external view returns (uint256);
 
     function setChainIdFromEid(uint32 _eid, uint256 _chainId) external;
 

@@ -281,12 +281,15 @@ contract InceptionOmniVault is IInceptionVault, InceptionOmniAssetsHandler {
     /**
      * @notice Calculates fees to send data message to Layer 1.
      */
-    function quoteSendEthToL1() external view returns (uint256) {
+    function quoteSendEthToL1(
+        uint256 _chaindId,
+        bytes memory _options
+    ) external view returns (uint256) {
         require(
             address(crossChainAdapter) != address(0),
             CrossChainAdapterNotSet()
         );
-        return crossChainAdapter.quoteSendEth();
+        return crossChainAdapter.quoteSendEth(_chaindId, _options);
     }
 
     /*//////////////////////////////

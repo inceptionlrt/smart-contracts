@@ -40,7 +40,7 @@ interface ICrossChainAdapterL1 is ICrossChainAdapter {
 
     function sendEthToL2(uint256 _chainId) external payable;
 
-    function quoteSendEth(uint256 _chainId) external view returns (uint256);
+    function quoteSendEth(uint256 _chainId, bytes memory _options) external view returns (uint256);
 
     function handleCrossChainData(
         uint256 _chainId,
