@@ -23,6 +23,7 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
 
     function sendEthCrossChain(uint256 _chainId, uint256 _sendValue) external payable override onlyOwnerRestricted {
         console.log("msg.value in sendEthCrossChain: ", msg.value);
+        console.log("localBalance in sendEthCrossChain: ", address(this).balance);
         _sendCrosschain(_chainId, new bytes(0), new bytes(0), _sendValue);
     }
 
@@ -67,6 +68,8 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         uint256 _sendValue
     ) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
+        console.log("sum of values in _sendCrosschain: ", msg.value + _sendValue);
+        console.log("msg.value in _sendCrosschain: ", msg.value);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
             _payload,
@@ -74,9 +77,6 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
             MessagingFee(msg.value + _sendValue, 0),
             payable(msg.sender)
         );
-
-        console.log("receipt.fee.nativeFee in _lzSend: ", receipt.fee.nativeFee);
-        console.log("msg.value in _sendCrosschain: ", msg.value);
 
         uint256 fee = receipt.fee.nativeFee;
         emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
