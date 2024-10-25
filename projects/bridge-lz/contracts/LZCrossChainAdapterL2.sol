@@ -5,12 +5,12 @@ import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdap
 import { AbstractCrossChainAdapterL2 } from "./abstract/AbstractCrossChainAdapterL2.sol";
 
 contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL2 {
-    uint256 private l1ChainId;
+    uint32 private l1ChainId;
 
     function initialize(
         address _endpoint,
         address _delegate,
-        uint256 _l1ChainId,
+        uint32 _l1ChainId,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
@@ -24,15 +24,11 @@ contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChai
         }
     }
 
-    function quote(
-        uint256 _chainId,
-        bytes calldata _payload,
-        bytes memory _options
-    ) public view onlyOwner returns (uint256) {
-        return _quote(_chainId, _payload, _options);
+    function quote(bytes calldata _payload, bytes memory _options) public view override onlyOwner returns (uint256) {
+        return _quote(l1ChainId, _payload, _options);
     }
 
-    function sendDataL1(bytes calldata _payload, bytes memory _options) external {
+    function sendDataL1(bytes calldata _payload, bytes memory _options) external override {
         _sendCrosschain(l1ChainId, _payload, _options);
     }
 }
