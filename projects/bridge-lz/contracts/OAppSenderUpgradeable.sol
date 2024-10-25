@@ -6,8 +6,6 @@ import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title OAppSender
  * @dev Abstract contract implementing the OAppSender functionality for sending messages to a LayerZero endpoint.
@@ -82,8 +80,6 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
     ) internal virtual returns (MessagingReceipt memory receipt) {
         // @dev Push corresponding fees to the endpoint, any excess is sent back to the _refundAddress from the endpoint.
 
-        console.log("nativeFee in _lzSend: ", _fee.nativeFee);
-        console.log("msg.value in _lzSend: ", msg.value);
         uint256 messageValue = _payNative(_fee.nativeFee);
         if (_fee.lzTokenFee > 0) _payLzToken(_fee.lzTokenFee);
 

@@ -10,8 +10,6 @@ import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
-import "hardhat/console.sol";
-
 abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
@@ -65,8 +63,6 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
 
     function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
-        console.log("sum of values in _sendCrosschain: ", msg.value);
-        console.log("msg.value in _sendCrosschain: ", msg.value);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
             _payload,

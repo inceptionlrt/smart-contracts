@@ -22,15 +22,15 @@ async function main() {
     const checkpointDataOptimism = JSON.parse(fs.readFileSync(checkpointOptimismFilePath, 'utf8'));
 
     // Fetch addresses from the checkpoint files
-    const CrossChainBridgeSepoliaAddress = checkpointDataSepolia.CrossChainBridge;
-    const CrossChainBridgeOptimismSepoliaAddress = checkpointDataOptimism.CrossChainBridge;
+    const CrossChainBridgeSepoliaAddress = checkpointDataSepolia.LZCrossChainAdapterL1;
+    const CrossChainBridgeOptimismSepoliaAddress = checkpointDataOptimism.LZCrossChainAdapterL2;
 
     if (!CrossChainBridgeSepoliaAddress || !CrossChainBridgeOptimismSepoliaAddress) {
         throw new Error("CrossChainBridge addresses not found in the checkpoint files.");
     }
-    
+
     // Get contract instances
-    const CrossChainBridgeOptimismSepolia = await ethers.getContractAt("CrossChainBridge", CrossChainBridgeOptimismSepoliaAddress);
+    const CrossChainBridgeOptimismSepolia = await ethers.getContractAt("LZCrossChainAdapterL2", CrossChainBridgeOptimismSepoliaAddress);
     const eIdSepolia = 40161;
 
     // Set peer for Sepolia
