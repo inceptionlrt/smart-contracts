@@ -8,7 +8,7 @@ import { Origin, MessagingReceipt, MessagingFee } from "@layerzerolabs/oapp-evm/
 import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter.sol";
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
-abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, AbstractCrossChainAdapter {
+abstract contract AbstractLZCrossChainAdapter is AbstractCrossChainAdapter {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
 
