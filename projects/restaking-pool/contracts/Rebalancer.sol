@@ -99,8 +99,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      */
     function setLiqPool(address payable _liqPool) external onlyOwner {
         require(_liqPool != address(0), SettingZeroAddress());
-        liqPool = _liqPool;
         emit LiqPoolChanged(liqPool, _liqPool);
+        liqPool = _liqPool;
     }
 
     /**
