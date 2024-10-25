@@ -6,22 +6,23 @@ const func: DeployFunction = async function ({ deployments, network }) {
   const { get } = deployments;
   const RestakingPool = await get("RestakingPool");
   console.log("Restaking Pool address: ", RestakingPool.address);
+  const [deployer] = await ethers.getSigners();
 
   const restakinPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
 
-  /// 1. InceptionLibrary
+  console.log(`deployer address: ${deployer.address}`);
+  console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
+
+  /// 1. InceptionLibrary Deployment
   let libAddress = "";
   if (network.name === "mainnet") {
     libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
   } else {
-    const libFactory = await ethers.getContractFactory("InceptionLibrary");
-    const lib = await libFactory.deploy();
-    await lib.waitForDeployment();
-    libAddress = await lib.getAddress();
+    libAddress = "0x4db1487f376efe5116af8491ece85f52e7082ce8";
   }
-  console.log("InceptionLibrary address:", libAddress);
+  console.log("InceptionLibrary address(11):", libAddress);
 
   /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
@@ -29,7 +30,6 @@ const func: DeployFunction = async function ({ deployments, network }) {
       InceptionLibrary: libAddress,
     },
   });
-
   const newImpl = await upgrades.prepareUpgrade(RestakingPool.address, RestakingPoolFactory, {
     unsafeAllowLinkedLibraries: true,
   });
@@ -55,7 +55,7 @@ const func: DeployFunction = async function ({ deployments, network }) {
 };
 
 module.exports = func;
-module.exports.tags = ["10_update_pool"];
+module.exports.tags = ["11_upgrade_pool"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "10";
+module.exports.id = "11";

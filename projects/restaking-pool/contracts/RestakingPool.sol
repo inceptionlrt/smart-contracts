@@ -399,28 +399,6 @@ contract RestakingPool is
     *******************************************************************************/
 
     /**
-     * @notice Will be called only once for each restaker, because it activates restaking.
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function activateRestaking(string memory provider) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).activateRestaking();
-    }
-
-    /**
-     * @notice withdraw not restaked ETH
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function withdrawBeforeRestaking(
-        string memory provider
-    ) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).withdrawBeforeRestaking();
-    }
-
-    /**
      * @notice Verify that validators has withdrawal credentials pointed to EigenPod
      */
     function verifyWithdrawalCredentials(
@@ -441,17 +419,6 @@ contract RestakingPool is
         );
     }
 
-    function withdrawNonBeaconChainETHBalanceWei(
-        string memory provider,
-        uint256 amountToWithdraw
-    ) external onlyOperator {
-        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
-        restaker.withdrawNonBeaconChainETHBalanceWei(
-            address(this),
-            amountToWithdraw
-        );
-    }
-
     function recoverTokens(
         string memory provider,
         IERC20[] memory tokenList,
@@ -463,6 +430,14 @@ contract RestakingPool is
             amountsToWithdraw,
             config().getOperator()
         );
+    }
+
+    function startWithdrawalCheckpoint(
+        string memory provider,
+        bool revertIfNoBalance
+    ) external onlyOperator {
+        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
+        restaker.startCheckpoint(revertIfNoBalance);
     }
 
     function delegateTo(
@@ -486,6 +461,34 @@ contract RestakingPool is
             _getRestakerOrRevert(provider)
         );
         restaker.undelegate(address(restaker));
+    }
+
+    function queueWithdrawals(
+        string memory provider,
+        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
+    ) external onlyOperator {
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
+        restaker.queueWithdrawals(withdrawals);
+    }
+
+    function completeWithdrawals(
+        string memory provider,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] memory tokens,
+        uint256[] memory middlewareTimesIndexes,
+        bool[] memory receiveAsTokens
+    ) external onlyOperator {
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
+        restaker.completeQueuedWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
     }
 
     /*******************************************************************************

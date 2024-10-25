@@ -127,4 +127,9 @@ interface IRestakingPool {
     function getMinStake() external view returns (uint256);
 
     function getMinUnstake() external view returns (uint256);
+
+    function startWithdrawalCheckpoint(
+        string memory provider,
+        bool revertIfNoBalance
+    ) external;
 }

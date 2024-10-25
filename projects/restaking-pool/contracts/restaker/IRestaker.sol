@@ -14,5 +14,6 @@ interface IRestaker {
     event RewardCoordinatorChanged(address indexed rewardCoordinator, address indexed newRewardCoordinator);
 
     function initialize(address owner, IRestakerFacets facets) external;
+
     function __claim() external;
 }
