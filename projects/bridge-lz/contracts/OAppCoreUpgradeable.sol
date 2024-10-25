@@ -38,7 +38,7 @@ abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable {
      * @dev Set this to bytes32(0) to remove the peer address.
      * @dev Peer is a bytes32 to accommodate non-evm chains.
      */
-    function setPeer(uint32 _eid, bytes32 _peer) public virtual {}
+    // function setPeer(uint32 _eid, bytes32 _peer) public virtual {}
 
     /**
      * @notice Sets the peer address (OApp instance) for a corresponding endpoint.
