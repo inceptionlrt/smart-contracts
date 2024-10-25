@@ -21,6 +21,11 @@ contract LZCrossChainAdapterL1 is
         _;
     }
 
+    modifier onlyTargetReceiverRestricted() override {
+        require(msg.sender == targetReceiver || msg.sender == owner(), NotTargetReceiver(msg.sender));
+        _;
+    }
+
     function initialize(
         address _endpoint,
         address _delegate,

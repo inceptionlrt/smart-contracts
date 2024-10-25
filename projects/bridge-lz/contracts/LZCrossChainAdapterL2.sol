@@ -20,6 +20,11 @@ contract LZCrossChainAdapterL2 is
         _;
     }
 
+    modifier onlyTargetReceiverRestricted() override {
+        require(msg.sender == targetReceiver || msg.sender == owner(), NotTargetReceiver(msg.sender));
+        _;
+    }
+
     uint32 private l1ChainId;
 
     function initialize(
@@ -43,7 +48,10 @@ contract LZCrossChainAdapterL2 is
         return _quote(l1ChainId, _payload, _options);
     }
 
-    function sendDataL1(bytes calldata _payload, bytes memory _options) external payable override {
+    function sendDataL1(
+        bytes calldata _payload,
+        bytes memory _options
+    ) external payable override onlyTargetReceiverRestricted {
         _sendCrosschain(l1ChainId, _payload, _options);
     }
 

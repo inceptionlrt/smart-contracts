@@ -20,8 +20,12 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
     mapping(uint256 => uint32) public chainIdToEid;
 
     modifier onlyOwnerRestricted() virtual;
+    modifier onlyTargetReceiverRestricted() virtual;
 
-    function sendEthCrossChain(uint256 _chainId, bytes memory _options) external payable override onlyOwnerRestricted {
+    function sendEthCrossChain(
+        uint256 _chainId,
+        bytes memory _options
+    ) external payable override onlyTargetReceiverRestricted {
         _sendCrosschain(_chainId, new bytes(0), _options);
     }
 
