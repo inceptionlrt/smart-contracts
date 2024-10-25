@@ -9,36 +9,36 @@ import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
 abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
-    //NOTE: vault is a term encompassing both Rebalancer on L1 or InceptionOmniVault on L2
-    address public vault;
+    //NOTE: targetReceiver is a term encompassing both Rebalancer on L1 or InceptionOmniTargetReceiver on L2
+    address public targetReceiver;
 
     modifier onlyOwnerRestricted() virtual;
 
-    modifier onlyVault() {
-        if (msg.sender != vault) {
-            revert NotVault(msg.sender);
+    modifier onlyTargetReceiver() {
+        if (msg.sender != targetReceiver) {
+            revert NotTargetReceiver(msg.sender);
         }
         _;
     }
 
-    function setVault(address _newVault) external override onlyOwnerRestricted {
-        require(_newVault != address(0), SettingZeroAddress());
-        emit VaultChanged(vault, _newVault);
-        vault = _newVault;
+    function setTargetReceiver(address _newTargetReceiver) external override onlyOwnerRestricted {
+        require(_newTargetReceiver != address(0), SettingZeroAddress());
+        emit TargetReceiverChanged(targetReceiver, _newTargetReceiver);
+        targetReceiver = _newTargetReceiver;
     }
 
     function recoverFunds() external override onlyOwnerRestricted {
-        require(vault != address(0), VaultNotSet());
+        require(targetReceiver != address(0), TargetReceiverNotSet());
         uint256 amount = address(this).balance;
-        (bool success, ) = vault.call{ value: amount }("");
-        require(success, TransferToVaultFailed());
+        (bool success, ) = targetReceiver.call{ value: amount }("");
+        require(success, TransferToTargetReceiverFailed());
         emit RecoverFundsInitiated(amount);
     }
 
     //primary function for receiving ETH from other chain
     function _handleCrossChainEth(uint256 _chainId) internal {
         emit CrossChainEthDeposit(_chainId, msg.value);
-        Address.sendValue(payable(vault), msg.value);
+        Address.sendValue(payable(targetReceiver), msg.value);
     }
 
     //fallback function just in case a cross-chain adapter messes up sending ETH to the right function

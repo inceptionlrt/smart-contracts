@@ -7,12 +7,12 @@ import { IRebalancer } from "../interfaces/IRebalancer.sol";
 
 abstract contract AbstractCrossChainAdapterL1 is AbstractCrossChainAdapter, ICrossChainBridgeL1 {
     function _handleCrossChainData(uint256 _chainId, bytes calldata _payload) internal {
-        require(vault != address(0), VaultNotSet());
+        require(targetReceiver != address(0), TargetReceiverNotSet());
         (uint256 timestamp, uint256 balance, uint256 totalSupply) = _decodeCalldata(_payload);
         if (timestamp > block.timestamp) {
             revert FutureTimestamp();
         }
-        IRebalancer(vault).handleL2Info(_chainId, timestamp, balance, totalSupply);
+        IRebalancer(targetReceiver).handleL2Info(_chainId, timestamp, balance, totalSupply);
         emit CrossChainInfoReceived(_chainId, timestamp, balance, totalSupply);
     }
 
