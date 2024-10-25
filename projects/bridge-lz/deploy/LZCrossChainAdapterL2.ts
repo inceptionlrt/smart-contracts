@@ -61,7 +61,7 @@ const deploy: DeployFunction = async (hre) => {
 
     // 4. Encode the initialize function call for the proxy
     console.log('Encoding initialize function call...');
-    const l1ChainId = 40161;
+    const l1ChainId = 11155111; //Sepolia Chain ID
     const initializeData = (await ethers.getContractFactory(contractName)).interface.encodeFunctionData(
         'initialize',
         [

@@ -23,15 +23,14 @@ async function main() {
         "function sendEthCrossChain(uint256 _chainId, bytes _options) external payable"
     ];
 
-    // Attach to the contract and connect the signer
     const signer = await ethers.provider.getSigner();
     const LZCrossChainAdapterL2 = new ethers.Contract(lzCrossChainAdapterL2Address, abi, signer);
     console.log("Attached to LZCrossChainAdapterL2 at address:", lzCrossChainAdapterL2Address);
 
-    const destinationChainId = 11155111;
+    const destinationChainId = 11155111;  //chain id of Sepolia
 
     const tx = await LZCrossChainAdapterL2.sendEthCrossChain(destinationChainId, options, {
-        value: ethers.parseEther("0.1") // Adjust ETH amount as needed
+        value: ethers.parseEther("0.1")
     });
 
     console.log("Sending ETH across chain...");
