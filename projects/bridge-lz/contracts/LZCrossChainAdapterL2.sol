@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import "./abstract/AbstractLZCrossChainAdapter.sol";
-import "./abstract/AbstractCrossChainAdapterL2.sol";
+import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
+import { AbstractCrossChainAdapterL2 } from "./abstract/AbstractCrossChainAdapterL2.sol";
 
-contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter {
+contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL2 {
     uint256 private l1ChainId;
 
     function initialize(

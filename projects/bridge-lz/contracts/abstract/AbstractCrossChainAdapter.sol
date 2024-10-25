@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import "../interfaces/ICrossChainBridge.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+
+import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
 abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     //NOTE: vault is a terming meaning InceptionOmniVault on L2 or Rebalancer on L1
