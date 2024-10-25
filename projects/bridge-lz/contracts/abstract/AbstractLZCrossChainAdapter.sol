@@ -51,6 +51,10 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return chainIdToEid[_chainId];
     }
 
+    function setPeer(uint32 _eid, bytes32 _peer) public override {
+        _setPeer(_eid, _peer);
+    }
+
     function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
