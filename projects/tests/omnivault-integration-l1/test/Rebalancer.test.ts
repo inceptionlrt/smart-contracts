@@ -5,13 +5,8 @@ import {randomBI, e18} from "./helpers/math";
 import {SnapshotRestorer} from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import {AbiCoder, keccak256, toUtf8Bytes} from 'ethers';
 import {
-    ArbBridgeMock,
-    CrossChainAdapterArbitrumL1, CrossChainAdapterL1, CrossChainAdapterOptimismL1,
     CToken, EndpointMock, LZCrossChainAdapterL1, LZCrossChainAdapterL2,
-    OptBridgeMock, ProtocolConfig,
-    Rebalancer,
-    RestakingPool,
-    TransactionStorage
+    ProtocolConfig, Rebalancer, RestakingPool
 } from "../typechain-types";
 
 BigInt.prototype.format = function () {
@@ -27,18 +22,14 @@ const ETH_EID = 30111n;
 const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
 const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
+const options = "0x00030100110100000000000000000000000000030d40";
 
 describe("Omnivault integration tests", function () {
     this.timeout(150000);
-    let ratioFeed, arbInboxMock, arbOutboxMock;
+    let ratioFeed;
     let inEth: CToken;
     let rebalancer: Rebalancer;
-    let txStorage: TransactionStorage;
     let restakingPool: RestakingPool
-    let arbBridgeMock: ArbBridgeMock;
-    let arbAdapter: CrossChainAdapterArbitrumL1;
-    let optBridgeMock: OptBridgeMock;
-    let optAdapter: CrossChainAdapterOptimismL1;
     let restakingPoolConfig: ProtocolConfig;
     let adapterEth: LZCrossChainAdapterL1;
     let adapterArb: LZCrossChainAdapterL2;
@@ -122,49 +113,6 @@ describe("Omnivault integration tests", function () {
         const ratioFeed = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
         ratioFeed.address = await ratioFeed.getAddress();
 
-        // console.log('=== TransactionStorage');
-        // const txStorage = await ethers.deployContract("TransactionStorage", [owner.address]);
-        // txStorage.address = await txStorage.getAddress();
-
-        // //===Arbitrum
-        // console.log('=== ArbInboxMock');
-        // const arbInboxMock = await ethers.deployContract("ArbInboxMock", []);
-        // arbInboxMock.address = await arbInboxMock.getAddress();
-        //
-        // console.log('=== ArbOutboxMock');
-        // const arbOutboxMock = await ethers.deployContract("ArbOutboxMock", [target]);
-        // arbOutboxMock.address = await arbOutboxMock.getAddress();
-        //
-        // console.log('=== CrossChainAdapterArbitrumL1');
-        // const ArbAdapter = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
-        // const arbAdapter = await upgrades.deployProxy(ArbAdapter, [
-        //     txStorage.address,
-        //     arbInboxMock.address,
-        //     operator.address
-        // ]);
-        // arbAdapter.address = await arbAdapter.getAddress();
-        //
-        // console.log('=== ArbBridgeMock');
-        // const arbBridgeMock = await ethers.deployContract("ArbBridgeMock", [arbAdapter.address, arbOutboxMock.address]);
-        // arbBridgeMock.address = await arbBridgeMock.getAddress();
-        // await arbInboxMock.setBridge(arbBridgeMock.address);
-        //
-        // //===Optimism
-        // console.log('=== OptimismBridgeMock');
-        // const optBridgeMock = await ethers.deployContract("OptBridgeMock", [target.address]);
-        // optBridgeMock.address = await optBridgeMock.getAddress();
-        //
-        // console.log('=== CrossChainAdapterOptimismL1');
-        // const OptAdapter = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
-        // const optAdapter = await upgrades.deployProxy(OptAdapter, [
-        //     optBridgeMock.address,
-        //     optimismStandardBridge,
-        //     txStorage.address,
-        //     operator.address
-        // ]);
-        // optAdapter.address = await optAdapter.getAddress();
-        // await optBridgeMock.setAdapter(optAdapter.address);
-
         console.log("=== Eth endpoint mock");
         const ethEndpoint = await ethers.deployContract("EndpointMock", [ETH_EID]);
         ethEndpoint.address = await ethEndpoint.getAddress();
@@ -180,49 +128,47 @@ describe("Omnivault integration tests", function () {
         ]);
         adapterEth.address = await adapterEth.getAddress();
 
-        console.log("=== Arb endpoint mock");
+        console.log("=== Arb LZCrossChainAdapterL2");
         const arbEndpoint = await ethers.deployContract("EndpointMock", [ARB_EID]);
         arbEndpoint.address = await arbEndpoint.getAddress();
         const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
         const adapterArb = await upgrades.deployProxy(LZCrossChainAdapterL2, [
             arbEndpoint.address,
             owner.address,
+            ETH_ID,
             eIds,
             chainIds
         ]);
-        adapterArb.address = await adapterEth.getAddress();
+        adapterArb.address = await adapterArb.getAddress();
+        adapterArb.sendData = async function(timestamp, vaultBalance, totalSupply) {
+            const message = encodePayload(timestamp, vaultBalance, totalSupply);
+            const fees = await this.quote(message, options);
+            return await this.sendDataL1(message, options, {value: fees});
+        }
 
-        console.log("=== Opt endpoint mock");
+        console.log("=== Opt LZCrossChainAdapterL2");
         const optEndpoint = await ethers.deployContract("EndpointMock", [OPT_EID]);
         optEndpoint.address = await optEndpoint.getAddress();
         const adapterOpt = await upgrades.deployProxy(LZCrossChainAdapterL2, [
             optEndpoint.address,
             owner.address,
+            ETH_ID,
             eIds,
             chainIds
         ]);
-        adapterOpt.address = await adapterEth.getAddress();
+        adapterOpt.address = await adapterOpt.getAddress();
+        adapterOpt.sendData = async function(timestamp, vaultBalance, totalSupply) {
+            const message = encodePayload(timestamp, vaultBalance, totalSupply);
+            const fees = await this.quote(message, options);
+            return await this.sendDataL1(message, options, {value: fees});
+        }
+        //Link endpoints
+        await arbEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
+        await optEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
+        await ethEndpoint.setDestLzEndpoint(adapterArb.address, arbEndpoint.address);
+        await ethEndpoint.setDestLzEndpoint(adapterOpt.address, optEndpoint.address);
 
-        // ethEndpoint.receivePayloadShort = async function (fromEid, fromAddress, timestamp, balance, totalSupply) {
-        //     const abiCoder = new AbiCoder();
-        //     const message = abiCoder.encode(
-        //         ["uint256", "uint256", "uint256"],
-        //         [timestamp, balance, totalSupply]);
-        //
-        //     return await this.receivePayload(
-        //         {
-        //             srcEid: fromEid,
-        //             sender: ethers.zeroPadValue(fromAddress, 32),
-        //             nonce: randomBI(6)
-        //         },
-        //         adapter.address,
-        //         ethers.ZeroHash,
-        //         message,
-        //         100_000n * 10n ** 9n,
-        //         0n,
-        //         ethers.ZeroHash,
-        //     );
-        // }
+
 
         console.log('=== Rebalancer');
         const Rebalancer = await ethers.getContractFactory("Rebalancer");
@@ -238,17 +184,10 @@ describe("Omnivault integration tests", function () {
 
         return [
             cToken,
-            // arbAdapter,
             rebalancer,
-            // txStorage,
             ratioFeed,
             restakingPool,
-            // arbBridgeMock,
-            // arbInboxMock,
-            // arbOutboxMock,
             restakingPoolConfig,
-            // optAdapter,
-            // optBridgeMock,
             adapterEth,
             ethEndpoint,
             adapterArb,
@@ -262,17 +201,10 @@ describe("Omnivault integration tests", function () {
         [owner, operator, treasury, signer1, signer2, signer3, target] = await ethers.getSigners();
         [
             inEth,
-            // arbAdapter,
             rebalancer,
-            // txStorage,
             ratioFeed,
             restakingPool,
-            // arbBridgeMock,
-            // arbInboxMock,
-            // arbOutboxMock,
             restakingPoolConfig,
-            // optAdapter,
-            // optBridgeMock,
             adapterEth,
             ethEndpoint,
             adapterArb,
@@ -282,15 +214,8 @@ describe("Omnivault integration tests", function () {
         ] = await init(owner, operator, treasury, target);
         clean_snapshot = await takeSnapshot();
 
-        // await rebalancer.connect(owner).addChainId(ETH_ID);
         await rebalancer.connect(owner).addChainId(ARB_ID);
         await rebalancer.connect(owner).addChainId(OPT_ID);
-
-
-        // await txStorage.connect(owner).addAdapter(ARB_ID, arbAdapter.address);
-        // await txStorage.connect(owner).addChainId(OPT_ID);
-        // await txStorage.connect(owner).setAdapter(adapter.address);
-        // await txStorage.connect(owner).addAdapter(OPT_ID, optAdapter.address);
 
 
         // MAX_THRESHOLD = await ratioFeed.MAX_THRESHOLD();
@@ -298,18 +223,12 @@ describe("Omnivault integration tests", function () {
         // await ratioFeed.connect(owner).setRatioThreshold(ratioThresh); //Default threshold 1%
         // await ratioFeed.connect(operator).updateRatio(inEth.address, e18); //Default ratio 1
 
-        //Arbitrum adapter
-        // await arbAdapter.setL2Sender(target);
-        // await arbAdapter.setRebalancer(rebalancer.address);
-        // await arbAdapter.setL2Receiver(target.address);
-        // await optAdapter.setL2Sender(target);
-        // await optAdapter.setRebalancer(rebalancer.address);
-        // await optAdapter.setL2Receiver(target.address);
-        await adapterEth.setVault(restakingPool.address);
+        await adapterEth.setTargetReceiver(rebalancer.address);
         await adapterEth.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
         await adapterEth.setPeer(OPT_EID, ethers.zeroPadValue(adapterOpt.address, 32));
         await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
         await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+
         // await arbEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
         // await optEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
 
@@ -467,43 +386,14 @@ describe("Omnivault integration tests", function () {
                 const timestamp = block.timestamp;
                 const balance = randomBI(19);
                 const totalSupply = randomBI(19);
-                const abiCoder = new AbiCoder();
-                const message = abiCoder.encode(
-                    ["uint256", "uint256", "uint256"],
-                    [timestamp, balance, totalSupply]
-                );
+                const message = encodePayload(timestamp, balance, totalSupply);
 
-                // await endpointMock.receivePayload(
-                //     {
-                //         srcEid: ARB_ID,
-                //         sender: ethers.zeroPadValue(target.address, 32),
-                //         nonce: randomBI(6)
-                //     },
-                //     adapter.address,
-                //     ethers.ZeroHash,
-                //     message,
-                //     100_000n * 10n ** 9n,
-                //     0n,
-                //     ethers.ZeroHash,
-                // );
-
-                // await ethEndpoint.receivePayloadShort(
-                //     ARB_ID, target.address, timestamp, balance, totalSupply
-                // );
-
-                // await adapter.connect(target).lzReceive(
-                //     {
-                //         srcEid: ARB_ID,
-                //         sender: ethers.zeroPadValue(target.address, 32),
-                //         nonce: randomBI(6)
-                //     },
-                //     ethers.ZeroHash,
-                //     message,
-                //     ethers.ZeroAddress,
-                //     "0x");
+                const fees = await adapterArb.quote(message, options);
+                await adapterArb.sendDataL1(message, options, {value: fees});
 
                 await expect(rebalancer.updateTreasuryData())
-                    .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
+                    .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions")
+                    .withArgs(OPT_ID)
             })
 
             const args = [
@@ -588,65 +478,26 @@ describe("Omnivault integration tests", function () {
                 it(`updateTreasuryData: ${arg.name}`, async () => {
                     const block = await ethers.provider.getBlock("latest");
                     const timestamp = block.timestamp;
-                    const options = "0x00030100110100000000000000000000000000030d40";
                     let expectedTotalSupplyDiff = 0n;
                     if (arg.arb) {
                         expectedTotalSupplyDiff += arg.arb.l2TotalSupplyDiff();
                         initialArbAmount += arg.arb.l2BalanceDiff();
                         initialArbSupply += arg.arb.l2TotalSupplyDiff();
-                        // await arbBridgeMock.receiveL2Info(timestamp, initialArbAmount, initialArbSupply);
-                        // let tx = await ethEndpoint.receivePayloadShort(
-                        //     ARB_ID, target.address, timestamp, initialArbAmount, initialArbSupply
-                        // );
 
-                        const abiCoder = new AbiCoder();
-                        const message = abiCoder.encode(
-                            ["uint256", "uint256", "uint256"],
-                            [timestamp, initialArbAmount, initialArbSupply]);
-                        // let tx = await arbEndpoint.send(
-                        //     {
-                        //         dstEid: ETH_EID,
-                        //         receiver: ethers.zeroPadValue(adapterEth.address, 32),
-                        //         message: message,
-                        //         options: "0x00030100110100000000000000000000000000030d40",
-                        //         payInLzToken: false,
-                        //     },
-                        //     target.address,
-                        //     {value: 10n ** 17n}
-                        // );
-
-                        let tx = await adapterArb.sendDataL1(message, options);
-                        let rec = await tx.wait();
-                        console.log(rec)
+                        const message = encodePayload(timestamp, initialArbAmount, initialArbSupply);
+                        const fees = await adapterArb.quote(message, options);
+                        await adapterArb.sendDataL1(message, options, {value: fees});
                     }
                     if (arg.opt) {
                         expectedTotalSupplyDiff += arg.opt.l2TotalSupplyDiff();
                         initialOptAmount += arg.opt.l2BalanceDiff();
                         initialOptSupply += arg.opt.l2TotalSupplyDiff();
-                        // await optBridgeMock.receiveL2Info(timestamp, initialOptAmount, initialOptSupply);
-                        // let tx = await ethEndpoint.receivePayloadShort(
-                        //     OPT_ID, target.address, timestamp, initialArbAmount, initialArbSupply
-                        // );
 
-                        const abiCoder = new AbiCoder();
-                        const message = abiCoder.encode(
-                            ["uint256", "uint256", "uint256"],
-                            [timestamp, initialOptAmount, initialOptSupply]);
-                        let tx = await adapterOpt.sendDataL1(message, options);
-
-                        // let tx = await arbEndpoint.send(
-                        //     {
-                        //         dstEid: ETH_EID,
-                        //         receiver: ethers.zeroPadValue(adapterEth.address, 32),
-                        //         message: message,
-                        //         options: "0x00030100110100000000000000000000000000030d40",
-                        //         payInLzToken: false,
-                        //     },
-                        //     target.address,
-                        //     {value: 10n ** 17n}
-                        // );
+                        const message = encodePayload(timestamp, initialOptAmount, initialOptSupply);
+                        const fees = await adapterOpt.quote(message, options);
+                        await adapterOpt.sendDataL1(message, options, {value: fees});
                     }
-                    console.log(`Total supply diff: ${expectedTotalSupplyDiff.format()}`);
+                    console.log(`Expected supply diff: ${expectedTotalSupplyDiff.format()}`);
                     const expectedLockboxBalance = initialArbSupply + initialOptSupply;
                     const totalSupplyBefore = await inEth.totalSupply();
 
@@ -676,8 +527,8 @@ describe("Omnivault integration tests", function () {
             it("updateTreasuryData reverts when total supply is the same", async function () {
                 const block = await ethers.provider.getBlock("latest");
                 const timestamp = block.timestamp;
-                await arbBridgeMock.receiveL2Info(timestamp, e18, e18);
-                await optBridgeMock.receiveL2Info(timestamp, e18, e18);
+                await adapterArb.sendData(timestamp, e18, e18);
+                await adapterOpt.sendData(timestamp, e18, e18);
                 await rebalancer.updateTreasuryData();
 
                 await expect(rebalancer.updateTreasuryData())
@@ -694,8 +545,8 @@ describe("Omnivault integration tests", function () {
                 const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
                 //Report L2 info
                 const l2SupplyChange = e18;
-                await arbBridgeMock.receiveL2Info(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
-                await optBridgeMock.receiveL2Info(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
+                await adapterArb.sendData(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
+                await adapterOpt.sendData(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
 
                 const amount = randomBI(17);
                 await inEth.connect(signer1).transfer(rebalancer.address, amount);
@@ -793,7 +644,7 @@ describe("Omnivault integration tests", function () {
             before(async function () {
                 const balance = await restakingPool.availableToStake();
                 await signer1.sendTransaction({value: balance, to: rebalancer.address});
-                await arbAdapter.setInbox("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f");
+                // await arbAdapter.setInbox("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f");
                 // await arbAdapter.connect(owner).setGasParameters(
                 //     2n * 10n ** 15n,
                 //     200_000n,
@@ -809,7 +660,7 @@ describe("Omnivault integration tests", function () {
                     fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                     event: "RetryableTicketCreated",
-                    adapter: () => arbAdapter,
+                    adapter: () => adapterArb,
                 },
                 {
                     name: "Part of the balance to OPT",
@@ -818,7 +669,7 @@ describe("Omnivault integration tests", function () {
                     fees: 0n,
                     chainId: OPT_ID,
                     event: "CrossChainTxOptimismSent",
-                    adapter: () => optAdapter,
+                    adapter: () => adapterOpt,
                 },
                 {
                     name: "All balance to ARB",
@@ -827,7 +678,7 @@ describe("Omnivault integration tests", function () {
                     fees: 2n * 10n ** 16n,
                     chainId: ARB_ID,
                     event: "RetryableTicketCreated",
-                    adapter: () => arbAdapter,
+                    adapter: () => adapterArb,
                 },
                 {
                     name: "All balance to OPT",
@@ -836,7 +687,7 @@ describe("Omnivault integration tests", function () {
                     fees: 0n,
                     chainId: OPT_ID,
                     event: "CrossChainTxOptimismSent",
-                    adapter: () => optAdapter,
+                    adapter: () => adapterOpt,
                 }
             ]
 
@@ -885,99 +736,99 @@ describe("Omnivault integration tests", function () {
         })
     })
 
-    describe("Transaction storage", function () {
-        describe("Setters", function () {
-            let chain = randomBI(4);
-            let adapter = ethers.Wallet.createRandom().address;
-            let newAdapter = ethers.Wallet.createRandom().address;
-
-            it("addChainId only owner can", async function () {
-                const chainsBefore = await txStorage.getAllChainIds();
-                await txStorage.connect(owner).addChainId(chain);
-
-                const chainsAfter = await txStorage.getAllChainIds();
-                expect([...chainsAfter]).to.include.members([...chainsBefore])
-                expect(chainsAfter).to.include(chain);
-            })
-
-            it("addChainId reverts when chain is added already", async function () {
-                await expect(txStorage.connect(owner).addChainId(chain))
-                    .to.be.revertedWithCustomError(txStorage, "ChainIdAlreadyExists")
-                    .withArgs(chain);
-            })
-
-            it("addChainId reverts when called by not an owner", async function () {
-                await expect(txStorage.connect(signer1).addChainId(chain + 1n))
-                    .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
-                    .withArgs(signer1.address);
-            })
-
-            it("addAdapter only owner can", async function () {
-                await expect(txStorage.connect(owner).addAdapter(chain, adapter))
-                    .to.emit(txStorage, "AdapterAdded")
-                    .withArgs(chain, adapter);
-
-                expect(await txStorage.adapters(chain)).to.be.eq(adapter);
-            })
-
-            it("addAdapter reverts when adapter is already set for the chain", async function () {
-                await expect(txStorage.connect(owner).addAdapter(chain, adapter))
-                    .to.revertedWithCustomError(txStorage, "AdapterAlreadyExists")
-                    .withArgs(chain);
-            })
-
-            it("addAdapter reverts when called by not an owner", async function () {
-                const anotherChain = randomBI(5);
-                await txStorage.connect(owner).addChainId(anotherChain);
-
-                const anotherAdapter = ethers.Wallet.createRandom().address;
-                await expect(txStorage.connect(signer1).addAdapter(anotherChain, anotherAdapter))
-                    .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
-                    .withArgs(signer1.address);
-            })
-
-            it("replaceAdapter only owner can", async function () {
-                newAdapter = ethers.Wallet.createRandom().address;
-                await expect(txStorage.connect(owner).replaceAdapter(chain, newAdapter))
-                    .to.emit(txStorage, "AdapterReplaced")
-                    .withArgs(chain, adapter, newAdapter);
-
-                expect(await txStorage.adapters(chain)).to.be.eq(newAdapter);
-            })
-
-            it("replaceAdapter reverts when adapter is not set", async function () {
-                const chainId = randomBI(6);
-                await expect(txStorage.connect(owner).replaceAdapter(chainId, adapter))
-                    .to.revertedWithCustomError(txStorage, "NoAdapterForThisChainId")
-                    .withArgs(chainId);
-            })
-
-            it("replaceAdapter reverts when called by not an owner", async function () {
-                await expect(txStorage.connect(signer1).replaceAdapter(chain, newAdapter))
-                    .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
-                    .withArgs(signer1.address);
-            })
-
-            it("getTransactionData when there is not such", async function () {
-                const res = await txStorage.getTransactionData(chain);
-                console.log(res);
-            })
-        })
-
-        describe("handleL2Info", function () {
-            it("handleL2Info reverts when called by not an adapter", async function () {
-                const block = await ethers.provider.getBlock("latest");
-                const chainId = ARB_ID;
-                const timestamp = block.timestamp;
-                const balance = e18;
-                const totalSupply = e18;
-
-                await expect(txStorage.connect(owner).handleL2Info(chainId, timestamp, balance, totalSupply))
-                    .to.be.revertedWithCustomError(txStorage, "MsgNotFromAdapter")
-                    .withArgs(owner.address);
-            })
-        })
-    })
+    // describe("Transaction storage", function () {
+    //     describe("Setters", function () {
+    //         let chain = randomBI(4);
+    //         let adapter = ethers.Wallet.createRandom().address;
+    //         let newAdapter = ethers.Wallet.createRandom().address;
+    //
+    //         it("addChainId only owner can", async function () {
+    //             const chainsBefore = await txStorage.getAllChainIds();
+    //             await txStorage.connect(owner).addChainId(chain);
+    //
+    //             const chainsAfter = await txStorage.getAllChainIds();
+    //             expect([...chainsAfter]).to.include.members([...chainsBefore])
+    //             expect(chainsAfter).to.include(chain);
+    //         })
+    //
+    //         it("addChainId reverts when chain is added already", async function () {
+    //             await expect(txStorage.connect(owner).addChainId(chain))
+    //                 .to.be.revertedWithCustomError(txStorage, "ChainIdAlreadyExists")
+    //                 .withArgs(chain);
+    //         })
+    //
+    //         it("addChainId reverts when called by not an owner", async function () {
+    //             await expect(txStorage.connect(signer1).addChainId(chain + 1n))
+    //                 .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
+    //                 .withArgs(signer1.address);
+    //         })
+    //
+    //         it("addAdapter only owner can", async function () {
+    //             await expect(txStorage.connect(owner).addAdapter(chain, adapter))
+    //                 .to.emit(txStorage, "AdapterAdded")
+    //                 .withArgs(chain, adapter);
+    //
+    //             expect(await txStorage.adapters(chain)).to.be.eq(adapter);
+    //         })
+    //
+    //         it("addAdapter reverts when adapter is already set for the chain", async function () {
+    //             await expect(txStorage.connect(owner).addAdapter(chain, adapter))
+    //                 .to.revertedWithCustomError(txStorage, "AdapterAlreadyExists")
+    //                 .withArgs(chain);
+    //         })
+    //
+    //         it("addAdapter reverts when called by not an owner", async function () {
+    //             const anotherChain = randomBI(5);
+    //             await txStorage.connect(owner).addChainId(anotherChain);
+    //
+    //             const anotherAdapter = ethers.Wallet.createRandom().address;
+    //             await expect(txStorage.connect(signer1).addAdapter(anotherChain, anotherAdapter))
+    //                 .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
+    //                 .withArgs(signer1.address);
+    //         })
+    //
+    //         it("replaceAdapter only owner can", async function () {
+    //             newAdapter = ethers.Wallet.createRandom().address;
+    //             await expect(txStorage.connect(owner).replaceAdapter(chain, newAdapter))
+    //                 .to.emit(txStorage, "AdapterReplaced")
+    //                 .withArgs(chain, adapter, newAdapter);
+    //
+    //             expect(await txStorage.adapters(chain)).to.be.eq(newAdapter);
+    //         })
+    //
+    //         it("replaceAdapter reverts when adapter is not set", async function () {
+    //             const chainId = randomBI(6);
+    //             await expect(txStorage.connect(owner).replaceAdapter(chainId, adapter))
+    //                 .to.revertedWithCustomError(txStorage, "NoAdapterForThisChainId")
+    //                 .withArgs(chainId);
+    //         })
+    //
+    //         it("replaceAdapter reverts when called by not an owner", async function () {
+    //             await expect(txStorage.connect(signer1).replaceAdapter(chain, newAdapter))
+    //                 .to.be.revertedWithCustomError(txStorage, "OwnableUnauthorizedAccount")
+    //                 .withArgs(signer1.address);
+    //         })
+    //
+    //         it("getTransactionData when there is not such", async function () {
+    //             const res = await txStorage.getTransactionData(chain);
+    //             console.log(res);
+    //         })
+    //     })
+    //
+    //     describe("handleL2Info", function () {
+    //         it("handleL2Info reverts when called by not an adapter", async function () {
+    //             const block = await ethers.provider.getBlock("latest");
+    //             const chainId = ARB_ID;
+    //             const timestamp = block.timestamp;
+    //             const balance = e18;
+    //             const totalSupply = e18;
+    //
+    //             await expect(txStorage.connect(owner).handleL2Info(chainId, timestamp, balance, totalSupply))
+    //                 .to.be.revertedWithCustomError(txStorage, "MsgNotFromAdapter")
+    //                 .withArgs(owner.address);
+    //         })
+    //     })
+    // })
 
     describe("Crosschain adapter Arbitrum", function () {
         describe("Getters and setters", function () {
@@ -1080,10 +931,13 @@ describe("Omnivault integration tests", function () {
                 it(arg.name, async function () {
                     const amount = await arg.amount();
 
-                    const tx = arbBridgeMock.connect(signer1).receiveL2Eth({value: amount});
-                    await expect(tx)
-                        .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
-                        .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount);
+                    const fees = await adapterArb.quoteSendEth(ETH_ID);
+                    const tx = await adapterArb.sendEthCrossChain(ETH_ID, {value: fees});
+
+                    // const tx = arbBridgeMock.connect(signer1).receiveL2Eth({value: amount});
+                    // await expect(tx)
+                    //     .and.emit(arbAdapter, "L2EthDeposit").withArgs(amount)
+                    //     .and.emit(rebalancer, "ETHReceived").withArgs(arbAdapter.address, arg.amount);
                     await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
                     await expect(tx).to.changeEtherBalance(signer1.address, -amount);
                 })
@@ -1167,7 +1021,7 @@ describe("Omnivault integration tests", function () {
         describe("sendEthToL2", function () {
             before(async function () {
                 await snapshot.restore();
-                await arbAdapter.setRebalancer(signer1.address);
+                // await arbAdapter.setRebalancer(signer1.address);
             })
 
             it("Reverts when called by not a rebalancer", async function () {
@@ -1595,6 +1449,13 @@ function encodeOptimismFees(maxGas) {
         ["uint256"],
         [maxGas]
     )];
+}
+
+function encodePayload(timestamp, ethAmount, totalSupply) {
+    const abiCoder = new AbiCoder();
+    return abiCoder.encode(
+        ["uint256", "uint256", "uint256"],
+        [timestamp, ethAmount, totalSupply]);
 }
 
 /**
