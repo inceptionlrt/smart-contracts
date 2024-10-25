@@ -1,14 +1,11 @@
-// scripts/sendDataL1.js
 import { ethers } from "hardhat";
 import fs from "fs";
 import path from "path";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
 
-// Define options for LayerZero cross-chain transaction
 const options = Options.newOptions().addExecutorLzReceiveOption(800000, 0).toHex().toString();
 
 async function main() {
-    // Define the path to the deployment checkpoint file and load it
     const checkpointPath = path.join(__dirname, '../../../../deployment_checkpoint_optimism-sepolia.json');
     if (!fs.existsSync(checkpointPath)) {
         console.error("Checkpoint file deployment_checkpoint_optimism-sepolia.json not found!");
@@ -33,19 +30,17 @@ async function main() {
     const LZCrossChainAdapterL2 = new ethers.Contract(lzCrossChainAdapterL2Address, abi, signer);
     console.log("Attached to LZCrossChainAdapterL2 at address:", lzCrossChainAdapterL2Address);
 
-    // Encode data payload with timestamp, balance, and totalSupply
     const timestamp = Math.floor(Date.now() / 1000) - 1000; // current timestamp in seconds
-    const balance = ethers.parseEther("1.5");        // example balance
-    const totalSupply = ethers.parseEther("1000");   // example total supply
+    const balance = ethers.parseEther("1.5");
+    const totalSupply = ethers.parseEther("1000");
 
     const payload = ethers.AbiCoder.defaultAbiCoder().encode(
         ["uint256", "uint256", "uint256"],
         [timestamp, balance, totalSupply]
     );
 
-    // Call sendDataL1 with the encoded payload and options
     const tx = await LZCrossChainAdapterL2.sendDataL1(payload, options, {
-        value: ethers.parseEther("0.1") // Adjust ETH amount if needed for cross-chain fees
+        value: ethers.parseEther("0.1")
     });
 
     console.log("Sending data across chain...");
