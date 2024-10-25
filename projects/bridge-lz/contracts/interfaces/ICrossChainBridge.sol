@@ -3,7 +3,7 @@ pragma solidity 0.8.27;
 
 interface ICrossChainBridge {
     
-    event VaultChanged(address prevVault, address newVault);
+    event TargetReceiverChanged(address prevTargetReceiver, address newTargetReceiver);
     event RecoverFundsInitiated(uint256 amount);
     event ReceiveTriggered(address caller, uint256 amount);
     event CrossChainEthDeposit(uint256 chainId, uint256 amount);
@@ -11,13 +11,13 @@ interface ICrossChainBridge {
     event CrossChainMessageReceived(uint256 indexed chainId, uint256 value, bytes data);
     event CrossChainMessageSent(uint256 indexed chainId, uint256 value, bytes data, uint256 fee);
 
-    error VaultNotSet();
-    error TransferToVaultFailed();
+    error TargetReceiverNotSet();
+    error TransferToTargetReceiverFailed();
     error SettingZeroAddress();
-    error NotVault(address caller);
+    error NotTargetReceiver(address caller);
     error ChainIdNotFound(uint256 chainId);
 
-    function setVault(address _newVault) external;
+    function setTargetReceiver(address _newTargetReceiver) external;
 
     function recoverFunds() external;
 
