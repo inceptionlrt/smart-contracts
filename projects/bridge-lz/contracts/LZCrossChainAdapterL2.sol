@@ -44,7 +44,7 @@ contract LZCrossChainAdapterL2 is
     }
 
     function sendDataL1(bytes calldata _payload, bytes memory _options) external payable override {
-        _sendCrosschain(l1ChainId, _payload, _options);
+        _sendCrosschain(l1ChainId, _payload, _options, 0);
     }
 
     function _lzReceive(

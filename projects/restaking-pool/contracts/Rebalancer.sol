@@ -219,11 +219,13 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     }
 
     function quoteSendEthToL2(
-        uint256 _chainId
+        uint256 _chainId,
+        bytes memory _options
     ) external view returns (uint256) {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
-        return ICrossChainBridge(defaultAdapter).quoteSendEth(_chainId);
+        return
+            ICrossChainBridge(defaultAdapter).quoteSendEth(_chainId, _options);
     }
 
     //------------------------ TX STORAGE FUNCTIONS ------------------------//

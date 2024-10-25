@@ -19,8 +19,8 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
 
     modifier onlyOwnerRestricted() virtual;
 
-    function sendEthCrossChain(uint256 _chainId) external payable onlyOwnerRestricted override {
-        _sendCrosschain(_chainId, new bytes(0), new bytes(0));
+    function sendEthCrossChain(uint256 _chainId, uint256 _sendValue) external payable override onlyOwnerRestricted {
+        _sendCrosschain(_chainId, new bytes(0), new bytes(0), _sendValue);
     }
 
     function _quote(uint256 _chainId, bytes calldata _payload, bytes memory _options) internal view returns (uint256) {
@@ -30,13 +30,12 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return fee.nativeFee;
     }
 
-    function quoteSendEth(uint256 _chainId) external view override returns (uint256) {
+    function quoteSendEth(uint256 _chainId, bytes memory _options) external view override returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
 
         bytes memory emptyPayload = "";
-        bytes memory emptyOptions = "";
-        MessagingFee memory fee = _quote(dstEid, emptyPayload, emptyOptions, false);
+        MessagingFee memory fee = _quote(dstEid, emptyPayload, _options, false);
         return fee.nativeFee;
     }
 
@@ -58,13 +57,18 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         _setPeer(_eid, _peer);
     }
 
-    function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
+    function _sendCrosschain(
+        uint256 _chainId,
+        bytes memory _payload,
+        bytes memory _options,
+        uint256 _sendValue
+    ) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
             _payload,
             _options,
-            MessagingFee(msg.value, 0),
+            MessagingFee(msg.value + _sendValue, 0),
             payable(msg.sender)
         );
         uint256 fee = receipt.fee.nativeFee;

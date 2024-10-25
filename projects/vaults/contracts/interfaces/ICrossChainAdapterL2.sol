@@ -38,7 +38,10 @@ interface ICrossChainAdapterL2 is ICrossChainAdapter {
         uint256 _totalSupply
     ) external view returns (uint256);
 
-    function quoteSendEth() external view returns (uint256);
+    function quoteSendEth(
+        uint256 _chainId,
+        bytes memory _options
+    ) external view returns (uint256);
 
     function recoverFunds() external;
 
