@@ -4,6 +4,8 @@ pragma solidity 0.8.27;
 import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
 import { AbstractCrossChainAdapterL2 } from "./abstract/AbstractCrossChainAdapterL2.sol";
 
+import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+
 contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL2 {
     uint32 private l1ChainId;
 
@@ -30,5 +32,19 @@ contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChai
 
     function sendDataL1(bytes calldata _payload, bytes memory _options) external override {
         _sendCrosschain(l1ChainId, _payload, _options);
+    }
+
+    function _lzReceive(
+        Origin calldata origin,
+        bytes32 /*_guid*/,
+        bytes calldata,
+        address /*_executor*/,
+        bytes calldata /*_extraData*/
+    ) internal virtual override {
+        uint256 chainId = getChainIdFromEid(origin.srcEid);
+
+        if (msg.value > 0) {
+            _handleCrossChainEth(chainId);
+        }
     }
 }

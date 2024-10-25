@@ -30,7 +30,7 @@ contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter, AbstractCrossChai
         bytes calldata payload,
         address /*_executor*/,
         bytes calldata /*_extraData*/
-    ) internal virtual override(AbstractLZCrossChainAdapter, OAppReceiverUpgradeable) {
+    ) internal virtual override(OAppReceiverUpgradeable) {
         uint256 chainId = getChainIdFromEid(origin.srcEid);
 
         if (msg.value > 0) {

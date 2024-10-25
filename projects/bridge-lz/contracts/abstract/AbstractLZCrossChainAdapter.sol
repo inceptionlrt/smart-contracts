@@ -7,28 +7,16 @@ import { Origin, MessagingReceipt, MessagingFee } from "@layerzerolabs/oapp-evm/
 
 import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter.sol";
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
+import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
-abstract contract AbstractLZCrossChainAdapter is AbstractCrossChainAdapter {
+abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
 
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
 
-    function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
-        uint32 dstEid = getEidFromChainId(_chainId);
-        MessagingReceipt memory receipt = _lzSend(
-            dstEid,
-            _payload,
-            _options,
-            MessagingFee(msg.value, 0),
-            payable(msg.sender)
-        );
-        uint256 fee = receipt.fee.nativeFee;
-        emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
-    }
-
-    function sendEthCrossChain(uint256 _chainId) external payable override onlyVault {
+    function sendEthCrossChain(uint256 _chainId) external payable override {
         _sendCrosschain(_chainId, new bytes(0), new bytes(0));
     }
 
@@ -49,7 +37,7 @@ abstract contract AbstractLZCrossChainAdapter is AbstractCrossChainAdapter {
         return fee.nativeFee;
     }
 
-    function setChainIdFromEid(uint32 _eid, uint256 _chainId) public onlyOwner {
+    function setChainIdFromEid(uint32 _eid, uint256 _chainId) public {
         eidToChainId[_eid] = _chainId;
         chainIdToEid[_chainId] = _eid;
         emit ChainIdAdded(_chainId);
@@ -63,17 +51,16 @@ abstract contract AbstractLZCrossChainAdapter is AbstractCrossChainAdapter {
         return chainIdToEid[_chainId];
     }
 
-    function _lzReceive(
-        Origin calldata origin,
-        bytes32 /*_guid*/,
-        bytes calldata,
-        address /*_executor*/,
-        bytes calldata /*_extraData*/
-    ) internal virtual override {
-        uint256 chainId = getChainIdFromEid(origin.srcEid);
-
-        if (msg.value > 0) {
-            _handleCrossChainEth(chainId);
-        }
+    function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
+        uint32 dstEid = getEidFromChainId(_chainId);
+        MessagingReceipt memory receipt = _lzSend(
+            dstEid,
+            _payload,
+            _options,
+            MessagingFee(msg.value, 0),
+            payable(msg.sender)
+        );
+        uint256 fee = receipt.fee.nativeFee;
+        emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
     }
 }
