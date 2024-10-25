@@ -3,10 +3,23 @@ pragma solidity 0.8.27;
 
 import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
 import { AbstractCrossChainAdapterL2 } from "./abstract/AbstractCrossChainAdapterL2.sol";
+import { AbstractCrossChainAdapter } from "./abstract/AbstractCrossChainAdapter.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
-contract LZCrossChainAdapterL2 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL2 {
+contract LZCrossChainAdapterL2 is
+    AbstractLZCrossChainAdapter,
+    AbstractCrossChainAdapterL2,
+    Initializable,
+    OwnableUpgradeable
+{
+    modifier onlyOwnerRestricted() override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
+        _checkOwner();
+        _;
+    }
+
     uint32 private l1ChainId;
 
     function initialize(

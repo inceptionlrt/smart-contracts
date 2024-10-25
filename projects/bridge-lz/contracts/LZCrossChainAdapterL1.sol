@@ -2,12 +2,25 @@
 pragma solidity 0.8.27;
 
 import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import { AbstractCrossChainAdapter } from "./abstract/AbstractCrossChainAdapter.sol";
 import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
 import { AbstractCrossChainAdapterL1 } from "./abstract/AbstractCrossChainAdapterL1.sol";
 import { OAppReceiverUpgradeable } from "./OAppReceiverUpgradeable.sol";
 
-contract LZCrossChainAdapterL1 is AbstractLZCrossChainAdapter, AbstractCrossChainAdapterL1 {
+contract LZCrossChainAdapterL1 is
+    AbstractLZCrossChainAdapter,
+    AbstractCrossChainAdapterL1,
+    Initializable,
+    OwnableUpgradeable
+{
+    modifier onlyOwnerRestricted() override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
+        _checkOwner();
+        _;
+    }
+
     function initialize(
         address _endpoint,
         address _delegate,

@@ -4,6 +4,7 @@ pragma solidity 0.8.27;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Origin, MessagingReceipt, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter.sol";
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
@@ -16,7 +17,9 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
 
-    function sendEthCrossChain(uint256 _chainId) external payable override {
+    modifier onlyOwnerRestricted() virtual;
+
+    function sendEthCrossChain(uint256 _chainId) external payable onlyOwnerRestricted override {
         _sendCrosschain(_chainId, new bytes(0), new bytes(0));
     }
 
@@ -37,7 +40,7 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return fee.nativeFee;
     }
 
-    function setChainIdFromEid(uint32 _eid, uint256 _chainId) public {
+    function setChainIdFromEid(uint32 _eid, uint256 _chainId) public onlyOwnerRestricted {
         eidToChainId[_eid] = _chainId;
         chainIdToEid[_chainId] = _eid;
         emit ChainIdAdded(_chainId);
@@ -51,7 +54,7 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return chainIdToEid[_chainId];
     }
 
-    function setPeer(uint32 _eid, bytes32 _peer) public override {
+    function setPeer(uint32 _eid, bytes32 _peer) public override onlyOwnerRestricted {
         _setPeer(_eid, _peer);
     }
 
