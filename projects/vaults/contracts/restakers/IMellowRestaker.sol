@@ -48,6 +48,9 @@ contract IMellowRestaker is
 
     uint256 public requestDeadline;
 
+    uint256 public depositSlippage;  // BasisPoints 10,000 = 100%
+    uint256 public withdrawSlippage;
+
     modifier onlyTrustee() {
         if(msg.sender != _vault && msg.sender != _trusteeManager) 
             revert NotVaultOrTrusteeManager();
@@ -82,11 +85,12 @@ contract IMellowRestaker is
         _trusteeManager = trusteeManager;
 
         requestDeadline = 15 days;
+        depositSlippage = 1500;  // 15%
+        withdrawSlippage = 10;
     }
 
     function delegateMellow(
         uint256 amount,
-        uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
     ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
@@ -96,12 +100,13 @@ contract IMellowRestaker is
         _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
+        uint256 minAmount = amount * (10000 - depositSlippage) / 10000;
         return
             wrapper.deposit(
                 address(this),
                 address(_asset),
                 amount,
-                minLpAmount,
+                minAmount,
                 deadline
             );
     }
@@ -130,11 +135,12 @@ contract IMellowRestaker is
                             address(wrapper),
                             bal
                         );
+                        uint256 minAmount = bal * (10000 - depositSlippage) / 10000;
                         lpAmount += wrapper.deposit(
                             address(this),
                             address(_asset),
                             bal,
-                            0,
+                            minAmount,
                             deadline
                         );
                         amount += bal;
@@ -153,7 +159,7 @@ contract IMellowRestaker is
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = amountToLpAmount(amount, mellowVault);
         uint256[] memory minAmounts = new uint256[](1);
-        minAmounts[0] = amount - 5; // dust
+        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
 
         if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
 
@@ -186,7 +192,7 @@ contract IMellowRestaker is
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256[] memory minAmounts = new uint256[](2);
-        minAmounts[0] = amount - 5; // dust
+        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
 
         if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
 
@@ -372,6 +378,13 @@ contract IMellowRestaker is
         uint256 newDealine = _days * 1 days;
         emit RequestDealineSet(requestDeadline, newDealine);
         requestDeadline = newDealine;
+    }
+
+    function slippages(uint256 _depositSlippage, uint256 _withdrawSlippage) external onlyOwner {
+        if (_depositSlippage > 3000 || _withdrawSlippage > 3000) revert TooMuchSlippage();
+        depositSlippage = _depositSlippage;
+        withdrawSlippage = _withdrawSlippage;
+        emit NewSlippages(_depositSlippage, _withdrawSlippage);
     }
 
     function pause() external onlyOwner {

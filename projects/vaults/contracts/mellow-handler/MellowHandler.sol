@@ -63,7 +63,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         address mellowVault
     ) internal {
         _asset.approve(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, 0, block.timestamp, mellowVault);
+        mellowRestaker.delegateMellow(amount, block.timestamp, mellowVault);
     }
 
     /*/////////////////////////////////
@@ -151,6 +151,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
             getTotalDelegated() +
             totalAssets() +
             getPendingWithdrawalAmountFromMellow() -
+            redeemReservedAmount -
             depositBonusAmount;
     }
 

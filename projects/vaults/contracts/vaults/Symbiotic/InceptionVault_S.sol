@@ -55,7 +55,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         IInceptionToken _inceptionToken,
         IIMellowRestaker _mellowRestaker
     ) internal {
-        __Ownable_init();
+        __Ownable2Step_init();
         __MellowHandler_init(assetAddress, _mellowRestaker);
 
         name = vaultName;
