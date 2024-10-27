@@ -185,6 +185,9 @@ describe("Rebalancer", function () {
 
             await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
 
+            // Check balance after burning
+            expect(await cToken.balanceOf(await xerc20Lockbox.getAddress())).to.equal(sameValue + sameValue);
+
         });
     });
 });
