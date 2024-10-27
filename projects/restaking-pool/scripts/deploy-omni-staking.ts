@@ -1,11 +1,11 @@
 import { ethers, upgrades, run } from "hardhat";
 import axios from "axios";
 import * as fs from 'fs';
+import path from "path";
 require("dotenv").config();
 
-const CHECKPOINT_FILE = "deployment_checkpoint.json";
+const checkpointPath = path.join(__dirname, '../../../deployment_checkpoint_sepolia.json');
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
-
 const verifiedContracts = new Set<string>();
 
 // Utility function to introduce delay
@@ -14,14 +14,20 @@ function delay(ms: number) {
 }
 
 async function main() {
+    if (!fs.existsSync(checkpointPath)) {
+        console.error("Deployment checkpoint file not found!");
+        process.exit(1);
+    }
+    const checkpoint = loadCheckpoint();
+    if (!checkpoint.LZCrossChainAdapterL1) {
+        console.error("LZCrossChainAdapterL1 address not found in the deployment checkpoint file!");
+        process.exit(1);
+    }
+
     const [deployer] = await ethers.getSigners();
     console.log(`Deployer Address: ${deployer.address}`);
     const operatorAddress = process.env.OPERATOR_ADDRESS;
 
-    // Load checkpoint data (if it exists)
-    let checkpoint: any = loadCheckpoint();
-
-    // Supported chains for verification
     const supportedChains = [1, 4, 5, 42, 56, 137, 17000, 11155111];
     const networkData = await ethers.provider.getNetwork();
     const chainId = Number(networkData.chainId);
@@ -68,12 +74,11 @@ async function main() {
         console.log("cToken deployed at:", checkpoint.cToken);
     }
 
-    // Verifications for contracts deployed in Transaction 1
     await verifyUpgradeableContract(checkpoint.ProtocolConfig, []);
     await verifyUpgradeableContract(checkpoint.RatioFeed, [checkpoint.ProtocolConfig, 1000000]);
     await verifyUpgradeableContract(checkpoint.cToken, [checkpoint.ProtocolConfig, "inETH", "inETH"]);
 
-    // ------------ Transaction 2: InceptionLibrary, RestakingPool, TransactionStorage ------------
+    // ------------ Transaction 2: InceptionLibrary, RestakingPool ------------
     if (!checkpoint.InceptionLibrary) {
         console.log("Deploying InceptionLibrary...");
         const InceptionLibrary = await ethers.getContractFactory("InceptionLibrary");
@@ -103,23 +108,16 @@ async function main() {
         checkpoint.RestakingPool = await restakingPool.getAddress();
         saveCheckpoint(checkpoint);
         console.log("RestakingPool deployed at:", checkpoint.RestakingPool);
+        // Set target capacity and stake bonus parameters
+        await restakingPool.setTargetFlashCapacity(1000000n);
+        await restakingPool.setStakeBonusParams(10n, 5n, 50n);
+        await restakingPool.setFlashUnstakeFeeParams(5n, 3n, 50n);
+        const newMaxTVL = ethers.parseEther("101");
+        await restakingPool.setMaxTVL(newMaxTVL);
+
         await verifyNonUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
     }
 
-    let transactionStorage;
-
-    if (!checkpoint.TransactionStorage) {
-        console.log("Deploying TransactionStorage...");
-        const TransactionStorage = await ethers.getContractFactory("TransactionStorage");
-        transactionStorage = await TransactionStorage.deploy(deployer.address);
-        await transactionStorage.waitForDeployment();
-        checkpoint.TransactionStorage = await transactionStorage.getAddress();
-        saveCheckpoint(checkpoint);
-        console.log("TransactionStorage deployed at:", checkpoint.TransactionStorage);
-    }
-
-    // Verifications for contracts deployed in Transaction 2
-    await verifyNonUpgradeableContract(checkpoint.TransactionStorage, [deployer.address]);
     await verifyNonUpgradeableContract(checkpoint.InceptionLibrary, []);
 
     // ------------ Transaction 3: XERC20Lockbox, Rebalancer ------------
@@ -128,7 +126,7 @@ async function main() {
         const XERC20Lockbox = await ethers.getContractFactory("XERC20Lockbox");
         const xerc20Lockbox = await XERC20Lockbox.deploy(
             checkpoint.cToken,
-            deployer.address,
+            checkpoint.cToken,
             true
         );
         await xerc20Lockbox.waitForDeployment();
@@ -137,7 +135,7 @@ async function main() {
         console.log("XERC20Lockbox deployed at:", checkpoint.XERC20Lockbox);
     }
 
-    await verifyNonUpgradeableContract(checkpoint.XERC20Lockbox, [checkpoint.cToken, deployer.address, true]);
+    await verifyNonUpgradeableContract(checkpoint.XERC20Lockbox, [checkpoint.cToken, checkpoint.cToken, true]);
 
     if (!checkpoint.Rebalancer) {
         console.log("Deploying Rebalancer...");
@@ -148,7 +146,7 @@ async function main() {
                 checkpoint.cToken,
                 checkpoint.XERC20Lockbox,
                 checkpoint.RestakingPool,
-                checkpoint.TransactionStorage,
+                checkpoint.LZCrossChainAdapterL1,
                 checkpoint.RatioFeed,
                 operatorAddress
             ],
@@ -156,89 +154,58 @@ async function main() {
         );
         await rebalancer.waitForDeployment();
         checkpoint.Rebalancer = await rebalancer.getAddress();
+        await rebalancer.addChainId(40231n);
         saveCheckpoint(checkpoint);
         console.log("Rebalancer (proxy) deployed at:", checkpoint.Rebalancer);
     }
+
+    // Set target receiver in LZCrossChainAdapterL1 to Rebalancer address
+    const lzCrossChainAdapterL1 = await ethers.getContractAt("ILZCrossChainAdapterL1", checkpoint.LZCrossChainAdapterL1);
+    console.log("Setting target receiver on LZCrossChainAdapterL1...");
+    const setTargetReceiverTx = await lzCrossChainAdapterL1.setTargetReceiver(checkpoint.Rebalancer);
+    await setTargetReceiverTx.wait();
+    console.log("Target receiver set to Rebalancer on LZCrossChainAdapterL1.");
+
+    // Update ratio in RatioFeed to a non-1:1 ratio
+    console.log("Updating ratio for cToken in RatioFeed...");
+    const ratioFeedContract = await ethers.getContractAt("RatioFeed", checkpoint.RatioFeed);
+    const newRatio = ethers.parseEther("0.8");
+    const updateRatioTx = await ratioFeedContract.updateRatio(checkpoint.cToken, newRatio);
+    await updateRatioTx.wait();
+    console.log(`Ratio updated for ${checkpoint.cToken} to ${newRatio.toString()} in RatioFeed.`);
+
+    // Call ProtocolConfig setters
+    console.log("Setting up ProtocolConfig addresses...");
+    const protocolConfig = await ethers.getContractAt("ProtocolConfig", checkpoint.ProtocolConfig);
+    await protocolConfig.setRatioFeed(checkpoint.RatioFeed);
+    await protocolConfig.setRestakingPool(checkpoint.RestakingPool);
+    await protocolConfig.setRebalancer(checkpoint.Rebalancer);
+    await protocolConfig.setCToken(checkpoint.cToken);
+    console.log("ProtocolConfig addresses set successfully.");
 
     // Add a delay before verifying the Rebalancer
     await delay(30000);
 
     // Verifications for contracts deployed in Transaction 3
-    await verifyUpgradeableContract(checkpoint.Rebalancer, [checkpoint.cToken, checkpoint.XERC20Lockbox, checkpoint.RestakingPool, checkpoint.TransactionStorage, checkpoint.RatioFeed, operatorAddress]);
-
-    // ------------ Transaction 4: CrossChainAdapterArbitrumL1, CrossChainAdapterOptimismL1 ------------
-    if (!checkpoint.CrossChainAdapterArbitrumL1) {
-        console.log("Deploying CrossChainAdapterArbitrumL1...");
-        const CrossChainAdapterArbitrumL1 = await ethers.getContractFactory("CrossChainAdapterArbitrumL1");
-        const arbitrumAdapter = await upgrades.deployProxy(
-            CrossChainAdapterArbitrumL1,
-            [checkpoint.TransactionStorage, `${process.env.ARB_INBOX_SEPOLIA}`, operatorAddress],
-            { initializer: "initialize" }
-        );
-        await arbitrumAdapter.waitForDeployment();
-        checkpoint.CrossChainAdapterArbitrumL1 = await arbitrumAdapter.getAddress();
-        saveCheckpoint(checkpoint);
-        console.log("CrossChainAdapterArbitrumL1 deployed at:", checkpoint.CrossChainAdapterArbitrumL1);
-
-        // Add Rebalancer to CrossChainAdapterArbitrumL1
-        await arbitrumAdapter.setRebalancer(checkpoint.Rebalancer);
-
-        // Add the Arbitrum adapter to TransactionStorage
-        console.log("Adding Arbitrum Adapter to TransactionStorage...");
-        const addArbitrumChainTx = await transactionStorage.addChainId(42161);  // Arbitrum Chain ID = 42161
-        await addArbitrumChainTx.wait();
-        const addArbitrumAdapterTx = await transactionStorage.addAdapter(42161, checkpoint.CrossChainAdapterArbitrumL1);
-        await addArbitrumAdapterTx.wait();
-        console.log("Arbitrum adapter added to TransactionStorage.");
-    }
-
-    if (!checkpoint.CrossChainAdapterOptimismL1) {
-        console.log("Deploying CrossChainAdapterOptimismL1...");
-        const CrossChainAdapterOptimismL1 = await ethers.getContractFactory("CrossChainAdapterOptimismL1");
-        const optimismAdapter = await upgrades.deployProxy(
-            CrossChainAdapterOptimismL1,
-            [`${process.env.OPT_X_DOMAIN_MESSENGER_L1_SEPOLIA}`, `${process.env.OPT_L1_BRIDGE_SEPOLIA}`, checkpoint.TransactionStorage, operatorAddress],
-            { initializer: "initialize" }
-        );
-        await optimismAdapter.waitForDeployment();
-        checkpoint.CrossChainAdapterOptimismL1 = await optimismAdapter.getAddress();
-        saveCheckpoint(checkpoint);
-        console.log("CrossChainAdapterOptimismL1 deployed at:", checkpoint.CrossChainAdapterOptimismL1);
-
-        // Add Rebalancer to CrossChainAdapterOptimismL1
-        await optimismAdapter.setRebalancer(checkpoint.Rebalancer);
-
-        // Add the Optimism adapter to TransactionStorage
-        console.log("Adding Optimism Adapter to TransactionStorage...");
-        const addOptimismChainTx = await transactionStorage.addChainId(10n);
-        await addOptimismChainTx.wait();
-        const addOptimismAdapterTx = await transactionStorage.addAdapter(10n, checkpoint.CrossChainAdapterOptimismL1);
-        await addOptimismAdapterTx.wait();
-        console.log("Optimism adapter added to TransactionStorage.");
-    }
-
-    // Verifications for contracts deployed in Transaction 4
-    await verifyUpgradeableContract(checkpoint.CrossChainAdapterArbitrumL1, [checkpoint.TransactionStorage, `${process.env.ARB_INBOX_SEPOLIA}`, operatorAddress]);
-    await verifyUpgradeableContract(checkpoint.CrossChainAdapterOptimismL1, [`${process.env.OPT_X_DOMAIN_MESSENGER_L1_SEPOLIA}`, `${process.env.OPT_L1_BRIDGE_SEPOLIA}`, checkpoint.TransactionStorage, operatorAddress]);
+    await verifyUpgradeableContract(checkpoint.Rebalancer, [checkpoint.cToken, checkpoint.XERC20Lockbox, checkpoint.RestakingPool, checkpoint.LZCrossChainAdapterL1, checkpoint.RatioFeed, operatorAddress]);
 
     console.log("Deployment completed successfully! 🥳");
     console.log("Checkpoint saved:", checkpoint);
 }
 
 function saveCheckpoint(checkpoint: any) {
-    fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(checkpoint, null, 2));
+    fs.writeFileSync(checkpointPath, JSON.stringify(checkpoint, null, 2));
 }
 
 // Load deployment checkpoint
 function loadCheckpoint(): any {
-    if (fs.existsSync(CHECKPOINT_FILE)) {
-        return JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf8'));
+    if (fs.existsSync(checkpointPath)) {
+        return JSON.parse(fs.readFileSync(checkpointPath, 'utf8'));
     }
     return {};
 }
 
 async function isContractVerified(contractAddress: string): Promise<boolean> {
-    // Check the cached verified contracts first
     if (verifiedContracts.has(contractAddress)) {
         console.log(`Contract ${contractAddress} is already in the verified cache.`);
         return true;
@@ -250,56 +217,51 @@ async function isContractVerified(contractAddress: string): Promise<boolean> {
         const response = await axios.get(apiUrl);
         const data = response.data;
 
-        // Check if the response is successful and has the expected structure
         if (data.status === "1" && Array.isArray(data.result) && data.result.length > 0) {
             const isVerified = data.result[0].ABI !== "Contract source code not verified";
             if (isVerified) {
-                verifiedContracts.add(contractAddress); // Add to the cache if verified
+                verifiedContracts.add(contractAddress);
             }
             return isVerified;
         }
         console.error(`Verification status for ${contractAddress} not found or invalid response:`, data);
-        return false; // Assume not verified on invalid response
+        return false;
     } catch (error) {
         console.error(`Error checking verification status for ${contractAddress}:`, error);
-        return false; // Assume not verified on error
+        return false;
     }
 }
 
 async function verifyUpgradeableContract(proxyAddress: string, constructorArguments: any[]) {
     const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
-    // Check if implementation is already verified
     const isVerifiedImplementation = await isContractVerified(implementationAddress);
     if (isVerifiedImplementation) {
         console.log(`Implementation contract at ${implementationAddress} is already verified.`);
         return;
     }
 
-    // Verify the implementation contract
     try {
         console.log(`Verifying implementation contract at: ${implementationAddress}`);
         await run("verify:verify", {
             address: implementationAddress,
-            constructorArguments: [] // Assuming no constructor arguments for implementation
+            constructorArguments: []
         });
     } catch (error) {
         console.error(`Failed to verify implementation contract at ${implementationAddress}:`, error);
     }
 
-    // Check if proxy is already verified
     const isVerifiedProxy = await isContractVerified(proxyAddress);
     if (isVerifiedProxy) {
         console.log(`Proxy contract at ${proxyAddress} is already verified.`);
         return;
     }
 
-    // Verify the proxy contract
     try {
         console.log(`Verifying proxy contract at: ${proxyAddress}`);
         await run("verify:verify", {
             address: proxyAddress,
-            constructorArguments: constructorArguments // Pass constructor arguments for the proxy contract
+            constructorArguments: constructorArguments
         });
     } catch (error) {
         console.error(`Failed to verify proxy contract at ${proxyAddress}:`, error);
@@ -309,7 +271,6 @@ async function verifyUpgradeableContract(proxyAddress: string, constructorArgume
 }
 
 async function verifyNonUpgradeableContract(contractAddress: string, constructorArguments: any[]) {
-    // Check if contract is already verified
     const isVerified = await isContractVerified(contractAddress);
     if (isVerified) {
         console.log(`Non-upgradeable contract at ${contractAddress} is already verified.`);
