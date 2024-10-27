@@ -154,7 +154,7 @@ async function main() {
         );
         await rebalancer.waitForDeployment();
         checkpoint.Rebalancer = await rebalancer.getAddress();
-        await rebalancer.addChainId(40231n);
+        await rebalancer.addChainId(421614n); //Arbitrum Sepolia Chain
         saveCheckpoint(checkpoint);
         console.log("Rebalancer (proxy) deployed at:", checkpoint.Rebalancer);
     }

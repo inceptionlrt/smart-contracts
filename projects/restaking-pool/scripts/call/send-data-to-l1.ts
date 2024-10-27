@@ -6,9 +6,9 @@ import { Options } from "@layerzerolabs/lz-v2-utilities";
 const options = Options.newOptions().addExecutorLzReceiveOption(800000, 0).toHex().toString();
 
 async function main() {
-    const checkpointPath = path.join(__dirname, '../../../../deployment_checkpoint_optimism-sepolia.json');
+    const checkpointPath = path.join(__dirname, '../../../../deployment_checkpoint_arbitrum-sepolia.json');
     if (!fs.existsSync(checkpointPath)) {
-        console.error("Checkpoint file deployment_checkpoint_optimism-sepolia.json not found!");
+        console.error("Checkpoint file deployment_checkpoint_arbitrum-sepolia.json not found!");
         process.exit(1);
     }
 
@@ -16,7 +16,7 @@ async function main() {
     const checkpointData = JSON.parse(fs.readFileSync(checkpointPath, "utf8"));
     const lzCrossChainAdapterL2Address = checkpointData.LZCrossChainAdapterL2;
     if (!lzCrossChainAdapterL2Address) {
-        console.error("LZCrossChainAdapterL2 address not found in deployment_checkpoint_optimism-sepolia.json!");
+        console.error("LZCrossChainAdapterL2 address not found in deployment_checkpoint_arbitrum-sepolia.json!");
         process.exit(1);
     }
 
