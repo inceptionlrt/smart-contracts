@@ -20,5 +20,7 @@
 >yarn hardhat run projects/restaking-pool/deploy-omni-staking.ts --network sepolia
 7. Now it's time to fire the test
 >cd projects/restaking-pool
+
 >npx hardhat run scripts/call/send-eth-to-l1.ts --network arbitrumSepolia
+
 >npx hardhat run scripts/call/send-data-to-l1.ts --network arbitrumSepolia
