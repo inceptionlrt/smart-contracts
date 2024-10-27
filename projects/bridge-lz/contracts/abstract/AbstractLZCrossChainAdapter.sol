@@ -10,6 +10,11 @@ import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
+/**
+ * @title AbstractCrossChainAdapter
+ * @author InceptionLRT
+ * @dev TODO
+ */
 abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();

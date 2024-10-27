@@ -8,6 +8,11 @@ import { OAppUpgradeable } from "../OAppUpgradeable.sol";
 
 import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
 
+/**
+ * @title AbstractCrossChainAdapter
+ * @author InceptionLRT
+ * @dev TODO
+ */
 abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     //NOTE: targetReceiver is a term encompassing both Rebalancer on L1 or InceptionOmniTargetReceiver on L2
     address public targetReceiver;

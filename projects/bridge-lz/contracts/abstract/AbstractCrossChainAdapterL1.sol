@@ -5,6 +5,11 @@ import { ICrossChainBridgeL1 } from "../interfaces/ICrossChainBridgeL1.sol";
 import { AbstractCrossChainAdapter } from "./AbstractCrossChainAdapter.sol";
 import { IRebalancer } from "../interfaces/IRebalancer.sol";
 
+/**
+ * @title AbstractCrossChainAdapter
+ * @author InceptionLRT
+ * @dev TODO
+ */
 abstract contract AbstractCrossChainAdapterL1 is AbstractCrossChainAdapter, ICrossChainBridgeL1 {
     function _handleCrossChainData(uint256 _chainId, bytes calldata _payload) internal {
         require(targetReceiver != address(0), TargetReceiverNotSet());
