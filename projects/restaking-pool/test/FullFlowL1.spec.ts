@@ -3,6 +3,10 @@ import { ethers, upgrades } from "hardhat";
 import { NativeRebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
 
 describe("NativeRebalancer", function () {
+
+    const arbitrumSepoliaChainId = 421614;
+    const optimismSepoliaChainId = 11155420;
+
     async function deployFixture() {
         const [deployer] = await ethers.getSigners();
 
@@ -81,8 +85,8 @@ describe("NativeRebalancer", function () {
         ]) as NativeRebalancer;
         await rebalancer.waitForDeployment();
 
-        await rebalancer.addChainId(40231n);
-        await rebalancer.addChainId(40232n);
+        await rebalancer.addChainId(arbitrumSepoliaChainId);
+        await rebalancer.addChainId(optimismSepoliaChainId);
 
         // Setup ProtocolConfig with addresses
         await protocolConfig.setRatioFeed(await ratioFeed.getAddress());
@@ -99,14 +103,12 @@ describe("NativeRebalancer", function () {
 
             const l2BalanceArb = 1n * 10n ** 17n;
             const l2BalanceOpt = 3n * 10n ** 17n;
-            const chainId1 = 40231;
-            const chainId2 = 40232;
 
             const pastTimestamp1 = Math.floor(Date.now() / 1000) - 2000;
             const pastTimestamp2 = Math.floor(Date.now() / 1000) - 1800;
 
-            await rebalancer.handleL2Info(chainId1, pastTimestamp1, l2BalanceArb, l2BalanceArb);
-            await rebalancer.handleL2Info(chainId2, pastTimestamp2, l2BalanceOpt, l2BalanceOpt);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestamp1, l2BalanceArb, l2BalanceArb);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestamp2, l2BalanceOpt, l2BalanceOpt);
 
             // Call updateTreasuryData, which should mint tokens to match the increase
             await expect(rebalancer.updateTreasuryData())
@@ -120,9 +122,6 @@ describe("NativeRebalancer", function () {
         it("should burn tokens when total L2 inETH is less than the last update", async function () {
             const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
-            const chainIdArb1 = 40231;
-            const chainIdOpt1 = 40232;
-
             const initValueArb = 5n * 10n ** 17n;
             const initValueOpt = 7n * 10n ** 17n;
             const nextValueArb = 3n * 10n ** 17n;
@@ -134,8 +133,8 @@ describe("NativeRebalancer", function () {
             const initialL2BalanceOpt1 = initValueOpt;
             const pastTimestampOpt1 = Math.floor(Date.now() / 1000) - 5000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
             await rebalancer.updateTreasuryData();
 
             const nextL2BalanceArb2 = nextValueArb;
@@ -144,8 +143,8 @@ describe("NativeRebalancer", function () {
             const nextL2BalanceOpt2 = nextValueOpt;
             const pastTimestampOpt2 = Math.floor(Date.now() / 1000) - 3000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
 
             // Call updateTreasuryData, which should burn tokens to match the decrease
             await expect(rebalancer.updateTreasuryData())
@@ -159,9 +158,6 @@ describe("NativeRebalancer", function () {
         it("should revert if no rebalancing is required", async function () {
             const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
-            const chainIdArb1 = 40231;
-            const chainIdOpt1 = 40232;
-
             const sameValue = 4n * 10n ** 17n;
 
             const initialL2BalanceArb1 = sameValue;
@@ -170,8 +166,8 @@ describe("NativeRebalancer", function () {
             const initialL2BalanceOpt1 = sameValue;
             const pastTimestampOpt1 = Math.floor(Date.now() / 1000) - 5000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
             await rebalancer.updateTreasuryData();
 
             const nextL2BalanceArb2 = sameValue;
@@ -180,8 +176,8 @@ describe("NativeRebalancer", function () {
             const nextL2BalanceOpt2 = sameValue;
             const pastTimestampOpt2 = Math.floor(Date.now() / 1000) - 3000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
 
             await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
 
