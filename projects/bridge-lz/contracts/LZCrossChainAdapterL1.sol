@@ -1,23 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import { Origin } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { AbstractCrossChainAdapter } from "./abstract/AbstractCrossChainAdapter.sol";
-import { AbstractLZCrossChainAdapter } from "./abstract/AbstractLZCrossChainAdapter.sol";
-import { AbstractCrossChainAdapterL1 } from "./abstract/AbstractCrossChainAdapterL1.sol";
-import { OAppReceiverUpgradeable } from "./OAppReceiverUpgradeable.sol";
+import {AbstractCrossChainAdapter} from "./abstract/AbstractCrossChainAdapter.sol";
+import {AbstractLZCrossChainAdapter} from "./abstract/AbstractLZCrossChainAdapter.sol";
+import {AbstractCrossChainAdapterL1} from "./abstract/AbstractCrossChainAdapterL1.sol";
+import {OAppReceiverUpgradeable} from "./OAppReceiverUpgradeable.sol";
 
+/**
+ * @title LZCrossChainAdapterL1
+ * @author InceptionLRT
+ * @dev TODO
+ */
 contract LZCrossChainAdapterL1 is
     AbstractLZCrossChainAdapter,
     AbstractCrossChainAdapterL1,
     Initializable,
     OwnableUpgradeable
 {
-    modifier onlyOwnerRestricted() override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
+    modifier onlyOwnerRestricted()
+        override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
         _checkOwner();
+        _;
+    }
+
+    modifier onlyTargetReceiverRestricted() override {
+        require(
+            msg.sender == targetReceiver || msg.sender == owner(),
+            NotTargetReceiver(msg.sender)
+        );
         _;
     }
 

@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../assets-handler/InceptionERC20OmniAssetHandler.sol";
+import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20OmniAssetsHandler.sol";
 
-import "../interfaces/IOwnable.sol";
-import "../interfaces/IInceptionOmniVault.sol";
-import "../interfaces/IInceptionToken.sol";
-import "../interfaces/IRebalanceStrategy.sol";
-import "../interfaces/IInceptionRatioFeed.sol";
-import "../interfaces/ICrossChainAdapterL2.sol";
+import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
+import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
+import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
+import {ICrossChainAdapterL2} from "../interfaces/ICrossChainAdapterL2.sol";
+
+import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionERC20OmniVault contract
-contract InceptionERC20OmniVault is
-    IInceptionOmniVault,
-    InceptionERC20OmniAssetsHandler
-{
+/// @title InceptionERC20OmniVault
+/// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
+/// @notice Allows users to deposit an asset(e.g. stETH), receive inception tokens, and handle asset transfers between L1 and L2.
+contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -28,26 +27,35 @@ contract InceptionERC20OmniVault is
     /// @dev the unique InceptionVault name
     string public name;
 
+    address public operator;
+
+    IInceptionRatioFeed public ratioFeed;
+
+    ICrossChainAdapterL2 public crossChainAdapter;
+
     /**
      *  @dev Flash withdrawal params
      */
-    address public treasuryAddress;
-    IInceptionRatioFeed public ratioFeed;
 
     uint256 public depositBonusAmount;
+
     uint256 public targetCapacity;
 
+    uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
     uint256 public constant MAX_PERCENT = 100 * 1e8;
 
-    uint256 public protocolFee;
+    address public treasuryAddress;
+    uint64 public protocolFee;
 
-    uint256 public maxBonusRate;
-    uint256 public optimalBonusRate;
-    uint256 public depositUtilizationKink;
+    /// @dev deposit bonus
+    uint64 public maxBonusRate;
+    uint64 public optimalBonusRate;
+    uint64 public depositUtilizationKink;
 
-    uint256 public maxFlashFeeRate;
-    uint256 public optimalWithdrawalRate;
-    uint256 public withdrawUtilizationKink;
+    /// @dev flash withdrawal fee
+    uint64 public maxFlashFeeRate;
+    uint64 public optimalWithdrawalRate;
+    uint64 public withdrawUtilizationKink;
 
     function __InceptionERC20OmniVault_init(
         string memory vaultName,
@@ -61,7 +69,7 @@ contract InceptionERC20OmniVault is
         inceptionToken = _inceptionToken;
         /// TODO
         treasuryAddress = msg.sender;
-        minAmount = 100;
+        minAmount = 1e8;
 
         targetCapacity = 1;
         protocolFee = 50 * 1e8;
@@ -87,7 +95,7 @@ contract InceptionERC20OmniVault is
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
-        require(iShares > 0, "InceptionVault: result iShares 0");
+        if (iShares == 0) revert DepositInconsistentResultedState();
     }
 
     /// @dev Transfers the msg.sender's assets to the vault.
@@ -97,6 +105,16 @@ contract InceptionERC20OmniVault is
         uint256 amount,
         address receiver
     ) public nonReentrant whenNotPaused returns (uint256) {
+        return _deposit(amount, msg.sender, receiver);
+    }
+
+    /// @notice The deposit function but with a referral code
+    function depositWithReferral(
+        uint256 amount,
+        address receiver,
+        bytes32 code
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        emit ReferralCode(code);
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -114,8 +132,7 @@ contract InceptionERC20OmniVault is
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
-            uint256 capacity = getFlashCapacity();
-            depositBonus = _calculateDepositBonus(amount, capacity);
+            depositBonus = calculateDepositBonus(amount);
             if (depositBonus > depositBonusAmount) {
                 depositBonus = depositBonusAmount;
                 depositBonusAmount = 0;
@@ -182,7 +199,7 @@ contract InceptionERC20OmniVault is
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        uint256 fee = calculateFlashUnstakeFee(amount);
+        uint256 fee = calculateFlashWithdrawFee(amount);
         amount -= fee;
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
         depositBonusAmount += (fee - protocolWithdrawalFee);
@@ -198,81 +215,34 @@ contract InceptionERC20OmniVault is
     /// @notice Function to calculate deposit bonus based on the utilization rate
     function calculateDepositBonus(
         uint256 amount
-    ) public view returns (uint256 bonus) {
-        uint256 capacity = getFlashCapacity();
-        return _calculateDepositBonus(amount, capacity);
-    }
-
-    function _calculateDepositBonus(
-        uint256 amount,
-        uint256 capacity
-    ) internal view returns (uint256 bonus) {
-        uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
-            MAX_PERCENT;
-
-        if (amount > 0 && capacity < optimalCapacity) {
-            uint256 replenished = amount;
-            if (optimalCapacity < capacity + amount)
-                replenished = optimalCapacity - capacity;
-
-            uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) * 1e18) /
-                ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxBonusRate -
-                (bonusSlope * (capacity + replenished / 2)) /
-                targetCapacity;
-
-            capacity += replenished;
-            bonus += (replenished * bonusPercent) / MAX_PERCENT;
-            amount -= replenished;
-        }
-        /// @dev the utilization rate is in the range [25: ] %
-        if (amount > 0 && capacity <= targetCapacity) {
-            uint256 replenished = targetCapacity > capacity + amount
-                ? amount
-                : targetCapacity - capacity;
-
-            bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
-        }
+    ) public view returns (uint256) {
+        return
+            InternalInceptionLibrary.calculateDepositBonus(
+                amount,
+                getFlashCapacity(),
+                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
+                optimalBonusRate,
+                maxBonusRate,
+                _getTargetCapacity()
+            );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashUnstakeFee(
+    function calculateFlashWithdrawFee(
         uint256 amount
-    ) public view returns (uint256 fee) {
+    ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) /
-            MAX_PERCENT;
-
-        /// @dev the utilization rate is greater 1, [ :100] %
-        if (amount > 0 && capacity > targetCapacity) {
-            uint256 replenished = amount;
-            if (capacity - amount < targetCapacity)
-                replenished = capacity - targetCapacity;
-
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        /// @dev the utilization rate is in the range [100:25] %
-        if (amount > 0 && capacity > optimalCapacity) {
-            uint256 replenished = amount;
-            if (capacity - amount < optimalCapacity)
-                replenished = capacity - optimalCapacity;
-
-            fee += (replenished * optimalWithdrawalRate) / MAX_PERCENT; // 0.5%
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        /// @dev the utilization rate is in the range [25:0] %
-        if (amount > 0) {
-            uint256 feeSlope = ((maxFlashFeeRate - optimalWithdrawalRate) *
-                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxFlashFeeRate -
-                (feeSlope * (capacity - amount / 2)) /
-                targetCapacity;
-            fee += (amount * bonusPercent) / MAX_PERCENT;
-        }
+        return
+            InternalInceptionLibrary.calculateWithdrawalFee(
+                amount,
+                capacity,
+                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                _getTargetCapacity()
+            );
     }
 
     /*//////////////////////////////
@@ -283,8 +253,16 @@ contract InceptionERC20OmniVault is
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
+    function getTotalDeposited() public view returns (uint256) {
+        return totalAssets() - depositBonusAmount;
+    }
+
     function getFlashCapacity() public view returns (uint256 total) {
         return totalAssets() - depositBonusAmount;
+    }
+
+    function _getTargetCapacity() internal view returns (uint256) {
+        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
     }
 
     /*//////////////////////////////

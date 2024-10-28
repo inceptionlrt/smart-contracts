@@ -18,7 +18,7 @@ import {IRebalancer} from "./interfaces/IRebalancer.sol";
  */
 contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     //------------- REBALANCER FIELDS -------------//
-    address public inETHAddress;
+    address public inceptionToken;
     address public lockboxAddress;
     address payable public liqPool;
     address public ratioFeed;
@@ -41,7 +41,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
     /**
      * @notice Initializes the contract with essential addresses and parameters.
-     * @param _inETHAddress The address of the inETH token.
+     * @param _inceptionToken The address of the inETH token.
      * @param _lockbox The address of the lockbox.
      * @param _liqPool The address of the liquidity pool.
      * @param _defaultAdapter The address of the CrossChainBridgeL1.
@@ -49,7 +49,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      * @param _operator The address of the operator who will manage this contract.
      */
     function initialize(
-        address _inETHAddress,
+        address _inceptionToken,
         address _lockbox,
         address payable _liqPool,
         address payable _defaultAdapter,
@@ -58,14 +58,14 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
     ) public initializer {
         __Ownable_init(msg.sender);
 
-        require(_inETHAddress != address(0), SettingZeroAddress());
+        require(_inceptionToken != address(0), SettingZeroAddress());
         require(_lockbox != address(0), SettingZeroAddress());
         require(_liqPool != address(0), SettingZeroAddress());
         require(_defaultAdapter != address(0), SettingZeroAddress());
         require(_ratioFeed != address(0), SettingZeroAddress());
         require(_operator != address(0), SettingZeroAddress());
 
-        inETHAddress = _inETHAddress;
+        inceptionToken = _inceptionToken;
         lockboxAddress = _lockbox;
         liqPool = _liqPool;
         defaultAdapter = _defaultAdapter;
@@ -75,12 +75,12 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
     /**
      * @notice Updates the inETH token address.
-     * @param _inETHAddress The new inETH address.
+     * @param _inceptionToken The new inETH address.
      */
-    function setInETHAddress(address _inETHAddress) external onlyOwner {
-        require(_inETHAddress != address(0), SettingZeroAddress());
-        emit InEthChanged(inETHAddress, _inETHAddress);
-        inETHAddress = _inETHAddress;
+    function setInceptionToken(address _inceptionToken) external onlyOwner {
+        require(_inceptionToken != address(0), SettingZeroAddress());
+        emit InceptionTokenChanged(inceptionToken, _inceptionToken);
+        inceptionToken = _inceptionToken;
     }
 
     /**
@@ -99,8 +99,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      */
     function setLiqPool(address payable _liqPool) external onlyOwner {
         require(_liqPool != address(0), SettingZeroAddress());
-        liqPool = _liqPool;
         emit LiqPoolChanged(liqPool, _liqPool);
+        liqPool = _liqPool;
     }
 
     /**
@@ -128,7 +128,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
                 txData.timestamp != 0,
                 MissingOneOrMoreL2Transactions(chainId)
             );
-            totalL2InETH += txData.inEthBalance;
+            totalL2InETH += txData.inceptionTokenBalance;
         }
 
         uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
@@ -143,32 +143,32 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
             revert NoRebalancingRequired();
         }
 
-        uint256 inETHBalance = IERC20(inETHAddress).balanceOf(address(this));
+        uint256 inETHBalance = IERC20(inceptionToken).balanceOf(address(this));
         if (inETHBalance > 0) {
             require(
-                IERC20(inETHAddress).transfer(lockboxAddress, inETHBalance),
+                IERC20(inceptionToken).transfer(lockboxAddress, inETHBalance),
                 TransferToLockboxFailed()
             );
-            emit InETHDepositedToLockbox(inETHBalance);
+            emit InceptionTokenDepositedToLockbox(inETHBalance);
         }
     }
 
     function _mintInceptionToken(uint256 _amountToMint) internal {
-        require(inETHAddress != address(0), InETHAddressNotSet());
-        IInceptionToken cToken = IInceptionToken(inETHAddress);
+        require(inceptionToken != address(0), InceptionTokenAddressNotSet());
+        IInceptionToken cToken = IInceptionToken(inceptionToken);
         cToken.mint(lockboxAddress, _amountToMint);
         emit TreasuryUpdateMint(_amountToMint);
     }
 
     function _burnInceptionToken(uint256 _amountToBurn) internal {
-        require(inETHAddress != address(0), InETHAddressNotSet());
-        IInceptionToken cToken = IInceptionToken(inETHAddress);
+        require(inceptionToken != address(0), InceptionTokenAddressNotSet());
+        IInceptionToken cToken = IInceptionToken(inceptionToken);
         cToken.burn(lockboxAddress, _amountToBurn);
         emit TreasuryUpdateBurn(_amountToBurn);
     }
 
     function _lastUpdateTotalL2InEth() internal view returns (uint256) {
-        return IERC20(inETHAddress).balanceOf(lockboxAddress);
+        return IERC20(inceptionToken).balanceOf(lockboxAddress);
     }
 
     /**
@@ -188,12 +188,17 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         );
         IRestakingPool(liqPool).stake{value: _amount}();
 
-        uint256 inEthBalance = IERC20(inETHAddress).balanceOf(address(this));
+        uint256 inceptionTokenBalance = IERC20(inceptionToken).balanceOf(
+            address(this)
+        );
         require(
-            IERC20(inETHAddress).transfer(lockboxAddress, inEthBalance),
+            IERC20(inceptionToken).transfer(
+                lockboxAddress,
+                inceptionTokenBalance
+            ),
             TransferToLockboxFailed()
         );
-        emit InETHDepositedToLockbox(inEthBalance);
+        emit InceptionTokenDepositedToLockbox(inceptionTokenBalance);
     }
 
     /**
@@ -261,7 +266,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         Transaction memory newUpdate = Transaction({
             timestamp: _timestamp,
             ethBalance: _balance,
-            inEthBalance: _totalSupply
+            inceptionTokenBalance: _totalSupply
         });
 
         txs[_chainId] = newUpdate;
@@ -306,6 +311,21 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
     function addChainId(uint32 _newChainId) external onlyOwner {
         _addChainId(_newChainId);
+    }
+
+    function deleteChainId(uint256 index) public {
+        require(
+            index < chainIds.length,
+            IndexOutOfBounds(index, chainIds.length)
+        );
+
+        // Shift elements to the left to fill the gap
+        for (uint256 i = index; i < chainIds.length - 1; i++) {
+            chainIds[i] = chainIds[i + 1];
+        }
+
+        // Remove the last element (which is now duplicated)
+        chainIds.pop();
     }
 
     function _getAdapter(

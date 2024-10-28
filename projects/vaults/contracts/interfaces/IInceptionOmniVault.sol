@@ -2,9 +2,61 @@
 pragma solidity ^0.8.20;
 
 interface IInceptionOmniVault {
-    /*///////////////////
-    ////// Events //////
-    /////////////////*/
+    /*///////////////////////////////////////////////////
+    / ******************** Errors ******************** /
+    /////////////////////////////////////////////////*/
+
+    error TransferAssetFromFailed();
+
+    error TransferAssetFailed();
+
+    error InsufficientCapacity(uint256 capacity);
+
+    error MessageToL1Failed(uint256 tokenAmount, uint256 ethAmount);
+    error EthToL1Failed(uint256 ethAmount);
+
+    error CrossChainAdapterNotSet();
+
+    error OnlyOwnerOrOperator();
+    error ResultISharesZero();
+    error RatioFeedNotSet();
+    error FreeBalanceIsZero();
+
+    error NullParams();
+
+    error ParameterExceedsLimits(uint256 param);
+
+    error NotContract();
+
+    error DepositInconsistentResultedState();
+
+    error OperatorNotRegistered();
+
+    error RestakerNotRegistered();
+
+    error ImplementationNotSet();
+
+    error OnlyOperatorAllowed();
+
+    error AlreadyDelegated();
+
+    error DelegationManagerImmutable();
+
+    error IsNotAbleToRedeem();
+
+    error LowerMinAmount(uint256 minAmount);
+
+    error ZeroFlashWithdrawFee();
+
+    /// TVL errors
+
+    error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
+
+    error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
+
+    /*///////////////////////////////////////////////////
+    / ******************** Events ******************** /
+    /////////////////////////////////////////////////*/
 
     event Deposit(
         address indexed sender,
@@ -32,8 +84,6 @@ interface IInceptionOmniVault {
 
     event TreasuryUpdated(address newTresury);
 
-    event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
-
     event RestakerDeployed(address indexed restaker);
 
     event ImplementationUpgraded(address prevValue, address newValue);
@@ -48,6 +98,13 @@ interface IInceptionOmniVault {
 
     event CrossChainAdapterChanged(address newCrossChainAdapter);
 
+    event MessageToL1Sent(
+        uint256 indexed tokensAmount,
+        uint256 indexed ethAmount
+    );
+
+    event EthToL1Sent(uint256 callValue);
+
     event DepositBonusParamsChanged(
         uint256 newMaxBonusRate,
         uint256 newOptimalBonusRate,
@@ -61,12 +118,8 @@ interface IInceptionOmniVault {
     );
 
     event AssetsInfoSentToL1(uint256 tokensAmount, uint256 ethAmount);
+
     event EthSentToL1(uint256 ethAmount);
 
-    error MessageToL1Failed(uint256 tokenAmount, uint256 ethAmount);
-    error EthToL1Failed(uint256 ethAmount);
-
-    error CrossChainAdapterNotSet();
-
-    function ratio() external view returns (uint256);
+    event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 }

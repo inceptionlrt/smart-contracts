@@ -9,7 +9,7 @@ import "../../interfaces/ICrossChainAdapterL2.sol";
 /// @title The InEthOmniVault, specifically designed for the Genesis LST
 contract InEthOmniVault is InceptionOmniVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 

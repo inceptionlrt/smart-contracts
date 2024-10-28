@@ -1,26 +1,32 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.23;
 
 // @dev Import the 'MessagingFee' and 'MessagingReceipt' so it's exposed to OApp implementers
 // solhint-disable-next-line no-unused-import
-import { OAppSenderUpgradeable, MessagingFee, MessagingReceipt } from "./OAppSenderUpgradeable.sol";
+import {OAppSenderUpgradeable, MessagingFee, MessagingReceipt} from "./OAppSenderUpgradeable.sol";
 // @dev Import the 'Origin' so it's exposed to OApp implementers
 // solhint-disable-next-line no-unused-import
-import { OAppReceiverUpgradeable, Origin } from "./OAppReceiverUpgradeable.sol";
-import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
+import {OAppReceiverUpgradeable, Origin} from "./OAppReceiverUpgradeable.sol";
+import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
 
 /**
- * @title OApp
+ * @title OAppUpgradeable
+ * @author InceptionLRT
  * @dev Abstract contract serving as the base for OApp implementation, combining OAppSender and OAppReceiver functionality.
  */
-abstract contract OAppUpgradeable is OAppSenderUpgradeable, OAppReceiverUpgradeable {
+abstract contract OAppUpgradeable is
+    OAppSenderUpgradeable,
+    OAppReceiverUpgradeable
+{
     /**
      * @dev Initializer to initialize the OApp with the provided endpoint and owner.
      * @param _endpoint The address of the LOCAL LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    function __OAppUpgradeable_init(address _endpoint, address _delegate) internal {
+    function __OAppUpgradeable_init(
+        address _endpoint,
+        address _delegate
+    ) internal {
         __OAppCoreUpgradeable_init(_endpoint, _delegate);
     }
 

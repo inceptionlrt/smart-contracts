@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.23;
 
-import { IOAppReceiverUpgradeable, Origin } from "./interfaces/IOAppReceiverUpgradeable.sol";
-import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
+import {IOAppReceiverUpgradeable, Origin} from "./interfaces/IOAppReceiverUpgradeable.sol";
+import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
 
 /**
- * @title OAppReceiver
+ * @title OAppReceiverUpgradeable
+ * @author InceptionLRT
  * @dev Abstract contract implementing the ILayerZeroReceiver interface and extending OAppCore for OApp receivers.
  */
-abstract contract OAppReceiverUpgradeable is IOAppReceiverUpgradeable, OAppCoreUpgradeable {
+abstract contract OAppReceiverUpgradeable is
+    IOAppReceiverUpgradeable,
+    OAppCoreUpgradeable
+{
     // Custom error message for when the caller is not the registered endpoint/
     error OnlyEndpoint(address addr);
 
@@ -26,7 +29,12 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiverUpgradeable, OAppCoreU
      * ie. this is a RECEIVE only OApp.
      * @dev If the OApp uses both OAppSender and OAppReceiver, then this needs to be override returning the correct versions.
      */
-    function oAppVersion() public view virtual returns (uint64 senderVersion, uint64 receiverVersion) {
+    function oAppVersion()
+        public
+        view
+        virtual
+        returns (uint64 senderVersion, uint64 receiverVersion)
+    {
         return (0, RECEIVER_VERSION);
     }
 
@@ -60,7 +68,9 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiverUpgradeable, OAppCoreU
      * @dev This defaults to assuming if a peer has been set, its initialized.
      * Can be overridden by the OApp if there is other logic to determine this.
      */
-    function allowInitializePath(Origin calldata origin) public view virtual returns (bool) {
+    function allowInitializePath(
+        Origin calldata origin
+    ) public view virtual returns (bool) {
         return peers[origin.srcEid] == origin.sender;
     }
 
@@ -75,7 +85,10 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiverUpgradeable, OAppCoreU
      * @dev This is also enforced by the OApp.
      * @dev By default this is NOT enabled. ie. nextNonce is hardcoded to return 0.
      */
-    function nextNonce(uint32 /*_srcEid*/, bytes32 /*_sender*/) public view virtual returns (uint64 nonce) {
+    function nextNonce(
+        uint32 /*_srcEid*/,
+        bytes32 /*_sender*/
+    ) public view virtual returns (uint64 nonce) {
         return 0;
     }
 
@@ -103,7 +116,8 @@ abstract contract OAppReceiverUpgradeable is IOAppReceiverUpgradeable, OAppCoreU
         if (address(endpoint) != msg.sender) revert OnlyEndpoint(msg.sender);
 
         // Ensure that the sender matches the expected peer for the source endpoint.
-        if (_getPeerOrRevert(_origin.srcEid) != _origin.sender) revert OnlyPeer(_origin.srcEid, _origin.sender);
+        if (_getPeerOrRevert(_origin.srcEid) != _origin.sender)
+            revert OnlyPeer(_origin.srcEid, _origin.sender);
 
         // Call the internal OApp implementation of lzReceive.
         _lzReceive(_origin, _guid, _message, _executor, _extraData);

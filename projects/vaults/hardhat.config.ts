@@ -17,11 +17,9 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545/",
     },
     hardhat: {
-      forking: {
-        url: process.env.RPC_URL_OPTIMISM_SEPOLIA || "",
-      },
-      accounts: [{ privateKey: `${process.env.DEPLOYER_PRIVATE_KEY}`, balance: "10000365467355464286459" }],
-      chainId: 1337,  // Local chain ID for Hardhat network
+      // forking: {
+      //   url: process.env.RPC_URL_OPTIMISM_SEPOLIA || "",
+      // },
     },
     ethereum: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
@@ -76,9 +74,8 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: `${process.env.ETHERSCAN_API_KEY}`
-  }
-
+    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
+  },
 };
 
 export default config;

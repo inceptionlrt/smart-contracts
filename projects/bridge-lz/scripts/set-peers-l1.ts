@@ -27,16 +27,16 @@ async function main() {
     const checkpointDataArbitrum = JSON.parse(fs.readFileSync(checkpointArbitrumFilePath, 'utf8'));
 
     // Fetch addresses from the checkpoint files
-    const CrossChainBridgeSepoliaAddress = checkpointDataSepolia.CrossChainBridge;
-    const CrossChainBridgeOptimismSepoliaAddress = checkpointDataOptimism.CrossChainBridge;
-    const CrossChainBridgeArbitrumSepoliaAddress = checkpointDataArbitrum.CrossChainBridge;
+    const CrossChainBridgeSepoliaAddress = checkpointDataSepolia.LZCrossChainAdapterL1;
+    const CrossChainBridgeOptimismSepoliaAddress = checkpointDataOptimism.LZCrossChainAdapterL2;
+    const CrossChainBridgeArbitrumSepoliaAddress = checkpointDataArbitrum.LZCrossChainAdapterL2;
 
     if (!CrossChainBridgeSepoliaAddress || !CrossChainBridgeOptimismSepoliaAddress || !CrossChainBridgeArbitrumSepoliaAddress) {
         throw new Error("CrossChainBridge addresses not found in the checkpoint files.");
     }
 
     // Get contract instances
-    const CrossChainBridgeSepolia = await ethers.getContractAt("CrossChainBridge", CrossChainBridgeSepoliaAddress);
+    const CrossChainBridgeSepolia = await ethers.getContractAt("LZCrossChainAdapterL1", CrossChainBridgeSepoliaAddress);
     const eIDArbitrumSepolia = 40231;
     const eIDOptimismSepolia = 40232;
 

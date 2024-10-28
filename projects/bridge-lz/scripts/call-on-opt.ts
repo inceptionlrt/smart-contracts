@@ -14,7 +14,7 @@ async function main() {
 
     // Define message and options
     const message = ethers.utils.toUtf8Bytes("");
-    const options = Options.newOptions().addExecutorLzReceiveOption(200000, 0).toHex().toString();
+    const options = Options.newOptions().addExecutorLzReceiveOption(200000, 1000).toHex().toString();
 
 
     // Estimate fees
