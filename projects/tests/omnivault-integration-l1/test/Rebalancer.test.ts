@@ -80,13 +80,18 @@ describe("Omnivault integration tests", function () {
 
     //===Restaking pool config upgrade
     console.log("=== ProtocolConfig");
-    const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
+    const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(
+      network.config.addresses.restakingPoolConfig,
+    );
     let slot = "0x" + (0).toString(16);
     let value = ethers.zeroPadValue(await owner.getAddress(), 32);
     await network.provider.send("hardhat_setStorageAt", [protocolConfigAdminAddress, slot, value]);
 
     const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig", owner);
-    const restakingPoolConfig = await upgrades.upgradeProxy(network.config.addresses.restakingPoolConfig, ProtocolConfig);
+    const restakingPoolConfig = await upgrades.upgradeProxy(
+      network.config.addresses.restakingPoolConfig,
+      ProtocolConfig,
+    );
     //Updating governance address
     slot = "0x" + getSlotByName("genesis.config.Governance");
     value = ethers.zeroPadValue(await owner.getAddress(), 32);
@@ -133,14 +138,25 @@ describe("Omnivault integration tests", function () {
     ethEndpoint.address = await ethEndpoint.getAddress();
     console.log("=== CrossChainAdapterL1");
     const LZCrossChainAdapterL1 = await ethers.getContractFactory("LZCrossChainAdapterL1");
-    const adapterEth = await upgrades.deployProxy(LZCrossChainAdapterL1, [ethEndpoint.address, owner.address, eIds, chainIds]);
+    const adapterEth = await upgrades.deployProxy(LZCrossChainAdapterL1, [
+      ethEndpoint.address,
+      owner.address,
+      eIds,
+      chainIds,
+    ]);
     adapterEth.address = await adapterEth.getAddress();
 
     console.log("=== Arb LZCrossChainAdapterL2");
     const arbEndpoint = await ethers.deployContract("EndpointMock", [ARB_EID]);
     arbEndpoint.address = await arbEndpoint.getAddress();
     const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
-    const adapterArb = await upgrades.deployProxy(LZCrossChainAdapterL2, [arbEndpoint.address, owner.address, ETH_ID, eIds, chainIds]);
+    const adapterArb = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+      arbEndpoint.address,
+      owner.address,
+      ETH_ID,
+      eIds,
+      chainIds,
+    ]);
     adapterArb.address = await adapterArb.getAddress();
     adapterArb.sendData = async function (timestamp, vaultBalance, totalSupply) {
       const message = encodePayload(timestamp, vaultBalance, totalSupply);
@@ -151,7 +167,13 @@ describe("Omnivault integration tests", function () {
     console.log("=== Opt LZCrossChainAdapterL2");
     const optEndpoint = await ethers.deployContract("EndpointMock", [OPT_EID]);
     optEndpoint.address = await optEndpoint.getAddress();
-    const adapterOpt = await upgrades.deployProxy(LZCrossChainAdapterL2, [optEndpoint.address, owner.address, ETH_ID, eIds, chainIds]);
+    const adapterOpt = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+      optEndpoint.address,
+      owner.address,
+      ETH_ID,
+      eIds,
+      chainIds,
+    ]);
     adapterOpt.address = await adapterOpt.getAddress();
     adapterOpt.sendData = async function (timestamp, vaultBalance, totalSupply) {
       const message = encodePayload(timestamp, vaultBalance, totalSupply);
@@ -346,7 +368,10 @@ describe("Omnivault integration tests", function () {
 
         it(`Reverts: ${arg.setter} new value is 0 address`, async function () {
           const newValue = ethers.ZeroAddress;
-          await expect(rebalancer[arg.setter](newValue)).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+          await expect(rebalancer[arg.setter](newValue)).to.be.revertedWithCustomError(
+            rebalancer,
+            "SettingZeroAddress",
+          );
         });
       });
 
@@ -376,7 +401,9 @@ describe("Omnivault integration tests", function () {
       });
 
       it("addAdapter only owner can", async function () {
-        await expect(rebalancer.connect(owner).addAdapter(chain, adapter)).to.emit(rebalancer, "AdapterAdded").withArgs(chain, adapter);
+        await expect(rebalancer.connect(owner).addAdapter(chain, adapter))
+          .to.emit(rebalancer, "AdapterAdded")
+          .withArgs(chain, adapter);
 
         expect(await rebalancer.adapters(chain)).to.be.eq(adapter);
       });
@@ -441,7 +468,10 @@ describe("Omnivault integration tests", function () {
       });
 
       it("Reverts when there is no data for one of the chains", async function () {
-        await expect(rebalancer.updateTreasuryData()).to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
+        await expect(rebalancer.updateTreasuryData()).to.revertedWithCustomError(
+          rebalancer,
+          "MissingOneOrMoreL2Transactions",
+        );
         const block = await ethers.provider.getBlock("latest");
         const timestamp = block.timestamp;
         const balance = randomBI(19);
@@ -573,7 +603,9 @@ describe("Omnivault integration tests", function () {
             await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(expectedTotalSupplyDiff);
           }
           if (expectedTotalSupplyDiff == 0n) {
-            await expect(tx).to.not.emit(rebalancer, "TreasuryUpdateMint").and.to.not.emit(rebalancer, "TreasuryUpdateBurn");
+            await expect(tx)
+              .to.not.emit(rebalancer, "TreasuryUpdateMint")
+              .and.to.not.emit(rebalancer, "TreasuryUpdateBurn");
           }
           if (expectedTotalSupplyDiff < 0n) {
             await expect(tx)
@@ -590,7 +622,10 @@ describe("Omnivault integration tests", function () {
         await adapterOpt.sendData(timestamp, e18, e18);
         await rebalancer.updateTreasuryData();
 
-        await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
+        await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(
+          rebalancer,
+          "NoRebalancingRequired",
+        );
       });
 
       it("inEth leftover on rebalancer will be transferred to the lockbox", async function () {
@@ -628,12 +663,12 @@ describe("Omnivault integration tests", function () {
         {
           name: "Part of the balance",
           balance: async () => await restakingPool.availableToStake(),
-          amount: async (amount) => amount / 2n,
+          amount: async amount => amount / 2n,
         },
         {
           name: "All balance",
           balance: async () => await restakingPool.availableToStake(),
-          amount: async (amount) => amount,
+          amount: async amount => amount,
         },
         {
           name: "Restaking pool min amount",
@@ -672,7 +707,10 @@ describe("Omnivault integration tests", function () {
       it("Reverts when amount > available to stake from restaking pool", async function () {
         const amount = (await restakingPool.availableToStake()) + 1n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
-        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(rebalancer, "StakeAmountExceedsMaxTVL");
+        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(
+          rebalancer,
+          "StakeAmountExceedsMaxTVL",
+        );
       });
 
       it("Reverts when amount > eth balance", async function () {
@@ -680,14 +718,17 @@ describe("Omnivault integration tests", function () {
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
         await expect(rebalancer.connect(operator).stake(amount + 1n)).to.revertedWithCustomError(
           rebalancer,
-          "StakeAmountExceedsEthBalance"
+          "StakeAmountExceedsEthBalance",
         );
       });
 
       it("Reverts when amount < restaking pool min stake", async function () {
         const amount = (await restakingPool.getMinStake()) - 1n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
-        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(restakingPool, "PoolStakeAmLessThanMin");
+        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(
+          restakingPool,
+          "PoolStakeAmLessThanMin",
+        );
       });
 
       it("Reverts when called by not an operator", async function () {
@@ -712,7 +753,7 @@ describe("Omnivault integration tests", function () {
       const args = [
         {
           name: "Part of the balance to ARB",
-          amount: async (amount) => amount / 2n,
+          amount: async amount => amount / 2n,
           feeParams: () => encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n),
           fees: 2n * 10n ** 16n,
           chainId: ARB_ID,
@@ -721,7 +762,7 @@ describe("Omnivault integration tests", function () {
         },
         {
           name: "Part of the balance to OPT",
-          amount: async (amount) => amount / 2n,
+          amount: async amount => amount / 2n,
           feeParams: () => encodeOptimismFees(200_000n),
           fees: 0n,
           chainId: OPT_ID,
@@ -730,7 +771,7 @@ describe("Omnivault integration tests", function () {
         },
         {
           name: "All balance to ARB",
-          amount: async (amount) => amount,
+          amount: async amount => amount,
           feeParams: () => encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n),
           fees: 2n * 10n ** 16n,
           chainId: ARB_ID,
@@ -739,7 +780,7 @@ describe("Omnivault integration tests", function () {
         },
         {
           name: "All balance to OPT",
-          amount: async (amount) => amount,
+          amount: async amount => amount,
           feeParams: () => encodeOptimismFees(200_000n),
           fees: 0n,
           chainId: OPT_ID,
@@ -768,10 +809,9 @@ describe("Omnivault integration tests", function () {
         await signer1.sendTransaction({ value: e18, to: rebalancer.address });
         const amount = await ethers.provider.getBalance(rebalancer.address);
         const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, feeParams, { value: fees })).to.revertedWithCustomError(
-          rebalancer,
-          "SendAmountExceedsEthBalance"
-        );
+        await expect(
+          rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, feeParams, { value: fees }),
+        ).to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
       });
 
       it("Reverts when called by not an operator", async function () {
@@ -779,10 +819,9 @@ describe("Omnivault integration tests", function () {
         await signer1.sendTransaction({ value: e18, to: rebalancer.address });
         const amount = await ethers.provider.getBalance(rebalancer.address);
         const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, feeParams, { value: fees })).to.revertedWithCustomError(
-          rebalancer,
-          "OnlyOperator"
-        );
+        await expect(
+          rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, feeParams, { value: fees }),
+        ).to.revertedWithCustomError(rebalancer, "OnlyOperator");
       });
 
       it("Reverts when there is no adapter for the chain", async function () {
@@ -790,10 +829,9 @@ describe("Omnivault integration tests", function () {
         const fees = 2n * 10n ** 15n;
         const amount = await ethers.provider.getBalance(rebalancer.address);
         const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, feeParams, { value: fees })).to.revertedWithCustomError(
-          rebalancer,
-          "CrosschainAdapterNotSet"
-        );
+        await expect(
+          rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, feeParams, { value: fees }),
+        ).to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
       });
     });
 
@@ -838,12 +876,17 @@ describe("Omnivault integration tests", function () {
 
         it(`Reverts: ${arg.setter} when called by not an owner`, async function () {
           const newValue = ethers.Wallet.createRandom().address;
-          await expect(adapterArb.connect(signer1)[arg.setter](newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+          await expect(adapterArb.connect(signer1)[arg.setter](newValue)).to.be.revertedWith(
+            "Ownable: caller is not the owner",
+          );
         });
 
         it(`Reverts: ${arg.setter} new value is 0 address`, async function () {
           const newValue = ethers.ZeroAddress;
-          await expect(adapterArb[arg.setter](newValue)).to.be.revertedWithCustomError(adapterArb, "SettingZeroAddress");
+          await expect(adapterArb[arg.setter](newValue)).to.be.revertedWithCustomError(
+            adapterArb,
+            "SettingZeroAddress",
+          );
         });
       });
 
@@ -864,7 +907,7 @@ describe("Omnivault integration tests", function () {
 
         await expect(adapterArb.connect(signer1).setPeer(eid, peer)).to.be.revertedWithCustomError(
           adapterArb,
-          "OwnableUnauthorizedAccount"
+          "OwnableUnauthorizedAccount",
         );
       });
 
@@ -882,7 +925,7 @@ describe("Omnivault integration tests", function () {
 
         await expect(adapterArb.connect(signer1).setChainIdFromEid(eid, chainId)).to.be.revertedWithCustomError(
           adapterArb,
-          "OwnableUnauthorizedAccount"
+          "OwnableUnauthorizedAccount",
         );
       });
 
@@ -1078,31 +1121,27 @@ describe("Omnivault integration tests", function () {
       it("Reverts amount > value", async function () {
         const feesParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
         const value = e18;
-        await expect(arbAdapter.connect(signer1).sendEthToL2(value + 1n, feesParams, { value: value })).to.be.revertedWithCustomError(
-          arbAdapter,
-          "InvalidValue"
-        );
+        await expect(
+          arbAdapter.connect(signer1).sendEthToL2(value + 1n, feesParams, { value: value }),
+        ).to.be.revertedWithCustomError(arbAdapter, "InvalidValue");
       });
 
       it("Reverts when gas params are zero", async function () {
         const value = e18;
         let feeParams = encodeArbitrumFees(0n, 200_000n, 100_000_000n);
-        await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value })).to.revertedWithCustomError(
-          arbAdapter,
-          "SettingZeroGas"
-        );
+        await expect(
+          arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value }),
+        ).to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
 
         feeParams = encodeArbitrumFees(2n * 10n ** 15n, 0n, 100_000_000n);
-        await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value })).to.revertedWithCustomError(
-          arbAdapter,
-          "SettingZeroGas"
-        );
+        await expect(
+          arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value }),
+        ).to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
 
         feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 0n);
-        await expect(arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value })).to.revertedWithCustomError(
-          arbAdapter,
-          "SettingZeroGas"
-        );
+        await expect(
+          arbAdapter.connect(signer1).sendEthToL2(value, feeParams, { value: value }),
+        ).to.revertedWithCustomError(arbAdapter, "SettingZeroGas");
       });
     });
 
@@ -1128,7 +1167,10 @@ describe("Omnivault integration tests", function () {
           .to.emit(arbAdapter, "ReceiveTriggered")
           .withArgs(signer1.address, amount);
 
-        await expect(arbAdapter.connect(signer1).recoverFunds()).to.be.revertedWithCustomError(arbAdapter, "OnlyOperatorCanCall");
+        await expect(arbAdapter.connect(signer1).recoverFunds()).to.be.revertedWithCustomError(
+          arbAdapter,
+          "OnlyOperatorCanCall",
+        );
       });
     });
   });
@@ -1147,7 +1189,10 @@ describe("Omnivault integration tests", function () {
       await arbAdapter.setL2Sender(target);
       await arbAdapter.setL2Receiver(target.address);
 
-      await expect(arbBridgeMock.connect(signer1).receiveL2Eth({ value: e18 })).to.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+      await expect(arbBridgeMock.connect(signer1).receiveL2Eth({ value: e18 })).to.revertedWithCustomError(
+        arbAdapter,
+        "RebalancerNotSet",
+      );
     });
 
     it("ArbitrumAdapterL1.sendEthToL2 reverts when l2 receiver is not set", async function () {
@@ -1157,10 +1202,9 @@ describe("Omnivault integration tests", function () {
 
       const feesParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
       const value = e18;
-      await expect(arbAdapter.connect(signer1).sendEthToL2(value, feesParams, { value: value })).to.revertedWithCustomError(
-        arbAdapter,
-        "L2ReceiverNotSet"
-      );
+      await expect(
+        arbAdapter.connect(signer1).sendEthToL2(value, feesParams, { value: value }),
+      ).to.revertedWithCustomError(arbAdapter, "L2ReceiverNotSet");
     });
 
     it("ArbitrumAdapterL1.receiveL2Info reverts when rebalancer is not set", async function () {
@@ -1172,7 +1216,10 @@ describe("Omnivault integration tests", function () {
       const timestamp = block.timestamp + 100;
       const balance = 100;
       const totalSupply = 100;
-      await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply)).to.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+      await expect(arbBridgeMock.receiveL2Info(timestamp, balance, totalSupply)).to.revertedWithCustomError(
+        arbAdapter,
+        "RebalancerNotSet",
+      );
     });
 
     it("ArbitrumAdapterL1.recoverFunds reverts when rebalancer is not set", async function () {
@@ -1181,7 +1228,10 @@ describe("Omnivault integration tests", function () {
       await arbAdapter.setL2Receiver(target.address);
 
       await signer1.sendTransaction({ to: arbAdapter.address, value: e18 });
-      await expect(arbAdapter.connect(operator).recoverFunds()).to.be.revertedWithCustomError(arbAdapter, "RebalancerNotSet");
+      await expect(arbAdapter.connect(operator).recoverFunds()).to.be.revertedWithCustomError(
+        arbAdapter,
+        "RebalancerNotSet",
+      );
     });
 
     it("OptimismAdapterL1.receiveL2Eth reverts when rebalancer is not set", async function () {
@@ -1189,7 +1239,10 @@ describe("Omnivault integration tests", function () {
       await optAdapter.setL2Sender(target);
       await optAdapter.setL2Receiver(target.address);
 
-      await expect(optBridgeMock.connect(signer1).receiveL2Eth({ value: e18 })).to.revertedWithCustomError(optAdapter, "RebalancerNotSet");
+      await expect(optBridgeMock.connect(signer1).receiveL2Eth({ value: e18 })).to.revertedWithCustomError(
+        optAdapter,
+        "RebalancerNotSet",
+      );
     });
 
     it("OptimismAdapterL1.receiveL2Info reverts when rebalancer is not set", async function () {
@@ -1201,7 +1254,10 @@ describe("Omnivault integration tests", function () {
       const timestamp = block.timestamp + 100;
       const balance = 100;
       const totalSupply = 100;
-      await expect(optBridgeMock.receiveL2Info(timestamp, balance, totalSupply)).to.revertedWithCustomError(optAdapter, "RebalancerNotSet");
+      await expect(optBridgeMock.receiveL2Info(timestamp, balance, totalSupply)).to.revertedWithCustomError(
+        optAdapter,
+        "RebalancerNotSet",
+      );
     });
 
     it("OptimismAdapterL1.sendEthToL2 reverts when l2 receiver is not set", async function () {
@@ -1211,10 +1267,9 @@ describe("Omnivault integration tests", function () {
 
       const feesParams = encodeOptimismFees(200_000n);
       const value = e18;
-      await expect(optAdapter.connect(signer1).sendEthToL2(value, feesParams, { value: value })).to.revertedWithCustomError(
-        optAdapter,
-        "L2ReceiverNotSet"
-      );
+      await expect(
+        optAdapter.connect(signer1).sendEthToL2(value, feesParams, { value: value }),
+      ).to.revertedWithCustomError(optAdapter, "L2ReceiverNotSet");
     });
 
     it("OptimismAdapterL1.recoverFunds reverts when rebalancer is not set", async function () {
@@ -1223,7 +1278,10 @@ describe("Omnivault integration tests", function () {
       await optAdapter.setL2Receiver(target.address);
 
       await signer1.sendTransaction({ to: optAdapter.address, value: e18 });
-      await expect(optAdapter.connect(operator).recoverFunds()).to.be.revertedWithCustomError(optAdapter, "RebalancerNotSet");
+      await expect(optAdapter.connect(operator).recoverFunds()).to.be.revertedWithCustomError(
+        optAdapter,
+        "RebalancerNotSet",
+      );
     });
   });
 });
