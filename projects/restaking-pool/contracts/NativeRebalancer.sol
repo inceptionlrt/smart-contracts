@@ -16,7 +16,11 @@ import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
  * @title NativeRebalancer
  * @dev This contract handles staking, manages treasury data and facilitates cross-chain ETH transfers.
  */
-contract NativeRebalancer is Initializable, OwnableUpgradeable, INativeRebalancer {
+contract NativeRebalancer is
+    Initializable,
+    OwnableUpgradeable,
+    INativeRebalancer
+{
     //------------- REBALANCER FIELDS -------------//
     address public inceptionToken;
     address public lockboxAddress;
@@ -313,7 +317,7 @@ contract NativeRebalancer is Initializable, OwnableUpgradeable, INativeRebalance
         _addChainId(_newChainId);
     }
 
-    function deleteChainId(uint256 index) public {
+    function deleteChainId(uint256 index) public onlyOperator {
         require(
             index < chainIds.length,
             IndexOutOfBounds(index, chainIds.length)
@@ -326,6 +330,7 @@ contract NativeRebalancer is Initializable, OwnableUpgradeable, INativeRebalance
 
         // Remove the last element (which is now duplicated)
         chainIds.pop();
+        emit ChainIdDelted(index);
     }
 
     function _getAdapter(
