@@ -9,6 +9,26 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   await asset.connect(staker).transfer(strategyAddress, amount);
 };
 
+const calculateRatioOmniVault = async (vault, token) => {
+  const totalSupply = await token.totalSupply();
+  const totalDeposited = await vault.getTotalDeposited();
+
+  const denominator = totalDeposited;
+
+  if (denominator === 0n || totalSupply === 0n) {
+    const ratio = e18;
+    // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+    return ratio;
+  }
+
+  const ratio = (totalSupply * e18) / denominator;
+  if ((totalSupply * e18) % denominator !== 0n) {
+    return ratio + 1n;
+  }
+  // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+  return ratio;
+};
+
 const calculateRatio = async (vault, token) => {
   const totalSupply = await token.totalSupply();
   const totalDeposited = await vault.getTotalDeposited();
@@ -113,8 +133,8 @@ const randomBIMax = (max) => {
   return random;
 };
 async function sleep(msec) {
-  return new Promise(resolve => setTimeout(resolve, msec));
-};
+  return new Promise((resolve) => setTimeout(resolve, msec));
+}
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
@@ -125,6 +145,7 @@ module.exports = {
   withdrawDataFromTx,
   impersonateWithEth,
   calculateRatio,
+  calculateRatioOmniVault,
   getStaker,
   getRandomStaker,
   mineBlocks,

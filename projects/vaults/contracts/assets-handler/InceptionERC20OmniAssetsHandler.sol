@@ -6,10 +6,8 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IInceptionAssetHandler.sol";
-import "../interfaces/IInceptionVaultErrors.sol";
-
-import "../lib/Convert.sol";
+import {IInceptionOmniVault} from "../interfaces/IInceptionOmniVault.sol";
+import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionERC20OmniAssetsHandler contract
@@ -18,14 +16,14 @@ contract InceptionERC20OmniAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
-    IInceptionVaultErrors,
+    IInceptionOmniVault,
     IInceptionAssetHandler
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
 
-    uint256[50] private __reserver;
+    uint256[50 - 1] private __reserver;
 
     function __InceptionERC20OmniAssetsHandler_init(
         IERC20 assetAddress
@@ -48,12 +46,11 @@ contract InceptionERC20OmniAssetsHandler is
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
         if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed(address(_asset));
+            revert TransferAssetFromFailed();
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount))
-            revert TransferAssetFailed(address(_asset));
+        if (!_asset.transfer(receiver, amount)) revert TransferAssetFailed();
     }
 
     /// @dev The functions below serve the proper withdrawal and claiming operations
