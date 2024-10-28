@@ -324,7 +324,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
    * @param amount Amount of the withdrawal.
    * @return fee Calculated fee.
    */
-  function calculateFlashUnstakeFee(uint256 amount) public view returns (uint256 fee) {
+  function calculateFlashWithdrawFee(uint256 amount) public view returns (uint256 fee) {
     uint256 capacity = getFlashCapacity();
     if (amount > capacity) revert InsufficientCapacity(capacity);
 
