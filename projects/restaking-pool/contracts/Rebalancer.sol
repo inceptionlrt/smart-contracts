@@ -308,6 +308,18 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         _addChainId(_newChainId);
     }
 
+    function deleteChainId(uint256 index) public {
+        require(index < chainIds.length, "Index out of bounds");
+
+        // Shift elements to the left to fill the gap
+        for (uint256 i = index; i < chainIds.length - 1; i++) {
+            chainIds[i] = chainIds[i + 1];
+        }
+
+        // Remove the last element (which is now duplicated)
+        chainIds.pop();
+    }
+
     function _getAdapter(
         uint256 _chainId
     ) internal view returns (address payable adapter) {
