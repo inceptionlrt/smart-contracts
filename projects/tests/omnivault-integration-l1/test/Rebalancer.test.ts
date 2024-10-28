@@ -330,12 +330,14 @@ describe("Omnivault integration tests", function () {
 
     //Restaking pool
     await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
-
     // await restakingPool.connect(owner).setFlashUnstakeFeeParams(30n * 10n ** 7n, 5n * 10n ** 7n, 25n * 10n ** 8n);
     // await restakingPool.connect(owner).setStakeBonusParams(15n * 10n ** 7n, 25n * 10n ** 6n, 25n * 10n ** 8n);
     // await restakingPool.connect(owner).setProtocolFee(50n * 10n ** 8n);
     // await restakingPool.connect(owner).setTargetFlashCapacity(1n);
     // await restakingPool.connect(owner).setMinStake(RESTAKING_POOL_MIN_STAKE);
+
+    //OmniVault
+    await omniVault.setTreasuryAddress(treasury.address);
 
     snapshot = await takeSnapshot();
   });
@@ -1367,6 +1369,10 @@ describe("Omnivault integration tests", function () {
 
   describe("OmniVault", function () {
 
+    it("Treasury", async function() {
+      console.log(await omniVault.treasury());
+    })
+
     describe("Base flow", function () {
       let deposited, freeBalance, depositFees;
 
@@ -1407,7 +1413,7 @@ describe("Omnivault integration tests", function () {
         const senderBalanceBefore = await ethers.provider.getBalance(signer1);
         const receiver = signer2;
         const receiverBalanceBefore = await ethers.provider.getBalance(receiver);
-        const treasuryBalanceBefore = await ethers.provider.getBalance(owner);
+        const treasuryBalanceBefore = await ethers.provider.getBalance(treasury);
         const totalAssetsBefore = await omniVault.totalAssets();
         const flashCapacityBefore = await omniVault.getFlashCapacity();
         console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
@@ -1435,7 +1441,7 @@ describe("Omnivault integration tests", function () {
         const sharesAfter = await iToken.balanceOf(signer1);
         const senderBalanceAfter = await ethers.provider.getBalance(signer1);
         const receiverBalanceAfter = await ethers.provider.getBalance(receiver);
-        const treasuryBalanceAfter = await ethers.provider.getBalance(owner);
+        const treasuryBalanceAfter = await ethers.provider.getBalance(treasury);
         const totalAssetsAfter = await omniVault.totalAssets();
         const flashCapacityAfter = await omniVault.getFlashCapacity();
         console.log(`Shares balance diff:\t${(sharesBefore - sharesAfter).format()}`);
@@ -1655,18 +1661,15 @@ describe("Omnivault integration tests", function () {
       it("Reverts when omniVault is paused", async function () {
         await omniVault.pause();
         const depositAmount = randomBI(19);
-        await expect(omniVault.connect(signer1).deposit(signer1.address, { value: depositAmount })).to.be.revertedWith(
-            "Pausable: paused",
-        );
+        await expect(omniVault.connect(signer1).deposit(signer1.address, { value: depositAmount }))
+            .revertedWithCustomError(omniVault, "EnforcedPause");;
         await omniVault.unpause();
       });
 
       it("Reverts when shares is 0", async function () {
         await omniVault.setMinAmount(0n);
-        await expect(omniVault.connect(signer1).deposit(signer1.address, { value: 0n })).to.be.revertedWithCustomError(
-            omniVault,
-            "ResultISharesZero",
-        );
+        await expect(omniVault.connect(signer1).deposit(signer1.address, { value: 0n }))
+            .revertedWithCustomError(omniVault, "ResultISharesZero");
       });
     });
 
@@ -1870,7 +1873,7 @@ describe("Omnivault integration tests", function () {
             omniVault
                 .connect(signer1)
                 .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
     });
 
@@ -1968,7 +1971,7 @@ describe("Omnivault integration tests", function () {
 
           const amount = await arg.amount();
           const shares = await omniVault.convertToShares(amount);
-          const expectedFee = await omniVault.calculateFlashUnstakeFee(amount);
+          const expectedFee = await omniVault.calculateFlashWithdrawFee(amount);
           console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
           let tx = await omniVault.connect(signer1).flashWithdraw(shares, receiver.address);
@@ -2029,9 +2032,8 @@ describe("Omnivault integration tests", function () {
         await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
         await omniVault.pause();
         const shares = await iToken.balanceOf(signer1.address);
-        await expect(omniVault.connect(signer1).flashWithdraw(shares / 2n, signer1.address)).to.be.revertedWith(
-            "Pausable: paused",
-        );
+        await expect(omniVault.connect(signer1).flashWithdraw(shares / 2n, signer1.address))
+            .to.be.revertedWithCustomError(omniVault, "EnforcedPause");
       });
 
       it("Reverts when withdraws to 0 address", async function () {
@@ -2173,7 +2175,7 @@ describe("Omnivault integration tests", function () {
         });
 
         amounts.forEach(function (amount) {
-          it(`calculateFlashUnstakeFee for: ${amount.name}`, async function () {
+          it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
             await localSnapshot.restore();
             if (amount.flashCapacity() > 0n) {
               await omniVault.connect(signer1).deposit(signer1.address, { value: amount.flashCapacity() });
@@ -2205,7 +2207,7 @@ describe("Omnivault integration tests", function () {
                 }
               }
             }
-            let contractFee = await omniVault.calculateFlashUnstakeFee(await amount.amount());
+            let contractFee = await omniVault.calculateFlashWithdrawFee(await amount.amount());
             console.log(`Expected withdraw fee:\t${withdrawFee.format()}`);
             console.log(`Contract withdraw fee:\t${contractFee.format()}`);
             expect(contractFee).to.be.closeTo(withdrawFee, 1n);
@@ -2248,11 +2250,11 @@ describe("Omnivault integration tests", function () {
         });
       });
 
-      it("calculateFlashUnstakeFee reverts when capacity is not sufficient", async function () {
+      it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
         await snapshot.restore();
         await omniVault.connect(signer1).deposit(signer1.address, { value: randomBI(19) });
         const capacity = await omniVault.getFlashCapacity();
-        await expect(omniVault.calculateFlashUnstakeFee(capacity + 1n))
+        await expect(omniVault.calculateFlashWithdrawFee(capacity + 1n))
             .to.be.revertedWithCustomError(omniVault, "InsufficientCapacity")
             .withArgs(capacity);
       });
@@ -2262,7 +2264,7 @@ describe("Omnivault integration tests", function () {
             omniVault
                 .connect(signer1)
                 .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
     });
 
@@ -2276,7 +2278,7 @@ describe("Omnivault integration tests", function () {
         await expect(omniVault.setTreasuryAddress(newTreasury))
             .to.emit(omniVault, "TreasuryUpdated")
             .withArgs(newTreasury);
-        expect(await omniVault.treasuryAddress()).to.be.eq(newTreasury);
+        expect(await omniVault.treasury()).to.be.eq(newTreasury);
       });
 
       it("setTreasuryAddress(): reverts when set to zero address", async function () {
@@ -2287,9 +2289,8 @@ describe("Omnivault integration tests", function () {
       });
 
       it("setTreasuryAddress(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setTreasuryAddress(signer1.address)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setTreasuryAddress(signer1.address))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setRatioFeed(): only owner can", async function () {
@@ -2313,9 +2314,8 @@ describe("Omnivault integration tests", function () {
 
       it("setRatioFeed(): reverts when caller is not an owner", async function () {
         const newRatioFeed = ethers.Wallet.createRandom().address;
-        await expect(omniVault.connect(signer1).setRatioFeed(newRatioFeed)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setRatioFeed(newRatioFeed))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setOperator(): only owner can", async function () {
@@ -2327,9 +2327,8 @@ describe("Omnivault integration tests", function () {
       });
 
       it("setOperator(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setOperator(signer1.address)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setOperator(signer1.address))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("ratio() reverts when ratioFeed is 0 address", async function () {
@@ -2360,9 +2359,8 @@ describe("Omnivault integration tests", function () {
       });
 
       it("setCrossChainAdapter(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setCrossChainAdapter(signer1.address)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setCrossChainAdapter(signer1.address))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setMinAmount(): only owner can", async function () {
@@ -2378,9 +2376,8 @@ describe("Omnivault integration tests", function () {
       });
 
       it("setMinAmount(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).setMinAmount(randomBI(3))).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setMinAmount(randomBI(3)))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setTargetFlashCapacity(): only owner can", async function () {
@@ -2394,9 +2391,8 @@ describe("Omnivault integration tests", function () {
 
       it("setTargetFlashCapacity(): reverts when called by not an owner", async function () {
         const newValue = randomBI(18);
-        await expect(omniVault.connect(signer1).setTargetFlashCapacity(newValue)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setTargetFlashCapacity(newValue))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setTargetFlashCapacity(): reverts when sets to 0", async function () {
@@ -2421,9 +2417,8 @@ describe("Omnivault integration tests", function () {
 
       it("setProtocolFee(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(10);
-        await expect(omniVault.connect(signer1).setProtocolFee(newValue)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setProtocolFee(newValue))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("setName(): only owner can", async function () {
@@ -2438,9 +2433,8 @@ describe("Omnivault integration tests", function () {
       });
 
       it("setName(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).setName("New name")).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-        );
+        await expect(omniVault.connect(signer1).setName("New name"))
+            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("pause(): only owner can", async function () {
@@ -2450,12 +2444,12 @@ describe("Omnivault integration tests", function () {
       });
 
       it("pause(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(omniVault.connect(signer1).pause()).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
 
       it("pause(): reverts when already paused", async function () {
         await omniVault.pause();
-        await expect(omniVault.pause()).to.be.revertedWith("Pausable: paused");
+        await expect(omniVault.pause()).revertedWithCustomError(omniVault, "EnforcedPause");
       });
 
       it("unpause(): only owner can", async function () {
@@ -2469,13 +2463,13 @@ describe("Omnivault integration tests", function () {
       it("unpause(): reverts when called by not an owner", async function () {
         await omniVault.pause();
         expect(await omniVault.paused()).is.true;
-        await expect(omniVault.connect(signer1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(omniVault.connect(signer1).unpause()).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
       });
     });
 
     describe("Bridge", function () {
       describe("Send info", function () {
-        let TARGET = 10n ** 12n;
+        let TARGET = e18;
 
         beforeEach(async function () {
           await snapshot.restore();
@@ -2483,7 +2477,7 @@ describe("Omnivault integration tests", function () {
         });
 
         it("Adapter is set", async function () {
-          expect(await omniVault.crossChainAdapter()).to.be.eq(adapter.address);
+          expect(await omniVault.crossChainAdapter()).to.be.eq(adapterArb.address);
         });
 
         const args = [
@@ -2537,11 +2531,10 @@ describe("Omnivault integration tests", function () {
             let sentToL1Amount = 0n;
             if (arg.sentToL1) {
               sentToL1Amount = arg.sentToL1(amount);
-              const feeParams = adapterInfo.feesFunc();
-              const fees = 3n * 10n ** 16n;
-              await expect(omniVault.connect(msgSender).sendEthToL1(feeParams, { value: fees }))
-                  .to.emit(omniVault, "EthToL1Sent")
-                  .withArgs(sentToL1Amount + fees);
+              const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, sentToL1Amount).toHex().toString();
+              const amountWithFee = await omniVault.quoteSendEthToL1(ETH_ID, options);
+              const fee = amountWithFee - sentToL1Amount;
+              await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee });
             }
 
             const freeBalance = await omniVault.getFreeBalance();
@@ -2557,8 +2550,10 @@ describe("Omnivault integration tests", function () {
 
             expect(vaultBalance).to.be.eq(expectedVaultBalance);
 
-            const feeParams = adapterInfo.feesFunc();
-            await expect(omniVault.connect(msgSender).sendAssetsInfoToL1(feeParams))
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            const feeParams = await omniVault.quoteSendAssetsInfoToL1(options);
+            console.log("Fees: ", feeParams.format());
+            await expect(omniVault.connect(msgSender).sendAssetsInfoToL1(options, {value: feeParams}))
                 .to.emit(omniVault, "MessageToL1Sent")
                 .withArgs(totalSupply, amount - sentToL1Amount);
           });
@@ -2592,7 +2587,7 @@ describe("Omnivault integration tests", function () {
       });
 
       describe("Send eth", function () {
-        let TARGET = toWei(10);
+        let TARGET = e18;
 
         beforeEach(async function () {
           await snapshot.restore();
@@ -2602,43 +2597,47 @@ describe("Omnivault integration tests", function () {
         const args = [
           {
             name: "with extra value",
-            value: 3n * 10n ** 16n,
+            extraValue: 3n * 10n ** 16n,
           },
           {
             name: "without extra value",
-            value: 0n,
+            extraValue: 0n,
           },
         ];
         args.forEach(function (arg) {
           it(`sendEthToL1 ${arg.name}`, async function () {
-            const freeBalance = randomBI(18);
-            const amount = TARGET + freeBalance;
-            await omniVault.connect(signer1).deposit(signer1, { value: amount });
+            await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
+            const amount = await omniVault.getFreeBalance();
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+            const amountWithFee = await omniVault.quoteSendEthToL1(ETH_ID, options);
+            const fee = amountWithFee - amount;
+            const extraValue = arg.extraValue;
 
-            const feeParams = adapterInfo.feesFunc();
-            await expect(omniVault.connect(operator).sendEthToL1(feeParams, { value: arg.value }))
-                .to.emit(omniVault, "EthToL1Sent")
-                .withArgs(freeBalance + arg.value);
+            const tx = await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
+            await expect(tx).emit(omniVault, "EthCrossChainSent").withArgs(amountWithFee + extraValue, ETH_ID);
+            await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
+            await expect(tx).to.changeEtherBalance(operator.address, -fee - extraValue, { includeFee: false });
+            await expect(tx).to.changeEtherBalance(omniVault.address, -amount + extraValue); //Extra value stays at omniVault
           });
         });
 
         it("Reverts when there is no free balance", async function () {
           await omniVault.connect(signer1).deposit(signer1, { value: TARGET - 1n });
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
 
-          const feeParams = adapterInfo.feesFunc();
-          await expect(omniVault.connect(operator).sendEthToL1(feeParams, { value: 0n })).to.revertedWithCustomError(
-              omniVault,
-              "FreeBalanceIsZero",
-          );
+          await expect(omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: 0n }))
+              .to.revertedWithCustomError(omniVault, "FreeBalanceIsZero");
         });
 
         it("Reverts when called by not an operator", async function () {
           await omniVault.connect(signer1).deposit(signer1, { value: TARGET * 2n });
-          const feeParams = adapterInfo.feesFunc();
-          await expect(omniVault.connect(signer1).sendEthToL1(feeParams, { value: 0n })).revertedWithCustomError(
-              omniVault,
-              "OnlyOwnerOrOperator",
-          );
+          const amount = await omniVault.getFreeBalance();
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const amountWithFee = await omniVault.quoteSendEthToL1(ETH_ID, options);
+          const fee = amountWithFee - amount;
+
+          await expect(omniVault.connect(signer1).sendEthCrossChain(ETH_ID, options, { value: fee }))
+              .to.revertedWithCustomError(omniVault, "OnlyOwnerOrOperator");
         });
       });
     });
@@ -2687,9 +2686,8 @@ describe("Omnivault integration tests", function () {
 
           it(`Reverts: ${arg.setter} when called by not an owner`, async function () {
             const newValue = ethers.Wallet.createRandom().address;
-            await expect(adapter.connect(signer1)[arg.setter](newValue)).to.be.revertedWith(
-                "Ownable: caller is not the owner",
-            );
+            await expect(adapter.connect(signer1)[arg.setter](newValue))
+                .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
           });
 
           it(`Reverts: ${arg.setter} new value is 0 address`, async function () {

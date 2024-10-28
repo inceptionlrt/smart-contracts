@@ -43,20 +43,20 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
   uint256 public targetCapacity;
 
   uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
-  uint64 public constant MAX_PERCENT = 100 * 1e8;
+  uint256 public constant MAX_PERCENT = 100 * 1e8;
 
   address public treasury;
-  uint64 public protocolFee;
+  uint256 public protocolFee;
 
   /// @dev deposit bonus
-  uint64 public maxBonusRate;
-  uint64 public optimalBonusRate;
-  uint64 public depositUtilizationKink;
+  uint256 public maxBonusRate;
+  uint256 public optimalBonusRate;
+  uint256 public depositUtilizationKink;
 
   /// @dev flash withdrawal fee
-  uint64 public maxFlashFeeRate;
-  uint64 public optimalWithdrawalRate;
-  uint64 public withdrawUtilizationKink;
+  uint256 public maxFlashFeeRate;
+  uint256 public optimalWithdrawalRate;
+  uint256 public withdrawUtilizationKink;
 
   /// @dev Modifier to restrict functions to owner or operator.
   modifier onlyOwnerOrOperator() {
@@ -92,9 +92,9 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     inceptionToken = IInceptionToken(_inceptionToken);
     crossChainAdapter = _crossChainAdapter;
 
-    minAmount = 1e8;
+    minAmount = 100;
 
-    targetCapacity = 0.5 * 1e18;
+    targetCapacity = 1;
 
     protocolFee = 50 * 1e8;
 
@@ -215,7 +215,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     inceptionToken.burn(claimer, iShares);
 
     uint256 fee = calculateFlashWithdrawFee(amount);
-    if (fee == 0) revert ZeroFlashWithdrawFee();
+//    if (fee == 0) revert ZeroFlashWithdrawFee();
     amount -= fee;
     uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
     depositBonusAmount += (fee - protocolWithdrawalFee);
