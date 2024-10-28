@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {IInceptionToken} from "./interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "./interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainBridge} from "./interfaces/ICrossChainBridge.sol";
+import {ICrossChainBridgeL1} from "./interfaces/ICrossChainBridgeL1.sol";
 import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
 
 /**
@@ -213,7 +213,8 @@ contract NativeRebalancer is
      */
     function sendEthToL2(
         uint256 _chainId,
-        uint256 _callValue
+        uint256 _callValue,
+        bytes memory _options
     ) external payable onlyOperator {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
@@ -222,9 +223,9 @@ contract NativeRebalancer is
             SendAmountExceedsEthBalance(_callValue)
         );
 
-        ICrossChainBridge(defaultAdapter).sendEthCrossChain{
+        ICrossChainBridgeL1(defaultAdapter).sendEthCrossChain{
             value: _callValue + msg.value
-        }(_chainId);
+        }(_chainId, _options);
     }
 
     function quoteSendEthToL2(
@@ -234,7 +235,10 @@ contract NativeRebalancer is
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
         return
-            ICrossChainBridge(defaultAdapter).quoteSendEth(_chainId, _options);
+            ICrossChainBridgeL1(defaultAdapter).quoteSendEth(
+                _chainId,
+                _options
+            );
     }
 
     //------------------------ TX STORAGE FUNCTIONS ------------------------//

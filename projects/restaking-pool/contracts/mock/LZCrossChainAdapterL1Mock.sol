@@ -2,7 +2,6 @@
 pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 contract LZCrossChainAdapterL1Mock is Ownable {
     event CrossChainMessageSent(
