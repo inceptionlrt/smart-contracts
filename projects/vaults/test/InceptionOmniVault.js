@@ -30,7 +30,11 @@ async function init() {
   console.log("- Deploying OmniVault");
   const adapter = ethers.Wallet.createRandom().address;
   const omniVaultFactory = await ethers.getContractFactory("InEthOmniVault");
-  const omniVault = await upgrades.deployProxy(omniVaultFactory, [iToken.address, await deployer.getAddress(), adapter], {});
+  const omniVault = await upgrades.deployProxy(
+    omniVaultFactory,
+    [iToken.address, await deployer.getAddress(), adapter],
+    {},
+  );
   omniVault.address = await omniVault.getAddress();
 
   await omniVault.setRatioFeed(ratioFeed.address);
@@ -74,13 +78,13 @@ describe("InceptionOmniVault: Native", function () {
       const expectedShares = (deposited * e18) / (await omniVault.ratio());
       const tx = await omniVault.connect(staker1).deposit(await staker1.getAddress(), { value: deposited });
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
+      const events = receipt.logs?.filter(e => e.eventName === "Deposit");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["sender"]).to.be.eq(staker1.address);
       expect(events[0].args["receiver"]).to.be.eq(staker1.address);
       expect(events[0].args["amount"]).to.be.eq(deposited);
       expect(events[0].args["iShares"]).to.be.closeTo(expectedShares, 1n);
-      expect(receipt.logs.find((l) => l.eventName === "DepositBonus")).to.be.undefined; //Because there is no replenish rewards has been collected yet
+      expect(receipt.logs.find(l => l.eventName === "DepositBonus")).to.be.undefined; //Because there is no replenish rewards has been collected yet
       console.log(`Ratio after:\t\t${(await omniVault.ratio()).format()}`);
 
       expect(await iToken.balanceOf(staker1.address)).to.be.closeTo(expectedShares, 1n);
@@ -118,7 +122,7 @@ describe("InceptionOmniVault: Native", function () {
       let tx = await omniVault.connect(staker1).flashWithdraw(sharesBefore, receiver.address);
       const receipt = await tx.wait();
       const txFee = BigInt(receipt.gasUsed * receipt.gasPrice);
-      const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
+      const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
       expect(withdrawEvent.length).to.be.eq(1);
       expect(withdrawEvent[0].args["sender"]).to.be.eq(staker1.address);
       expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -260,7 +264,7 @@ describe("InceptionOmniVault: Native", function () {
         const shares = await iToken.balanceOf(staker3.address);
         const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
         const rec = await tx.wait();
-        collectedFee += (rec.logs.find((l) => l.eventName === "FlashWithdraw")?.args.fee || 0n) / 2n;
+        collectedFee += (rec.logs.find(l => l.eventName === "FlashWithdraw")?.args.fee || 0n) / 2n;
         console.log(`collectedFee: ${collectedFee.format()}`);
       }
       return collectedFee;
@@ -303,14 +307,14 @@ describe("InceptionOmniVault: Native", function () {
 
         const tx = await omniVault.connect(staker1).deposit(receiver, { value: amount });
         const receipt = await tx.wait();
-        const depositEvent = receipt.logs?.filter((e) => e.eventName === "Deposit");
+        const depositEvent = receipt.logs?.filter(e => e.eventName === "Deposit");
         expect(depositEvent.length).to.be.eq(1);
         expect(depositEvent[0].args["sender"]).to.be.eq(staker1.address);
         expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
         expect(depositEvent[0].args["amount"]).to.be.eq(amount);
         expect(depositEvent[0].args["iShares"]).to.be.closeTo(convertedShares, 1n);
         //DepositBonus event
-        const actualBonus = receipt.logs.find((l) => l.eventName === "DepositBonus")?.args.amount || 0n;
+        const actualBonus = receipt.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n;
         console.log(`Actual bonus:\t\t\t${actualBonus.format()}`);
 
         const stakerSharesAfter = await iToken.balanceOf(receiver);
@@ -354,7 +358,7 @@ describe("InceptionOmniVault: Native", function () {
         if (arg.customError) {
           await expect(omniVault.connect(staker1).deposit(receiver, { value: amount })).to.be.revertedWithCustomError(
             omniVault,
-            arg.customError
+            arg.customError,
           );
         } else {
           await expect(omniVault.connect(staker1).deposit(receiver, { value: amount })).to.be.revertedWith(arg.error);
@@ -365,10 +369,9 @@ describe("InceptionOmniVault: Native", function () {
     it("Reverts when omniVault is paused", async function () {
       await omniVault.pause();
       const depositAmount = randomBI(19);
-      await expect(omniVault.connect(staker1).deposit(staker1.address, { value: depositAmount })).to.be.revertedWithCustomError(
-        omniVault,
-        "EnforcedPause"
-      );
+      await expect(
+        omniVault.connect(staker1).deposit(staker1.address, { value: depositAmount }),
+      ).to.be.revertedWithCustomError(omniVault, "EnforcedPause");
       await omniVault.unpause();
     });
 
@@ -376,7 +379,7 @@ describe("InceptionOmniVault: Native", function () {
       await omniVault.setMinAmount(0n);
       await expect(omniVault.connect(staker1).deposit(staker1.address, { value: 0n })).to.be.revertedWithCustomError(
         omniVault,
-        "DepositInconsistentResultedState"
+        "DepositInconsistentResultedState",
       );
     });
   });
@@ -486,7 +489,9 @@ describe("InceptionOmniVault: Native", function () {
         TARGET = e18;
         await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
-        await expect(omniVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink))
+        await expect(
+          omniVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
+        )
           .to.emit(omniVault, "DepositBonusParamsChanged")
           .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
 
@@ -561,14 +566,20 @@ describe("InceptionOmniVault: Native", function () {
     invalidArgs.forEach(function (arg) {
       it(`setDepositBonusParams reverts when ${arg.name}`, async function () {
         await expect(
-          omniVault.setDepositBonusParams(arg.newMaxBonusRate(), arg.newOptimalBonusRate(), arg.newDepositUtilizationKink())
+          omniVault.setDepositBonusParams(
+            arg.newMaxBonusRate(),
+            arg.newOptimalBonusRate(),
+            arg.newDepositUtilizationKink(),
+          ),
         ).to.be.revertedWithCustomError(omniVault, arg.customError);
       });
     });
 
     it("setDepositBonusParams reverts when caller is not an owner", async function () {
       await expect(
-        omniVault.connect(staker1).setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
+        omniVault
+          .connect(staker1)
+          .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
       ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
   });
@@ -673,7 +684,7 @@ describe("InceptionOmniVault: Native", function () {
         let tx = await omniVault.connect(staker1).flashWithdraw(shares, receiver.address);
         const receipt = await tx.wait();
         const txFee = receiver.address === staker1.address ? BigInt(receipt.gasUsed * receipt.gasPrice) : 0n;
-        const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
         expect(withdrawEvent.length).to.be.eq(1);
         expect(withdrawEvent[0].args["sender"]).to.be.eq(staker1.address);
         expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -735,15 +746,17 @@ describe("InceptionOmniVault: Native", function () {
     it("Reverts when withdraws to 0 address", async function () {
       await omniVault.connect(staker1).deposit(staker1.address, { value: toWei(1) });
       const shares = await iToken.balanceOf(staker1.address);
-      await expect(omniVault.connect(staker1).flashWithdraw(shares / 2n, ethers.ZeroAddress)).to.be.revertedWithCustomError(
-        omniVault,
-        "NullParams"
-      );
+      await expect(
+        omniVault.connect(staker1).flashWithdraw(shares / 2n, ethers.ZeroAddress),
+      ).to.be.revertedWithCustomError(omniVault, "NullParams");
     });
 
     it("Reverts when shares = 0", async function () {
       await omniVault.connect(staker1).deposit(staker1.address, { value: toWei(1) });
-      await expect(omniVault.connect(staker1).flashWithdraw(0n, staker1.address)).to.be.revertedWithCustomError(omniVault, "NullParams");
+      await expect(omniVault.connect(staker1).flashWithdraw(0n, staker1.address)).to.be.revertedWithCustomError(
+        omniVault,
+        "NullParams",
+      );
     });
   });
 
@@ -853,7 +866,11 @@ describe("InceptionOmniVault: Native", function () {
         await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
         await expect(
-          omniVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink)
+          omniVault.setFlashWithdrawFeeParams(
+            arg.newMaxFlashFeeRate,
+            arg.newOptimalWithdrawalRate,
+            arg.newWithdrawUtilizationKink,
+          ),
         )
           .to.emit(omniVault, "WithdrawFeeParamsChanged")
           .withArgs(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink);
@@ -931,7 +948,11 @@ describe("InceptionOmniVault: Native", function () {
     invalidArgs.forEach(function (arg) {
       it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function () {
         await expect(
-          omniVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate(), arg.newOptimalWithdrawalRate(), arg.newWithdrawUtilizationKink())
+          omniVault.setFlashWithdrawFeeParams(
+            arg.newMaxFlashFeeRate(),
+            arg.newOptimalWithdrawalRate(),
+            arg.newWithdrawUtilizationKink(),
+          ),
         ).to.be.revertedWithCustomError(omniVault, arg.customError);
       });
     });
@@ -947,7 +968,9 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setFlashWithdrawFeeParams reverts when caller is not an owner", async function () {
       await expect(
-        omniVault.connect(staker1).setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
+        omniVault
+          .connect(staker1)
+          .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
       ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
   });
@@ -959,16 +982,23 @@ describe("InceptionOmniVault: Native", function () {
 
     it("settreasury(): only owner can", async function () {
       const newTreasury = ethers.Wallet.createRandom().address;
-      await expect(omniVault.setTreasuryAddress(newTreasury)).to.emit(omniVault, "TreasuryUpdated").withArgs(newTreasury);
+      await expect(omniVault.setTreasuryAddress(newTreasury))
+        .to.emit(omniVault, "TreasuryUpdated")
+        .withArgs(newTreasury);
       expect(await omniVault.treasury()).to.be.eq(newTreasury);
     });
 
     it("settreasury(): reverts when set to zero address", async function () {
-      await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(omniVault, "NullParams");
+      await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+        omniVault,
+        "NullParams",
+      );
     });
 
     it("settreasury(): reverts when caller is not an owner", async function () {
-      await expect(omniVault.connect(staker1).setTreasuryAddress(staker1.address)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setTreasuryAddress(staker1.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("setRatioFeed(): only owner can", async function () {
@@ -992,13 +1022,17 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setRatioFeed(): reverts when caller is not an owner", async function () {
       const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(omniVault.connect(staker1).setRatioFeed(newRatioFeed)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setRatioFeed(newRatioFeed)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("setMinAmount(): only owner can", async function () {
       const prevValue = await omniVault.minAmount();
       const newMinAmount = randomBI(4);
-      await expect(omniVault.setMinAmount(newMinAmount)).to.emit(omniVault, "MinAmountChanged").withArgs(prevValue, newMinAmount);
+      await expect(omniVault.setMinAmount(newMinAmount))
+        .to.emit(omniVault, "MinAmountChanged")
+        .withArgs(prevValue, newMinAmount);
       expect(await omniVault.minAmount()).to.be.eq(newMinAmount);
       await expect(omniVault.connect(staker1).deposit(staker1.address, { value: newMinAmount - 1n }))
         .to.be.revertedWithCustomError(omniVault, "LowerMinAmount")
@@ -1006,19 +1040,25 @@ describe("InceptionOmniVault: Native", function () {
     });
 
     it("setMinAmount(): reverts when called by not an owner", async function () {
-      await expect(omniVault.connect(staker1).setMinAmount(randomBI(3))).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setMinAmount(randomBI(3))).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("setTargetFlashCapacity(): only owner can", async function () {
       const prevValue = await omniVault.targetCapacity();
       const newValue = randomBI(18);
-      await expect(omniVault.setTargetFlashCapacity(newValue)).to.emit(omniVault, "TargetCapacityChanged").withArgs(prevValue, newValue);
+      await expect(omniVault.setTargetFlashCapacity(newValue))
+        .to.emit(omniVault, "TargetCapacityChanged")
+        .withArgs(prevValue, newValue);
       expect(await omniVault.targetCapacity()).to.be.eq(newValue);
     });
 
     it("setTargetFlashCapacity(): reverts when called by not an owner", async function () {
       const newValue = randomBI(18);
-      await expect(omniVault.connect(staker1).setTargetFlashCapacity(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setTargetFlashCapacity(newValue)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("setTargetFlashCapacity(): reverts when sets to 0", async function () {
@@ -1028,7 +1068,9 @@ describe("InceptionOmniVault: Native", function () {
     it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
       const prevValue = await omniVault.protocolFee();
       const newValue = randomBI(10);
-      await expect(omniVault.setProtocolFee(newValue)).to.emit(omniVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
+      await expect(omniVault.setProtocolFee(newValue))
+        .to.emit(omniVault, "ProtocolFeeChanged")
+        .withArgs(prevValue, newValue);
       expect(await omniVault.protocolFee()).to.be.eq(newValue);
     });
 
@@ -1041,7 +1083,9 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setProtocolFee(): reverts when caller is not an owner", async function () {
       const newValue = randomBI(10);
-      await expect(omniVault.connect(staker1).setProtocolFee(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setProtocolFee(newValue)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("setName(): only owner can", async function () {
@@ -1056,7 +1100,9 @@ describe("InceptionOmniVault: Native", function () {
     });
 
     it("setName(): reverts when called by not an owner", async function () {
-      await expect(omniVault.connect(staker1).setName("New name")).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(omniVault.connect(staker1).setName("New name")).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("pause(): only owner can", async function () {
