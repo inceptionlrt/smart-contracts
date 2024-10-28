@@ -5,10 +5,12 @@ import {ICrossChainBridgeL2} from "../interfaces/ICrossChainBridgeL2.sol";
 import {AbstractCrossChainAdapter} from "./AbstractCrossChainAdapter.sol";
 
 /**
- * @title AbstractCrossChainAdapter
- * @author InceptionLRT
- * @dev TODO
+ * @title AbstractCrossChainAdapterL2
+ * @dev This abstract contract is a placeholder for Layer 2 cross-chain bridge functionality. It extends
+ * `AbstractCrossChainAdapter` and implements `ICrossChainBridgeL2`, serving as a placeholder for functionalities of Layer 2
+ * cross-chain adapters.
  */
+
 abstract contract AbstractCrossChainAdapterL2 is
     AbstractCrossChainAdapter,
     ICrossChainBridgeL2

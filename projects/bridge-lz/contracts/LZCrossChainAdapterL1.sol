@@ -12,8 +12,10 @@ import {OAppReceiverUpgradeable} from "./OAppReceiverUpgradeable.sol";
 
 /**
  * @title LZCrossChainAdapterL1
- * @author InceptionLRT
- * @dev TODO
+ * @dev Layer 1 adapter for cross-chain messaging using LayerZero's communication framework.
+ * This contract initializes mappings between Endpoint IDs (EIDs) and chain IDs  and processes
+ * incoming messages with optional ETH transfers and payload handling. Extends LayerZero and
+ * cross-chain adapter functionalities for L1 environments.
  */
 contract LZCrossChainAdapterL1 is
     AbstractLZCrossChainAdapter,

@@ -11,9 +11,11 @@ import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 /**
  * @title LZCrossChainAdapterL2
- * @author InceptionLRT
- * @dev TODO
+ * @dev Layer 2 adapter for LayerZero cross-chain communication, supporting ETH transfers and data messaging with Layer 1.
+ * This contract manages endpoint and chain ID mappings, enables quoting for cross-chain transactions, and provides functions for
+ * data transfer to L1.
  */
+
 contract LZCrossChainAdapterL2 is
     AbstractLZCrossChainAdapter,
     AbstractCrossChainAdapterL2,

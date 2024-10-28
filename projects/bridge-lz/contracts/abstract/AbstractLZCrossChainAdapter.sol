@@ -11,9 +11,11 @@ import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
 import {OAppUpgradeable} from "../OAppUpgradeable.sol";
 
 /**
- * @title AbstractCrossChainAdapter
- * @author InceptionLRT
- * @dev TODO
+ * @title AbstractLZCrossChainAdapter
+ * @dev Provides foundational cross-chain messaging functionality using LayerZero's messaging protocols.
+ * This contract includes methods to send and quote cross-chain ETH transactions, map LayerZero Endpoint IDs (EIDs)
+ * to chain IDs, and configure peer contracts for cross-chain interaction. It is intended to be inherited by specific
+ * cross-chain adapter implementations.
  */
 abstract contract AbstractLZCrossChainAdapter is
     ICrossChainBridge,

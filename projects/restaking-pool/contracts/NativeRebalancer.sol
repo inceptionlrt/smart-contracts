@@ -8,15 +8,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {IInceptionToken} from "./interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "./interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainBridge} from "./interfaces/ICrossChainBridge.sol";
-import {IRebalancer} from "./interfaces/IRebalancer.sol";
+import {ICrossChainBridgeL1} from "./interfaces/ICrossChainBridgeL1.sol";
+import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
 
 /**
  * @author The InceptionLRT team
- * @title Rebalancer
+ * @title NativeRebalancer
  * @dev This contract handles staking, manages treasury data and facilitates cross-chain ETH transfers.
  */
-contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
+contract NativeRebalancer is
+    Initializable,
+    OwnableUpgradeable,
+    INativeRebalancer
+{
     //------------- REBALANCER FIELDS -------------//
     address public inceptionToken;
     address public lockboxAddress;
@@ -209,7 +213,8 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
      */
     function sendEthToL2(
         uint256 _chainId,
-        uint256 _callValue
+        uint256 _callValue,
+        bytes memory _options
     ) external payable onlyOperator {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
@@ -218,9 +223,9 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
             SendAmountExceedsEthBalance(_callValue)
         );
 
-        ICrossChainBridge(defaultAdapter).sendEthCrossChain{
+        ICrossChainBridgeL1(defaultAdapter).sendEthCrossChain{
             value: _callValue + msg.value
-        }(_chainId);
+        }(_chainId, _options);
     }
 
     function quoteSendEthToL2(
@@ -230,7 +235,10 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
         return
-            ICrossChainBridge(defaultAdapter).quoteSendEth(_chainId, _options);
+            ICrossChainBridgeL1(defaultAdapter).quoteSendEth(
+                _chainId,
+                _options
+            );
     }
 
     //------------------------ TX STORAGE FUNCTIONS ------------------------//
@@ -297,7 +305,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         adapters[_chainId] = _newAdapter;
         _addChainId(_chainId);
 
-        emit BridgeAdded(_chainId, _newAdapter);
+        emit AdapterAdded(_chainId, _newAdapter);
     }
 
     function setDefaultAdapter(
@@ -309,11 +317,11 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
         defaultAdapter = _newDefaultAdapter;
     }
 
-    function addChainId(uint32 _newChainId) external onlyOwner {
+    function addChainId(uint32 _newChainId) external onlyOperator {
         _addChainId(_newChainId);
     }
 
-    function deleteChainId(uint256 index) public {
+    function deleteChainId(uint256 index) public onlyOperator {
         require(
             index < chainIds.length,
             IndexOutOfBounds(index, chainIds.length)
@@ -326,6 +334,7 @@ contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
 
         // Remove the last element (which is now duplicated)
         chainIds.pop();
+        emit ChainIdDelted(index);
     }
 
     function _getAdapter(

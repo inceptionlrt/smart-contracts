@@ -1,96 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.27;
 
 interface ICrossChainBridge {
-    // ======================= Events =======================
+  event TargetReceiverChanged(address prevTargetReceiver, address newTargetReceiver);
+  event RecoverFundsInitiated(uint256 amount);
+  event ReceiveTriggered(address caller, uint256 amount);
+  event CrossChainEthDeposit(uint256 chainId, uint256 amount);
+  event ChainIdAdded(uint256 _chainId);
+  event CrossChainMessageReceived(uint256 indexed chainId, uint256 value, bytes data);
+  event CrossChainMessageSent(uint256 indexed chainId, uint256 value, bytes data, uint256 fee);
 
-    event CrossChainMessageReceived(
-        uint256 indexed chainId,
-        uint256 value,
-        bytes data
-    );
-    event CrossChainMessageSent(
-        uint256 indexed chainId,
-        uint256 value,
-        bytes data,
-        uint256 fee
-    );
-    event ChainIdAdded(uint32 indexed _eid, uint256 indexed _chainId);
-    event CrossChainDataSuccessfullyRelayed(uint256 indexed chainId);
-    event CrossChainDataProcessingFailed(
-        uint256 indexed chainId,
-        string reason
-    );
+  error TargetReceiverNotSet();
+  error TransferToTargetReceiverFailed();
+  error SettingZeroAddress();
+  error NotTargetReceiver(address caller);
+  error ChainIdNotFound(uint256 chainId);
 
-    event CrossChainEthDeposit(uint256 chainId, uint256 amount);
-    event CrossChainInfoReceived(
-        uint256 indexed chainId,
-        uint256 timestamp,
-        uint256 balance,
-        uint256 totalSupply
-    );
-    event ReceiveTriggered(address caller, uint256 amount);
+  function setTargetReceiver(address _newTargetReceiver) external;
 
-    event VaultChanged(address prevVault, address newVault);
-    event TxStorageChanged(address prevTxStorage, address newTxStorage);
-    event RecoverFundsInitiated(uint256 amount);
+  function recoverFunds() external;
 
-    // ======================= Errors =======================
+  function quoteSendEth(uint256 _chainId, bytes memory _options) external view returns (uint256);
 
-    error SettingZeroAddress();
-    error NoAdapterSet();
-    error Unauthorized(address caller);
-    error NoDestEidFoundForChainId(uint256 chainId);
-    error ArraysLengthsMismatch();
+  function sendEthCrossChain(uint256 _chainId, bytes memory _options) external payable;
 
-    error NotBridge(address caller);
-    error NotVault(address caller);
-    error FutureTimestamp();
-    error UnauthorizedOriginalSender();
-    error TransferToVaultFailed();
-    error VaultNotSet();
-    error TxStorageNotSet();
-    error InvalidValue();
-    error L2ReceiverNotSet();
-    error GasDataNotProvided();
-    error OnlyVaultCanCall(address caller);
-    error OnlyOperatorCanCall(address caller);
-
-    // ======================= Functions =======================
-
-    // CrossChainBridge-related functions
-    function eidToChainId(uint32 _eid) external view returns (uint256);
-
-    function chainIdToEid(uint256 _chainId) external view returns (uint32);
-
-    function sendCrosschain(
-        uint256 _chainId,
-        bytes calldata _payload,
-        bytes calldata _options
-    ) external payable;
-
-    function quote(
-        uint256 _chainId,
-        bytes calldata _payload,
-        bytes memory _options,
-        bool _payInLzToken
-    ) external view returns (uint256);
-
-    function quoteSendEth(
-        uint256 _chainId,
-        bytes memory _options
-    ) external view returns (uint256);
-
-    function setChainIdFromEid(uint32 _eid, uint256 _chainId) external;
-
-    function getChainIdFromEid(uint32 _eid) external view returns (uint256);
-
-    function getEidFromChainId(uint256 _chainId) external view returns (uint32);
-
-    // CrossChainAdapter-related functions
-    function sendEthCrossChain(uint256 _chainId) external payable;
-
-    function recoverFunds() external;
-
-    receive() external payable;
+  receive() external payable;
 }

@@ -8,7 +8,10 @@ import {IRebalancer} from "../interfaces/IRebalancer.sol";
 /**
  * @title AbstractCrossChainAdapter
  * @author InceptionLRT
- * @dev TODO
+ * @dev This abstract contract extends `AbstractCrossChainAdapter` with functionality specific to receiving
+ * cross-chain data from Layer 2 to Layer 1. It decodes and processes data from incoming cross-chain messages,
+ * updating the designated `targetReceiver` with timestamped balance and supply information.
+ * Intended for use by Layer 1 cross-chain bridge adapters.
  */
 abstract contract AbstractCrossChainAdapterL1 is
     AbstractCrossChainAdapter,

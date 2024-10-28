@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-interface IRebalancer {
+interface INativeRebalancer {
     struct Transaction {
         uint256 timestamp;
         uint256 ethBalance;
@@ -27,11 +27,12 @@ interface IRebalancer {
     );
     event LiqPoolChanged(address prevLiqPool, address newLiqPool);
     event OperatorChanged(address prevOperator, address newOperator);
-    event BridgeAdded(uint256 indexed chainId, address newAdapter);
+    event AdapterAdded(uint256 indexed chainId, address newAdapter);
     event DefaultBridgeChanged(
         address indexed prevDefaultAdapter,
         address indexed newDefaultAdapter
     );
+    event ChainIdDelted(uint256 index);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);

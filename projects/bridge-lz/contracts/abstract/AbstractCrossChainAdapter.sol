@@ -11,7 +11,10 @@ import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
 /**
  * @title AbstractCrossChainAdapter
  * @author InceptionLRT
- * @dev TODO
+ * @dev This abstract contract provides core functionality for cross-chain ETH transfers.
+ * It allows designated target receivers to handle incoming cross-chain ETH deposits
+ * and provides recovery of contract-held ETH to a specified receiver.
+ * This contract is intended to be inherited by contracts implementing specific cross-chain bridge logic.
  */
 abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     /// NOTE: targetReceiver is a term encompassing both Rebalancer on L1 or InceptionOmniTargetReceiver on L2

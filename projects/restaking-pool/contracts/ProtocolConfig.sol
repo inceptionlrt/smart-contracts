@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-import "./interfaces/IRebalancer.sol";
+import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
 import "./interfaces/IProtocolConfig.sol";
 import "./restaker/IRestakerDeployer.sol";
 
@@ -133,7 +133,7 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
         _RESTAKING_POOL_SLOT.getAddressSlot().value = address(newValue);
     }
 
-    function setRebalancer(IRebalancer newValue) external onlyGovernance {
+    function setRebalancer(INativeRebalancer newValue) external onlyGovernance {
         _requireNotZero(address(newValue));
         emit RebalancerChanged(getRebalancer(), newValue);
         _REBALANCER_SLOT.getAddressSlot().value = address(newValue);
@@ -179,8 +179,8 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
         return IRestakingPool(_RESTAKING_POOL_SLOT.getAddressSlot().value);
     }
 
-    function getRebalancer() public view override returns (IRebalancer) {
-        return IRebalancer(_REBALANCER_SLOT.getAddressSlot().value);
+    function getRebalancer() public view override returns (INativeRebalancer) {
+        return INativeRebalancer(_REBALANCER_SLOT.getAddressSlot().value);
     }
 
     function getRatioFeed() public view override returns (IRatioFeed) {
