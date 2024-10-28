@@ -1,3 +1,3 @@
-module.exports = {
-    ...require('@layerzerolabs/prettier-config-next'),
-};
+// module.exports = {
+//     ...require('@layerzerolabs/prettier-config-next'),
+// };

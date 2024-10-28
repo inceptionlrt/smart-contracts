@@ -2,12 +2,13 @@
 
 pragma solidity ^0.8.23;
 
-import { OAppCoreUpgradeable } from "./OAppCoreUpgradeable.sol";
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {MessagingParams, MessagingFee, MessagingReceipt} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 /**
- * @title OAppSender
+ * @title OAppSenderUpgradeable
+ * @author InceptionLRT
  * @dev Abstract contract implementing the OAppSender functionality for sending messages to a LayerZero endpoint.
  */
 abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
@@ -30,7 +31,12 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
      * ie. this is a SEND only OApp.
      * @dev If the OApp uses both OAppSender and OAppReceiver, then this needs to be override returning the correct versions
      */
-    function oAppVersion() public view virtual returns (uint64 senderVersion, uint64 receiverVersion) {
+    function oAppVersion()
+        public
+        view
+        virtual
+        returns (uint64 senderVersion, uint64 receiverVersion)
+    {
         return (SENDER_VERSION, 0);
     }
 
@@ -52,7 +58,13 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
     ) internal view virtual returns (MessagingFee memory fee) {
         return
             endpoint.quote(
-                MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _payInLzToken),
+                MessagingParams(
+                    _dstEid,
+                    _getPeerOrRevert(_dstEid),
+                    _message,
+                    _options,
+                    _payInLzToken
+                ),
                 address(this)
             );
     }
@@ -85,8 +97,14 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
 
         return
             // solhint-disable-next-line check-send-result
-            endpoint.send{ value: messageValue }(
-                MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _fee.lzTokenFee > 0),
+            endpoint.send{value: messageValue}(
+                MessagingParams(
+                    _dstEid,
+                    _getPeerOrRevert(_dstEid),
+                    _message,
+                    _options,
+                    _fee.lzTokenFee > 0
+                ),
                 _refundAddress
             );
     }
@@ -102,7 +120,9 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
      * @dev Some EVMs use an ERC20 as a method for paying transactions/gasFees.
      * @dev The endpoint is EITHER/OR, ie. it will NOT support both types of native payment at a time.
      */
-    function _payNative(uint256 _nativeFee) internal virtual returns (uint256 nativeFee) {
+    function _payNative(
+        uint256 _nativeFee
+    ) internal virtual returns (uint256 nativeFee) {
         if (msg.value != _nativeFee) revert NotEnoughNative(msg.value);
         return _nativeFee;
     }
@@ -120,6 +140,10 @@ abstract contract OAppSenderUpgradeable is OAppCoreUpgradeable {
         if (lzToken == address(0)) revert LzTokenUnavailable();
 
         // Pay LZ token fee by sending tokens to the endpoint.
-        IERC20(lzToken).safeTransferFrom(msg.sender, address(endpoint), _lzTokenFee);
+        IERC20(lzToken).safeTransferFrom(
+            msg.sender,
+            address(endpoint),
+            _lzTokenFee
+        );
     }
 }

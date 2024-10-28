@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { Origin, MessagingReceipt, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Origin, MessagingReceipt, MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { AbstractCrossChainAdapter } from "../abstract/AbstractCrossChainAdapter.sol";
-import { ICrossChainBridge } from "../interfaces/ICrossChainBridge.sol";
-import { OAppUpgradeable } from "../OAppUpgradeable.sol";
+import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.sol";
+import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
+import {OAppUpgradeable} from "../OAppUpgradeable.sol";
 
 /**
  * @title AbstractCrossChainAdapter
  * @author InceptionLRT
  * @dev TODO
  */
-abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradeable {
+abstract contract AbstractLZCrossChainAdapter is
+    ICrossChainBridge,
+    OAppUpgradeable
+{
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
 
@@ -32,14 +35,21 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         _sendCrosschain(_chainId, new bytes(0), _options);
     }
 
-    function _quote(uint256 _chainId, bytes calldata _payload, bytes memory _options) internal view returns (uint256) {
+    function _quote(
+        uint256 _chainId,
+        bytes calldata _payload,
+        bytes memory _options
+    ) internal view returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
         MessagingFee memory fee = _quote(dstEid, _payload, _options, false);
         return fee.nativeFee;
     }
 
-    function quoteSendEth(uint256 _chainId, bytes memory _options) external view override returns (uint256) {
+    function quoteSendEth(
+        uint256 _chainId,
+        bytes memory _options
+    ) external view override returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
 
@@ -48,7 +58,10 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return fee.nativeFee;
     }
 
-    function setChainIdFromEid(uint32 _eid, uint256 _chainId) public onlyOwnerRestricted {
+    function setChainIdFromEid(
+        uint32 _eid,
+        uint256 _chainId
+    ) public onlyOwnerRestricted {
         eidToChainId[_eid] = _chainId;
         chainIdToEid[_chainId] = _eid;
         emit ChainIdAdded(_chainId);
@@ -62,11 +75,18 @@ abstract contract AbstractLZCrossChainAdapter is ICrossChainBridge, OAppUpgradea
         return chainIdToEid[_chainId];
     }
 
-    function setPeer(uint32 _eid, bytes32 _peer) public override onlyOwnerRestricted {
+    function setPeer(
+        uint32 _eid,
+        bytes32 _peer
+    ) public override onlyOwnerRestricted {
         _setPeer(_eid, _peer);
     }
 
-    function _sendCrosschain(uint256 _chainId, bytes memory _payload, bytes memory _options) internal {
+    function _sendCrosschain(
+        uint256 _chainId,
+        bytes memory _payload,
+        bytes memory _options
+    ) internal {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,

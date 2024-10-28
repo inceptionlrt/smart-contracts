@@ -2,10 +2,11 @@
 
 pragma solidity ^0.8.23;
 
-import { IOAppCoreUpgradeable, ILayerZeroEndpointV2 } from "./interfaces/IOAppCoreUpgradeable.sol";
+import {IOAppCoreUpgradeable, ILayerZeroEndpointV2} from "./interfaces/IOAppCoreUpgradeable.sol";
 
 /**
- * @title OAppCore
+ * @title OAppCoreUpgradeable
+ * @author InceptionLRT
  * @dev Abstract contract implementing the IOAppCore interface with basic OApp configurations.
  */
 abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable {
@@ -22,7 +23,10 @@ abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable {
      *
      * @dev The delegate typically should be set as the owner of the contract.
      */
-    function __OAppCoreUpgradeable_init(address _endpoint, address _delegate) internal {
+    function __OAppCoreUpgradeable_init(
+        address _endpoint,
+        address _delegate
+    ) internal {
         endpoint = ILayerZeroEndpointV2(_endpoint);
         if (_delegate == address(0)) revert InvalidDelegate();
         endpoint.setDelegate(_delegate);
@@ -60,7 +64,9 @@ abstract contract OAppCoreUpgradeable is IOAppCoreUpgradeable {
      * @param _eid The endpoint ID.
      * @return peer The address of the peer associated with the specified endpoint.
      */
-    function _getPeerOrRevert(uint32 _eid) internal view virtual returns (bytes32) {
+    function _getPeerOrRevert(
+        uint32 _eid
+    ) internal view virtual returns (bytes32) {
         bytes32 peer = peers[_eid];
         if (peer == bytes32(0)) revert NoPeer(_eid);
         return peer;
