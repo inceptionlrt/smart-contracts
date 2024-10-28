@@ -1,8 +1,8 @@
+![OmniStaking Architecture](./OmniStaking_Architecture.jpg)
+
 # OmniStaking
 
 OmniStaking is a cross-chain staking system designed to maintain the balance of Inception Tokens across Layer 1 (L1) and multiple Layer 2 (L2) networks. By managing both data and ETH transfers between chains, OmniStaking ensures that the protocol maintains a consistent supply of Inception Tokens across all deployed chains, creating a unified and decentralized staking ecosystem.
-
-![OmniStaking Architecture](./OmniStaking_Architecture.jpg)
 
 ## Overview
 
