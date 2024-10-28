@@ -4,8 +4,9 @@ import { NativeRebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, Res
 
 describe("NativeRebalancer", function () {
 
-    const arbitrumSepoliaChainId = 421614;
-    const optimismSepoliaChainId = 11155420;
+    const arbitrumSepoliaChainId = 421614n;
+    const optimismSepoliaChainId = 11155420n;
+    const LZCrossChainBridgeAddress = "0xbCc523818C16e5F955EEe112665d57F35a8000e4";
 
     async function deployFixture() {
         const [deployer] = await ethers.getSigners();
@@ -61,7 +62,7 @@ describe("NativeRebalancer", function () {
         await restakingPool.setTargetFlashCapacity(1000000n);
         await restakingPool.setStakeBonusParams(10n, 5n, 50n);
         await restakingPool.setFlashUnstakeFeeParams(5n, 3n, 50n);
-        const newMaxTVL = ethers.parseEther("101");
+        const newMaxTVL = ethers.parseEther("100");
         await restakingPool.setMaxTVL(newMaxTVL);
 
         // Deploy XERC20Lockbox
@@ -79,7 +80,7 @@ describe("NativeRebalancer", function () {
             await cToken.getAddress(),
             await xerc20Lockbox.getAddress(),
             await restakingPool.getAddress(),
-            "0xbCc523818C16e5F955EEe112665d57F35a8000e4",
+            LZCrossChainBridgeAddress,
             await ratioFeed.getAddress(),
             deployer.address,
         ]) as NativeRebalancer;
@@ -186,4 +187,49 @@ describe("NativeRebalancer", function () {
 
         });
     });
+
+    describe("Stake Scenarios", function () {
+        it("should successfully stake when conditions are met", async function () {
+            const { rebalancer, restakingPool, cToken, xerc20Lockbox, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("1");
+
+            const rebalancerAddress = await rebalancer.getAddress();
+
+            // Send ETH to rebalancer contract to allow staking
+            await deployer.sendTransaction({ to: rebalancerAddress, value: amountToStake });
+
+            // Calculate expected shares based on the conversion rate
+            const expectedShares = await cToken.convertToShares(amountToStake);
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.emit(restakingPool, "Staked")
+                .withArgs(rebalancerAddress, amountToStake, expectedShares);
+
+            // Verify `inceptionToken` balance is transferred to lockbox
+            const lockboxBalance = await cToken.balanceOf(xerc20Lockbox.getAddress());
+
+            expect(lockboxBalance).to.equal(expectedShares);
+        });
+
+        it("should fail to stake when ETH balance is insufficient", async function () {
+            const { rebalancer, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("1");
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.be.revertedWithCustomError(rebalancer, "StakeAmountExceedsEthBalance");
+        });
+
+        it("should fail to stake if stake amount exceeds RestakingPool's max TVL", async function () {
+            const { rebalancer, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("101"); // More than the set max TVL of 100
+
+            await deployer.sendTransaction({ to: rebalancer.getAddress(), value: amountToStake });
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.be.revertedWithCustomError(rebalancer, "StakeAmountExceedsMaxTVL");
+        });
+    });;
 });
