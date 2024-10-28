@@ -8,7 +8,7 @@ import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20O
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainAdapterL2} from "../interfaces/ICrossChainAdapterL2.sol";
+import {ICrossChainBridgeL2} from "../interfaces/ICrossChainAdapterL2.sol";
 
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
@@ -31,7 +31,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
     IInceptionRatioFeed public ratioFeed;
 
-    ICrossChainAdapterL2 public crossChainAdapter;
+    ICrossChainBridgeL2 public crossChainAdapter;
 
     /**
      *  @dev Flash withdrawal params

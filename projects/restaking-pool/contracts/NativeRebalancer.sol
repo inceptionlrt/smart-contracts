@@ -313,7 +313,7 @@ contract NativeRebalancer is
         defaultAdapter = _newDefaultAdapter;
     }
 
-    function addChainId(uint32 _newChainId) external onlyOwner {
+    function addChainId(uint32 _newChainId) external onlyOperator {
         _addChainId(_newChainId);
     }
 
