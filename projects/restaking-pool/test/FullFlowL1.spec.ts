@@ -1,8 +1,13 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { NativeRebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
+import { NativeRebalancer, CToken, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
 
 describe("NativeRebalancer", function () {
+
+    const arbitrumSepoliaChainId = 421614n;
+    const optimismSepoliaChainId = 11155420n;
+    const LZCrossChainBridgeAddress = "0xbCc523818C16e5F955EEe112665d57F35a8000e4";
+
     async function deployFixture() {
         const [deployer] = await ethers.getSigners();
 
@@ -57,7 +62,7 @@ describe("NativeRebalancer", function () {
         await restakingPool.setTargetFlashCapacity(1000000n);
         await restakingPool.setStakeBonusParams(10n, 5n, 50n);
         await restakingPool.setFlashUnstakeFeeParams(5n, 3n, 50n);
-        const newMaxTVL = ethers.parseEther("101");
+        const newMaxTVL = ethers.parseEther("100");
         await restakingPool.setMaxTVL(newMaxTVL);
 
         // Deploy XERC20Lockbox
@@ -75,14 +80,14 @@ describe("NativeRebalancer", function () {
             await cToken.getAddress(),
             await xerc20Lockbox.getAddress(),
             await restakingPool.getAddress(),
-            "0xbCc523818C16e5F955EEe112665d57F35a8000e4",
+            LZCrossChainBridgeAddress,
             await ratioFeed.getAddress(),
             deployer.address,
         ]) as NativeRebalancer;
         await rebalancer.waitForDeployment();
 
-        await rebalancer.addChainId(40231n);
-        await rebalancer.addChainId(40232n);
+        await rebalancer.addChainId(arbitrumSepoliaChainId);
+        await rebalancer.addChainId(optimismSepoliaChainId);
 
         // Setup ProtocolConfig with addresses
         await protocolConfig.setRatioFeed(await ratioFeed.getAddress());
@@ -99,14 +104,12 @@ describe("NativeRebalancer", function () {
 
             const l2BalanceArb = 1n * 10n ** 17n;
             const l2BalanceOpt = 3n * 10n ** 17n;
-            const chainId1 = 40231;
-            const chainId2 = 40232;
 
             const pastTimestamp1 = Math.floor(Date.now() / 1000) - 2000;
             const pastTimestamp2 = Math.floor(Date.now() / 1000) - 1800;
 
-            await rebalancer.handleL2Info(chainId1, pastTimestamp1, l2BalanceArb, l2BalanceArb);
-            await rebalancer.handleL2Info(chainId2, pastTimestamp2, l2BalanceOpt, l2BalanceOpt);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestamp1, l2BalanceArb, l2BalanceArb);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestamp2, l2BalanceOpt, l2BalanceOpt);
 
             // Call updateTreasuryData, which should mint tokens to match the increase
             await expect(rebalancer.updateTreasuryData())
@@ -120,9 +123,6 @@ describe("NativeRebalancer", function () {
         it("should burn tokens when total L2 inETH is less than the last update", async function () {
             const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
-            const chainIdArb1 = 40231;
-            const chainIdOpt1 = 40232;
-
             const initValueArb = 5n * 10n ** 17n;
             const initValueOpt = 7n * 10n ** 17n;
             const nextValueArb = 3n * 10n ** 17n;
@@ -134,8 +134,8 @@ describe("NativeRebalancer", function () {
             const initialL2BalanceOpt1 = initValueOpt;
             const pastTimestampOpt1 = Math.floor(Date.now() / 1000) - 5000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
             await rebalancer.updateTreasuryData();
 
             const nextL2BalanceArb2 = nextValueArb;
@@ -144,8 +144,8 @@ describe("NativeRebalancer", function () {
             const nextL2BalanceOpt2 = nextValueOpt;
             const pastTimestampOpt2 = Math.floor(Date.now() / 1000) - 3000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
 
             // Call updateTreasuryData, which should burn tokens to match the decrease
             await expect(rebalancer.updateTreasuryData())
@@ -159,9 +159,6 @@ describe("NativeRebalancer", function () {
         it("should revert if no rebalancing is required", async function () {
             const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
-            const chainIdArb1 = 40231;
-            const chainIdOpt1 = 40232;
-
             const sameValue = 4n * 10n ** 17n;
 
             const initialL2BalanceArb1 = sameValue;
@@ -170,8 +167,8 @@ describe("NativeRebalancer", function () {
             const initialL2BalanceOpt1 = sameValue;
             const pastTimestampOpt1 = Math.floor(Date.now() / 1000) - 5000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb1, initialL2BalanceArb1, initialL2BalanceArb1);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt1, initialL2BalanceOpt1, initialL2BalanceOpt1);
             await rebalancer.updateTreasuryData();
 
             const nextL2BalanceArb2 = sameValue;
@@ -180,8 +177,8 @@ describe("NativeRebalancer", function () {
             const nextL2BalanceOpt2 = sameValue;
             const pastTimestampOpt2 = Math.floor(Date.now() / 1000) - 3000;
 
-            await rebalancer.handleL2Info(chainIdArb1, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
-            await rebalancer.handleL2Info(chainIdOpt1, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
+            await rebalancer.handleL2Info(arbitrumSepoliaChainId, pastTimestampArb2, nextL2BalanceArb2, nextL2BalanceArb2);
+            await rebalancer.handleL2Info(optimismSepoliaChainId, pastTimestampOpt2, nextL2BalanceOpt2, nextL2BalanceOpt2);
 
             await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
 
@@ -190,4 +187,49 @@ describe("NativeRebalancer", function () {
 
         });
     });
+
+    describe("Stake Scenarios", function () {
+        it("should successfully stake when conditions are met", async function () {
+            const { rebalancer, restakingPool, cToken, xerc20Lockbox, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("1");
+
+            const rebalancerAddress = await rebalancer.getAddress();
+
+            // Send ETH to rebalancer contract to allow staking
+            await deployer.sendTransaction({ to: rebalancerAddress, value: amountToStake });
+
+            // Calculate expected shares based on the conversion rate
+            const expectedShares = await cToken.convertToShares(amountToStake);
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.emit(restakingPool, "Staked")
+                .withArgs(rebalancerAddress, amountToStake, expectedShares);
+
+            // Verify `inceptionToken` balance is transferred to lockbox
+            const lockboxBalance = await cToken.balanceOf(xerc20Lockbox.getAddress());
+
+            expect(lockboxBalance).to.equal(expectedShares);
+        });
+
+        it("should fail to stake when ETH balance is insufficient", async function () {
+            const { rebalancer, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("1");
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.be.revertedWithCustomError(rebalancer, "StakeAmountExceedsEthBalance");
+        });
+
+        it("should fail to stake if stake amount exceeds RestakingPool's max TVL", async function () {
+            const { rebalancer, deployer } = await deployFixture();
+
+            const amountToStake = ethers.parseEther("101"); // More than the set max TVL of 100
+
+            await deployer.sendTransaction({ to: rebalancer.getAddress(), value: amountToStake });
+
+            await expect(rebalancer.connect(deployer).stake(amountToStake))
+                .to.be.revertedWithCustomError(rebalancer, "StakeAmountExceedsMaxTVL");
+        });
+    });;
 });

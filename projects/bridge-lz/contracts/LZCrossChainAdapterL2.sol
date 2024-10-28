@@ -58,7 +58,7 @@ contract LZCrossChainAdapterL2 is
     function quote(
         bytes calldata _payload,
         bytes memory _options
-    ) external view override onlyOwner returns (uint256) {
+    ) external view override onlyTargetReceiverRestricted returns (uint256) {
         return _quote(l1ChainId, _payload, _options);
     }
 
