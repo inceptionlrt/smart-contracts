@@ -61,7 +61,7 @@ describe("Rebalancer", function () {
         await restakingPool.setMaxTVL(newMaxTVL);
 
         // Deploy XERC20Lockbox
-        const XERC20Lockbox = await ethers.getContractFactory("XERC20Lockbox");
+        const XERC20Lockbox = await ethers.getContractFactory("XERC20LockboxMock");
         const xerc20Lockbox = await XERC20Lockbox.deploy(
             await cToken.getAddress(),
             await cToken.getAddress(),
@@ -95,7 +95,7 @@ describe("Rebalancer", function () {
 
     describe("updateTreasuryData", function () {
         it("should mint tokens when total L2 inETH is greater than the last update", async function () {
-            const { rebalancer, cToken, xerc20Lockbox, restakingPool, deployer } = await deployFixture();
+            const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
             const l2BalanceArb = 1n * 10n ** 17n;
             const l2BalanceOpt = 3n * 10n ** 17n;
@@ -118,7 +118,7 @@ describe("Rebalancer", function () {
         });
 
         it("should burn tokens when total L2 inETH is less than the last update", async function () {
-            const { rebalancer, cToken, xerc20Lockbox, restakingPool, deployer } = await deployFixture();
+            const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
             const chainIdArb1 = 40231;
             const chainIdOpt1 = 40232;
@@ -157,7 +157,7 @@ describe("Rebalancer", function () {
         });
 
         it("should revert if no rebalancing is required", async function () {
-            const { rebalancer, cToken, xerc20Lockbox, restakingPool, deployer } = await deployFixture();
+            const { rebalancer, cToken, xerc20Lockbox } = await deployFixture();
 
             const chainIdArb1 = 40231;
             const chainIdOpt1 = 40232;
