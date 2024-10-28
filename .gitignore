@@ -16,3 +16,4 @@ artifacts
 deployments
 .openzeppelin/
 projects/restaking-pool/.openzeppelin/
+/projects/tests/omnivault-integration-l1/contracts/
