@@ -27,7 +27,7 @@ interface INativeRebalancer {
     );
     event LiqPoolChanged(address prevLiqPool, address newLiqPool);
     event OperatorChanged(address prevOperator, address newOperator);
-    event BridgeAdded(uint256 indexed chainId, address newAdapter);
+    event AdapterAdded(uint256 indexed chainId, address newAdapter);
     event DefaultBridgeChanged(
         address indexed prevDefaultAdapter,
         address indexed newDefaultAdapter

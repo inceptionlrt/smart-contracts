@@ -305,7 +305,7 @@ contract NativeRebalancer is
         adapters[_chainId] = _newAdapter;
         _addChainId(_chainId);
 
-        emit BridgeAdded(_chainId, _newAdapter);
+        emit AdapterAdded(_chainId, _newAdapter);
     }
 
     function setDefaultAdapter(
