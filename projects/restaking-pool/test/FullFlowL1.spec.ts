@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { NativeRebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
+import { NativeRebalancer, CToken, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
 
 describe("NativeRebalancer", function () {
 
