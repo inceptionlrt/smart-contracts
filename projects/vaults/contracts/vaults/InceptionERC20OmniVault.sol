@@ -200,6 +200,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
+        if (fee == 0) revert ZeroFlashWithdrawFee();
         amount -= fee;
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
         depositBonusAmount += (fee - protocolWithdrawalFee);
