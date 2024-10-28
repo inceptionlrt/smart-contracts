@@ -266,7 +266,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
     crossChainAdapter.sendEthCrossChain{ value: freeBalance + msg.value }(_chainId, _options);
 
-    emit EthToL1Sent(freeBalance);
+    emit EthCrossChainSent(freeBalance, _chainId);
   }
 
   /**
