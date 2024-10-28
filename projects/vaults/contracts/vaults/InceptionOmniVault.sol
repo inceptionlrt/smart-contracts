@@ -237,7 +237,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     if (address(crossChainAdapter) == address(0)) revert CrossChainAdapterNotSet();
 
     uint256 tokensAmount = _inceptionTokenSupply();
-    uint256 ethAmount = getTotalDeposited();
+    uint256 ethAmount = getTotalDeposited() - msg.value;
     bytes memory payload = abi.encode(block.timestamp, tokensAmount, ethAmount);
 
     crossChainAdapter.sendDataL1{ value: msg.value }(payload, _options);
