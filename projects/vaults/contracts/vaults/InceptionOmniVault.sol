@@ -288,15 +288,8 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
    * @return bonus Calculated bonus.
    */
   function calculateDepositBonus(uint256 amount) public view returns (uint256 bonus) {
-    return
-      InternalInceptionLibrary.calculateDepositBonus(
-        amount,
-        getFlashCapacity(),
-        (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
-        optimalBonusRate,
-        maxBonusRate,
-        _getTargetCapacity()
-      );
+    uint256 capacity = getFlashCapacity();
+    return _calculateDepositBonus(amount, capacity);
   }
 
   /**
@@ -312,11 +305,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
       uint256 replenished = amount;
       if (optimalCapacity < capacity + amount) replenished = optimalCapacity - capacity;
 
-      uint256 x_1 = maxBonusRate - optimalBonusRate;
-      uint256 x = x_1 * 1e18;
-
-      uint256 bonusSlope = x / ((optimalCapacity * 1e18) / targetCapacity);
-
+      uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) * 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
       uint256 bonusPercent = maxBonusRate - (bonusSlope * (capacity + replenished / 2)) / targetCapacity;
 
       capacity += replenished;
@@ -335,19 +324,36 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
    * @param amount Amount of the withdrawal.
    * @return fee Calculated fee.
    */
-  function calculateFlashWithdrawFee(uint256 amount) public view returns (uint256) {
+  function calculateFlashUnstakeFee(uint256 amount) public view returns (uint256 fee) {
     uint256 capacity = getFlashCapacity();
     if (amount > capacity) revert InsufficientCapacity(capacity);
 
-    return
-      InternalInceptionLibrary.calculateWithdrawalFee(
-        amount,
-        capacity,
-        (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
-        optimalWithdrawalRate,
-        maxFlashFeeRate,
-        _getTargetCapacity()
-      );
+    uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT;
+
+    /// @dev the utilization rate is greater 1, [ :100] %
+    if (amount > 0 && capacity > targetCapacity) {
+      uint256 replenished = amount;
+      if (capacity - amount < targetCapacity) replenished = capacity - targetCapacity;
+
+      amount -= replenished;
+      capacity -= replenished;
+    }
+    /// @dev the utilization rate is in the range [100:25] %
+    if (amount > 0 && capacity > optimalCapacity) {
+      uint256 replenished = amount;
+      if (capacity - amount < optimalCapacity) replenished = capacity - optimalCapacity;
+
+      fee += (replenished * optimalWithdrawalRate) / MAX_PERCENT; // 0.5%
+      amount -= replenished;
+      capacity -= replenished;
+    }
+    /// @dev the utilization rate is in the range [25:0] %
+    if (amount > 0) {
+      uint256 feeSlope = ((maxFlashFeeRate - optimalWithdrawalRate) * 1e18) /
+        ((optimalCapacity * 1e18) / targetCapacity);
+      uint256 bonusPercent = maxFlashFeeRate - (feeSlope * (capacity - amount / 2)) / targetCapacity;
+      fee += (amount * bonusPercent) / MAX_PERCENT;
+    }
   }
 
   /*//////////////////////////////
