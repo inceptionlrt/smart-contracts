@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-interface IRebalancer {
+interface INativeRebalancer {
     struct Transaction {
         uint256 timestamp;
         uint256 ethBalance;

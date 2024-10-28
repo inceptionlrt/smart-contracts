@@ -9,14 +9,14 @@ import {IRestakingPool} from "./interfaces/IRestakingPool.sol";
 import {IInceptionToken} from "./interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "./interfaces/IInceptionRatioFeed.sol";
 import {ICrossChainBridge} from "./interfaces/ICrossChainBridge.sol";
-import {IRebalancer} from "./interfaces/IRebalancer.sol";
+import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
 
 /**
  * @author The InceptionLRT team
- * @title Rebalancer
+ * @title NativeRebalancer
  * @dev This contract handles staking, manages treasury data and facilitates cross-chain ETH transfers.
  */
-contract Rebalancer is Initializable, OwnableUpgradeable, IRebalancer {
+contract NativeRebalancer is Initializable, OwnableUpgradeable, INativeRebalancer {
     //------------- REBALANCER FIELDS -------------//
     address public inceptionToken;
     address public lockboxAddress;

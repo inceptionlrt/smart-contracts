@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { Rebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
+import { NativeRebalancer, CToken, XERC20Lockbox, RatioFeed, ProtocolConfig, RestakingPool } from "../typechain-types";
 
-describe("Rebalancer", function () {
+describe("NativeRebalancer", function () {
     async function deployFixture() {
         const [deployer] = await ethers.getSigners();
 
@@ -69,16 +69,16 @@ describe("Rebalancer", function () {
         ) as XERC20Lockbox;
         await xerc20Lockbox.waitForDeployment();
 
-        // Deploy Rebalancer
-        const Rebalancer = await ethers.getContractFactory("Rebalancer");
-        const rebalancer = await upgrades.deployProxy(Rebalancer, [
+        // Deploy NativeRebalancer
+        const NativeRebalancer = await ethers.getContractFactory("NativeRebalancer");
+        const rebalancer = await upgrades.deployProxy(NativeRebalancer, [
             await cToken.getAddress(),
             await xerc20Lockbox.getAddress(),
             await restakingPool.getAddress(),
             "0xbCc523818C16e5F955EEe112665d57F35a8000e4",
             await ratioFeed.getAddress(),
             deployer.address,
-        ]) as Rebalancer;
+        ]) as NativeRebalancer;
         await rebalancer.waitForDeployment();
 
         await rebalancer.addChainId(40231n);
