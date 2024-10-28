@@ -13,7 +13,8 @@ import path from "path";
 const TARGET_DIR = "./contracts";
 const EXTERNAL_PROJECTS = [
     "../../bridge-lz",
-    "../../restaking-pool"
+    "../../restaking-pool",
+    "../../vaults"
 ]
 
 const collectContractsWithSymlinks = () => {
