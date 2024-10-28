@@ -258,7 +258,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
   }
 
   /**
-   * @notice Sends available ETH to Layer 1 via cross-chain adapter.
+   * @notice Sends available ETH to another chain via cross-chain adapter.
    * @dev msg.value is used to pay for the cross-chain fees
    */
   function sendEthCrossChain(uint256 _chainId, bytes memory _options) external payable onlyOwnerOrOperator {
@@ -271,9 +271,9 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
   }
 
   /**
-   * @notice Calculates fees to send data message to Layer 1.
+   * @notice Calculates fees to send ETH to other chain
    */
-  function quoteSendEthToL1(uint256 _chaindId, bytes memory _options) external view returns (uint256) {
+  function quoteSendEthCrossChain(uint256 _chaindId, bytes memory _options) external view returns (uint256) {
     require(address(crossChainAdapter) != address(0), CrossChainAdapterNotSet());
     return crossChainAdapter.quoteSendEth(_chaindId, _options);
   }
