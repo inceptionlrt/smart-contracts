@@ -12,7 +12,7 @@ import {
   LZCrossChainAdapterL2,
   ProtocolConfig,
   RatioFeed,
-  Rebalancer,
+  NativeRebalancer,
   RestakingPool,
 } from "../typechain-types";
 
@@ -45,7 +45,7 @@ describe("Omnivault integration tests", function () {
   //L1
   let ratioFeedL1: RatioFeed;
   let inEth: CToken;
-  let rebalancer: Rebalancer;
+  let rebalancer: NativeRebalancer;
   let restakingPool: RestakingPool;
   let restakingPoolConfig: ProtocolConfig;
   //L2
@@ -67,7 +67,6 @@ describe("Omnivault integration tests", function () {
   let lockboxAddress: String;
 
   let TARGET = toWei(10);
-  let MAX_TARGET_PERCENT;
 
   async function init(owner: Signer, operator: Signer) {
     const block = await ethers.provider.getBlock("latest");
@@ -192,8 +191,8 @@ describe("Omnivault integration tests", function () {
     const ratioFeedL1 = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
     ratioFeedL1.address = await ratioFeedL1.getAddress();
 
-    console.log("=== Rebalancer");
-    const Rebalancer = await ethers.getContractFactory("Rebalancer");
+    console.log("=== NativeRebalancer");
+    const Rebalancer = await ethers.getContractFactory("NativeRebalancer");
     const rebalancer = await upgrades.deployProxy(Rebalancer, [
       cToken.address,
       lockboxAddress,
@@ -1367,11 +1366,13 @@ describe("Omnivault integration tests", function () {
   });
 
   describe("OmniVault", function () {
+
     describe("Base flow", function () {
       let deposited, freeBalance, depositFees;
 
       before(async function () {
         await snapshot.restore();
+        TARGET = toWei(10);
         await omniVault.setTargetFlashCapacity(TARGET);
       });
 
@@ -1670,7 +1671,7 @@ describe("Omnivault integration tests", function () {
     });
 
     describe("Deposit bonus params setter and calculation", function () {
-      let targetCapacityPercent, MAX_PERCENT, localSnapshot;
+      let TARGET, MAX_PERCENT, localSnapshot;
       before(async function () {
         MAX_PERCENT = await omniVault.MAX_PERCENT();
       });
@@ -1733,7 +1734,7 @@ describe("Omnivault integration tests", function () {
       const amounts = [
         {
           name: "min amount from 0",
-          flashCapacity: targetCapacity => 0n,
+          flashCapacity: () => 0n,
           amount: async () => (await omniVault.convertToAssets(await omniVault.minAmount())) + 1n,
         },
         {
@@ -1743,41 +1744,44 @@ describe("Omnivault integration tests", function () {
         },
         {
           name: "from 0 to 25% of TARGET",
-          flashCapacity: targetCapacity => 0n,
-          amount: async () => (targetCapacityPercent * 25n) / 100n,
+          flashCapacity: () => 0n,
+          amount: async () => (TARGET * 25n) / 100n,
         },
         {
           name: "from 0 to 25% + 1wei of TARGET",
-          flashCapacity: targetCapacity => 0n,
-          amount: async () => (targetCapacityPercent * 25n) / 100n,
+          flashCapacity: () => 0n,
+          amount: async () => (TARGET * 25n) / 100n,
         },
         {
           name: "from 25% to 100% of TARGET",
-          flashCapacity: targetCapacity => (targetCapacity * 25n) / 100n,
-          amount: async () => (targetCapacityPercent * 75n) / 100n,
+          flashCapacity: () => (TARGET * 25n) / 100n,
+          amount: async () => (TARGET * 75n) / 100n,
         },
         {
           name: "from 0% to 100% of TARGET",
-          flashCapacity: targetCapacity => 0n,
-          amount: async () => targetCapacityPercent,
+          flashCapacity: () => 0n,
+          amount: async () => TARGET,
         },
         {
           name: "from 0% to 200% of TARGET",
-          flashCapacity: targetCapacity => 0n,
-          amount: async () => targetCapacityPercent * 2n,
+          flashCapacity: () => 0n,
+          amount: async () => TARGET * 2n,
         },
       ];
 
       args.forEach(function (arg) {
         it(`setDepositBonusParams: ${arg.name}`, async function () {
           await snapshot.restore();
-          targetCapacityPercent = e18;
-          await omniVault.connect(owner).setTargetFlashCapacity(targetCapacityPercent);
+          TARGET = e18;
+          await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
-          await expect(omniVault.setDepositBonusParams(
+          await expect(
+              omniVault.setDepositBonusParams(
                   arg.newMaxBonusRate,
                   arg.newOptimalBonusRate,
-                  arg.newDepositUtilizationKink))
+                  arg.newDepositUtilizationKink,
+              ),
+          )
               .to.emit(omniVault, "DepositBonusParamsChanged")
               .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
 
@@ -1794,25 +1798,20 @@ describe("Omnivault integration tests", function () {
             if (flashCapacity > 0n) {
               await omniVault.connect(signer1).deposit(signer1.address, { value: flashCapacity });
             }
-
-
-
-
-
             let _amount = await amount.amount();
             let depositBonus = 0n;
             while (_amount > 0n) {
               for (const feeFunc of depositBonusSegment) {
-                const utilization = (flashCapacity * MAX_PERCENT) / targetCapacityPercent;
+                const utilization = (flashCapacity * MAX_PERCENT) / TARGET;
                 const fromUtilization = await feeFunc.fromUtilization();
                 const toUtilization = await feeFunc.toUtilization();
                 if (_amount > 0n && fromUtilization <= utilization && utilization < toUtilization) {
                   const fromPercent = await feeFunc.fromPercent();
                   const toPercent = await feeFunc.toPercent();
-                  const upperBound = (toUtilization * targetCapacityPercent) / MAX_PERCENT;
+                  const upperBound = (toUtilization * TARGET) / MAX_PERCENT;
                   const replenished = upperBound > flashCapacity + _amount ? _amount : upperBound - flashCapacity;
                   const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
-                  const bonusPercent = fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacityPercent;
+                  const bonusPercent = fromPercent + (slope * (flashCapacity + replenished / 2n)) / TARGET;
                   const bonus = (replenished * bonusPercent) / MAX_PERCENT;
                   console.log(`Replenished:\t\t\t${replenished.format()}`);
                   console.log(`Bonus percent:\t\t\t${bonusPercent.format()}`);
@@ -2333,7 +2332,7 @@ describe("Omnivault integration tests", function () {
         );
       });
 
-      it("ratio() reverts when ratioFeedL1 is 0 address", async function () {
+      it("ratio() reverts when ratioFeed is 0 address", async function () {
         const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
         const omniVault = await upgrades.deployProxy(
             omniVaultFactory,
@@ -2476,7 +2475,7 @@ describe("Omnivault integration tests", function () {
 
     describe("Bridge", function () {
       describe("Send info", function () {
-        let TARGET = e18;
+        let TARGET = 10n ** 12n;
 
         beforeEach(async function () {
           await snapshot.restore();
@@ -2484,7 +2483,7 @@ describe("Omnivault integration tests", function () {
         });
 
         it("Adapter is set", async function () {
-          expect(await omniVault.crossChainAdapter()).to.be.eq(adapterArb.address);
+          expect(await omniVault.crossChainAdapter()).to.be.eq(adapter.address);
         });
 
         const args = [
