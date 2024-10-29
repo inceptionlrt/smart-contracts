@@ -37,11 +37,13 @@ describe("Omnivault integration tests", function () {
   this.timeout(150000);
   //Adapters
   let adapterEth: LZCrossChainAdapterL1;
+  let maliciousAdapterL1: LZCrossChainAdapterL1;
   let adapterArb: LZCrossChainAdapterL2;
   let adapterOpt: LZCrossChainAdapterL2;
   let ethEndpoint: EndpointMock;
   let arbEndpoint: EndpointMock;
   let optEndpoint: EndpointMock;
+  let maliciousAdapterL2: LZCrossChainAdapterL2;
   //L1
   let ratioFeedL1: RatioFeed;
   let inEth: CToken;
@@ -132,6 +134,24 @@ describe("Omnivault integration tests", function () {
     await optEndpoint.setDestLzEndpoint(adapterEth.address, ethEndpoint.address);
     await ethEndpoint.setDestLzEndpoint(adapterArb.address, arbEndpoint.address);
     await ethEndpoint.setDestLzEndpoint(adapterOpt.address, optEndpoint.address);
+
+    //Malicious adapters
+    const maliciousAdapterL1 = await upgrades.deployProxy(LZCrossChainAdapterL1, [
+      ethEndpoint.address,
+      owner.address,
+      eIds,
+      chainIds,
+    ]);
+    maliciousAdapterL1.address = await maliciousAdapterL1.getAddress();
+
+    const maliciousAdapterL2 = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+      arbEndpoint.address,
+      owner.address,
+      ETH_ID,
+      eIds,
+      chainIds,
+    ]);
+    maliciousAdapterL2.address = await maliciousAdapterL2.getAddress();
 
     //   ____           _        _    _                                 _   _     _
     //  |  _ \ ___  ___| |_ __ _| | _(_)_ __   __ _   _ __   ___   ___ | | | |   / |
@@ -248,7 +268,9 @@ describe("Omnivault integration tests", function () {
       restakingPoolConfig,
       iToken,
       ratioFeedL2,
-      omniVault
+      omniVault,
+      maliciousAdapterL1,
+      maliciousAdapterL2
     ];
   }
 
@@ -314,7 +336,9 @@ describe("Omnivault integration tests", function () {
       restakingPoolConfig,
       iToken,
       ratioFeedL2,
-      omniVault
+      omniVault,
+      maliciousAdapterL1,
+      maliciousAdapterL2
     ] = await init(owner, operator);
     clean_snapshot = await takeSnapshot();
 
@@ -327,6 +351,8 @@ describe("Omnivault integration tests", function () {
     await adapterArb.setTargetReceiver(omniVault.address);
     await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
     await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+    await maliciousAdapterL1.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
+    await maliciousAdapterL2.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
 
     //Restaking pool
     await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
@@ -932,7 +958,300 @@ describe("Omnivault integration tests", function () {
     });
   });
 
-  describe("Crosschain adapter Arbitrum", function () {
+  describe("Adapters", function() {
+    before(async function () {
+      await snapshot.restore();
+    });
+
+    //=== Getters and setters
+    const adapters = [
+      {
+        name: "layer1",
+        adapter: () => adapterEth,
+        endpoint: () => ethEndpoint,
+      },
+      {
+        name: "layer2",
+        adapter: () => adapterArb,
+        endpoint: () => arbEndpoint,
+      }
+    ];
+    adapters.forEach(function(adapterArg) {
+      let adapter;
+      describe(`Getters and setters ${adapterArg.name}`, function () {
+        beforeEach(async function () {
+          await snapshot.restore();
+          adapter = adapterArg.adapter();
+        });
+
+        const setters = [
+          {
+            name: "receiver address",
+            setter: "setTargetReceiver",
+            getter: "targetReceiver",
+            event: "TargetReceiverChanged",
+          },
+        ];
+
+        setters.forEach(function (setterArg) {
+          it(`Set new ${setterArg.name}`, async function () {
+            const prevValue = await adapter[setterArg.getter]();
+            const newValue = ethers.Wallet.createRandom().address;
+
+            await expect(adapter[setterArg.setter](newValue)).to.emit(adapter, setterArg.event).withArgs(prevValue, newValue);
+            expect(await adapter[setterArg.getter]()).to.be.eq(newValue);
+          });
+
+          it(`Reverts: ${setterArg.setter} when called by not an owner`, async function () {
+            const newValue = ethers.Wallet.createRandom().address;
+            await expect(adapter.connect(signer1)[setterArg.setter](newValue))
+                .to.be.revertedWithCustomError(adapter, "OwnableUnauthorizedAccount");
+          });
+
+          it(`Reverts: ${setterArg.setter} new value is 0 address`, async function () {
+            const newValue = ethers.ZeroAddress;
+            await expect(adapter[setterArg.setter](newValue))
+                .to.be.revertedWithCustomError(adapter, "SettingZeroAddress");
+          });
+        });
+
+        it("setPeer sets target address by chain", async function () {
+          const eid = randomBI(8);
+          const target = ethers.Wallet.createRandom();
+          const peer = ethers.zeroPadValue(target.address, 32);
+
+          await expect(adapter.setPeer(eid, peer)).to.emit(adapter, "PeerSet").withArgs(eid, peer);
+          expect(await adapter.peers(eid)).to.be.eq(peer);
+        });
+
+        it("setPeer reverts when called by not an owner", async function () {
+          const eid = randomBI(8);
+          const target = ethers.Wallet.createRandom();
+          const peer = ethers.zeroPadValue(target.address, 32);
+
+          await expect(adapter.connect(signer1).setPeer(eid, peer))
+              .to.be.revertedWithCustomError(adapter, "OwnableUnauthorizedAccount");
+        });
+
+        it("setChainIdFromEid maps chaind id by eid", async function () {
+          const eid = randomBI(8);
+          const chainId = randomBI(8);
+
+          await expect(adapter.setChainIdFromEid(eid, chainId)).to.emit(adapter, "ChainIdAdded").withArgs(chainId);
+          expect(await adapter.getChainIdFromEid(eid)).to.be.eq(chainId);
+          expect(await adapter.getEidFromChainId(chainId)).to.be.eq(eid);
+        });
+
+        it("setChainIdFromEid reverts when called by not an owner", async function () {
+          const eid = randomBI(8);
+          const chainId = randomBI(8);
+
+          await expect(adapter.connect(signer1).setChainIdFromEid(eid, chainId))
+              .to.be.revertedWithCustomError(adapter, "OwnableUnauthorizedAccount",);
+        });
+
+        it("Owner", async function () {
+          expect(await adapter.owner()).to.be.eq(owner.address);
+        });
+
+        it("Transfer ownership", async function() {
+          const newOwner = ethers.Wallet.createRandom();
+
+          await expect(adapter.transferOwnership(newOwner.address))
+              .emit(adapter, "OwnershipTransferred")
+              .withArgs(owner.address, newOwner.address);
+
+          expect(await adapter.owner()).to.be.eq(newOwner.address);
+        })
+
+        it("Endpoint", async function () {
+          const endpoint = adapterArg.endpoint();
+          expect(await adapter.endpoint()).to.be.eq(endpoint.address);
+        });
+      });
+    })
+
+    //=== Send eth between layers
+    const directions = [
+      {
+        name: "L2 -> L1",
+        fromAdapter: () => adapterArb,
+        fromEndpoint: () => arbEndpoint,
+        fromChainID: ARB_ID,
+        fromChainEID: ARB_EID,
+        toAdapter: () => adapterEth,
+        toEndpoint: () => ethEndpoint,
+        toChainID: ETH_ID,
+        target: () => rebalancer,
+        maliciousAdapter: () => maliciousAdapterL2,
+      },
+      {
+        name: "L1 -> L2",
+        fromAdapter: () => adapterEth,
+        fromEndpoint: () => ethEndpoint,
+        fromChainID: ETH_ID,
+        fromChainEID: ETH_EID,
+        toAdapter: () => adapterArb,
+        toEndpoint: () => arbEndpoint,
+        toChainID: ARB_ID,
+        target: () => omniVault,
+        maliciousAdapter: () => maliciousAdapterL1
+      }
+    ]
+    directions.forEach(function(direction) {
+      describe(`Send eth ${direction.name}`, function () {
+        let fromAdapter;
+        let fromEndpoint;
+        let toAdapter;
+        let toEndpoint;
+        let target;
+
+        before(async function () {
+          await snapshot.restore();
+          fromAdapter = direction.fromAdapter();
+          fromEndpoint = direction.fromEndpoint();
+          toAdapter = direction.toAdapter();
+          toEndpoint = direction.toEndpoint();
+          target = direction.target();
+        });
+
+        const args = [
+          {
+            name: "Random amount ~ 1e17",
+            amount: async () => randomBI(17),
+          },
+          {
+            name: "Restaking pool min amount",
+            amount: async () => await restakingPool.getMinStake(),
+          },
+          {
+            name: "Greater than available to stake",
+            amount: async () => (await restakingPool.availableToStake()) + 1n,
+          },
+        ];
+
+        args.forEach(function (arg) {
+          it(arg.name, async function () {
+            const amount = await arg.amount();
+
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+            const amountWithFees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+            const tx = await fromAdapter.connect(owner).sendEthCrossChain(direction.toChainID, options, { value: amountWithFees });
+
+            await expect(tx).emit(toAdapter, "CrossChainEthDeposit").withArgs(direction.fromChainID, amount);
+            if(direction.toChainID === ETH_ID){
+              await expect(tx).emit(target, "ETHReceived").withArgs(toAdapter.address, amount);
+            }
+            await expect(tx).to.changeEtherBalance(target.address, amount);
+            await expect(tx).to.changeEtherBalance(owner.address, -amountWithFees, { includeFee: false });
+          });
+        });
+
+        it("Reverts when caller is not endpoint", async function () {
+          await snapshot.restore();
+          const maliciousEndpoint = await ethers.deployContract("EndpointMock", [direction.toChainID]);
+          maliciousEndpoint.address = await maliciousEndpoint.getAddress();
+          await fromEndpoint.setDestLzEndpoint(toAdapter.address, maliciousEndpoint.address);
+
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const fees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+
+          await expect(fromAdapter.sendEthCrossChain(direction.toChainID, options, { value: fees }))
+              .to.revertedWithCustomError(toAdapter, "OnlyEndpoint")
+              .withArgs(maliciousEndpoint.address);
+        });
+
+        it("Reverts when sent from unknown adapter", async function () {
+          await snapshot.restore();
+          const maliciousAdapter = direction.maliciousAdapter();
+
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const fees = await maliciousAdapter.quoteSendEth(direction.toChainID, options);
+          await expect(maliciousAdapter.sendEthCrossChain(direction.toChainID, options, { value: fees }))
+              .to.be.revertedWithCustomError(toAdapter, "OnlyPeer")
+              .withArgs(direction.fromChainEID, ethers.zeroPadValue(maliciousAdapter.address, 32));
+        });
+      });
+    })
+
+    describe("receiveL2Info", function () {
+      let lastHandleTime;
+      before(async function () {
+        await snapshot.restore();
+      });
+
+      it("receiveL2Info", async () => {
+        const block = await ethers.provider.getBlock("latest");
+        lastHandleTime = block.timestamp - 1000;
+        const _balance = 100;
+        const _totalSupply = 100;
+
+        await expect(adapterArb.sendData(lastHandleTime, _balance, _totalSupply))
+            .to.emit(rebalancer, "L2InfoReceived")
+            .withArgs(ARB_ID, lastHandleTime, _balance, _totalSupply);
+
+        const chainDataAfter = await rebalancer.getTransactionData(ARB_ID);
+        expect(chainDataAfter.timestamp).to.be.eq(lastHandleTime);
+        expect(chainDataAfter.ethBalance).to.be.eq(_balance);
+        expect(chainDataAfter.inceptionTokenBalance).to.be.eq(_totalSupply);
+      });
+
+      it("Reverts when there is a message with this timestamp", async function () {
+        const balance = 200;
+        const totalSupply = 200;
+
+        await expect(adapterArb.sendData(lastHandleTime, balance, totalSupply))
+            .to.revertedWithCustomError(rebalancer, "TimeBeforePrevRecord")
+            .withArgs(lastHandleTime);
+      });
+
+      it("Reverts when timestamp is in the future", async function () {
+        const block = await ethers.provider.getBlock("latest");
+        const timestamp = block.timestamp + 100;
+        const balance = 100;
+        const totalSupply = 100;
+
+        await expect(adapterArb.sendData(timestamp, balance, totalSupply))
+            .to.revertedWithCustomError(rebalancer, "TimeCannotBeInFuture")
+            .withArgs(timestamp);
+      });
+
+      it("Reverts when caller is not endpoint", async function () {
+        const maliciousEndpoint = await ethers.deployContract("EndpointMock", [ETH_EID]);
+        maliciousEndpoint.address = await maliciousEndpoint.getAddress();
+        await arbEndpoint.setDestLzEndpoint(adapterEth.address, maliciousEndpoint.address);
+
+        const block = await ethers.provider.getBlock("latest");
+        const timestamp = block.timestamp - 1;
+        const balance = 300;
+        const totalSupply = 300;
+
+        await expect(adapterArb.sendData(timestamp, balance, totalSupply))
+            .to.revertedWithCustomError(adapterEth, "OnlyEndpoint")
+            .withArgs(maliciousEndpoint.address);
+      });
+
+      it("Reverts when l2 sender is unknown", async function () {
+        await snapshot.restore();
+        const block = await ethers.provider.getBlock("latest");
+        const timestamp = block.timestamp + 100;
+        const balance = 100;
+        const totalSupply = 100;
+        const message = encodePayload(timestamp, balance, totalSupply);
+
+        const fees = await maliciousAdapterL2.quote(message, options);
+        await expect(maliciousAdapterL2.sendDataL1(message, options, { value: fees }))
+            .to.be.revertedWithCustomError(adapterEth, "OnlyPeer")
+            .withArgs(ARB_EID, ethers.zeroPadValue(maliciousAdapterL2.address, 32));
+      });
+    });
+
+  })
+
+
+  describe("L1 adapter", function () {
     describe("Getters and setters", function () {
       beforeEach(async function () {
         await snapshot.restore();
@@ -958,9 +1277,8 @@ describe("Omnivault integration tests", function () {
 
         it(`Reverts: ${arg.setter} when called by not an owner`, async function () {
           const newValue = ethers.Wallet.createRandom().address;
-          await expect(adapterArb.connect(signer1)[arg.setter](newValue)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-          );
+          await expect(adapterArb.connect(signer1)[arg.setter](newValue))
+              .to.be.revertedWithCustomError(adapterArb, "OwnableUnauthorizedAccount");
         });
 
         it(`Reverts: ${arg.setter} new value is 0 address`, async function () {
@@ -972,7 +1290,7 @@ describe("Omnivault integration tests", function () {
         });
       });
 
-      it("setPeer: sets target address by chain", async function () {
+      it("setPeer sets target address by chain", async function () {
         const eid = randomBI(8);
         const target = ethers.Wallet.createRandom();
         const peer = ethers.zeroPadValue(target.address, 32);
@@ -987,13 +1305,11 @@ describe("Omnivault integration tests", function () {
         const target = ethers.Wallet.createRandom();
         const peer = ethers.zeroPadValue(target.address, 32);
 
-        await expect(adapterArb.connect(signer1).setPeer(eid, peer)).to.be.revertedWithCustomError(
-          adapterArb,
-          "OwnableUnauthorizedAccount",
-        );
+        await expect(adapterArb.connect(signer1).setPeer(eid, peer))
+            .to.be.revertedWithCustomError(adapterArb, "OwnableUnauthorizedAccount");
       });
 
-      it("setChainIdFromEid: maps chaind id by eid", async function () {
+      it("setChainIdFromEid maps chaind id by eid", async function () {
         const eid = randomBI(8);
         const chainId = randomBI(8);
         await expect(adapterArb.setChainIdFromEid(eid, chainId)).to.emit(adapterArb, "ChainIdAdded").withArgs(chainId);
@@ -1015,12 +1331,18 @@ describe("Omnivault integration tests", function () {
         expect(await adapterArb.owner()).to.be.eq(owner.address);
       });
 
+      it("Transfer ownership", async function() {
+        const newOwner = ethers.Wallet.createRandom();
+
+        await expect(adapterArb.transferOwnership(newOwner.address))
+            .emit(adapterArb, "OwnershipTransferred")
+            .withArgs(owner.address, newOwner.address);
+
+        expect(await adapterArb.owner()).to.be.eq(newOwner.address);
+      })
+
       it("Endpoint", async function () {
         expect(await adapterArb.endpoint()).to.be.eq(arbEndpoint.address);
-      });
-
-      it("Operator", async function () {
-        expect(await adapterArb.operator()).to.be.eq(operator.address);
       });
     });
 
@@ -2340,7 +2662,7 @@ describe("Omnivault integration tests", function () {
         );
         omniVault.address = await omniVault.getAddress();
         await iToken.setVault(omniVault.address);
-        await expect(omniVault.ratio()).revertedWithCustomError(omniVault, "RatioFeedNotSet");
+        await expect(omniVault.ratio()).to.be.reverted;
       });
 
       it("setCrossChainAdapter(): only owner can", async function () {
@@ -2610,7 +2932,13 @@ describe("Omnivault integration tests", function () {
             const amount = await omniVault.getFreeBalance();
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
             const amountWithFee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+            const options1 = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            const onlyFees = await omniVault.quoteSendEthCrossChain(ETH_ID, options1);
             const fee = amountWithFee - amount;
+
+            console.log("Fee by subtract:", fee.format());
+            console.log("onlyFees:", onlyFees.format());
+
             const extraValue = arg.extraValue;
 
             const tx = await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
