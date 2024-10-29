@@ -41,7 +41,7 @@ contract LZCrossChainAdapterL1 is
         address _endpoint,
         address _delegate,
         uint32[] memory _eIds,
-        uint32[] memory _chainIds
+        uint256[] memory _chainIds
     ) public initializer {
         __Ownable_init(msg.sender);
         __OAppUpgradeable_init(_endpoint, _delegate);
@@ -60,15 +60,13 @@ contract LZCrossChainAdapterL1 is
         address /*_executor*/,
         bytes calldata /*_extraData*/
     ) internal virtual override(OAppReceiverUpgradeable) {
-        uint32 chainId = getChainIdFromEid(origin.srcEid);
+        uint256 chainId = getChainIdFromEid(origin.srcEid);
 
         if (msg.value > 0) {
-            emit CrossChainEthReceived(chainId, msg.value);
             _handleCrossChainEth(chainId);
         }
 
         if (payload.length > 0) {
-            emit CrossChainMessageReceived(chainId);
             _handleCrossChainData(chainId, payload);
         }
     }
