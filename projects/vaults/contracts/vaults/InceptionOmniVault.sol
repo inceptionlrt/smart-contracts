@@ -275,7 +275,11 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
    */
   function quoteSendEthCrossChain(uint256 _chaindId, bytes memory _options) external view returns (uint256) {
     require(address(crossChainAdapter) != address(0), CrossChainAdapterNotSet());
-    return crossChainAdapter.quoteSendEth(_chaindId, _options);
+
+    uint256 start = 16;
+    uint256 end = start + 16;
+    uint256 value = uint256(bytes16(_options[start:end]));
+    return crossChainAdapter.quoteSendEth(_chaindId, _options) - value;
   }
 
   /*//////////////////////////////
