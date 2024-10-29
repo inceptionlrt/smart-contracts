@@ -8,6 +8,8 @@ interface IInceptionVaultErrors {
 
     error InsufficientCapacity(uint256 capacity);
 
+    error InvalidTargetFlashCapacity();
+
     error InceptionOnPause();
 
     error InconsistentData();

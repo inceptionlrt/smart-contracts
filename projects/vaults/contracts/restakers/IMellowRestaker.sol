@@ -268,6 +268,9 @@ contract IMellowRestaker is
     function getDeposited(address _mellowVault) public view returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
+        if (balance == 0) {
+            return 0;
+        }
         return lpAmountToAmount(balance, mellowVault);
     }
 
@@ -275,7 +278,9 @@ contract IMellowRestaker is
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
-            total += lpAmountToAmount(balance, mellowVaults[i]);
+            if (balance > 0) {
+                total += lpAmountToAmount(balance, mellowVaults[i]);
+            }
         }
         return total;
     }
@@ -380,11 +385,16 @@ contract IMellowRestaker is
         requestDeadline = newDealine;
     }
 
-    function slippages(uint256 _depositSlippage, uint256 _withdrawSlippage) external onlyOwner {
+    function setSlippages(uint256 _depositSlippage, uint256 _withdrawSlippage) external onlyOwner {
         if (_depositSlippage > 3000 || _withdrawSlippage > 3000) revert TooMuchSlippage();
         depositSlippage = _depositSlippage;
         withdrawSlippage = _withdrawSlippage;
         emit NewSlippages(_depositSlippage, _withdrawSlippage);
+    }
+
+    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+        _trusteeManager = _newTrusteeManager;
     }
 
     function pause() external onlyOwner {

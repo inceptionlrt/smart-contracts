@@ -192,6 +192,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
+        if (newTargetCapacity <= 0) revert InvalidTargetFlashCapacity();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
