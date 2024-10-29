@@ -753,7 +753,7 @@ describe("Omnivault integration tests", function () {
         const amount = randomBI(17);
         await inEth.connect(signer1).transfer(rebalancer.address, amount);
 
-        await expect(rebalancer.updateTreasuryData()).to.emit(rebalancer, "InETHDepositedToLockbox").withArgs(amount);
+        await expect(rebalancer.updateTreasuryData()).to.emit(rebalancer, "InceptionTokenDepositedToLockbox").withArgs(amount);
         console.log(`Total supply: ${(await inEth.totalSupply()).format()}`);
 
         const totalSupplyAfter = await inEth.totalSupply();
@@ -942,8 +942,7 @@ describe("Omnivault integration tests", function () {
         const totalSupply = e18;
 
         await expect(rebalancer.connect(owner).handleL2Info(chainId, timestamp, balance, totalSupply))
-          .to.be.revertedWithCustomError(rebalancer, "MsgNotFromAdapter")
-          .withArgs(owner.address);
+          .to.be.revertedWithCustomError(rebalancer, "OnlyAdapter");
       });
     });
   });
@@ -2397,8 +2396,7 @@ describe("Omnivault integration tests", function () {
             if (arg.sentToL1) {
               sentToL1Amount = arg.sentToL1(amount);
               const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, sentToL1Amount).toHex().toString();
-              const amountWithFee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
-              const fee = amountWithFee - sentToL1Amount;
+              const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
               await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee });
             }
 
@@ -2472,16 +2470,9 @@ describe("Omnivault integration tests", function () {
             await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
             const amount = await omniVault.getFreeBalance();
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
-            const amountWithFee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
-            const options1 = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
-            const onlyFees = await omniVault.quoteSendEthCrossChain(ETH_ID, options1);
-            const fee = amountWithFee - amount;
 
-            console.log("Fee by subtract:", fee.format());
-            console.log("onlyFees:", onlyFees.format());
-
+            const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
             const extraValue = arg.extraValue;
-
             const tx = await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
             await expect(tx).emit(omniVault, "EthCrossChainSent").withArgs(amountWithFee + extraValue, ETH_ID);
             await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
