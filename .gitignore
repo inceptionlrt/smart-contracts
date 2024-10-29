@@ -13,6 +13,4 @@ artifacts
 
 # Inception LRT custom ignore
 *.tgz
-deployments
-.openzeppelin/
-projects/restaking-pool/.openzeppelin/
+/projects/tests/omnivault-integration-l1/contracts/
