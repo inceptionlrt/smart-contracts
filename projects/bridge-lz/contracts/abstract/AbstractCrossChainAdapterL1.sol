@@ -27,9 +27,6 @@ abstract contract AbstractCrossChainAdapterL1 is
             uint256 balance,
             uint256 totalSupply
         ) = _decodeCalldata(_payload);
-        if (timestamp > block.timestamp) {
-            revert FutureTimestamp();
-        }
         IRebalancer(targetReceiver).handleL2Info(
             _chainId,
             timestamp,
