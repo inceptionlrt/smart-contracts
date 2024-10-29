@@ -271,7 +271,9 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
   }
 
   /**
-   * @notice Calculates fees to send ETH to other chain
+   * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
+   * @param _chaindId chain ID of the network to simulate sending ETH to
+   * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
    */
   function quoteSendEthCrossChain(uint256 _chaindId, bytes memory _options) external view returns (uint256) {
     require(address(crossChainAdapter) != address(0), CrossChainAdapterNotSet());
