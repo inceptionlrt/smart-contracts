@@ -350,6 +350,7 @@ describe("Omnivault integration tests", function () {
     await adapterEth.setPeer(OPT_EID, ethers.zeroPadValue(adapterOpt.address, 32));
     await adapterArb.setTargetReceiver(omniVault.address);
     await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+    await adapterOpt.setTargetReceiver(omniVault.address);
     await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
     await maliciousAdapterL1.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
     await maliciousAdapterL2.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
@@ -847,7 +848,8 @@ describe("Omnivault integration tests", function () {
     });
 
     describe("sendEthToL2", function () {
-      before(async function () {
+      beforeEach(async function () {
+        await snapshot.restore();
         const balance = await restakingPool.availableToStake();
         await signer1.sendTransaction({ value: balance, to: rebalancer.address });
       });
@@ -856,28 +858,24 @@ describe("Omnivault integration tests", function () {
         {
           name: "Part of the balance to ARB",
           amount: async amount => amount / 2n,
-          fees: 2n * 10n ** 16n,
           chainId: ARB_ID,
           adapter: () => adapterArb,
         },
         {
           name: "Part of the balance to OPT",
           amount: async amount => amount / 2n,
-          fees: 0n,
           chainId: OPT_ID,
           adapter: () => adapterOpt,
         },
         {
           name: "All balance to ARB",
           amount: async amount => amount,
-          fees: 2n * 10n ** 16n,
           chainId: ARB_ID,
           adapter: () => adapterArb,
         },
         {
           name: "All balance to OPT",
           amount: async amount => amount,
-          fees: 0n,
           chainId: OPT_ID,
           adapter: () => adapterOpt,
         },
@@ -889,43 +887,37 @@ describe("Omnivault integration tests", function () {
           const amount = await arg.amount(balance);
 
           const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
-          const amountWithFees = await rebalancer.quoteSendEthToL2(arg.chainId, options);
-          const fees = amountWithFees - amount;
+          const fees = await rebalancer.quoteSendEthToL2(arg.chainId, options);
           const tx = await rebalancer.connect(operator).sendEthToL2(arg.chainId, amount, options, { value: fees });
           await expect(tx).to.emit(adapterEth, "CrossChainMessageSent");
+          await expect(tx).to.changeEtherBalance(omniVault, amount);
           await expect(tx).to.changeEtherBalance(rebalancer, -amount);
           await expect(tx).to.changeEtherBalance(operator, -fees, { includeFee: false });
         });
       });
 
       it("Reverts when amount > eth balance", async function () {
-        const fees = 2n * 10n ** 15n;
-        await signer1.sendTransaction({ value: e18, to: rebalancer.address });
-        const amount = await ethers.provider.getBalance(rebalancer.address);
-        const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(
-          rebalancer.connect(operator).sendEthToL2(ARB_ID, amount + 1n, feeParams, { value: fees }),
-        ).to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
+        const amount = await ethers.provider.getBalance(rebalancer.address) + 1n;
+        const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+        const fees = await rebalancer.quoteSendEthToL2(ARB_ID, options);
+        await expect(rebalancer.connect(operator).sendEthToL2(ARB_ID, amount, options, { value: fees }))
+            .to.revertedWithCustomError(rebalancer, "SendAmountExceedsEthBalance");
       });
 
       it("Reverts when called by not an operator", async function () {
-        const fees = 2n * 10n ** 15n;
-        await signer1.sendTransaction({ value: e18, to: rebalancer.address });
         const amount = await ethers.provider.getBalance(rebalancer.address);
-        const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(
-          rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, feeParams, { value: fees }),
-        ).to.revertedWithCustomError(rebalancer, "OnlyOperator");
+        const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+        const fees = await rebalancer.quoteSendEthToL2(ARB_ID, options);
+        await expect(rebalancer.connect(signer1).sendEthToL2(ARB_ID, amount, options, { value: fees }))
+            .to.revertedWithCustomError(rebalancer, "OnlyOperator");
       });
 
       it("Reverts when there is no adapter for the chain", async function () {
-        await signer1.sendTransaction({ value: e18, to: rebalancer.address });
-        const fees = 2n * 10n ** 15n;
         const amount = await ethers.provider.getBalance(rebalancer.address);
-        const feeParams = encodeArbitrumFees(2n * 10n ** 15n, 200_000n, 100_000_000n);
-        await expect(
-          rebalancer.connect(operator).sendEthToL2(randomBI(4), amount, feeParams, { value: fees }),
-        ).to.revertedWithCustomError(rebalancer, "CrosschainAdapterNotSet");
+        const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+        const fees = await rebalancer.quoteSendEthToL2(ARB_ID, options);
+        await expect(rebalancer.connect(operator).sendEthToL2(randomBI(8), amount, options, { value: fees }))
+            .to.revertedWithCustomError(adapterArb, "NoPeer");
       });
     });
 
