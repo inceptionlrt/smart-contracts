@@ -25,7 +25,6 @@ interface ILZCrossChainAdapterL1 {
     error ChainIdNotFound(uint256 chainId);
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
-    error FutureTimestamp();
 
     // State Variables
     function targetReceiver() external view returns (address);

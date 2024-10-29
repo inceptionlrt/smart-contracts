@@ -10,5 +10,4 @@ interface ICrossChainBridgeL1 is ICrossChainBridge {
         uint256 balance,
         uint256 totalSupply
     );
-    error FutureTimestamp();
 }
