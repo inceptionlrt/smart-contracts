@@ -50,6 +50,7 @@ interface INativeRebalancer {
     error SendAmountExceedsEthBalance(uint256 amountToSend);
     error StakeAmountExceedsMaxTVL();
     error OnlyOperator();
+    error OnlyAdapter();
     error NoRebalancingRequired();
     error IndexOutOfBounds(uint256 index, uint256 length);
     error NoAdapterAvailable(uint256 _chainId);
