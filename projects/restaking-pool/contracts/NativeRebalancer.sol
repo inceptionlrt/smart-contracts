@@ -228,22 +228,31 @@ contract NativeRebalancer is
             SendAmountExceedsEthBalance(_callValue)
         );
 
-        ICrossChainBridgeL1(defaultAdapter).sendEthCrossChain{
+        ICrossChainBridgeL1(adapter).sendEthCrossChain{
             value: _callValue + msg.value
         }(_chainId, _options);
     }
 
+    /**
+     * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
+     * @param _chainId chain ID of the network to simulate sending ETH to
+     * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+     */
     function quoteSendEthToL2(
         uint256 _chainId,
-        bytes memory _options
-    ) external view returns (uint256) {
+        bytes calldata _options
+    ) external view returns (uint256 fee) {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
-        return
-            ICrossChainBridgeL1(defaultAdapter).quoteSendEth(
-                _chainId,
-                _options
-            );
+
+        uint256 valueStart = _options.length - 16;
+        uint256 valueEnd = _options.length;
+        uint256 sendValue = uint256(
+            uint128(bytes16(_options[valueStart:valueEnd]))
+        );
+        fee =
+            ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
+            sendValue;
     }
 
     //------------------------ TX STORAGE FUNCTIONS ------------------------//
