@@ -21,24 +21,25 @@ abstract contract AbstractLZCrossChainAdapter is
     ICrossChainBridge,
     OAppUpgradeable
 {
-    error NoDestEidFoundForChainId(uint256 chainId);
+    error NoDestEidFoundForChainId(uint32 chainId);
+    error NoChainIdForEid(uint32 eid);
     error ArraysLengthsMismatch();
 
-    mapping(uint32 => uint256) public eidToChainId;
-    mapping(uint256 => uint32) public chainIdToEid;
+    mapping(uint32 => uint32) public eidToChainId;
+    mapping(uint32 => uint32) public chainIdToEid;
 
     modifier onlyOwnerRestricted() virtual;
     modifier onlyTargetReceiverRestricted() virtual;
 
     function sendEthCrossChain(
-        uint256 _chainId,
+        uint32 _chainId,
         bytes memory _options
     ) external payable override onlyTargetReceiverRestricted {
         _sendCrosschain(_chainId, new bytes(0), _options);
     }
 
     function _quote(
-        uint256 _chainId,
+        uint32 _chainId,
         bytes calldata _payload,
         bytes memory _options
     ) internal view returns (uint256) {
@@ -49,7 +50,7 @@ abstract contract AbstractLZCrossChainAdapter is
     }
 
     function quoteSendEth(
-        uint256 _chainId,
+        uint32 _chainId,
         bytes memory _options
     ) external view override returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
@@ -62,19 +63,36 @@ abstract contract AbstractLZCrossChainAdapter is
 
     function setChainIdFromEid(
         uint32 _eid,
-        uint256 _chainId
+        uint32 _chainId
     ) public onlyOwnerRestricted {
         eidToChainId[_eid] = _chainId;
         chainIdToEid[_chainId] = _eid;
-        emit ChainIdAdded(_chainId);
+        emit ChainIdAdded(_chainId, _eid);
     }
 
-    function getChainIdFromEid(uint32 _eid) public view returns (uint256) {
-        return eidToChainId[_eid];
+    function deleteChainIdAndEid(
+        uint32 _eid,
+        uint32 _chainId
+    ) public onlyOwnerRestricted {
+        delete eidToChainId[_eid];
+        delete chainIdToEid[_chainId];
+        emit ChainIdAndEidDeleted(_chainId, _eid);
     }
 
-    function getEidFromChainId(uint256 _chainId) public view returns (uint32) {
-        return chainIdToEid[_chainId];
+    function getChainIdFromEid(
+        uint32 _eid
+    ) public view returns (uint32 chainId) {
+        chainId = eidToChainId[_eid];
+        if (chainId == 0) revert NoChainIdForEid(_eid);
+        return chainId;
+    }
+
+    function getEidFromChainId(
+        uint32 _chainId
+    ) public view returns (uint32 eid) {
+        eid = chainIdToEid[_chainId];
+        if (eid == 0) revert NoDestEidFoundForChainId(_chainId);
+        return eid;
     }
 
     function setPeer(
@@ -85,7 +103,7 @@ abstract contract AbstractLZCrossChainAdapter is
     }
 
     function _sendCrosschain(
-        uint256 _chainId,
+        uint32 _chainId,
         bytes memory _payload,
         bytes memory _options
     ) internal {
