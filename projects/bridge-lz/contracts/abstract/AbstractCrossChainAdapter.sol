@@ -46,7 +46,7 @@ abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
     }
 
     //primary function for receiving ETH from other chain
-    function _handleCrossChainEth(uint32 _chainId) internal {
+    function _handleCrossChainEth(uint256 _chainId) internal {
         emit CrossChainEthDeposit(_chainId, msg.value);
         Address.sendValue(payable(targetReceiver), msg.value);
     }
