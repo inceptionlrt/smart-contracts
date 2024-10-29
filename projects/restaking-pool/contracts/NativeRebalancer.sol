@@ -43,6 +43,11 @@ contract NativeRebalancer is
         _;
     }
 
+    modifier onlyAdapter(uint256 _chainId) {
+        require(msg.sender == _getAdapter(_chainId), OnlyAdapter());
+        _;
+    }
+
     /**
      * @notice Initializes the contract with essential addresses and parameters.
      * @param _inceptionToken The address of the inETH token.
@@ -256,7 +261,7 @@ contract NativeRebalancer is
         uint256 _timestamp,
         uint256 _balance,
         uint256 _totalSupply
-    ) external {
+    ) external onlyAdapter(_chainId) {
         require(
             _timestamp <= block.timestamp,
             TimeCannotBeInFuture(_timestamp)
