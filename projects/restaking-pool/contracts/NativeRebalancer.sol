@@ -237,7 +237,7 @@ contract NativeRebalancer is
      * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _chainId chain ID of the network to simulate sending ETH to
      * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
-     * @return the fee required to pay for cross-chain transaction, without the value to be sent itself
+     * @return fee required to pay for cross-chain transaction, without the value to be sent itself
      */
     function quoteSendEthToL2(
         uint256 _chainId,
@@ -358,14 +358,16 @@ contract NativeRebalancer is
 
         require(found, ChainIdNotFound(_chainId));
 
-        // Shift elements to the left to remove the gap
-        for (uint256 i = index; i < chainIds.length - 1; i++) {
-            chainIds[i] = chainIds[i + 1];
+        // Shift elements to the left to remove the gap if there's more than one element
+        if (chainIds.length > 1) {
+            for (uint256 i = index; i < chainIds.length - 1; i++) {
+                chainIds[i] = chainIds[i + 1];
+            }
         }
 
         // Remove the last element (which is now duplicated)
         chainIds.pop();
-        emit ChainIdDeleted(_chainId);
+        emit ChainIdDeleted(_chainId, index);
     }
 
     function _getAdapter(
