@@ -335,20 +335,33 @@ contract NativeRebalancer is
         _addChainId(_newChainId);
     }
 
-    function deleteChainId(uint256 index) public onlyOperator {
-        require(
-            index < chainIds.length,
-            IndexOutOfBounds(index, chainIds.length)
-        );
+    /**
+     * @notice Removes a specific `chainId` from the `chainIds` array.
+     * @param _chainId The Chain ID to delete.
+     */
+    function deleteChainId(uint32 _chainId) public onlyOperator {
+        bool found = false;
+        uint256 index;
 
-        // Shift elements to the left to fill the gap
+        // Search for the _chainId in the array
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == _chainId) {
+                found = true;
+                index = i;
+                break;
+            }
+        }
+
+        require(found, ChainIdNotFound(_chainId));
+
+        // Shift elements to the left to remove the gap
         for (uint256 i = index; i < chainIds.length - 1; i++) {
             chainIds[i] = chainIds[i + 1];
         }
 
         // Remove the last element (which is now duplicated)
         chainIds.pop();
-        emit ChainIdDelted(index);
+        emit ChainIdDeleted(_chainId);
     }
 
     function _getAdapter(
@@ -374,6 +387,7 @@ contract NativeRebalancer is
             }
         }
         chainIds.push(_newChainId);
+        emit ChainIdAdded(_newChainId);
     }
 
     /**
