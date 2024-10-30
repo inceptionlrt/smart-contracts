@@ -50,7 +50,7 @@ contract NativeRebalancer is
 
     /**
      * @notice Initializes the contract with essential addresses and parameters.
-     * @param _inceptionToken The address of the inETH token.
+     * @param _inceptionToken The address of the InceptionToken token.
      * @param _lockbox The address of the lockbox.
      * @param _liqPool The address of the liquidity pool.
      * @param _defaultAdapter The address of the CrossChainBridgeL1.
@@ -83,8 +83,8 @@ contract NativeRebalancer is
     }
 
     /**
-     * @notice Updates the inETH token address.
-     * @param _inceptionToken The new inETH address.
+     * @notice Updates the InceptionToken address.
+     * @param _inceptionToken The new InceptionToken address.
      */
     function setInceptionToken(address _inceptionToken) external onlyOwner {
         require(_inceptionToken != address(0), SettingZeroAddress());
@@ -237,6 +237,7 @@ contract NativeRebalancer is
      * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _chainId chain ID of the network to simulate sending ETH to
      * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+     * @return the fee required to pay for cross-chain transaction, without the value to be sent itself
      */
     function quoteSendEthToL2(
         uint256 _chainId,
@@ -254,8 +255,6 @@ contract NativeRebalancer is
             ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
             sendValue;
     }
-
-    //------------------------ TX STORAGE FUNCTIONS ------------------------//
 
     /**
      * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
@@ -322,6 +321,11 @@ contract NativeRebalancer is
         emit AdapterAdded(_chainId, _newAdapter);
     }
 
+    /**
+     * @notice set the so-called defaultAdapter - the adapter to be used for every chain unless a
+      specific adapter for specific chainId is set
+     * @param _newDefaultAdapter Address of the default cross-chain adapter
+     **/
     function setDefaultAdapter(
         address payable _newDefaultAdapter
     ) external override onlyOwner {
