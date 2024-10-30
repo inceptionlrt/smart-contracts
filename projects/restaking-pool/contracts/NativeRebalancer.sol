@@ -21,19 +21,16 @@ contract NativeRebalancer is
     OwnableUpgradeable,
     INativeRebalancer
 {
-    //------------- REBALANCER FIELDS -------------//
     address public inceptionToken;
     address public lockboxAddress;
     address payable public liqPool;
     address public ratioFeed;
     address public operator;
     uint256 public constant MULTIPLIER = 1e18;
-
-    //------------- TX STORAGE FIELDS -------------//
     mapping(uint256 => Transaction) public txs;
     mapping(uint256 => address payable) adapters;
     address payable public defaultAdapter;
-    uint32[] public chainIds;
+    uint256[] public chainIds;
 
     modifier onlyOperator() {
         require(
@@ -128,10 +125,10 @@ contract NativeRebalancer is
     function updateTreasuryData() public {
         uint256 totalL2InETH = 0;
 
-        uint32[] memory allChainIds = chainIds;
+        uint256[] memory allChainIds = chainIds;
 
         for (uint i = 0; i < allChainIds.length; i++) {
-            uint32 chainId = allChainIds[i];
+            uint256 chainId = allChainIds[i];
             Transaction memory txData = getTransactionData(chainId);
             require(
                 txData.timestamp != 0,
@@ -311,7 +308,7 @@ contract NativeRebalancer is
      * @param _newAdapter The address of the defaultAdapter.
      */
     function addAdapter(
-        uint32 _chainId,
+        uint256 _chainId,
         address payable _newAdapter
     ) external onlyOwner {
         require(_newAdapter != address(0), SettingZeroAddress());
@@ -335,7 +332,7 @@ contract NativeRebalancer is
         defaultAdapter = _newDefaultAdapter;
     }
 
-    function addChainId(uint32 _newChainId) external onlyOperator {
+    function addChainId(uint256 _newChainId) external onlyOperator {
         _addChainId(_newChainId);
     }
 
@@ -343,7 +340,7 @@ contract NativeRebalancer is
      * @notice Removes a specific `chainId` from the `chainIds` array.
      * @param _chainId The Chain ID to delete.
      */
-    function deleteChainId(uint32 _chainId) public onlyOperator {
+    function deleteChainId(uint256 _chainId) public onlyOperator {
         uint256 index;
         bool found = false;
 
@@ -395,7 +392,7 @@ contract NativeRebalancer is
      * @dev Ensures that the Chain ID does not already exist in the list.
      * @param _newChainId The Chain ID to add.
      */
-    function _addChainId(uint32 _newChainId) internal {
+    function _addChainId(uint256 _newChainId) internal {
         for (uint i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _newChainId) {
                 return;
