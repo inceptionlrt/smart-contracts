@@ -373,9 +373,8 @@ contract NativeRebalancer is
     function getAdapter(
         uint256 _chainId
     ) external view returns (address payable adapter, bool isDefault) {
-        adapter = adapters[_chainId];
-        if (adapter == address(0)) {
-            adapter = defaultAdapter;
+        adapter = _getAdapter(_chainId);
+        if (adapter == defaultAdapter) {
             isDefault = true;
         }
     }
