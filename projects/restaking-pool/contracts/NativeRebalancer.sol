@@ -344,28 +344,22 @@ contract NativeRebalancer is
      * @param _chainId The Chain ID to delete.
      */
     function deleteChainId(uint32 _chainId) public onlyOperator {
-        bool found = false;
         uint256 index;
+        bool found = false;
 
-        // Search for the _chainId in the array
+        // Find the _chainId in the array
         for (uint256 i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _chainId) {
-                found = true;
                 index = i;
+                found = true;
                 break;
             }
         }
 
         require(found, ChainIdNotFound(_chainId));
 
-        // Shift elements to the left to remove the gap if there's more than one element
-        if (chainIds.length > 1) {
-            for (uint256 i = index; i < chainIds.length - 1; i++) {
-                chainIds[i] = chainIds[i + 1];
-            }
-        }
-
-        // Remove the last element (which is now duplicated)
+        // Move the last element into the place of the one to delete
+        chainIds[index] = chainIds[chainIds.length - 1];
         chainIds.pop();
         emit ChainIdDeleted(_chainId, index);
     }
