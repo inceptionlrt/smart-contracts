@@ -139,7 +139,7 @@ async function main() {
 
     if (!checkpoint.Rebalancer) {
         console.log("Deploying Rebalancer...");
-        const Rebalancer = await ethers.getContractFactory("Rebalancer");
+        const Rebalancer = await ethers.getContractFactory("NativeRebalancer");
         const rebalancer = await upgrades.deployProxy(
             Rebalancer,
             [
