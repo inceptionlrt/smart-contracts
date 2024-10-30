@@ -275,13 +275,9 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
    * @param _chainId chain ID of the network to simulate sending ETH to
    * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
    */
-  function quoteSendEthCrossChain(uint256 _chainId, bytes calldata _options) external view returns (uint256 fee) {
+  function quoteSendEthCrossChain(uint256 _chainId, bytes calldata _options) external view returns (uint256) {
     require(address(crossChainAdapter) != address(0), CrossChainAdapterNotSet());
-
-    uint256 valueStart = _options.length - 16;
-    uint256 valueEnd = _options.length;
-    uint256 sendValue = uint256(uint128(bytes16(_options[valueStart:valueEnd])));
-    fee = crossChainAdapter.quoteSendEth(_chainId, _options) - sendValue;
+    return crossChainAdapter.quoteSendEth(_chainId, _options) - crossChainAdapter.getValueFromOpts(_options);
   }
 
   /*//////////////////////////////

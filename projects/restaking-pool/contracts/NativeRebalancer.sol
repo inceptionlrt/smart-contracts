@@ -242,15 +242,9 @@ contract NativeRebalancer is
     ) external view returns (uint256 fee) {
         address payable adapter = payable(_getAdapter(_chainId));
         require(adapter != address(0), CrosschainBridgeNotSet());
-
-        uint256 valueStart = _options.length - 16;
-        uint256 valueEnd = _options.length;
-        uint256 sendValue = uint256(
-            uint128(bytes16(_options[valueStart:valueEnd]))
-        );
-        fee =
+        return
             ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
-            sendValue;
+            ICrossChainBridgeL1(adapter).getValueFromOpts(_options);
     }
 
     /**

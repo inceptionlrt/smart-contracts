@@ -104,7 +104,7 @@ abstract contract AbstractLZCrossChainAdapter is
 
     function getValueFromOpts(
         bytes calldata _options
-    ) public view returns (uint256) {
+    ) public pure override returns (uint256) {
         uint256 valueStart = _options.length - 16;
         uint256 valueEnd = _options.length;
         return uint256(uint128(bytes16(_options[valueStart:valueEnd])));
