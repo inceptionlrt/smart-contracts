@@ -364,17 +364,6 @@ contract NativeRebalancer is
         emit ChainIdDeleted(_chainId, index);
     }
 
-    function _getAdapter(
-        uint256 _chainId
-    ) internal view returns (address payable adapter) {
-        adapter = adapters[_chainId];
-        if (adapter == address(0)) {
-            adapter = defaultAdapter;
-        }
-
-        require(adapter != address(0), NoAdapterAvailable(_chainId));
-    }
-
     /**
      * @notice Fetches the adapter assigned to a specific chain ID
      * @param _chainId The Chain ID
@@ -389,6 +378,17 @@ contract NativeRebalancer is
             adapter = defaultAdapter;
             isDefault = true;
         }
+    }
+
+    function _getAdapter(
+        uint256 _chainId
+    ) internal view returns (address payable adapter) {
+        adapter = adapters[_chainId];
+        if (adapter == address(0)) {
+            adapter = defaultAdapter;
+        }
+
+        require(adapter != address(0), NoAdapterAvailable(_chainId));
     }
 
     /**
