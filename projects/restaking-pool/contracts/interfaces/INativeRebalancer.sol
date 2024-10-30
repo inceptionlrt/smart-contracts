@@ -33,7 +33,7 @@ interface INativeRebalancer {
         address indexed newDefaultAdapter
     );
     event ChainIdAdded(uint32 chainId);
-    event ChainIdDeleted(uint32 chainId);
+    event ChainIdDeleted(uint32 chainId, uint256 index);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);

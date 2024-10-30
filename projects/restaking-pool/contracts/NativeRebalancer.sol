@@ -50,7 +50,7 @@ contract NativeRebalancer is
 
     /**
      * @notice Initializes the contract with essential addresses and parameters.
-     * @param _inceptionToken The address of the inETH token.
+     * @param _inceptionToken The address of the InceptionToken token.
      * @param _lockbox The address of the lockbox.
      * @param _liqPool The address of the liquidity pool.
      * @param _defaultAdapter The address of the CrossChainBridgeL1.
@@ -83,8 +83,8 @@ contract NativeRebalancer is
     }
 
     /**
-     * @notice Updates the inETH token address.
-     * @param _inceptionToken The new inETH address.
+     * @notice Updates the InceptionToken address.
+     * @param _inceptionToken The new InceptionToken address.
      */
     function setInceptionToken(address _inceptionToken) external onlyOwner {
         require(_inceptionToken != address(0), SettingZeroAddress());
@@ -237,6 +237,7 @@ contract NativeRebalancer is
      * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _chainId chain ID of the network to simulate sending ETH to
      * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+     * @return fee required to pay for cross-chain transaction, without the value to be sent itself
      */
     function quoteSendEthToL2(
         uint256 _chainId,
@@ -254,8 +255,6 @@ contract NativeRebalancer is
             ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
             sendValue;
     }
-
-    //------------------------ TX STORAGE FUNCTIONS ------------------------//
 
     /**
      * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
@@ -322,6 +321,11 @@ contract NativeRebalancer is
         emit AdapterAdded(_chainId, _newAdapter);
     }
 
+    /**
+     * @notice set the so-called defaultAdapter - the adapter to be used for every chain unless a
+      specific adapter for specific chainId is set
+     * @param _newDefaultAdapter Address of the default cross-chain adapter
+     **/
     function setDefaultAdapter(
         address payable _newDefaultAdapter
     ) external override onlyOwner {
@@ -340,28 +344,40 @@ contract NativeRebalancer is
      * @param _chainId The Chain ID to delete.
      */
     function deleteChainId(uint32 _chainId) public onlyOperator {
-        bool found = false;
         uint256 index;
+        bool found = false;
 
-        // Search for the _chainId in the array
+        // Find the _chainId in the array
         for (uint256 i = 0; i < chainIds.length; i++) {
             if (chainIds[i] == _chainId) {
-                found = true;
                 index = i;
+                found = true;
                 break;
             }
         }
 
         require(found, ChainIdNotFound(_chainId));
 
-        // Shift elements to the left to remove the gap
-        for (uint256 i = index; i < chainIds.length - 1; i++) {
-            chainIds[i] = chainIds[i + 1];
-        }
-
-        // Remove the last element (which is now duplicated)
+        // Move the last element into the place of the one to delete
+        chainIds[index] = chainIds[chainIds.length - 1];
         chainIds.pop();
-        emit ChainIdDeleted(_chainId);
+        emit ChainIdDeleted(_chainId, index);
+    }
+
+    /**
+     * @notice Fetches the adapter assigned to a specific chain ID
+     * @param _chainId The Chain ID
+     * @return adapter address of the adapter for the specified chainId. Returns 0 if non set
+     * @return isDefault whether the returned adapter is default or not (from the mapping)
+     */
+    function getAdapter(
+        uint256 _chainId
+    ) external view returns (address payable adapter, bool isDefault) {
+        adapter = adapters[_chainId];
+        if (adapter == address(0)) {
+            adapter = defaultAdapter;
+            isDefault = true;
+        }
     }
 
     function _getAdapter(
