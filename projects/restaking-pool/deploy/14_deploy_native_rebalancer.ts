@@ -7,8 +7,8 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
   const { get, execute } = deployments;
 
   // Load existing contract addresses
-  const inceptionToken = await get("InceptionToken");
-  const lockbox = await get("Lockbox");
+  const inceptionToken = await get("cToken");
+  const lockbox = await get("XERC20Lockbox");
   const liqPool = await get("LiquidityPool");
   const ratioFeed = await get("RatioFeed");
 
@@ -21,10 +21,10 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
   console.log("Deployer:", deployer);
   console.log("Operator:", operator);
   console.log("InceptionToken:", inceptionToken.address);
-  console.log("Lockbox:", lockbox.address);
+  console.log("XERC20Lockbox:", lockbox.address);
   console.log("LiquidityPool:", liqPool.address);
   console.log("RatioFeed:", ratioFeed.address);
-  console.log("CrossChainBridge (default adapter):", crossChainBridge);
+  console.log("LZCrossChainAdapterL1:", crossChainBridge);
 
   const nativeRebalancer = await ozDeploy(deployments, "NativeRebalancer", [
     inceptionToken.address,
