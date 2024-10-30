@@ -98,7 +98,13 @@ abstract contract AbstractLZCrossChainAdapter is
             payable(msg.sender)
         );
 
-        uint256 fee = receipt.fee.nativeFee;
+        uint256 fee = receipt.fee.nativeFee - getValueFromOpts(_options);
         emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
+    }
+
+    function getValueFromOpts(bytes calldata _options) returns (uint256) {
+        uint256 valueStart = _options.length - 16;
+        uint256 valueEnd = _options.length;
+        return uint256(uint128(bytes16(_options[valueStart:valueEnd])));
     }
 }
