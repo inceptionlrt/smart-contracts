@@ -1,8 +1,6 @@
 module.exports = {
   skipFiles: [
-    "crosschain-adapters/mock/",
-    "crosschain-adapters/l2/",
-    "rebalancer/mock/",
+    "bridge-lz/mock/",
     "restaking-pool/interfaces/",
     "restaking-pool/libraries/",
     "restaking-pool/mock/",
@@ -13,6 +11,20 @@ module.exports = {
     "restaking-pool/ProtocolConfig.sol",
     "restaking-pool/RatioFeed.sol",
     "restaking-pool/RestakingPool.sol",
-    "restaking-pool/XERC20Lockbox.sol"
+    "restaking-pool/XERC20Lockbox.sol",
+    "vaults/assets-handler/InceptionAssetsHandler.sol",
+    "vaults/assets-handler/InceptionERC20OmniAssetsHandler.sol",
+    "vaults/eigenlayer-handler/",
+    "vaults/interfaces/",
+    "vaults/lib/",
+    "vaults/mock/",
+    "vaults/restaker/",
+    "vaults/tests/",
+    "vaults/tokens/",
+    "vaults/vaults/inEth/",
+    "vaults/vaults/vault_e1/",
+    "vaults/vaults/vault_e2/",
+    "vaults/vaults/InceptionERC20OmniVault.sol",
+    "vaults/vaults/InceptionVault.sol",
   ]
 };

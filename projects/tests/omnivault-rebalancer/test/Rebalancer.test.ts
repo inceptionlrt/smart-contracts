@@ -31,7 +31,7 @@ const chainIds = [ETH_ID, ARB_ID, OPT_ID];
 const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
 const RESTAKING_POOL_MAX_TVL = 32n * e18;
 const RESTAKING_POOL_MIN_STAKE = 1000n;
-const options = "0x00030100110100000000000000000000000000030d40";
+const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
 
 describe("Omnivault integration tests", function () {
   this.timeout(150000);
@@ -386,28 +386,30 @@ describe("Omnivault integration tests", function () {
   });
 
   describe("Rebalancer", function () {
-    describe("After deployments checks", function () {
+    describe("Deployments checks", function () {
       before(async function () {
         await snapshot.restore();
       });
 
-      //Constants
       it("MULTIPLIER", async function () {
         expect(await rebalancer.MULTIPLIER()).to.be.eq(e18);
       });
 
-      //Addresses
       it("Inception token address", async function () {
         expect(await rebalancer.inceptionToken()).to.be.eq(inEth.address);
+      });
+
+      it("Lockbox address", async function () {
+        expect(await rebalancer.lockboxAddress()).to.be.eq(lockboxAddress);
       });
 
       it("Restaking pool address", async function () {
         expect(await rebalancer.liqPool()).to.be.eq(restakingPool.address);
       });
 
-      it("Lockbox address", async function () {
-        expect(await rebalancer.lockboxAddress()).to.be.eq(lockboxAddress);
-      });
+      it("Default adapter", async function() {
+        expect(await rebalancer.defaultAdapter()).to.be.eq(adapterEth.address);
+      })
 
       it("Ratio feed address", async function () {
         expect(await rebalancer.ratioFeed()).to.be.eq(ratioFeedL1.address);
@@ -485,80 +487,109 @@ describe("Omnivault integration tests", function () {
         });
       });
 
-      let chain = randomBI(4);
-      let adapter = ethers.Wallet.createRandom().address;
-      let newAdapter = ethers.Wallet.createRandom().address;
-
-      it("addChainId only owner can", async function () {
-        // const chainsBefore = await rebalancer.chainIds();
-        await rebalancer.connect(owner).addChainId(chain);
-
-        // const chainsAfter = await rebalancer.chainIds();
-        // expect([...chainsAfter]).to.include.members([...chainsBefore])
-        // expect(chainsAfter).to.include(chain);
+      it("addChainId operator can", async function () {
+        let chain = randomBI(4);
+        await expect(rebalancer.connect(operator).addChainId(chain))
+            .to.emit(rebalancer, "ChainIdAdded")
+            .withArgs(chain);
+        expect(await rebalancer.chainIds(2n)).to.be.eq(chain);
       });
 
-      it("addChainId reverts when chain is added already", async function () {
-        await expect(rebalancer.connect(owner).addChainId(chain))
-          .to.be.revertedWithCustomError(rebalancer, "ChainIdAlreadyExists")
-          .withArgs(chain);
+      it("addChainId skips if the chain has been added already", async function () {
+        let chain = randomBI(4);
+        await rebalancer.connect(operator).addChainId(chain);
+        await expect(rebalancer.connect(operator).addChainId(chain)).to.not.emit(rebalancer, "ChainIdAdded");
       });
 
       it("addChainId reverts when called by not an owner", async function () {
-        await expect(rebalancer.connect(signer1).addChainId(chain + 1n))
-          .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
-          .withArgs(signer1.address);
+        await expect(rebalancer.connect(signer1).addChainId(randomBI(4)))
+          .to.be.revertedWithCustomError(rebalancer, "OnlyOperator");
       });
 
-      it("addAdapter only owner can", async function () {
-        await expect(rebalancer.connect(owner).addAdapter(chain, adapter))
-          .to.emit(rebalancer, "AdapterAdded")
-          .withArgs(chain, adapter);
+      it("deleteChainId operator can delete the 1st chain in the list", async function() {
+        const chain = ARB_ID;
+        await expect(rebalancer.connect(operator).deleteChainId(chain))
+            .to.emit(rebalancer, "ChainIdDeleted")
+            .withArgs(chain, 0n);
+        expect(await rebalancer.chainIds(0n)).to.be.eq(OPT_ID);
+        await expect(rebalancer.chainIds(1n)).to.be.reverted;
+      })
 
-        expect(await rebalancer.adapters(chain)).to.be.eq(adapter);
+      it("deleteChainId owner can delete the last chain in the list", async function() {
+        const chain = OPT_ID;
+        await expect(rebalancer.connect(owner).deleteChainId(chain))
+            .to.emit(rebalancer, "ChainIdDeleted")
+            .withArgs(chain, 1n);
+        expect(await rebalancer.chainIds(0n)).to.be.eq(ARB_ID);
+        await expect(rebalancer.chainIds(1n)).to.be.reverted;
+      })
+
+      it("deleteChainId reverts when chain does not exist", async function () {
+        let chain = randomBI(4);
+        await expect(rebalancer.connect(operator).deleteChainId(chain))
+            .to.be.revertedWithCustomError(rebalancer, "ChainIdNotFound")
+            .withArgs(chain);
       });
 
-      it("addAdapter reverts when adapter is already set for the chain", async function () {
+      it("addChainId reverts when called by not an owner", async function () {
+        await expect(rebalancer.connect(signer1).deleteChainId(ARB_ID))
+            .to.be.revertedWithCustomError(rebalancer, "OnlyOperator");
+      });
+
+      it("addAdapter for a new chain", async function () {
+        let adapter = ethers.Wallet.createRandom().address;
+        let chain = randomBI(4);
         await expect(rebalancer.connect(owner).addAdapter(chain, adapter))
-          .to.revertedWithCustomError(rebalancer, "AdapterAlreadyExists")
-          .withArgs(chain);
+          .to.emit(rebalancer, "AdapterAdded").withArgs(chain, adapter)
+          .and
+          .to.emit(rebalancer, "ChainIdAdded").withArgs(chain);
+
+        const [adapterAddress, isDefault] = await rebalancer.getAdapter(chain);
+        expect(adapterAddress).to.be.eq(adapter);
+        expect(isDefault).to.be.false;
+      });
+
+      it("addAdapter for existing chain", async function () {
+        let adapter = ethers.Wallet.createRandom().address;
+        let chain = ARB_ID;
+        await expect(rebalancer.connect(owner).addAdapter(chain, adapter))
+            .to.emit(rebalancer, "AdapterAdded").withArgs(chain, adapter)
+            .and
+            .to.not.emit(rebalancer, "ChainIdAdded");
+
+        const [adapterAddress, isDefault] = await rebalancer.getAdapter(chain);
+        expect(adapterAddress).to.be.eq(adapter);
+        expect(isDefault).to.be.false;
+      });
+
+      it("addAdapter reverts when adapter address is 0", async function () {
+        let adapter = ethers.ZeroAddress;
+        let chain = randomBI(4);
+        await expect(rebalancer.connect(owner).addAdapter(chain, adapter))
+            .to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
       });
 
       it("addAdapter reverts when called by not an owner", async function () {
-        const anotherChain = randomBI(5);
-        await rebalancer.connect(owner).addChainId(anotherChain);
-
-        const anotherAdapter = ethers.Wallet.createRandom().address;
-        await expect(rebalancer.connect(signer1).addAdapter(anotherChain, anotherAdapter))
+        let adapter = ethers.Wallet.createRandom().address;
+        let chain = randomBI(4);
+        await expect(rebalancer.connect(signer1).addAdapter(chain, adapter))
           .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
           .withArgs(signer1.address);
       });
 
-      // it("replaceAdapter only owner can", async function () {
-      //     newAdapter = ethers.Wallet.createRandom().address;
-      //     await expect(rebalancer.connect(owner).replaceAdapter(chain, newAdapter))
-      //         .to.emit(rebalancer, "AdapterReplaced")
-      //         .withArgs(chain, adapter, newAdapter);
-      //
-      //     expect(await rebalancer.adapters(chain)).to.be.eq(newAdapter);
-      // })
-      //
-      // it("replaceAdapter reverts when adapter is not set", async function () {
-      //     const chainId = randomBI(6);
-      //     await expect(rebalancer.connect(owner).replaceAdapter(chainId, adapter))
-      //         .to.revertedWithCustomError(rebalancer, "NoAdapterForThisChainId")
-      //         .withArgs(chainId);
-      // })
-      //
-      // it("replaceAdapter reverts when called by not an owner", async function () {
-      //     await expect(rebalancer.connect(signer1).replaceAdapter(chain, newAdapter))
-      //         .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
-      //         .withArgs(signer1.address);
+      //TODO: test after fix
+      // it("getAdapter returns default adapter if no other set", async function() {
+      //   const [adapterAddress, isDefault] = await rebalancer.getAdapter(ARB_ID);
+      //   expect(adapterAddress).to.be.eq(adapterEth);
+      //   expect(isDefault).to.be.true;
       // })
 
-      it("getTransactionData when there is not such", async function () {
-        const res = await rebalancer.getTransactionData(chain);
-        console.log(res);
+      it("getTransactionData when there is no data for the chain", async function () {
+        let chain = randomBI(4);
+        const txData = await rebalancer.getTransactionData(chain);
+        expect(txData.timestamp).to.be.eq(0n);
+        expect(txData.ethBalance).to.be.eq(0n);
+        expect(txData.inceptionTokenBalance).to.be.eq(0n);
       });
     });
 
@@ -578,19 +609,19 @@ describe("Omnivault integration tests", function () {
       });
 
       it("Reverts when there is no data for one of the chains", async function () {
-        await expect(rebalancer.updateTreasuryData()).to.revertedWithCustomError(
-          rebalancer,
-          "MissingOneOrMoreL2Transactions",
-        );
+        //Call when there is no data at all
+        await expect(rebalancer.updateTreasuryData())
+            .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions");
+
         const block = await ethers.provider.getBlock("latest");
         const timestamp = block.timestamp;
         const balance = randomBI(19);
         const totalSupply = randomBI(19);
         const message = encodePayload(timestamp, balance, totalSupply);
 
+        //Send data for the 1 chain of 2
         const fees = await adapterArb.quote(message, options);
         await adapterArb.sendDataL1(message, options, { value: fees });
-
         await expect(rebalancer.updateTreasuryData())
           .to.revertedWithCustomError(rebalancer, "MissingOneOrMoreL2Transactions")
           .withArgs(OPT_ID);
@@ -683,19 +714,13 @@ describe("Omnivault integration tests", function () {
             expectedTotalSupplyDiff += arg.arb.l2TotalSupplyDiff();
             initialArbAmount += arg.arb.l2BalanceDiff();
             initialArbSupply += arg.arb.l2TotalSupplyDiff();
-
-            const message = encodePayload(timestamp, initialArbAmount, initialArbSupply);
-            const fees = await adapterArb.quote(message, options);
-            await adapterArb.sendDataL1(message, options, { value: fees });
+            await adapterArb.sendData(timestamp, initialArbAmount, initialArbSupply);
           }
           if (arg.opt) {
             expectedTotalSupplyDiff += arg.opt.l2TotalSupplyDiff();
             initialOptAmount += arg.opt.l2BalanceDiff();
             initialOptSupply += arg.opt.l2TotalSupplyDiff();
-
-            const message = encodePayload(timestamp, initialOptAmount, initialOptSupply);
-            const fees = await adapterOpt.quote(message, options);
-            await adapterOpt.sendDataL1(message, options, { value: fees });
+            await adapterOpt.sendData(timestamp, initialOptAmount, initialOptSupply);
           }
           console.log(`Expected supply diff: ${expectedTotalSupplyDiff.format()}`);
           const expectedLockboxBalance = initialArbSupply + initialOptSupply;
@@ -710,17 +735,16 @@ describe("Omnivault integration tests", function () {
           expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedTotalSupplyDiff);
           expect(lockboxBalanceAfter).to.be.eq(expectedLockboxBalance);
           if (expectedTotalSupplyDiff > 0n) {
-            await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(expectedTotalSupplyDiff);
+            await expect(tx).emit(rebalancer, "TreasuryUpdateMint").withArgs(expectedTotalSupplyDiff);
           }
           if (expectedTotalSupplyDiff == 0n) {
             await expect(tx)
               .to.not.emit(rebalancer, "TreasuryUpdateMint")
-              .and.to.not.emit(rebalancer, "TreasuryUpdateBurn");
+              .and
+              .to.not.emit(rebalancer, "TreasuryUpdateBurn");
           }
           if (expectedTotalSupplyDiff < 0n) {
-            await expect(tx)
-              .to.emit(rebalancer, "TreasuryUpdateBurn")
-              .withArgs(0n - expectedTotalSupplyDiff);
+            await expect(tx).emit(rebalancer, "TreasuryUpdateBurn").withArgs(-expectedTotalSupplyDiff);
           }
         });
       });
@@ -732,10 +756,8 @@ describe("Omnivault integration tests", function () {
         await adapterOpt.sendData(timestamp, e18, e18);
         await rebalancer.updateTreasuryData();
 
-        await expect(rebalancer.updateTreasuryData()).to.be.revertedWithCustomError(
-          rebalancer,
-          "NoRebalancingRequired",
-        );
+        await expect(rebalancer.updateTreasuryData())
+            .to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
       });
 
       it("inEth leftover on rebalancer will be transferred to the lockbox", async function () {
@@ -1094,6 +1116,10 @@ describe("Omnivault integration tests", function () {
 
         const args = [
           {
+            name: "1eth",
+            amount: async () => e18,
+          },
+          {
             name: "Random amount ~ 1e17",
             amount: async () => randomBI(17),
           },
@@ -1110,11 +1136,13 @@ describe("Omnivault integration tests", function () {
         args.forEach(function (arg) {
           it(arg.name, async function () {
             const amount = await arg.amount();
-
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
             const amountWithFees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+            const fee = amountWithFees - amount;
             const tx = await fromAdapter.connect(owner).sendEthCrossChain(direction.toChainID, options, { value: amountWithFees });
 
+            await expect(tx).emit(fromAdapter, "CrossChainMessageSent")
+                .withArgs(direction.toChainID, amountWithFees, "0x", amountWithFees);
             await expect(tx).emit(toAdapter, "CrossChainEthDeposit").withArgs(direction.fromChainID, amount);
             if(direction.toChainID === ETH_ID){
               await expect(tx).emit(target, "ETHReceived").withArgs(toAdapter.address, amount);
@@ -1124,7 +1152,21 @@ describe("Omnivault integration tests", function () {
           });
         });
 
-        it("Reverts when caller is not endpoint", async function () {
+        it(`Send 0th ${direction.name}`, async function() {
+          const amount = 0n;
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const amountWithFees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+          const tx = await fromAdapter.connect(owner).sendEthCrossChain(direction.toChainID, options, { value: amountWithFees });
+
+          await expect(tx).emit(fromAdapter, "CrossChainMessageSent")
+              .withArgs(direction.toChainID, amountWithFees, "0x", amountWithFees);
+          await expect(tx).not.emit(toAdapter, "CrossChainEthDeposit");
+          await expect(tx).not.emit(rebalancer, "ETHReceived");
+          await expect(tx).to.changeEtherBalance(target.address, amount);
+          await expect(tx).to.changeEtherBalance(owner.address, -amountWithFees, { includeFee: false });
+        })
+
+        it("sendEthCrossChain reverts when caller is not endpoint", async function () {
           await snapshot.restore();
           const maliciousEndpoint = await ethers.deployContract("EndpointMock", [direction.toChainID]);
           maliciousEndpoint.address = await maliciousEndpoint.getAddress();
@@ -1139,7 +1181,7 @@ describe("Omnivault integration tests", function () {
               .withArgs(maliciousEndpoint.address);
         });
 
-        it("Reverts when sent from unknown adapter", async function () {
+        it("sendEthCrossChain reverts when sent from unknown adapter", async function () {
           await snapshot.restore();
           const maliciousAdapter = direction.maliciousAdapter();
 
@@ -1150,14 +1192,57 @@ describe("Omnivault integration tests", function () {
               .to.be.revertedWithCustomError(toAdapter, "OnlyPeer")
               .withArgs(direction.fromChainEID, ethers.zeroPadValue(maliciousAdapter.address, 32));
         });
+
+        it("sendEthCrossChain reverts when chain is unknown", async function() {
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const amountWithFees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+          await expect(fromAdapter.connect(owner).sendEthCrossChain(randomBI(4), options, { value: amountWithFees }))
+              .to.be.revertedWithCustomError(fromAdapter, "NoPeer");
+        })
+
+        it("sendEthCrossChain reverts there is not enough fee", async function() {
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const amountWithFees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+          await expect(fromAdapter.connect(owner).sendEthCrossChain(direction.toChainID, options, { value: amountWithFees - 1n }))
+              .to.be.revertedWith("LayerZeroMock: not enough native for fees");
+        })
+
+        it("quoteSendEth reverts when chain is unknown", async function() {
+          const chain = randomBI(4);
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          await expect(fromAdapter.quoteSendEth(chain, options))
+              .to.be.revertedWithCustomError(fromAdapter, "NoDestEidFoundForChainId")
+              .withArgs(chain);
+        })
+
+        it("quoteSendEth reverts when options value is invalid", async function() {
+          await expect(fromAdapter.quoteSendEth(direction.toChainID, "0x"))
+              .to.be.revertedWithCustomError(fromEndpoint, "LZ_ULN_InvalidWorkerOptions")
+              .withArgs(0n);
+        })
       });
     })
 
-    describe("receiveL2Info", function () {
+    describe("sendDataL1 receiveL2Info", function () {
       let lastHandleTime;
       before(async function () {
         await snapshot.restore();
       });
+
+      it("sendDataL1 reverts when called by not a target", async function() {
+        const block = await ethers.provider.getBlock("latest");
+        const timestamp = block.timestamp;
+        const balance = randomBI(19);
+        const totalSupply = randomBI(19);
+        const message = encodePayload(timestamp, balance, totalSupply);
+        const fees = await adapterArb.quote(message, options);
+        await expect(adapterArb.connect(signer1).sendDataL1(message, options, { value: fees }))
+            .to.be.revertedWithCustomError(adapterArb, "NotTargetReceiver")
+            .withArgs(signer1.address);
+      })
 
       it("receiveL2Info", async () => {
         const block = await ethers.provider.getBlock("latest");
@@ -1223,8 +1308,42 @@ describe("Omnivault integration tests", function () {
             .to.be.revertedWithCustomError(adapterEth, "OnlyPeer")
             .withArgs(ARB_EID, ethers.zeroPadValue(maliciousAdapterL2.address, 32));
       });
+
+      it("quoteSendEth reverts when options value is invalid", async function() {
+        await snapshot.restore();
+        const block = await ethers.provider.getBlock("latest");
+        const timestamp = block.timestamp + 100;
+        const balance = 100;
+        const totalSupply = 100;
+        const message = encodePayload(timestamp, balance, totalSupply);
+
+        await expect(adapterArb.quote(message, "0x"))
+            .to.be.revertedWithCustomError(arbEndpoint, "LZ_ULN_InvalidWorkerOptions")
+            .withArgs(0n);
+      })
     });
 
+    describe("Recover funds", function() {
+      it("recoverFunds owner can send funds from adapter to the target", async function() {
+        const amount = randomBI(18);
+        await signer1.sendTransaction({ value: amount, to: adapterEth.address });
+        expect(await ethers.provider.getBalance(adapterEth.address)).to.be.eq(amount);
+
+        const tx = await adapterEth.connect(owner).recoverFunds();
+        await expect(tx).to.emit(adapterEth, "RecoverFundsInitiated").withArgs(amount);
+        await expect(tx).changeEtherBalance(adapterEth, -amount);
+        await expect(tx).changeEtherBalance(rebalancer, amount);
+      })
+
+      it("recoverFunds reverts when called by not an owner", async function() {
+        const amount = randomBI(18);
+        await signer1.sendTransaction({ value: amount, to: adapterEth.address });
+        expect(await ethers.provider.getBalance(adapterEth.address)).to.be.eq(amount);
+
+        await expect(adapterEth.connect(signer1).recoverFunds())
+            .to.revertedWithCustomError(adapterEth, "OwnableUnauthorizedAccount");
+      })
+    })
   })
 
   describe("OmniVault", function () {
