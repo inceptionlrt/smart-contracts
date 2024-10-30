@@ -364,6 +364,22 @@ contract NativeRebalancer is
         emit ChainIdDeleted(_chainId, index);
     }
 
+    /**
+     * @notice Fetches the adapter assigned to a specific chain ID
+     * @param _chainId The Chain ID
+     * @return adapter address of the adapter for the specified chainId. Returns 0 if non set
+     * @return isDefault whether the returned adapter is default or not (from the mapping)
+     */
+    function getAdapter(
+        uint256 _chainId
+    ) external view returns (address payable adapter, bool isDefault) {
+        adapter = adapters[_chainId];
+        if (adapter == address(0)) {
+            adapter = defaultAdapter;
+            isDefault = true;
+        }
+    }
+
     function _getAdapter(
         uint256 _chainId
     ) internal view returns (address payable adapter) {
