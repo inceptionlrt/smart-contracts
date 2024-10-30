@@ -6,9 +6,13 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
   const { deployer, operator } = await getNamedAccounts();
   const { get, execute } = deployments;
 
+  const lockboxAddress = process.env.XERC20LOCKBOX_ADDRESS;
+  if (!lockboxAddress) {
+    throw new Error("XERC20LOCKBOX_ADDRESS environment variable is not set");
+  }
+
   // Load existing contract addresses
   const inceptionToken = await get("cToken");
-  const lockbox = await get("XERC20Lockbox");
   const liqPool = await get("LiquidityPool");
   const ratioFeed = await get("RatioFeed");
 
@@ -21,14 +25,14 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
   console.log("Deployer:", deployer);
   console.log("Operator:", operator);
   console.log("InceptionToken:", inceptionToken.address);
-  console.log("XERC20Lockbox:", lockbox.address);
+  console.log("XERC20lockboxAddress:", lockboxAddress);
   console.log("LiquidityPool:", liqPool.address);
   console.log("RatioFeed:", ratioFeed.address);
   console.log("LZCrossChainAdapterL1:", crossChainBridge);
 
   const nativeRebalancer = await ozDeploy(deployments, "NativeRebalancer", [
     inceptionToken.address,
-    lockbox.address,
+    lockboxAddress,
     liqPool.address,
     crossChainBridge,
     ratioFeed.address,
