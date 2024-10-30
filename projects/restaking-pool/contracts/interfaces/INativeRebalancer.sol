@@ -32,10 +32,12 @@ interface INativeRebalancer {
         address indexed prevDefaultAdapter,
         address indexed newDefaultAdapter
     );
-    event ChainIdDelted(uint256 index);
+    event ChainIdAdded(uint32 chainId);
+    event ChainIdDeleted(uint32 chainId);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
+    error ChainIdNotFound(uint256 chainId);
     error BridgeAlreadyExists(uint256 chainId);
     error NoBridgeForThisChainId(uint256 chainId);
     error TimeCannotBeInFuture(uint256 timestamp);
