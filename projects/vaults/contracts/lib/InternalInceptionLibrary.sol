@@ -77,6 +77,7 @@ library InternalInceptionLibrary {
             fee += (replenished * optimaFeeRate) / MAX_PERCENT; // 0.5%
             amount -= replenished;
             capacity -= replenished;
+            if (fee == 0) ++fee;
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
@@ -87,5 +88,6 @@ library InternalInceptionLibrary {
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
         }
+        if (fee == 0) ++fee;
     }
 }
