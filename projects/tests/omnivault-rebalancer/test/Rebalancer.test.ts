@@ -1723,7 +1723,7 @@ describe("Omnivault integration tests", function () {
         await omniVault.pause();
         const depositAmount = randomBI(19);
         await expect(omniVault.connect(signer1).deposit(signer1.address, { value: depositAmount }))
-            .revertedWithCustomError(omniVault, "EnforcedPause");;
+            .revertedWithCustomError(omniVault, "EnforcedPause");
         await omniVault.unpause();
       });
 

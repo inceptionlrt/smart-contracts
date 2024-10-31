@@ -24,8 +24,8 @@ abstract contract AbstractCrossChainAdapterL1 is
         require(targetReceiver != address(0), TargetReceiverNotSet());
         (
             uint256 timestamp,
-            uint256 balance,
-            uint256 totalSupply
+            uint256 totalSupply,
+            uint256 balance
         ) = _decodeCalldata(_payload);
         IRebalancer(targetReceiver).handleL2Info(
             _chainId,
