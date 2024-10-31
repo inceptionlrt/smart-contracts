@@ -16,7 +16,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "prettier:sol": "prettier --write --plugin=prettier-plugin-solidity './**/*.sol'",
+    "prettier:sol": "prettier --write --plugin=prettier-plugin-solidity ./**/*.sol",
     "prettier:ts": "prettier --write ./**/*.ts",
     "prettier:js": "prettier --write ./**/*.js"
   }

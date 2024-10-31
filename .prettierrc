@@ -2,6 +2,7 @@
   "arrowParens": "avoid",
   "bracketSameLine": true,
   "bracketSpacing": true,
+  "endOfLine": "crlf",
   "semi": true,
   "experimentalTernaries": false,
   "singleQuote": false,
@@ -16,14 +17,20 @@
   "printWidth": 120,
   "requirePragma": false,
   "tabWidth": 2,
+  "useTabs": false,
+  "embeddedLanguageFormatting": "auto",
+  "plugins": ["prettier-plugin-solidity"],
   "overrides": [
     {
       "files": "*.sol",
       "options": {
-        "tabWidth": 4
+        "parser": "solidity-parse",
+        "printWidth": 80,
+        "tabWidth": 4,
+        "useTabs": false,
+        "singleQuote": false,
+        "bracketSpacing": false
       }
     }
-  ],
-  "useTabs": false,
-  "embeddedLanguageFormatting": "auto"
+  ]
 }
