@@ -38,6 +38,11 @@ contract InceptionToken is
         _;
     }
 
+    modifier whenNotPausedTransfers() {
+        require(!paused(), "InceptionToken: token transfer while paused");
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -51,12 +56,12 @@ contract InceptionToken is
         __ERC20_init_unchained(name, symbol);
     }
 
-    function transfer(
+    function _update(
+        address from,
         address to,
-        uint256 amount
-    ) public override returns (bool) {
-        require(!paused(), "InceptionToken: token transfer while paused");
-        return super.transfer(to, amount);
+        uint256 value
+    ) internal override whenNotPausedTransfers {
+        super._update(from, to, value);
     }
 
     function burn(address account, uint256 amount) external override onlyVault {
