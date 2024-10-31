@@ -7,64 +7,64 @@ const gasPrice = process.env.GAS_PRICE ? parseInt(process.env.GAS_PRICE) : "auto
 
 export const CONFIG = {
   networks: {
-    // mainnet: {
-    //   url: process.env.MAINNET_RPC || "https://rpc.ankr.com/eth",
-    //   chainId: 1,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts,
-    // },
-    // holesky: {
-    //   url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
-    //   chainId: 17000,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts,
-    //   verify: {
-    //     etherscan: {
-    //       apiKey: process.env.ETHERSCAN_API_KEY,
-    //       apiUrl: "https://api-holesky.etherscan.io",
-    //     },
-    //   },
-    // },
-    // arbitrum: {
-    //   url: process.env.RPC_URL_ARBITRUM,
-    //   chainId: 42161,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts
-    // },
-    // sepolia: {
-    //   url: process.env.RPC_URL_SEPOLIA,
-    //   chainId: 11155111,
-    //   gas: 800000,
-    //   gasPrice,
-    //   accounts,
-    //   eid: 40161,
-    // },
-    // optimism: {
-    //   url: process.env.RPC_URL_OPTIMISM,
-    //   chainId: 10,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts,
-    // },
-    // arbitrumSepolia: {
-    //   url: process.env.RPC_URL_ARBITRUM_TESTNET,
-    //   chainId: 421614,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts,
-    //   eid: 40231
-    // },
-    // optimismSepolia: {
-    //   url: process.env.RPC_URL_OPTIMISM_SEPOLIA,
-    //   chainId: 11155420,
-    //   gas: 8000000,
-    //   gasPrice,
-    //   accounts,
-    //   eid: 40232,
-    // },
+    mainnet: {
+      url: process.env.MAINNET_RPC || "https://rpc.ankr.com/eth",
+      chainId: 1,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+    },
+    holesky: {
+      url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
+      chainId: 17000,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      verify: {
+        etherscan: {
+          apiKey: process.env.ETHERSCAN_API_KEY,
+          apiUrl: "https://api-holesky.etherscan.io",
+        },
+      },
+    },
+    arbitrum: {
+      url: process.env.RPC_URL_ARBITRUM,
+      chainId: 42161,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+    },
+    sepolia: {
+      url: process.env.RPC_URL_SEPOLIA,
+      chainId: 11155111,
+      gas: 800000,
+      gasPrice,
+      accounts,
+      eid: 40161,
+    },
+    optimism: {
+      url: process.env.RPC_URL_OPTIMISM,
+      chainId: 10,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+    },
+    arbitrumSepolia: {
+      url: process.env.RPC_URL_ARBITRUM_TESTNET,
+      chainId: 421614,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      eid: 40231,
+    },
+    optimismSepolia: {
+      url: process.env.RPC_URL_OPTIMISM_SEPOLIA,
+      chainId: 11155420,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      eid: 40232,
+    },
     local: {
       url: process.env.LOCAL_RPC || "http://127.0.0.1:8545",
       chainId: 1337,
@@ -134,7 +134,7 @@ export const CONFIG = {
       holesky: "PP5CDPZBG6AF6FBGE9CJNYGCRYXYN549M1",
       mainnet: process.env.ETHERSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
-      arbitrumTestnet: process.env.ARBISCAN_API_KEY
+      arbitrumTestnet: process.env.ARBISCAN_API_KEY,
     },
     customChains: [
       {
