@@ -41,6 +41,7 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
 
   const executeCfg = { from: deployer, log: true };
   await execute("ProtocolConfig", executeCfg, "setRebalancer", nativeRebalancer.address);
+  await execute("RestakingPool", executeCfg, "PR", nativeRebalancer.address);
 
   return true;
 };
