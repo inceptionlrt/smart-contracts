@@ -28,7 +28,10 @@ async function init(operator) {
   const adapter = ethers.Wallet.createRandom().address;
   const omniVaultFactory = await ethers.getContractFactory("InEthOmniVault");
   const omniVault = await upgrades.deployProxy(
-    omniVaultFactory, [iToken.address, await operator.getAddress(), adapter], {});
+    omniVaultFactory,
+    [iToken.address, await operator.getAddress(), adapter],
+    {},
+  );
   omniVault.address = await omniVault.getAddress();
 
   await omniVault.setRatioFeed(ratioFeed.address);
@@ -65,7 +68,6 @@ describe("InceptionOmniVault: Native", function () {
     let deposited, freeBalance, depositFees;
 
     before(async function () {
-
       await snapshot.restore();
       TARGET = toWei(10);
       await omniVault.setTargetFlashCapacity(TARGET);
@@ -360,15 +362,18 @@ describe("InceptionOmniVault: Native", function () {
     it("Reverts when omniVault is paused", async function () {
       await omniVault.pause();
       const depositAmount = randomBI(19);
-      await expect(omniVault.connect(signer1).deposit(signer1.address, { value: depositAmount }))
-        .to.be.revertedWithCustomError(omniVault, "EnforcedPause");
+      await expect(
+        omniVault.connect(signer1).deposit(signer1.address, { value: depositAmount }),
+      ).to.be.revertedWithCustomError(omniVault, "EnforcedPause");
       await omniVault.unpause();
     });
 
     it("Reverts when shares is 0", async function () {
       await omniVault.setMinAmount(0n);
-      await expect(omniVault.connect(signer1).deposit(signer1.address, { value: 0n }))
-        .to.be.revertedWithCustomError(omniVault, "DepositInconsistentResultedState");
+      await expect(omniVault.connect(signer1).deposit(signer1.address, { value: 0n })).to.be.revertedWithCustomError(
+        omniVault,
+        "DepositInconsistentResultedState",
+      );
     });
   });
 
@@ -477,13 +482,11 @@ describe("InceptionOmniVault: Native", function () {
         TARGET = e18;
         await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
-        await expect(omniVault.setDepositBonusParams(
-          arg.newMaxBonusRate,
-          arg.newOptimalBonusRate,
-          arg.newDepositUtilizationKink
-        )).to.emit(omniVault, "DepositBonusParamsChanged")
+        await expect(
+          omniVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
+        )
+          .to.emit(omniVault, "DepositBonusParamsChanged")
           .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
-
 
         expect(await omniVault.maxBonusRate()).to.be.eq(arg.newMaxBonusRate);
         expect(await omniVault.optimalBonusRate()).to.be.eq(arg.newOptimalBonusRate);
@@ -717,10 +720,10 @@ describe("InceptionOmniVault: Native", function () {
     });
 
     it("Reverts when amount < min", async function () {
-        await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
+      await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
       const minAmount = await omniVault.minAmount();
       const shares = (await omniVault.convertToShares(minAmount)) - 1n;
-        await expect(omniVault.connect(signer1).flashWithdraw(shares, signer1.address))
+      await expect(omniVault.connect(signer1).flashWithdraw(shares, signer1.address))
         .to.be.revertedWithCustomError(omniVault, "LowerMinAmount")
         .withArgs(minAmount);
     });
@@ -729,21 +732,22 @@ describe("InceptionOmniVault: Native", function () {
       await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
       await omniVault.pause();
       const shares = await iToken.balanceOf(signer1.address);
-      await expect(omniVault.connect(signer1).flashWithdraw(shares / 2n, signer1.address))
-          .to.be.revertedWithCustomError(omniVault, "EnforcedPause");
+      await expect(
+        omniVault.connect(signer1).flashWithdraw(shares / 2n, signer1.address),
+      ).to.be.revertedWithCustomError(omniVault, "EnforcedPause");
     });
 
     it("Reverts when withdraws to 0 address", async function () {
-        await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
-        const shares = await iToken.balanceOf(signer1.address);
+      await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
+      const shares = await iToken.balanceOf(signer1.address);
       await expect(
-            omniVault.connect(signer1).flashWithdraw(shares / 2n, ethers.ZeroAddress),
+        omniVault.connect(signer1).flashWithdraw(shares / 2n, ethers.ZeroAddress),
       ).to.be.revertedWithCustomError(omniVault, "NullParams");
     });
 
     it("Reverts when shares = 0", async function () {
-        await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
-        await expect(omniVault.connect(signer1).flashWithdraw(0n, signer1.address)).to.be.revertedWithCustomError(
+      await omniVault.connect(signer1).deposit(signer1.address, { value: toWei(1) });
+      await expect(omniVault.connect(signer1).flashWithdraw(0n, signer1.address)).to.be.revertedWithCustomError(
         omniVault,
         "NullParams",
       );
@@ -872,10 +876,10 @@ describe("InceptionOmniVault: Native", function () {
       });
 
       amounts.forEach(function (amount) {
-          it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
+        it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
           await localSnapshot.restore();
           if (amount.flashCapacity() > 0n) {
-              await omniVault.connect(signer1).deposit(signer1.address, { value: amount.flashCapacity() });
+            await omniVault.connect(signer1).deposit(signer1.address, { value: amount.flashCapacity() });
           }
           let flashCapacity = await omniVault.getFlashCapacity();
           console.log(`flash capacity: ${flashCapacity.format()}`);
@@ -904,7 +908,7 @@ describe("InceptionOmniVault: Native", function () {
               }
             }
           }
-            let contractFee = await omniVault.calculateFlashWithdrawFee(await amount.amount());
+          let contractFee = await omniVault.calculateFlashWithdrawFee(await amount.amount());
           console.log(`Expected withdraw fee:\t${withdrawFee.format()}`);
           console.log(`Contract withdraw fee:\t${contractFee.format()}`);
           expect(contractFee).to.be.closeTo(withdrawFee, 1n);
@@ -947,11 +951,11 @@ describe("InceptionOmniVault: Native", function () {
       });
     });
 
-      it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
+    it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
       await snapshot.restore();
-        await omniVault.connect(signer1).deposit(signer1.address, { value: randomBI(19) });
+      await omniVault.connect(signer1).deposit(signer1.address, { value: randomBI(19) });
       const capacity = await omniVault.getFlashCapacity();
-        await expect(omniVault.calculateFlashWithdrawFee(capacity + 1n))
+      await expect(omniVault.calculateFlashWithdrawFee(capacity + 1n))
         .to.be.revertedWithCustomError(omniVault, "InsufficientCapacity")
         .withArgs(capacity);
     });
@@ -959,7 +963,7 @@ describe("InceptionOmniVault: Native", function () {
     it("setFlashWithdrawFeeParams reverts when caller is not an owner", async function () {
       await expect(
         omniVault
-                .connect(signer1)
+          .connect(signer1)
           .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
       ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
@@ -970,7 +974,7 @@ describe("InceptionOmniVault: Native", function () {
       await snapshot.restore();
     });
 
-      it("setTreasuryAddress(): only owner can", async function () {
+    it("setTreasuryAddress(): only owner can", async function () {
       const newTreasury = ethers.Wallet.createRandom().address;
       await expect(omniVault.setTreasuryAddress(newTreasury))
         .to.emit(omniVault, "TreasuryUpdated")
@@ -978,16 +982,18 @@ describe("InceptionOmniVault: Native", function () {
       expect(await omniVault.treasury()).to.be.eq(newTreasury);
     });
 
-      it("setTreasuryAddress(): reverts when set to zero address", async function () {
+    it("setTreasuryAddress(): reverts when set to zero address", async function () {
       await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(
         omniVault,
         "NullParams",
       );
     });
 
-      it("setTreasuryAddress(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setTreasuryAddress(signer1.address))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+    it("setTreasuryAddress(): reverts when caller is not an owner", async function () {
+      await expect(omniVault.connect(signer1).setTreasuryAddress(signer1.address)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("setRatioFeed(): only owner can", async function () {
@@ -1011,54 +1017,60 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setRatioFeed(): reverts when caller is not an owner", async function () {
       const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(omniVault.connect(signer1).setRatioFeed(newRatioFeed))
-        .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).setRatioFeed(newRatioFeed)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
-      it("setOperator(): only owner can", async function () {
-        const newValue = ethers.Wallet.createRandom().address;
-        await expect(omniVault.setOperator(newValue))
-            .to.emit(omniVault, "OperatorChanged")
-            .withArgs(operator.address, newValue);
-        expect(await omniVault.operator()).to.be.eq(newValue);
-      });
+    it("setOperator(): only owner can", async function () {
+      const newValue = ethers.Wallet.createRandom().address;
+      await expect(omniVault.setOperator(newValue))
+        .to.emit(omniVault, "OperatorChanged")
+        .withArgs(operator.address, newValue);
+      expect(await omniVault.operator()).to.be.eq(newValue);
+    });
 
-      it("setOperator(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setOperator(signer1.address))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
-      });
+    it("setOperator(): reverts when caller is not an owner", async function () {
+      await expect(omniVault.connect(signer1).setOperator(signer1.address)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
+    });
 
-      it("ratio() reverts when ratioFeed is 0 address", async function () {
-        const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
-        const omniVault = await upgrades.deployProxy(
-            omniVaultFactory,
-            ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
-            { initializer: "__InceptionOmniVault_init" },
-        );
-        omniVault.address = await omniVault.getAddress();
-        await iToken.setVault(omniVault.address);
-        await expect(omniVault.ratio()).to.be.reverted;
-      });
+    it("ratio() reverts when ratioFeed is 0 address", async function () {
+      const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+      const omniVault = await upgrades.deployProxy(
+        omniVaultFactory,
+        ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
+        { initializer: "__InceptionOmniVault_init" },
+      );
+      omniVault.address = await omniVault.getAddress();
+      await iToken.setVault(omniVault.address);
+      await expect(omniVault.ratio()).to.be.reverted;
+    });
 
-      it("setCrossChainAdapter(): only owner can", async function () {
-        const newValue = ethers.Wallet.createRandom().address;
-        await expect(omniVault.setCrossChainAdapter(newValue))
-            .to.emit(omniVault, "CrossChainAdapterChanged")
-            .withArgs(newValue);
-        expect(await omniVault.crossChainAdapter()).to.be.eq(newValue);
-      });
+    it("setCrossChainAdapter(): only owner can", async function () {
+      const newValue = ethers.Wallet.createRandom().address;
+      await expect(omniVault.setCrossChainAdapter(newValue))
+        .to.emit(omniVault, "CrossChainAdapterChanged")
+        .withArgs(newValue);
+      expect(await omniVault.crossChainAdapter()).to.be.eq(newValue);
+    });
 
-      it("setCrossChainAdapter(): reverts when set to zero address", async function () {
-        await expect(omniVault.setCrossChainAdapter(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-            omniVault,
-            "NullParams",
-        );
-      });
+    it("setCrossChainAdapter(): reverts when set to zero address", async function () {
+      await expect(omniVault.setCrossChainAdapter(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+        omniVault,
+        "NullParams",
+      );
+    });
 
-      it("setCrossChainAdapter(): reverts when caller is not an owner", async function () {
-        await expect(omniVault.connect(signer1).setCrossChainAdapter(signer1.address))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
-      });
+    it("setCrossChainAdapter(): reverts when caller is not an owner", async function () {
+      await expect(omniVault.connect(signer1).setCrossChainAdapter(signer1.address)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
+    });
 
     it("setMinAmount(): only owner can", async function () {
       const prevValue = await omniVault.minAmount();
@@ -1067,14 +1079,16 @@ describe("InceptionOmniVault: Native", function () {
         .to.emit(omniVault, "MinAmountChanged")
         .withArgs(prevValue, newMinAmount);
       expect(await omniVault.minAmount()).to.be.eq(newMinAmount);
-        await expect(omniVault.connect(signer1).deposit(signer1.address, { value: newMinAmount - 1n }))
+      await expect(omniVault.connect(signer1).deposit(signer1.address, { value: newMinAmount - 1n }))
         .to.be.revertedWithCustomError(omniVault, "LowerMinAmount")
         .withArgs(newMinAmount);
     });
 
     it("setMinAmount(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).setMinAmount(randomBI(3)))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).setMinAmount(randomBI(3))).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("setTargetFlashCapacity(): only owner can", async function () {
@@ -1088,8 +1102,10 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setTargetFlashCapacity(): reverts when called by not an owner", async function () {
       const newValue = randomBI(18);
-        await expect(omniVault.connect(signer1).setTargetFlashCapacity(newValue))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).setTargetFlashCapacity(newValue)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("setTargetFlashCapacity(): reverts when sets to 0", async function () {
@@ -1114,8 +1130,10 @@ describe("InceptionOmniVault: Native", function () {
 
     it("setProtocolFee(): reverts when caller is not an owner", async function () {
       const newValue = randomBI(10);
-        await expect(omniVault.connect(signer1).setProtocolFee(newValue))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).setProtocolFee(newValue)).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("setName(): only owner can", async function () {
@@ -1130,8 +1148,10 @@ describe("InceptionOmniVault: Native", function () {
     });
 
     it("setName(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).setName("New name"))
-            .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).setName("New name")).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("pause(): only owner can", async function () {
@@ -1141,13 +1161,15 @@ describe("InceptionOmniVault: Native", function () {
     });
 
     it("pause(): reverts when called by not an owner", async function () {
-        await expect(omniVault.connect(signer1).pause())
-          .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).pause()).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
 
     it("pause(): reverts when already paused", async function () {
       await omniVault.pause();
-        await expect(omniVault.pause()).revertedWithCustomError(omniVault, "EnforcedPause");
+      await expect(omniVault.pause()).revertedWithCustomError(omniVault, "EnforcedPause");
     });
 
     it("unpause(): only owner can", async function () {
@@ -1161,8 +1183,10 @@ describe("InceptionOmniVault: Native", function () {
     it("unpause(): reverts when called by not an owner", async function () {
       await omniVault.pause();
       expect(await omniVault.paused()).is.true;
-      await expect(omniVault.connect(signer1).unpause())
-        .to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+      await expect(omniVault.connect(signer1).unpause()).to.be.revertedWithCustomError(
+        omniVault,
+        "OwnableUnauthorizedAccount",
+      );
     });
   });
 });
