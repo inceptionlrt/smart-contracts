@@ -221,10 +221,10 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             InternalInceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
@@ -239,10 +239,10 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             InternalInceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 

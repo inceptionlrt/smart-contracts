@@ -46,23 +46,23 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     uint256 public constant MAX_PERCENT = 100 * 1e8;
 
     address public treasury;
-    uint256 public protocolFee;
+    uint64 public protocolFee;
 
     /// @dev deposit bonus
-    uint256 public maxBonusRate;
-    uint256 public optimalBonusRate;
-    uint256 public depositUtilizationKink;
+    uint64 public maxBonusRate;
+    uint64 public optimalBonusRate;
+    uint64 public depositUtilizationKink;
 
     /// @dev flash withdrawal fee
-    uint256 public maxFlashFeeRate;
-    uint256 public optimalWithdrawalRate;
-    uint256 public withdrawUtilizationKink;
+    uint64 public maxFlashFeeRate;
+    uint64 public optimalWithdrawalRate;
+    uint64 public withdrawUtilizationKink;
 
     /// @dev Modifier to restrict functions to owner or operator.
     modifier onlyOwnerOrOperator() {
-        if (msg.sender != owner() && msg.sender != operator) {
+        if (msg.sender != owner() && msg.sender != operator)
             revert OnlyOwnerOrOperator();
-        }
+
         _;
     }
 
@@ -339,46 +339,23 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
      */
     function calculateDepositBonus(
         uint256 amount
-    ) public view returns (uint256 bonus) {
-        uint256 capacity = getFlashCapacity();
-        return _calculateDepositBonus(amount, capacity);
+    ) public view returns (uint256) {
+        return _calculateDepositBonus(amount, getFlashCapacity());
     }
 
-    /**
-     * @dev Internal function to calculate the deposit bonus.
-     * @param amount Amount of the deposit.
-     * @param capacity Available capacity for the deposit.
-     * @return bonus Calculated bonus.
-     */
     function _calculateDepositBonus(
         uint256 amount,
         uint256 capacity
     ) internal view returns (uint256 bonus) {
-        uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
-            MAX_PERCENT;
-
-        if (amount > 0 && capacity < optimalCapacity) {
-            uint256 replenished = amount;
-            if (optimalCapacity < capacity + amount)
-                replenished = optimalCapacity - capacity;
-
-            uint256 bonusSlope = ((maxBonusRate - optimalBonusRate) * 1e18) /
-                ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxBonusRate -
-                (bonusSlope * (capacity + replenished / 2)) /
-                targetCapacity;
-
-            capacity += replenished;
-            bonus += (replenished * bonusPercent) / MAX_PERCENT;
-            amount -= replenished;
-        }
-        /// @dev the utilization rate is in the range [25: ] %
-        if (amount > 0 && capacity <= targetCapacity) {
-            uint256 replenished = targetCapacity > capacity + amount
-                ? amount
-                : targetCapacity - capacity;
-            bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
-        }
+        return
+            InternalInceptionLibrary.calculateDepositBonus(
+                amount,
+                capacity,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+                optimalBonusRate,
+                maxBonusRate,
+                targetCapacity
+            );
     }
 
     /**
@@ -392,37 +369,15 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
-        uint256 optimalCapacity = (targetCapacity * withdrawUtilizationKink) /
-            MAX_PERCENT;
-
-        /// @dev the utilization rate is greater 1, [ :100] %
-        if (amount > 0 && capacity > targetCapacity) {
-            uint256 replenished = amount;
-            if (capacity - amount < targetCapacity)
-                replenished = capacity - targetCapacity;
-
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        /// @dev the utilization rate is in the range [100:25] %
-        if (amount > 0 && capacity > optimalCapacity) {
-            uint256 replenished = amount;
-            if (capacity - amount < optimalCapacity)
-                replenished = capacity - optimalCapacity;
-
-            fee += (replenished * optimalWithdrawalRate) / MAX_PERCENT; // 0.5%
-            amount -= replenished;
-            capacity -= replenished;
-        }
-        /// @dev the utilization rate is in the range [25:0] %
-        if (amount > 0) {
-            uint256 feeSlope = ((maxFlashFeeRate - optimalWithdrawalRate) *
-                1e18) / ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxFlashFeeRate -
-                (feeSlope * (capacity - amount / 2)) /
-                targetCapacity;
-            fee += (amount * bonusPercent) / MAX_PERCENT;
-        }
+        return
+            InternalInceptionLibrary.calculateWithdrawalFee(
+                amount,
+                capacity,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
@@ -450,10 +405,6 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
     function _inceptionTokenSupply() public view returns (uint256) {
         return IERC20(address(inceptionToken)).totalSupply();
-    }
-
-    function _getTargetCapacity() internal view returns (uint256) {
-        return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
     }
 
     /*//////////////////////////////
