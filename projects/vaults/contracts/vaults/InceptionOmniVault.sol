@@ -233,7 +233,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         inceptionToken.burn(claimer, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
-        //    if (fee == 0) revert ZeroFlashWithdrawFee();
+        if (fee == 0) revert ZeroFlashWithdrawFee();
         amount -= fee;
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
         depositBonusAmount += (fee - protocolWithdrawalFee);
