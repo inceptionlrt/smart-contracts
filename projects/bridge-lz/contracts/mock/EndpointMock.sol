@@ -153,7 +153,7 @@ contract EndpointMock is ILayerZeroEndpointV2, MessagingContext {
         bytes32 _guid
     ) external payable receiveNonReentrant {
         inboundPayloadHash[_receiver][_origin.srcEid][_origin.sender][_origin.nonce] = _payloadHash;
-        console.log("msg value:", _msgValue);
+        console.log("EndpointMock :: message.value:", _msgValue);
         if (_msgValue > 0) {
             ILayerZeroReceiver(_receiver).lzReceive{ value: _msgValue, gas: _gas }(
                 _origin,
@@ -165,7 +165,6 @@ contract EndpointMock is ILayerZeroEndpointV2, MessagingContext {
         } else {
             ILayerZeroReceiver(_receiver).lzReceive{ gas: _gas }(_origin, _guid, _message, address(0), "");
         }
-        console.log("receiveNonReentrant passed");
     }
 
     function getExecutorFee(uint256 _payloadSize, bytes calldata _options) public view returns (uint256) {
