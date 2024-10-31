@@ -23,7 +23,9 @@ library InternalInceptionLibrary {
         uint256 maxDepositBonusRate,
         uint256 targetCapacity
     ) internal pure returns (uint256 bonus) {
-        /// @dev the utilization rate is in the range [0:25] %
+        // uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
+        //     MAX_PERCENT;
+
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
             if (optimalCapacity < capacity + amount)
@@ -44,7 +46,6 @@ library InternalInceptionLibrary {
             uint256 replenished = targetCapacity > capacity + amount
                 ? amount
                 : targetCapacity - capacity;
-
             bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
         }
     }
