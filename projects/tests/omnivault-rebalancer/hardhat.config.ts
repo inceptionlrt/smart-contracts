@@ -1,12 +1,11 @@
 import "dotenv";
-import {HardhatUserConfig} from "hardhat/config";
-import {CONFIG} from "../../../hh.config";
+import { HardhatUserConfig } from "hardhat/config";
+import { CONFIG } from "../../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@layerzerolabs/test-devtools-evm-hardhat";
 import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
-import fs from "fs";
 import fse from "fs-extra";
 import path from "path";
 
@@ -16,25 +15,6 @@ const EXTERNAL_PROJECTS = [
     "../../restaking-pool",
     "../../vaults"
 ]
-
-const collectContractsWithSymlinks = () => {
-    if (!fs.existsSync(TARGET_DIR)) {
-        fs.mkdirSync(TARGET_DIR);
-    }
-
-    EXTERNAL_PROJECTS.forEach((project) => {
-        const baseName = path.basename(project);
-        const symlinkPath = path.join(TARGET_DIR, baseName);
-        console.log("basename: ", baseName);
-        console.log("symlinkPath: ", symlinkPath);
-
-        if (!fs.existsSync(symlinkPath)) {
-            const resolvedSourceDir = path.resolve(project);
-            fs.symlinkSync(path.join(resolvedSourceDir, "contracts"), symlinkPath, 'dir');
-        }
-    });
-};
-// collectContractsWithSymlinks();
 
 const copyContracts = () => {
     EXTERNAL_PROJECTS.forEach((project) => {
