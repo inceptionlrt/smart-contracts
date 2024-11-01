@@ -29,6 +29,8 @@ interface IIEigenRestakerErrors {
     error ZeroAddress();
 
     error InvalidAllocation();
+
+    error TooMuchSlippage();
 }
 
 interface IIMellowRestaker {
@@ -38,13 +40,20 @@ interface IIMellowRestaker {
         uint256 newAllocation
     );
 
+    event VaultSet(address indexed oldVault, address indexed newVault);
+    
+    event RequestDealineSet(uint256 indexed oldDeadline, uint256 indexed newDealine);
+
+    event NewSlippages(uint256 _deposit, uint256 _withdraw);
+
+    event TrusteeManagerSet(address indexed _trusteeManager, address indexed _newTrusteeManager);
+    
     function getDeposited(address _mellowVault) external view returns (uint256);
 
     function getTotalDeposited() external view returns (uint256);
 
     function delegateMellow(
         uint256 amount,
-        uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
     ) external returns (uint256 lpAmount);
@@ -57,6 +66,12 @@ interface IIMellowRestaker {
         address mellowVault,
         uint256 minLpAmount,
         bool closePrevious
+    ) external returns (uint256);
+
+    
+    function withdrawEmergencyMellow(
+        address _mellowVault,
+        uint256 amount
     ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);

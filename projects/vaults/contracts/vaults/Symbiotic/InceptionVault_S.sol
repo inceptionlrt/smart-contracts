@@ -55,14 +55,14 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         IInceptionToken _inceptionToken,
         IIMellowRestaker _mellowRestaker
     ) internal {
-        __Ownable_init();
+        __Ownable2Step_init();
         __MellowHandler_init(assetAddress, _mellowRestaker);
 
         name = vaultName;
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        minAmount = 100;
+        minAmount = 10000000000000;
 
         protocolFee = 50 * 1e8;
 

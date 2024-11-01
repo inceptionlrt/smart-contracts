@@ -46,6 +46,11 @@ contract IMellowRestaker is
 
     mapping(address => uint256) public allocations;
 
+    uint256 public requestDeadline;
+
+    uint256 public depositSlippage;  // BasisPoints 10,000 = 100%
+    uint256 public withdrawSlippage;
+
     modifier onlyTrustee() {
         if(msg.sender != _vault && msg.sender != _trusteeManager) 
             revert NotVaultOrTrusteeManager();
@@ -78,11 +83,14 @@ contract IMellowRestaker is
         }
         _asset = asset;
         _trusteeManager = trusteeManager;
+
+        requestDeadline = 15 days;
+        depositSlippage = 1500;  // 15%
+        withdrawSlippage = 10;
     }
 
     function delegateMellow(
         uint256 amount,
-        uint256 minLpAmount,
         uint256 deadline,
         address mellowVault
     ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
@@ -92,12 +100,13 @@ contract IMellowRestaker is
         _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
+        uint256 minAmount = amount * (10000 - depositSlippage) / 10000;
         return
             wrapper.deposit(
                 address(this),
                 address(_asset),
                 amount,
-                minLpAmount,
+                minAmount,
                 deadline
             );
     }
@@ -126,11 +135,12 @@ contract IMellowRestaker is
                             address(wrapper),
                             bal
                         );
+                        uint256 minAmount = bal * (10000 - depositSlippage) / 10000;
                         lpAmount += wrapper.deposit(
                             address(this),
                             address(_asset),
                             bal,
-                            0,
+                            minAmount,
                             deadline
                         );
                         amount += bal;
@@ -149,7 +159,7 @@ contract IMellowRestaker is
         amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = amountToLpAmount(amount, mellowVault);
         uint256[] memory minAmounts = new uint256[](1);
-        minAmounts[0] = amount - 5; // dust
+        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
 
         if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
 
@@ -158,7 +168,7 @@ contract IMellowRestaker is
             lpAmount,
             minAmounts,
             block.timestamp + 15 days,
-            block.timestamp + 15 days,
+            block.timestamp + requestDeadline,
             closePrevious
         );
 
@@ -173,6 +183,27 @@ contract IMellowRestaker is
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
         return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
+    }
+
+    function withdrawEmergencyMellow(
+        address _mellowVault,
+        uint256 amount
+    ) external override onlyTrustee whenNotPaused returns(uint256) {
+        IMellowVault mellowVault = IMellowVault(_mellowVault);
+        amount = IWSteth(wsteth).getWstETHByStETH(amount);
+        uint256[] memory minAmounts = new uint256[](2);
+        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
+
+        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+
+        uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(
+            minAmounts,
+            block.timestamp + 15 days
+        );
+
+        uint256 actualAmount;
+        if (actualAmounts.length > 0) actualAmount = actualAmounts[0];
+        return IWSteth(wsteth).getStETHByWstETH(actualAmount);
     }
 
     function claimableAmount() external view returns (uint256) {
@@ -237,6 +268,9 @@ contract IMellowRestaker is
     function getDeposited(address _mellowVault) public view returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
+        if (balance == 0) {
+            return 0;
+        }
         return lpAmountToAmount(balance, mellowVault);
     }
 
@@ -244,7 +278,9 @@ contract IMellowRestaker is
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
-            total += lpAmountToAmount(balance, mellowVaults[i]);
+            if (balance > 0) {
+                total += lpAmountToAmount(balance, mellowVaults[i]);
+            }
         }
         return total;
     }
@@ -339,7 +375,26 @@ contract IMellowRestaker is
     }
 
     function setVault(address vault) external onlyOwner {
+        emit VaultSet(_vault, vault);
         _vault = vault;
+    }
+
+    function setRequestDeadline(uint256 _days) external onlyOwner {
+        uint256 newDealine = _days * 1 days;
+        emit RequestDealineSet(requestDeadline, newDealine);
+        requestDeadline = newDealine;
+    }
+
+    function setSlippages(uint256 _depositSlippage, uint256 _withdrawSlippage) external onlyOwner {
+        if (_depositSlippage > 3000 || _withdrawSlippage > 3000) revert TooMuchSlippage();
+        depositSlippage = _depositSlippage;
+        withdrawSlippage = _withdrawSlippage;
+        emit NewSlippages(_depositSlippage, _withdrawSlippage);
+    }
+
+    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+        _trusteeManager = _newTrusteeManager;
     }
 
     function pause() external onlyOwner {

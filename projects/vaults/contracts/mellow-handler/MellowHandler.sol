@@ -63,7 +63,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         address mellowVault
     ) internal {
         _asset.approve(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, 0, block.timestamp, mellowVault);
+        mellowRestaker.delegateMellow(amount, block.timestamp, mellowVault);
     }
 
     /*/////////////////////////////////
@@ -77,6 +77,17 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         amount = mellowRestaker.withdrawMellow(mellowVault, amount, true);
+        emit StartMellowWithdrawal(address(mellowRestaker), amount);
+        return;
+    }
+
+    /// @dev performs creating a withdrawal request from Mellow Protocol
+    /// @dev requires a specific amount to withdraw
+    function undelegateForceFrom(
+        address mellowVault,
+        uint256 amount
+    ) external whenNotPaused nonReentrant onlyOperator {
+        amount = mellowRestaker.withdrawEmergencyMellow(mellowVault, amount);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }
@@ -140,6 +151,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
             getTotalDelegated() +
             totalAssets() +
             getPendingWithdrawalAmountFromMellow() -
+            redeemReservedAmount -
             depositBonusAmount;
     }
 
@@ -180,6 +192,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
+        if (newTargetCapacity <= 0) revert InvalidTargetFlashCapacity();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
