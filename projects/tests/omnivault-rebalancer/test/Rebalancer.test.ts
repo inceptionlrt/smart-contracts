@@ -1,9 +1,9 @@
-import { ethers, network, upgrades, deployments } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
-import { toWei, randomBI, e18, randomBIMax } from "./helpers/utils.js";
+import { e18, getSlotByName, randomBI, randomBIMax, toWei } from "./helpers/utils.js";
 import { SnapshotRestorer } from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
-import { AbiCoder, keccak256, Signer, toUtf8Bytes } from "ethers";
+import { AbiCoder, Signer } from "ethers";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
 import {
   CToken,
@@ -13,9 +13,9 @@ import {
   InceptionToken,
   LZCrossChainAdapterL1,
   LZCrossChainAdapterL2,
+  NativeRebalancer,
   ProtocolConfig,
   RatioFeed,
-  NativeRebalancer,
   RestakingPool,
 } from "../typechain-types";
 
@@ -31,9 +31,6 @@ const OPT_EID = 30110n;
 const ETH_EID = 30111n;
 const eIds = [ETH_EID, ARB_EID, OPT_EID];
 const chainIds = [ETH_ID, ARB_ID, OPT_ID];
-const RESTAKING_POOL_DISTRIBUTE_GAS_LIMIT = 250_000n;
-const RESTAKING_POOL_MAX_TVL = 32n * e18;
-const RESTAKING_POOL_MIN_STAKE = 1000n;
 const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
 
 describe("Omnivault integration tests", function () {
@@ -66,8 +63,6 @@ describe("Omnivault integration tests", function () {
   let signer3: Signer;
   let target: Signer;
 
-  let MAX_THRESHOLD, ratioThresh;
-  let clean_snapshot: SnapshotRestorer;
   let snapshot: SnapshotRestorer;
   let lockboxAddress: String;
 
@@ -225,6 +220,9 @@ describe("Omnivault integration tests", function () {
       operator.address,
     ]);
     rebalancer.address = await rebalancer.getAddress();
+    await rebalancer.connect(owner).addChainId(ARB_ID);
+    await rebalancer.connect(owner).addChainId(OPT_ID);
+    await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
 
     //    ___                  ___     __          _ _     _     ____
     //   / _ \ _ __ ___  _ __ (_) \   / /_ _ _   _| | |_  | |   |___ \
@@ -255,7 +253,19 @@ describe("Omnivault integration tests", function () {
     );
     omniVault.address = await omniVault.getAddress();
     await omniVault.setRatioFeed(ratioFeedL2.address);
+    await omniVault.setTreasuryAddress(treasury.address);
     await iToken.setVault(omniVault.address);
+
+    //Adapters final setup
+    await adapterEth.setTargetReceiver(rebalancer.address);
+    await adapterEth.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
+    await adapterEth.setPeer(OPT_EID, ethers.zeroPadValue(adapterOpt.address, 32));
+    await adapterArb.setTargetReceiver(omniVault.address);
+    await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+    await adapterOpt.setTargetReceiver(omniVault.address);
+    await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
+    await maliciousAdapterL1.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
+    await maliciousAdapterL2.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
 
     return [
       adapterEth,
@@ -292,34 +302,6 @@ describe("Omnivault integration tests", function () {
     return abiCoder.encode(["uint256", "uint256", "uint256"], [timestamp, totalSupply, ethAmount]);
   }
 
-  /**
-   * @return slot number for the value by its internal name for restaking balance ProtocolConfig
-   */
-  function getSlotByName(name) {
-    // Perform keccak256 hashing of the string
-    const governanceHash = keccak256(toUtf8Bytes(name));
-
-    // Convert the resulting hash to a BigInt
-    const governanceUint = BigInt(governanceHash);
-
-    // Subtract 1 from the hash
-    const governanceUintMinus1 = governanceUint - 1n;
-
-    // Use the AbiCoder to encode the uint256 type
-    const abiCoder = new AbiCoder();
-    const encodedValue = abiCoder.encode(["uint256"], [governanceUintMinus1]);
-
-    // Re-hash the encoded result
-    const finalHash = keccak256(encodedValue);
-
-    // Perform bitwise AND operation with ~0xff (mask out the last byte)
-    const mask = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00");
-    const governanceSlot = BigInt(finalHash) & mask;
-
-    // Return the result as a hex string (without '0x' prefix)
-    return governanceSlot.toString(16);
-  }
-
   before(async function () {
     [owner, operator, treasury, signer1, signer2, signer3, target] = await ethers.getSigners();
     [
@@ -340,31 +322,6 @@ describe("Omnivault integration tests", function () {
       maliciousAdapterL1,
       maliciousAdapterL2,
     ] = await init(owner, operator);
-    clean_snapshot = await takeSnapshot();
-
-    await rebalancer.connect(owner).addChainId(ARB_ID);
-    await rebalancer.connect(owner).addChainId(OPT_ID);
-
-    await adapterEth.setTargetReceiver(rebalancer.address);
-    await adapterEth.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
-    await adapterEth.setPeer(OPT_EID, ethers.zeroPadValue(adapterOpt.address, 32));
-    await adapterArb.setTargetReceiver(omniVault.address);
-    await adapterArb.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
-    await adapterOpt.setTargetReceiver(omniVault.address);
-    await adapterOpt.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
-    await maliciousAdapterL1.setPeer(ARB_EID, ethers.zeroPadValue(adapterArb.address, 32));
-    await maliciousAdapterL2.setPeer(ETH_EID, ethers.zeroPadValue(adapterEth.address, 32));
-
-    //Restaking pool
-    await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
-    // await restakingPool.connect(owner).setFlashUnstakeFeeParams(30n * 10n ** 7n, 5n * 10n ** 7n, 25n * 10n ** 8n);
-    // await restakingPool.connect(owner).setStakeBonusParams(15n * 10n ** 7n, 25n * 10n ** 6n, 25n * 10n ** 8n);
-    // await restakingPool.connect(owner).setProtocolFee(50n * 10n ** 8n);
-    // await restakingPool.connect(owner).setTargetFlashCapacity(1n);
-    // await restakingPool.connect(owner).setMinStake(RESTAKING_POOL_MIN_STAKE);
-
-    //OmniVault
-    await omniVault.setTreasuryAddress(treasury.address);
 
     snapshot = await takeSnapshot();
   });

@@ -1,57 +1,8 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, network } = require("hardhat");
+const { ethers } = require("hardhat");
+const { keccak256, toUtf8Bytes, AbiCoder } = require("ethers");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
-};
-const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
-  const strategy = await ethers.getContractAt("IStrategy", strategyAddress);
-  const asset = await ethers.getContractAt("IERC20", await strategy.underlyingToken());
-  await asset.connect(staker).transfer(strategyAddress, amount);
-};
-
-const calculateRatio = async (vault, token) => {
-  const totalSupply = await token.totalSupply();
-  const totalDeposited = await vault.getTotalDeposited();
-  const totalAmountToWithdraw = await vault.totalAmountToWithdraw();
-
-  let denominator;
-  if (totalDeposited < totalAmountToWithdraw) {
-    denominator = 0n;
-  } else {
-    denominator = totalDeposited - totalAmountToWithdraw;
-  }
-
-  if (denominator === 0n || totalSupply === 0n) {
-    const ratio = e18;
-    // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
-    return ratio;
-  }
-
-  const ratio = (totalSupply * e18) / denominator;
-  if ((totalSupply * e18) % denominator !== 0n) {
-    return ratio + 1n;
-  }
-  // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
-  return ratio;
-};
-
-const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
-  const receipt = await tx.wait();
-  if (receipt.logs.length !== 3) {
-    console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
-    console.log(receipt.logs);
-  }
-
-  const WithdrawalQueuedEvent = receipt.logs?.find((e) => e.eventName === "StartWithdrawal").args;
-  return [
-    WithdrawalQueuedEvent["stakerAddress"],
-    operatorAddress,
-    restaker,
-    WithdrawalQueuedEvent["nonce"],
-    WithdrawalQueuedEvent["withdrawalStartBlock"],
-    [WithdrawalQueuedEvent["strategy"]],
-    [WithdrawalQueuedEvent["shares"]],
-  ];
 };
 
 const impersonateWithEth = async (address, amount) => {
@@ -65,34 +16,24 @@ const impersonateWithEth = async (address, amount) => {
   }
 
   console.log(`Account impersonated at address: ${account.address}`);
-  // console.log(`Account balance Eth: ${format(await ethers.provider.getBalance(account.address))}`);
   return account;
 };
 
-const getStaker = async (address, iVault, asset, donor, amount = 100_000_000_000_000_000_000n) => {
+const getStaker = async (address, iVault, asset, donor, amount = 10n ** 21n) => {
   const staker = await impersonateWithEth(address, toWei(1));
-  // console.log(`Donor asset balance: ${format(await asset.balanceOf(donor.address))}`);
   await asset.connect(donor).transfer(address, amount);
   const balanceAfter = await asset.balanceOf(address);
-  // console.log(`Staker asset balance: ${format(balanceAfter)}`);
   await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
   return staker;
 };
 
 const getRandomStaker = async (iVault, asset, donor, amount) => {
-  return await getStaker(randomAddress(), iVault, asset, donor, amount);
+  return await getStaker(ethers.Wallet.createRandom().address, iVault, asset, donor, amount);
 };
 
-const mineBlocks = async (count) => {
-  console.log(`WAIT FOR ${count} BLOCKs`);
-  for (let i = 0; i < count; i++) {
-    await network.provider.send("evm_mine");
-  }
-};
-const toWei = (ether) => ethers.parseEther(ether.toString());
+const toWei = ether => ethers.parseEther(ether.toString());
 
-const toBN = (n) => BigInt(n);
-const randomBI = (length) => {
+const randomBI = length => {
   if (length > 0) {
     let randomNum = "";
     randomNum += Math.floor(Math.random() * 9) + 1; // generates a random digit 1-9
@@ -105,35 +46,51 @@ const randomBI = (length) => {
   }
 };
 
-const randomBIMax = (max) => {
+const randomBIMax = max => {
   let random = 0n;
   if (max > 0n) {
     random += BigInt(Math.random() * Number(max));
   }
   return random;
 };
-async function sleep(msec) {
-  return new Promise(resolve => setTimeout(resolve, msec));
-};
-const randomAddress = () => ethers.Wallet.createRandom().address;
-const format = (bi) => bi.toLocaleString("de-DE");
 
-const e18 = 1000_000_000_000_000_000n;
+const e18 = 10n ** 18n;
+
+/**
+ * @return slot number for the value by its internal name for restaking balance ProtocolConfig
+ */
+function getSlotByName(name) {
+  // Perform keccak256 hashing of the string
+  const governanceHash = keccak256(toUtf8Bytes(name));
+
+  // Convert the resulting hash to a BigInt
+  const governanceUint = BigInt(governanceHash);
+
+  // Subtract 1 from the hash
+  const governanceUintMinus1 = governanceUint - 1n;
+
+  // Use the AbiCoder to encode the uint256 type
+  const abiCoder = new AbiCoder();
+  const encodedValue = abiCoder.encode(["uint256"], [governanceUintMinus1]);
+
+  // Re-hash the encoded result
+  const finalHash = keccak256(encodedValue);
+
+  // Perform bitwise AND operation with ~0xff (mask out the last byte)
+  const mask = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00");
+  const governanceSlot = BigInt(finalHash) & mask;
+
+  // Return the result as a hex string (without '0x' prefix)
+  return governanceSlot.toString(16);
+}
 
 module.exports = {
-  addRewardsToStrategy,
-  withdrawDataFromTx,
   impersonateWithEth,
-  calculateRatio,
   getStaker,
   getRandomStaker,
-  mineBlocks,
   toWei,
-  toBN,
   randomBI,
   randomBIMax,
-  sleep,
-  randomAddress,
-  format,
   e18,
+  getSlotByName,
 };
