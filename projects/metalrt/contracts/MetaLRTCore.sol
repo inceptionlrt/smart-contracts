@@ -43,7 +43,6 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         if (_yieldMargin > MAX_YIELD_MARGIN) revert MetaLRTBasicMaxMargin();
         yieldMargin = _yieldMargin;
         emit YieldMargin(0, _yieldMargin);
-        yieldBalance = 0;
     }
     function initialize(string memory _name, string memory _symbol, uint256 _yieldMargin, address _underlying) external virtual initializer {
 
