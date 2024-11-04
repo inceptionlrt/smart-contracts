@@ -126,4 +126,10 @@ contract RestakerFacets is OwnableUpgradeable, IRestakerFacets {
     {
         return _delegationManager;
     }
+
+    function setDelegationManager(
+        IDelegationManager newDelegationManager
+    ) external onlyOwner {
+        _delegationManager = newDelegationManager;
+    }
 }

@@ -92,12 +92,18 @@ contract RestakingPool is
     uint64 public unstakeUtilizationKink;
     uint64 public protocolFee;
 
+    uint256 public currentRewards;
+    /// @dev blockTime
+    uint256 public startTimeline;
+    /// @dev in days
+    uint256 public rewardsTimeline;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50 - 16] private __gap;
+    uint256[50 - 19] private __gap;
 
     /*******************************************************************************
                         CONSTRUCTOR
@@ -393,28 +399,6 @@ contract RestakingPool is
     *******************************************************************************/
 
     /**
-     * @notice Will be called only once for each restaker, because it activates restaking.
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function activateRestaking(string memory provider) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).activateRestaking();
-    }
-
-    /**
-     * @notice withdraw not restaked ETH
-     * @dev deprecated. Remove after EigenPod activation
-     */
-    function withdrawBeforeRestaking(
-        string memory provider
-    ) external onlyOperator {
-        address restaker = _getRestakerOrRevert(provider);
-        // it withdraw ETH to restaker
-        IEigenPod(restaker).withdrawBeforeRestaking();
-    }
-
-    /**
      * @notice Verify that validators has withdrawal credentials pointed to EigenPod
      */
     function verifyWithdrawalCredentials(
@@ -435,17 +419,6 @@ contract RestakingPool is
         );
     }
 
-    function withdrawNonBeaconChainETHBalanceWei(
-        string memory provider,
-        uint256 amountToWithdraw
-    ) external onlyOperator {
-        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
-        restaker.withdrawNonBeaconChainETHBalanceWei(
-            address(this),
-            amountToWithdraw
-        );
-    }
-
     function recoverTokens(
         string memory provider,
         IERC20[] memory tokenList,
@@ -457,6 +430,14 @@ contract RestakingPool is
             amountsToWithdraw,
             config().getOperator()
         );
+    }
+
+    function startWithdrawalCheckpoint(
+        string memory provider,
+        bool revertIfNoBalance
+    ) external onlyOperator {
+        IEigenPod restaker = IEigenPod(_getRestakerOrRevert(provider));
+        restaker.startCheckpoint(revertIfNoBalance);
     }
 
     function delegateTo(
@@ -482,9 +463,48 @@ contract RestakingPool is
         restaker.undelegate(address(restaker));
     }
 
+    function queueWithdrawals(
+        string memory provider,
+        IDelegationManager.QueuedWithdrawalParams[] calldata withdrawals
+    ) external onlyOperator {
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
+        restaker.queueWithdrawals(withdrawals);
+    }
+
+    function completeWithdrawals(
+        string memory provider,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IERC20[][] memory tokens,
+        uint256[] memory middlewareTimesIndexes,
+        bool[] memory receiveAsTokens
+    ) external onlyOperator {
+        IDelegationManager restaker = IDelegationManager(
+            _getRestakerOrRevert(provider)
+        );
+        restaker.completeQueuedWithdrawals(
+            withdrawals,
+            tokens,
+            middlewareTimesIndexes,
+            receiveAsTokens
+        );
+    }
+
     /*******************************************************************************
                         VIEW FUNCTIONS
     *******************************************************************************/
+
+    function totalAssets() public view returns (uint256) {
+        uint256 elapsedDays = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (elapsedDays > totalDays) return address(this).balance;
+
+        uint256 reservedRewards = (currentRewards / totalDays) *
+            (totalDays - elapsedDays);
+
+        return (address(this).balance - reservedRewards);
+    }
 
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 balance = address(this).balance;
@@ -551,7 +571,7 @@ contract RestakingPool is
      * @notice Get pending to calculate ratio.
      */
     function getPending() public view returns (uint256) {
-        uint256 balance = address(this).balance;
+        uint256 balance = totalAssets();
         uint256 claimable = getTotalClaimable();
         uint256 stakeBonus = stakeBonusAmount;
 
@@ -719,6 +739,33 @@ contract RestakingPool is
                 maxFlashFeeRate,
                 targetCap
             );
+    }
+
+    /*******************************************************************************
+                        Rewards
+    *******************************************************************************/
+    /// @dev addRewards
+    function addRewards() external payable onlyOperator {
+        uint256 amount = msg.value;
+        /// @dev verify whether the prev timeline is over
+        if (currentRewards > 0) {
+            uint256 totalDays = rewardsTimeline / 1 days;
+            uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+            if (dayNum < totalDays) revert TimelineNotOver();
+        }
+        currentRewards = amount;
+        startTimeline = block.timestamp;
+
+        emit RewardsAdded(amount, startTimeline);
+    }
+
+    /// @dev setRewardsTimeline ...
+    /// @dev newTimelineInDays is measured in seconds
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyGovernance {
+        if (newTimelineInSeconds < 1 days) revert InconsistentData();
+
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
+        rewardsTimeline = newTimelineInSeconds;
     }
 
     /*******************************************************************************
