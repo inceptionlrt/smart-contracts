@@ -8,12 +8,15 @@ import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import "../eigenlayer-handler/EigenLayerStrategyBaseHandler.sol";
 
 /// @author The InceptionLRT team
-/// @title The InceptionVault contract
+/// @title The InceptionStrategyBaseVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault is IInceptionVault, EigenLayerHandler {
+contract InceptionStrategyBaseVault is
+    IInceptionVault,
+    EigenLayerStrategyBaseHandler
+{
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
@@ -54,10 +57,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         address operatorAddress,
         IStrategyManager _strategyManager,
         IInceptionToken _inceptionToken,
-        IStrategy _assetStrategy
+        IStrategy _assetStrategy,
+        IERC20 asset
     ) internal {
         __Ownable_init();
-        __EigenLayerHandler_init(_strategyManager, _assetStrategy);
+        __EigenLayerHandler_init(_strategyManager, _assetStrategy, asset);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -65,7 +69,9 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         minAmount = 100;
 
+        /// TODO
         protocolFee = 50 * 1e8;
+        targetCapacity = 5 * 1e18;
 
         /// @dev deposit bonus
         depositUtilizationKink = 25 * 1e8;
@@ -435,9 +441,8 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         return true;
     }
 
-    function maxDeposit(address /*receiver*/) external view returns (uint256) {
-        (uint256 maxPerDeposit, ) = strategy.getTVLLimits();
-        return maxPerDeposit;
+    function maxDeposit(address /*receiver*/) external pure returns (uint256) {
+        return type(uint256).max;
     }
 
     function maxRedeem(
