@@ -40,7 +40,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        if (_yieldMargin > MAX_YIELD_MARGIN) revert MetaLRTBasicMaxMargin();
+        if (_yieldMargin > MAX_YIELD_MARGIN) revert MetaLRTCoreMaxMargin();
         yieldMargin = _yieldMargin;
         emit YieldMargin(0, _yieldMargin);
     }
@@ -55,12 +55,12 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         address src = _msgSender();
         uint256 maxAssets = maxDeposit(receiver);
 
-        if (assets <= 0) revert MetaLRTBasicInvalidAmount();
-        if (receiver == address(0)) revert MetaLRTBasicZeroAddress();
+        if (assets <= 0) revert MetaLRTCoreInvalidAmount();
+        if (receiver == address(0)) revert MetaLRTCoreZeroAddress();
         if (assets > maxAssets) revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
 
         _claimYield();
-        uint256 shares = previewDeposit(assets);
+        uint256 shares = previewDeposit(ratioAdapter.toValue(asset(), assets));
         _deposit(src, receiver, assets, shares);
 
         yieldBalance = getBalance();
@@ -73,9 +73,10 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         uint256 maxShares = maxRedeem(owner);
 
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        if (receiver == address(0)) revert MetaLRTBasicZeroAddress();
+        if (receiver == address(0)) revert MetaLRTCoreZeroAddress();
 
         uint256 assets = previewRedeem(shares);
+        assets = ratioAdapter.fromValue(asset(), assets);
         _claimYield();
 
         yieldBalance = getBalance();
@@ -84,7 +85,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
 
         return assets;
     }
-    function mint(uint256 shares, address receiver) public override returns (uint256) { 
+    function mint(uint256 shares, address receiver) public override nonReentrant whenNotPaused returns (uint256) { 
 
        address src = _msgSender();
 
@@ -95,13 +96,14 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         
         _claimYield();
         uint256 assets = previewMint(shares);
+        assets = ratioAdapter.fromValue(asset(), assets);
         _deposit(src, receiver, assets, shares);
 
         yieldBalance = getBalance();
 
         return assets;
     }
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) { 
+    function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant whenNotPaused returns (uint256) { 
 
         address src = _msgSender();
         uint256 maxAssets = maxWithdraw(owner);
@@ -110,7 +112,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
 
-        uint256 shares = previewWithdraw(assets);
+        uint256 shares = previewWithdraw(ratioAdapter.toValue(asset(), assets));
         _claimYield();
         
         yieldBalance = getBalance();
@@ -119,18 +121,17 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
 
         return shares;
     }
-    function claimYield() public returns (uint256) {
+    function claimYield() external nonReentrant whenNotPaused returns (uint256) {
         uint256 yield = _claimYield();
         yieldBalance = getBalance();
         return yield;
     }
 
-    function _claimYield() internal returns (uint256) {
+    function _claimYield() internal virtual returns (uint256) {
         uint256 availableYields = getVaultYield();
         if (availableYields <= 0) return 0;
 
-        IERC20 _asset = IERC20(asset());
-        _asset.safeTransfer(yieldHeritor, availableYields);
+        IERC20(asset()).safeTransfer(yieldHeritor, ratioAdapter.fromValue(asset(), availableYields));
 
         emit Claim(address(this), yieldHeritor, availableYields);
         return availableYields;
@@ -139,26 +140,26 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
     // --- Admin ---
     function changeYieldHeritor(address _yieldHeritor) external onlyOwner {
 
-        if (_yieldHeritor == address(0)) revert MetaLRTBasicZeroAddress();
+        if (_yieldHeritor == address(0)) revert MetaLRTCoreZeroAddress();
         yieldHeritor = _yieldHeritor;
 
         emit YieldHeritor(yieldHeritor, _yieldHeritor);
     }
     function changeYieldMargin(uint256 _yieldMargin) external onlyOwner {
 
-        if (_yieldMargin > MAX_YIELD_MARGIN) revert MetaLRTBasicMaxMargin();
+        if (_yieldMargin > MAX_YIELD_MARGIN) revert MetaLRTCoreMaxMargin();
         yieldMargin = _yieldMargin;
 
         emit YieldMargin(yieldMargin, _yieldMargin);
     }
     function changeAdapter(address adapter) external onlyOwner {
-        if (adapter == address(0)) revert MetaLRTBasicZeroAddress();
+        if (adapter == address(0)) revert MetaLRTCoreZeroAddress();
         emit AdapterChanged(address(ratioAdapter), adapter);
         ratioAdapter = IRatioAdapter(adapter);
     }
 
     // --- Views ---
-    function getVaultYield() public view returns (uint256) {
+    function getVaultYield() public view virtual returns (uint256) {
         uint256 totalBalance = getBalance();
         if (totalBalance <= yieldBalance) return 0;
 
@@ -166,14 +167,12 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
 
         uint256 yield = diffBalance * yieldMargin / MAX_YIELD_MARGIN;
 
-        return IRatioAdapter(ratioAdapter).fromValue(asset(), yield);
+        return yield;
     }
-
-    function totalAssets() public view virtual override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)) - getVaultYield();
-    }
-
     function getBalance() public view virtual returns (uint256) {
-        return IRatioAdapter(ratioAdapter).toValue(asset(), IERC20(asset()).balanceOf(address(this)));
+        return ratioAdapter.toValue(asset(), IERC20(asset()).balanceOf(address(this)));
+    }
+    function totalAssets() public view virtual override returns (uint256) {
+        return getBalance() - getVaultYield();
     }
 }
