@@ -1167,15 +1167,33 @@ describe("Omnivault integration tests", function () {
           expect(await adapter.owner()).to.be.eq(owner.address);
         });
 
-        it("Transfer ownership", async function () {
-          const newOwner = ethers.Wallet.createRandom();
+        it("Transfer ownership in two steps", async function () {
+          // Generate a new owner address and connect it to the provider
+          const newOwner = ethers.Wallet.createRandom().connect(ethers.provider);
 
+          // Fund newOwner with some ETH from the current owner
+          await owner.sendTransaction({
+            to: newOwner.address,
+            value: ethers.parseEther("1"), // Transfer 1 ETH for gas fees
+          });
+
+          // Initiate ownership transfer (step 1)
           await expect(adapter.transferOwnership(newOwner.address))
-            .emit(adapter, "OwnershipTransferred")
+            .to.emit(adapter, "OwnershipTransferStarted")
             .withArgs(owner.address, newOwner.address);
 
-          expect(await adapter.owner()).to.be.eq(newOwner.address);
+          // Ensure that the new owner is set as the pending owner
+          expect(await adapter.pendingOwner()).to.equal(newOwner.address);
+
+          // Simulate the new owner accepting the ownership (step 2)
+          await expect(adapter.connect(newOwner).acceptOwnership())
+            .to.emit(adapter, "OwnershipTransferred")
+            .withArgs(owner.address, newOwner.address);
+
+          // Check that the ownership transfer is complete
+          expect(await adapter.owner()).to.equal(newOwner.address);
         });
+
 
         it("Endpoint", async function () {
           const endpoint = adapterArg.endpoint();
@@ -2377,11 +2395,16 @@ describe("Omnivault integration tests", function () {
 
       it("setTreasuryAddress(): only owner can", async function () {
         const newTreasury = ethers.Wallet.createRandom().address;
+
+        const currentTreasury = await omniVault.treasury();
+
         await expect(omniVault.setTreasuryAddress(newTreasury))
           .to.emit(omniVault, "TreasuryUpdated")
-          .withArgs(newTreasury);
+          .withArgs(currentTreasury, newTreasury);
+
         expect(await omniVault.treasury()).to.be.eq(newTreasury);
       });
+
 
       it("setTreasuryAddress(): reverts when set to zero address", async function () {
         await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(
@@ -2453,11 +2476,19 @@ describe("Omnivault integration tests", function () {
 
       it("setCrossChainAdapter(): only owner can", async function () {
         const newValue = ethers.Wallet.createRandom().address;
+
+        // Capture the current cross-chain adapter address before making the change
+        const currentAdapter = await omniVault.crossChainAdapter();
+
+        // Expect the event to include both the previous and new cross-chain adapter addresses
         await expect(omniVault.setCrossChainAdapter(newValue))
           .to.emit(omniVault, "CrossChainAdapterChanged")
-          .withArgs(newValue);
+          .withArgs(currentAdapter, newValue);
+
+        // Verify the cross-chain adapter address has been updated
         expect(await omniVault.crossChainAdapter()).to.be.eq(newValue);
       });
+
 
       it("setCrossChainAdapter(): reverts when set to zero address", async function () {
         await expect(omniVault.setCrossChainAdapter(ethers.ZeroAddress)).to.be.revertedWithCustomError(
@@ -2724,7 +2755,7 @@ describe("Omnivault integration tests", function () {
             console.log("Free balance:\t\t", freeBalance.format());
             console.log("Deposit bonus:\t\t", depositBonus.format());
             console.log("Sent to L1 eth:\t\t", sentToL1Amount.format());
-            console.log("Total deposited:\t", (await omniVault.getTotalDeposited()).format());
+            console.log("Total deposited:\t", (await omniVault.getFlashCapacity()).format());
             expect(vaultBalance).to.be.eq(expectedVaultBalance);
 
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
