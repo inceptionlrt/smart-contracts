@@ -5,7 +5,7 @@ import {AbstractLZCrossChainAdapter} from "./abstract/AbstractLZCrossChainAdapte
 import {AbstractCrossChainAdapterL2} from "./abstract/AbstractCrossChainAdapterL2.sol";
 import {AbstractCrossChainAdapter} from "./abstract/AbstractCrossChainAdapter.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
@@ -20,7 +20,7 @@ contract LZCrossChainAdapterL2 is
     AbstractLZCrossChainAdapter,
     AbstractCrossChainAdapterL2,
     Initializable,
-    OwnableUpgradeable
+    Ownable2StepUpgradeable
 {
     modifier onlyOwnerRestricted()
         override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {

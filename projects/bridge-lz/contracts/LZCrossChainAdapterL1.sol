@@ -2,7 +2,7 @@
 pragma solidity 0.8.27;
 
 import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {AbstractCrossChainAdapter} from "./abstract/AbstractCrossChainAdapter.sol";
@@ -21,7 +21,7 @@ contract LZCrossChainAdapterL1 is
     AbstractLZCrossChainAdapter,
     AbstractCrossChainAdapterL1,
     Initializable,
-    OwnableUpgradeable
+    Ownable2StepUpgradeable
 {
     modifier onlyOwnerRestricted()
         override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
