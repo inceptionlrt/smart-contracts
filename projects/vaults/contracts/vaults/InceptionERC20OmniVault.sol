@@ -352,11 +352,11 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         minAmount = newMinAmount;
     }
 
-    function setTreasuryAddress(address newTreasury) external onlyOwner {
-        if (newTreasury == address(0)) revert NullParams();
+    function setTreasuryAddress(address _newTreasury) external onlyOwner {
+        if (_newTreasury == address(0)) revert NullParams();
 
-        emit TreasuryUpdated(newTreasury);
-        treasuryAddress = newTreasury;
+        emit TreasuryUpdated(treasuryAddress, _newTreasury);
+        treasuryAddress = _newTreasury;
     }
 
     function setTargetFlashCapacity(

@@ -492,7 +492,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     function setTreasuryAddress(address newTreasury) external onlyOwner {
         if (newTreasury == address(0)) revert NullParams();
 
-        emit TreasuryUpdated(newTreasury);
+        emit TreasuryUpdated(treasury, newTreasury);
         treasury = newTreasury;
     }
 

@@ -82,7 +82,10 @@ interface IInceptionOmniVault {
 
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
-    event TreasuryUpdated(address newTresury);
+    event TreasuryUpdated(
+        address indexed prevTreasury,
+        address indexed newTreasury
+    );
 
     event RestakerDeployed(address indexed restaker);
 
