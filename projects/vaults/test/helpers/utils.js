@@ -34,8 +34,14 @@ const calculateRatio = async (vault, token) => {
   return ratio;
 };
 
-const withdrawDataFromTx = async (event, operatorAddress, restaker) => {
-  const WithdrawalQueuedEvent = event.args;
+const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
+  const receipt = await tx.wait();
+  if (receipt.logs.length !== 3) {
+    console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
+    console.log(receipt.logs);
+  }
+
+  const WithdrawalQueuedEvent = receipt.logs?.find(e => e.eventName === "StartWithdrawal").args;
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,
@@ -76,16 +82,16 @@ const getRandomStaker = async (iVault, asset, donor, amount) => {
   return await getStaker(randomAddress(), iVault, asset, donor, amount);
 };
 
-const mineBlocks = async (count) => {
+const mineBlocks = async count => {
   console.log(`WAIT FOR ${count} BLOCKs`);
   for (let i = 0; i < count; i++) {
     await network.provider.send("evm_mine");
   }
 };
-const toWei = (ether) => ethers.parseEther(ether.toString());
+const toWei = ether => ethers.parseEther(ether.toString());
 
-const toBN = (n) => BigInt(n);
-const randomBI = (length) => {
+const toBN = n => BigInt(n);
+const randomBI = length => {
   if (length > 0) {
     let randomNum = "";
     randomNum += Math.floor(Math.random() * 9) + 1; // generates a random digit 1-9
@@ -98,7 +104,7 @@ const randomBI = (length) => {
   }
 };
 
-const randomBIMax = (max) => {
+const randomBIMax = max => {
   let random = 0n;
   if (max > 0n) {
     random += BigInt(Math.floor(Math.random() * Number(max)));
@@ -106,14 +112,22 @@ const randomBIMax = (max) => {
   return random;
 };
 async function sleep(msec) {
-  return new Promise((resolve) => setTimeout(resolve, msec));
+  return new Promise(resolve => setTimeout(resolve, msec));
 }
 const randomAddress = () => ethers.Wallet.createRandom().address;
-const format = (bi) => bi.toLocaleString("de-DE");
+const format = bi => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
 const e9 = 1000_000_000n;
-const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroAddress, 0, 1, [ethers.ZeroAddress], [0]];
+const zeroWithdrawalData = [
+  ethers.ZeroAddress,
+  ethers.ZeroAddress,
+  ethers.ZeroAddress,
+  0,
+  1,
+  [ethers.ZeroAddress],
+  [0],
+];
 
 const day = 86400n;
 
