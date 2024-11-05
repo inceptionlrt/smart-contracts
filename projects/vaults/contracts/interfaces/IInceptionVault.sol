@@ -75,7 +75,6 @@ interface IInceptionVault {
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
     event TreasuryUpdated(address indexed newTreasury);
-    event CrossChainAdapterChanged(address newCrossChainAdapter);
     event MessageToL1Sent(
         uint256 indexed tokensAmount,
         uint256 indexed ethAmount

@@ -146,7 +146,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         address receiver,
         bytes32 code
     ) external payable nonReentrant whenNotPaused returns (uint256) {
-        emit ReferralCode(code);
+        emit ReferralCode(msg.sender, code);
         return _deposit(msg.value, msg.sender, receiver);
     }
 
@@ -258,7 +258,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             revert CrossChainAdapterNotSet();
 
         uint256 tokensAmount = _inceptionTokenSupply();
-        uint256 ethAmount = getTotalDeposited() - msg.value;
+        uint256 ethAmount = getFlashCapacity() - msg.value;
         bytes memory payload = abi.encode(
             block.timestamp,
             tokensAmount,
@@ -281,7 +281,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             CrossChainAdapterNotSet()
         );
         uint256 tokensAmount = _inceptionTokenSupply();
-        uint256 ethAmount = getTotalDeposited();
+        uint256 ethAmount = getFlashCapacity();
         bytes memory payload = abi.encode(
             block.timestamp,
             tokensAmount,
@@ -307,7 +307,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             _options
         );
 
-        emit EthCrossChainSent(freeBalance, _chainId);
+        emit EthCrossChainSent(freeBalance + msg.value, _chainId);
     }
 
     /**
@@ -388,19 +388,15 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getFlashCapacity() public view returns (uint256 total) {
+    function getFlashCapacity() public view returns (uint256) {
         return totalAssets() - depositBonusAmount;
     }
 
-    function getFreeBalance() public view returns (uint256 total) {
+    function getFreeBalance() public view returns (uint256) {
         return
             getFlashCapacity() < targetCapacity
                 ? 0
                 : getFlashCapacity() - targetCapacity;
-    }
-
-    function getTotalDeposited() public view returns (uint256) {
-        return totalAssets() - depositBonusAmount;
     }
 
     function _inceptionTokenSupply() public view returns (uint256) {
@@ -501,11 +497,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     }
 
     function setCrossChainAdapter(
-        address payable newCrossChainAdapter
+        address payable _newCrossChainAdapter
     ) external onlyOwner {
-        if (newCrossChainAdapter == address(0)) revert NullParams();
-        emit CrossChainAdapterChanged(newCrossChainAdapter);
-        crossChainAdapter = ICrossChainBridgeL2(newCrossChainAdapter);
+        require(_newCrossChainAdapter != address(0), NullParams());
+        emit CrossChainAdapterChanged(
+            address(crossChainAdapter),
+            _newCrossChainAdapter
+        );
+        crossChainAdapter = ICrossChainBridgeL2(_newCrossChainAdapter);
     }
 
     function setTargetFlashCapacity(
@@ -524,6 +523,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     }
 
     function setOperator(address _newOperator) external onlyOwner {
+        require(_newOperator != address(0), NullParams());
         emit OperatorChanged(operator, _newOperator);
         operator = _newOperator;
     }

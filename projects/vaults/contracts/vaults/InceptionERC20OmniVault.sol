@@ -114,7 +114,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         address receiver,
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
-        emit ReferralCode(code);
+        emit ReferralCode(msg.sender, code);
         return _deposit(amount, msg.sender, receiver);
     }
 

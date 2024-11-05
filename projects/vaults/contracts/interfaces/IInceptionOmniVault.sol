@@ -92,18 +92,21 @@ interface IInceptionOmniVault {
 
     event NameChanged(string prevValue, string newValue);
 
-    event ReferralCode(bytes32 indexed code);
+    event ReferralCode(address indexed sender, bytes32 indexed code);
 
     event DepositBonus(uint256 amount);
 
-    event CrossChainAdapterChanged(address newCrossChainAdapter);
+    event CrossChainAdapterChanged(
+        address prevCrossChainAdapter,
+        address newCrossChainAdapter
+    );
 
     event MessageToL1Sent(
         uint256 indexed tokensAmount,
         uint256 indexed ethAmount
     );
 
-    event EthCrossChainSent(uint256 callValue, uint256 chainId);
+    event EthCrossChainSent(uint256 callValue, uint256 indexed chainId);
 
     event DepositBonusParamsChanged(
         uint256 newMaxBonusRate,
