@@ -8,5 +8,8 @@ interface ICrossChainAdapter {
 
     function receiveCrosschainEth(uint256 _chainId) external payable;
 
-    function handleCrossChainData(uint256 _chainId, bytes calldata _payload) external;
+    function handleCrossChainData(
+        uint256 _chainId,
+        bytes calldata _payload
+    ) external;
 }

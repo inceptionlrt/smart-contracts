@@ -23,7 +23,9 @@ library InternalInceptionLibrary {
         uint256 maxDepositBonusRate,
         uint256 targetCapacity
     ) internal pure returns (uint256 bonus) {
-        /// @dev the utilization rate is in the range [0:25] %
+        // uint256 optimalCapacity = (targetCapacity * depositUtilizationKink) /
+        //     MAX_PERCENT;
+
         if (amount > 0 && capacity < optimalCapacity) {
             uint256 replenished = amount;
             if (optimalCapacity < capacity + amount)
@@ -44,7 +46,6 @@ library InternalInceptionLibrary {
             uint256 replenished = targetCapacity > capacity + amount
                 ? amount
                 : targetCapacity - capacity;
-
             bonus += (replenished * optimalBonusRate) / MAX_PERCENT;
         }
     }
@@ -57,13 +58,23 @@ library InternalInceptionLibrary {
         uint256 maxFlashWithdrawalFeeRate,
         uint256 targetCapacity
     ) internal pure returns (uint256 fee) {
+        /// @dev the utilization rate is greater 1, [ :100] %
+        if (amount > 0 && capacity > targetCapacity) {
+            uint256 replenished = amount;
+            if (capacity - amount < targetCapacity)
+                replenished = capacity - targetCapacity;
+
+            amount -= replenished;
+            capacity -= replenished;
+        }
+
         /// @dev the utilization rate is in the range [100:25] %
         if (amount > 0 && capacity > optimalCapacity) {
             uint256 replenished = amount;
             if (capacity - amount < optimalCapacity)
                 replenished = capacity - optimalCapacity;
 
-            fee += (replenished * optimaFeeRate) / MAX_PERCENT;
+            fee += (replenished * optimaFeeRate) / MAX_PERCENT; // 0.5%
             amount -= replenished;
             capacity -= replenished;
             if (fee == 0) ++fee;
@@ -76,7 +87,6 @@ library InternalInceptionLibrary {
                 (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
             fee += (amount * bonusPercent) / MAX_PERCENT;
-            if (fee == 0) ++fee;
         }
         if (fee == 0) ++fee;
     }

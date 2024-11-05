@@ -27,38 +27,6 @@ const config: HardhatUserConfig = {
             },
         ],
     },
-    networks: {
-        'sepolia': {
-            eid: 40161,
-            url: process.env.RPC_URL_SEPOLIA,
-            chainId: 11155111,
-            accounts,
-        },
-        'arbitrum-sepolia': {
-            eid: 40231,
-            url: process.env.RPC_URL_ARBITRUM_SEPOLIA,
-            chainId: 421614,
-            accounts,
-        },
-        'optimism-sepolia': {
-            eid: 40232,
-            url: process.env.RPC_URL_OPTIMISM_SEPOLIA,
-            chainId: 11155420,
-            accounts,
-        },
-
-    },
-    namedAccounts: {
-        deployer: {
-            default: 0, // wallet address of index[0], of the mnemonic in .env
-        },
-    },
-    etherscan: {
-        apiKey: {
-            sepolia: `${process.env.ETHERSCAN_API_KEY}`,
-            arbitrumTestnet: `${process.env.ARBISCAN_API_KEY}`
-        }
-    }
 }
 
 export default config

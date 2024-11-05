@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.23;
 
-import { ILayerZeroReceiver, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroReceiver.sol";
+import {ILayerZeroReceiver, Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroReceiver.sol";
 
 /**
  * @title IOAppReceiverUpgradeable

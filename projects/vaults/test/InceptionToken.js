@@ -47,16 +47,15 @@ describe("Inception token", function () {
 
     it("set on pause", async function () {
       expect(await iToken.paused()).equal(false);
-      await expect(iToken.connect(staker1).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(iToken.connect(staker1).pause()).to.be.revertedWithCustomError(iToken, "OwnableUnauthorizedAccount");
       await iToken.connect(owner).pause();
       await expect(iToken.connect(owner).pause()).to.be.revertedWith("InceptionToken: paused");
       expect(await iToken.paused()).equal(true);
     });
 
     it("mint && burn are paused", async function () {
-      await expect(iToken.connect(owner).mint(staker1.address, e18)).to.be.revertedWith(
-        "InceptionToken: token transfer while paused",
-      );
+      await expect(iToken.connect(owner).mint(staker1.address, e18))
+        .to.be.revertedWith("InceptionToken: token transfer while paused");
       await expect(iToken.connect(owner).burn(staker1.address, e18)).to.be.revertedWith(
         "InceptionToken: token transfer while paused",
       );
@@ -73,7 +72,7 @@ describe("Inception token", function () {
 
     it("unpause", async function () {
       expect(await iToken.paused()).equal(true);
-      await expect(iToken.connect(staker1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(iToken.connect(staker1).unpause()).to.be.revertedWithCustomError(iToken, "OwnableUnauthorizedAccount");
       await iToken.connect(owner).unpause();
       await expect(iToken.connect(owner).unpause()).to.be.revertedWith("InceptionToken: not paused");
       expect(await iToken.paused()).equal(false);

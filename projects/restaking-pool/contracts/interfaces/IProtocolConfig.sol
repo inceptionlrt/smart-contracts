@@ -51,7 +51,10 @@ interface IProtocolConfig {
 
     function getRestakingPool() external view returns (IRestakingPool pool);
 
-    function getRebalancer() external view returns (INativeRebalancer rebalancer);
+    function getRebalancer()
+        external
+        view
+        returns (INativeRebalancer rebalancer);
 
     function getRestakerDeployer()
         external
