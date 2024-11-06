@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionVault_S, IInceptionToken, IERC20} from "../InceptionVault_S.sol";
+import {InceptionVault_S, IERC20} from "../InceptionVault_S.sol";
 import {IIMellowRestaker} from "../../../interfaces/symbiotic-vault/IIMellowRestaker.sol";
 
 /// @author The InceptionLRT team
@@ -12,17 +12,17 @@ contract InVault_S_E2 is InceptionVault_S {
     }
 
     function initialize(
-        string memory vaultName,
+        string memory name,
+        string memory symbol,
         address operatorAddress,
         IERC20 assetAddress,
-        IInceptionToken _inceptionToken,
         IIMellowRestaker _mellowRestaker
     ) external initializer {
         __InceptionVault_init(
-            vaultName,
+            name,
+            symbol,
             operatorAddress,
             assetAddress,
-            _inceptionToken,
             _mellowRestaker
         );
     }

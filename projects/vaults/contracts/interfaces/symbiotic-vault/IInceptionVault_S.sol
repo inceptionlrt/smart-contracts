@@ -70,7 +70,5 @@ interface IInceptionVault_S {
 
     event ProtocolFeeChanged(uint256 prevValue, uint256 newValue);
 
-    function inceptionToken() external view returns (IInceptionToken);
-
     function ratio() external view returns (uint256);
 }

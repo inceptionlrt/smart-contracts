@@ -5,27 +5,21 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {MellowHandler, IIMellowRestaker, IERC20} from "../../mellow-handler/MellowHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
-import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
-contract InceptionVault_S is MellowHandler, IInceptionVault_S {
+contract InceptionVault_S is MellowHandler, ERC20Upgradeable, IInceptionVault_S {
     using SafeERC20 for IERC20;
-
-    /// @dev Inception restaking token
-    IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
     uint256 public minAmount;
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
-
-    /// @dev the unique InceptionVault name
-    string public name;
 
     /**
      *  @dev Flash withdrawal params
@@ -49,18 +43,17 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint64 public withdrawUtilizationKink;
 
     function __InceptionVault_init(
-        string memory vaultName,
+        string memory _name,
+        string memory _symbol,
         address operatorAddress,
         IERC20 assetAddress,
-        IInceptionToken _inceptionToken,
         IIMellowRestaker _mellowRestaker
     ) internal {
         __Ownable_init();
         __MellowHandler_init(assetAddress, _mellowRestaker);
+        __ERC20_init(_name, _symbol);
 
-        name = vaultName;
         _operator = operatorAddress;
-        inceptionToken = _inceptionToken;
 
         minAmount = 100;
 
@@ -142,7 +135,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         amount = totalAssets() - depositedBefore;
 
         uint256 iShares = convertToShares(amount + depositBonus);
-        inceptionToken.mint(receiver, iShares);
+        _mint(receiver, iShares);
         __afterDeposit(iShares);
 
         emit Deposit(sender, receiver, amount, iShares);
@@ -203,7 +196,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (amount < minAmount) revert LowerMinAmount(minAmount);
 
         // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
+        _burn(claimer, iShares);
 
         // update global state and claimer's state
         totalAmountToWithdraw += amount;
@@ -274,7 +267,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (amount < minAmount) revert LowerMinAmount(minAmount);
 
         // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
+        _burn(claimer, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
         if (fee == 0) revert ZeroFlashWithdrawFee();
@@ -356,7 +349,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     function ratio() public view returns (uint256) {
-        return ratioFeed.getRatioFor(address(inceptionToken));
+        return ratioFeed.getRatioFor(address(this));
     }
 
     function getDelegatedTo(
@@ -375,7 +368,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         address account
     ) external view returns (uint256 maxShares) {
         return
-            convertToAssets(IERC20(address(inceptionToken)).balanceOf(account));
+            convertToAssets(balanceOf(account));
     }
 
     /*//////////////////////////////
@@ -476,13 +469,6 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function setMinAmount(uint256 newMinAmount) external onlyOwner {
         emit MinAmountChanged(minAmount, newMinAmount);
         minAmount = newMinAmount;
-    }
-
-    function setName(string memory newVaultName) external onlyOwner {
-        if (bytes(newVaultName).length == 0) revert NullParams();
-
-        emit NameChanged(name, newVaultName);
-        name = newVaultName;
     }
 
     /*///////////////////////////////

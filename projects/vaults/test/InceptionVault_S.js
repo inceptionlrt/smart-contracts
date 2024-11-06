@@ -45,6 +45,7 @@ assets = [
     assetAddress: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     assetPoolName: "LidoMockPool",
     vaultName: "InstEthVault",
+    vaultSymbol: "InstETH",
     vaultFactory: "InVault_S_E2",
     iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
     withdrawalDelayBlocks: 50400,
@@ -151,7 +152,7 @@ const initVault = async (a) => {
   });
   const iVault = await upgrades.deployProxy(
     iVaultFactory,
-    [a.vaultName, a.iVaultOperator, a.assetAddress, iToken.address, mellowRestaker.address],
+    [a.vaultName, a.vaultSymbol, a.iVaultOperator, a.assetAddress, mellowRestaker.address],
     {
       unsafeAllowLinkedLibraries: true,
     }
