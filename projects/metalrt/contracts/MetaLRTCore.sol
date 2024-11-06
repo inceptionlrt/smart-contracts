@@ -122,12 +122,14 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         return shares;
     }
     function claimYield() external nonReentrant whenNotPaused returns (uint256) {
+        
         uint256 yield = _claimYield();
         yieldBalance = getBalance();
         return yield;
     }
 
     function _claimYield() internal virtual returns (uint256) {
+
         uint256 availableYields = getVaultYield();
         if (availableYields <= 0) return 0;
 
@@ -136,6 +138,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         emit Claim(address(this), yieldHeritor, availableYields);
         return availableYields;
     }
+
 
     // --- Admin ---
     function changeYieldHeritor(address _yieldHeritor) external onlyOwner {
@@ -153,6 +156,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         emit YieldMargin(yieldMargin, _yieldMargin);
     }
     function changeAdapter(address adapter) external onlyOwner {
+
         if (adapter == address(0)) revert MetaLRTCoreZeroAddress();
         emit AdapterChanged(address(ratioAdapter), adapter);
         ratioAdapter = IRatioAdapter(adapter);
@@ -160,6 +164,7 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
 
     // --- Views ---
     function getVaultYield() public view virtual returns (uint256) {
+
         uint256 totalBalance = getBalance();
         if (totalBalance <= yieldBalance) return 0;
 
@@ -170,9 +175,11 @@ contract MetaLRTCore is ReentrancyGuardUpgradeable, PausableUpgradeable, Ownable
         return yield;
     }
     function getBalance() public view virtual returns (uint256) {
+
         return ratioAdapter.toValue(asset(), IERC20(asset()).balanceOf(address(this)));
     }
     function totalAssets() public view virtual override returns (uint256) {
+
         return getBalance() - getVaultYield();
     }
 }

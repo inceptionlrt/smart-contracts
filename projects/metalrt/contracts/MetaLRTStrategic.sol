@@ -27,8 +27,13 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
     uint256[47] private __reserver;
 
     modifier onlySOperatorOrOwner {
-        if (msg.sender != sOperator || msg.sender != owner()) revert();
+        if (msg.sender != sOperator && msg.sender != owner()) revert();
         _;
+    }
+    modifier checkBalances {
+        // balanceBefore
+        _;
+        // balanceAfter
     }
 
     // --- Constructor ---
@@ -44,73 +49,57 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
         __MetaLRTStrategic_init();
     }
 
-    // --- Strategies ---
-    function sDeposit(address _strategy, uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused {
+    // --- Strategies --- TODO Make sure claim is not needed since the asset are moving within metaLRT and ETH yield remains constant
+    function sDeposit(address _strategy, uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused checkBalances returns (uint256) {
 
         if (listed(_strategy) < 0) revert();
         if (totalAssets() < ratioAdapter.toValue(asset(), _amount)) revert();
         if (IERC20(asset()).balanceOf(address(this)) < _amount) revert();
 
-        // TODO balance check before and after 
-        IStrategyBase(_strategy).deposit(_amount); // TODO STRAT wstETH
+        return IStrategyBase(_strategy).deposit(_amount);
     }
-    function sDepositAuto(uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused {
+    function sDepositAuto(uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused checkBalances returns (uint256[] memory) {
 
         if (totalAssets() < ratioAdapter.toValue(asset(), _amount)) revert();
         if (IERC20(asset()).balanceOf(address(this)) < _amount) revert();
 
         (, uint256[] memory _subAmounts) = split(_amount);
-        for (uint8 i = 0; i < _subAmounts.length;) {
 
-            // TODO balance check before and after 
+        for (uint8 i = 0; i < _subAmounts.length; i++) {
+
+            if (_subAmounts[i] <= 0) continue;
             IStrategyBase(strategies[i]).deposit(_subAmounts[i]);
-
             unchecked { i++; }
         }
     }
-    function sWithdraw(address _strategy, uint256 _amount) public virtual  onlySOperatorOrOwner nonReentrant whenNotPaused {
+    function sWithdraw(address _strategy, uint256 _amount) public virtual  onlySOperatorOrOwner nonReentrant whenNotPaused checkBalances {
 
-        if (listed(_strategy) < 0) revert();  // TODO if _amount is wstETH, how can empty strat ?
-        // TODO balance check before and after 
-        IStrategyBase(_strategy).withdraw(_amount); // TODO STRAT wstETH
+        // TODO POINTSADAPTER !!!
+        if (listed(_strategy) < 0) revert();
+        IStrategyBase(_strategy).withdraw(_amount);
     }
-    function sWithdrawAuto(uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused {
+    function sWithdrawAuto(uint256 _amount) public virtual onlySOperatorOrOwner nonReentrant whenNotPaused checkBalances {
 
         (, uint256[] memory _subAmounts) = split(_amount);
+
         for (uint8 i = 0; i < _subAmounts.length;) {
 
             IStrategyBase(strategies[i]).withdraw(_amount);
-
             unchecked { i++; }
         }
     }
 
     // --- Admin ---
-    function setAllocations(uint256[] calldata _allocations) external onlySOperatorOrOwner {
-
-        if (strategies.length != _allocations.length) revert();
-        uint256 totalAllocation;
-        for (uint8 i = 0; i < strategies.length; ) {
-
-            stats[strategies[i]].allocation = _allocations[i];
-
-            totalAllocation += _allocations[i];
-
-            unchecked { i++; }
-        }
-
-        if (totalAllocation != MAX_ALLOCATION) revert();
-    }
     function setSOperator(address _sOperator) external onlySOperatorOrOwner {
 
         sOperator = _sOperator;
     }
-    function addStrategy(address _strategy, address _derivative, uint256 _allocation) external onlyOwner {
+    function addStrategy(address _strategy, address _derivative) external onlyOwner {
 
         if (listed(_strategy) >= 0) revert();
 
         strategies.push(_strategy);
-        StrategyStats memory s = StrategyStats(_allocation, _derivative);  // TODO derivative might be address(0) for point adapters
+        stats[_strategy] = StrategyStats(0, _derivative);
 
         IERC20(asset()).approve(_strategy, type(uint256).max);
         IERC20(_derivative).approve(_strategy, type(uint256).max);
@@ -130,6 +119,21 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
 
         strategies[uint256(index)] = strategies[strategies.length - 1];
         strategies.pop();
+    }
+    function setAllocations(uint256[] calldata _allocations) external onlySOperatorOrOwner {
+
+        if (strategies.length != _allocations.length) revert();
+        
+        uint256 totalAllocation;
+        for (uint8 i = 0; i < strategies.length; ) {
+
+            stats[strategies[i]].allocation = _allocations[i];
+
+            totalAllocation += _allocations[i];
+            unchecked { i++; }
+        }
+
+        if (totalAllocation != MAX_ALLOCATION) revert();
     }
     function listed(address _strategy) internal view returns (int8) {
         
@@ -153,31 +157,31 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
     }
     function _claimYield() internal virtual override returns (uint256) {
 
-        uint256 availableYields = getVaultYield();
+        uint256 availableYields = ratioAdapter.fromValue(asset(), getVaultYield());
         if (availableYields <= 0) return 0;
 
         uint256[] memory _subAmounts;
-        uint256 assetBalance = ratioAdapter.toValue(asset(), IERC20(asset()).balanceOf(address(this)));
+        uint256 assetBalance = IERC20(asset()).balanceOf(address(this));
+        emit Claim(address(this), yieldHeritor, ratioAdapter.toValue(asset(), availableYields));
 
-        if (assetBalance >= availableYields) {  // Send in wstETH if wstETH can cover yield
+        if (assetBalance >= availableYields) { 
             IERC20(asset()).safeTransfer(yieldHeritor, availableYields);
-            emit Claim(address(this), yieldHeritor, availableYields);
             return availableYields;
-        } else if (assetBalance > 0) {  // Send wstETH first, remaining shared in derivatives based on proportions
+
+        } else if (assetBalance > 0) {
             IERC20(asset()).safeTransfer(yieldHeritor, availableYields - (availableYields - assetBalance));
             (, _subAmounts) = split(availableYields - assetBalance);
+
         } else (, _subAmounts) = split(availableYields);
 
-        for (uint8 i = 0; i < strategies.length; ) { // Send derivatives as yeild based on proportions
+        for (uint8 i = 0; i < strategies.length; ) {
 
+            // TODO POINTSADAPTER !!!
             IERC20(stats[strategies[i]].derivative).safeTransfer(yieldHeritor, _subAmounts[i]);
             unchecked { i++; }
         }
-        
-        emit Claim(address(this), yieldHeritor, availableYields);
         return availableYields;
     }
-
 
     // --- Views ---
     function split(uint256 _amount) public view returns (address[] memory _strategies, uint256[] memory _subAmounts) {
@@ -190,17 +194,22 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
             unchecked { i++; }
         }
     }
+    function getSDepositDerivative(address _strategy) public view returns (uint256) {
+        int256 index = listed(_strategy);
+        if (index < 0) revert();
+        return IStrategyBase(_strategy).totalStrategy();
+    }
     function getSDepositETH(address _strategy) public view returns (uint256) {
 
         int256 index = listed(_strategy);
         if (index < 0) revert();
-        return IERC20(stats[_strategy].derivative).balanceOf(address(this));  // TODO forward balance logic to strategy
+        return IStrategyBase(_strategy).totalStrategyETH();
     }
     function getSDepositByDerivativeETH(address _derivative) public view returns (uint256) {
 
         (int256 index, address _strategy )= listedDerivative(_derivative);
         if (index < 0) revert();
-        return IERC20(stats[_strategy].derivative).balanceOf(address(this));  // TODO forward balance logic to strategy
+        return IStrategyBase(_strategy).totalStrategyETH();
     }
     function getSDepositETHTotal() public view returns (uint256 _total) {
 
@@ -210,22 +219,9 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
             unchecked { i++; }
         }
     }
-    function getVaultYield() public view virtual override returns (uint256) {
-        uint256 totalBalance = getBalance();
-        if (totalBalance <= yieldBalance) return 0;
-
-        uint256 diffBalance = totalBalance - yieldBalance;
-
-        uint256 yield = diffBalance * yieldMargin / MAX_YIELD_MARGIN;
-
-        return yield;
-    }
     function getBalance() public view virtual override returns (uint256 _total) {
 
         _total = ratioAdapter.toValue(asset(), IERC20(asset()).balanceOf(address(this)));
-        _total = getSDepositETHTotal();
-    }
-    function totalAssets() public view virtual override returns (uint256) {
-        return getBalance() - getVaultYield();
+        _total += getSDepositETHTotal();
     }
 }

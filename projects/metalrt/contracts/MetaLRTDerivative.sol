@@ -16,6 +16,8 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
     using Math for uint256;
 
     // --- Vars ---
+    uint256 public tolerance;
+
     uint256[50] private __reserver;
 
     // --- Constructor ---
@@ -24,6 +26,8 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
     // --- Init ---
     function __MetaLRTDerivative_init() internal onlyInitializing {
+
+        tolerance = 1e16;  // 1%
     }
 
     function initialize(string memory _name, string memory _symbol, uint256 _yieldMargin, address _underlying) external virtual override initializer {
@@ -36,28 +40,42 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
     // --- Derivative ---
     function dDeposit(uint256[] memory _derivativeAmounts) public virtual nonReentrant whenNotPaused returns (uint256) {
 
-        if (!verifyAllocation(_derivativeAmounts)) revert();
+        if (!verifyProportion(_derivativeAmounts)) revert("V");
 
-        address caller = msg.sender;
-        uint256 depositedBefore = totalAssets();  // getBalance is cheaper
+        address src = _msgSender();
+        // uint256 balanceBefore = totalAssets();
+        address[] memory _derivatives = getDerivativeTokens();
+        uint256 total;
 
-        address[] memory numberOfAssets = getDerivativeTokens();
 
-        for (uint256 i = 0; i < numberOfAssets.length; ) {
-            address assetAddress = numberOfAssets[i];
-            uint256 amount = _derivativeAmounts[i];
+        _claimYield();
 
-            IERC20(assetAddress).safeTransferFrom(caller, address(this), amount);
-
-            unchecked { i++; }
+        for (uint256 i = 0; i < _derivativeAmounts.length; i++) {
+            total += ratioAdapter.toValue(_derivatives[i], _derivativeAmounts[i]);
         }
 
-        uint256 depositedEth = totalAssets() - depositedBefore;
+        uint256 shares = previewDeposit(total);
+
+        for (uint256 i = 0; i < _derivatives.length; i++) {
+
+            address derivative = _derivatives[i];
+            uint256 amount = _derivativeAmounts[i];
+
+            if (_derivativeAmounts[i] == 0) continue;
+            IERC20(derivative).safeTransferFrom(src, address(this), amount);
+
+            // unchecked { i++; }
+        }
+
+        // uint256 depositedEth = totalAssets() - balanceBefore;
 
         // require(depositedEth >= minAmount);
 
-        uint256 shares = _convertToShares(depositedEth, Math.Rounding.Floor);
-        _mint(caller, shares);
+        _mint(src, shares);
+
+        yieldBalance = getBalance();
+
+        return shares;
     }
     function dWithdraw(uint256 shares) public virtual nonReentrant whenNotPaused returns (uint256) {
 
@@ -76,6 +94,11 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
         // TODO Transfer to User, we simply transfer cuz withdrawal doesn't affect allocation
     }
 
+    function setTolerance(uint256 _newTolerance) external onlyOwner {
+
+        tolerance = _newTolerance;
+    }
+
     // --- Views ---
     function getDerivativeTokens() public view virtual returns (address[] memory _derivatives) {
 
@@ -84,7 +107,7 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
         for (uint8 i = 0; i < length; ) {
 
-            _derivatives[i] = stats[strategies[i]].derivative;  // TODO might include point adapter as address(0)
+            _derivatives[i] = stats[strategies[i]].derivative;
             unchecked { i++; }
         } 
     }
@@ -95,7 +118,7 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
         for (uint8 i = 0; i < _derivatives.length; ) {
 
-            _shares[i] = IERC20(_derivatives[i]).balanceOf(address(this));  // TODO might include point adapter as address(0)
+            _shares[i] = IERC20(_derivatives[i]).balanceOf(address(this));
             unchecked { i++; }
         }
     }
@@ -105,7 +128,7 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
         for (uint8 i = 0; i < _derivatives.length;) {
 
-            _ethValue += ratioAdapter.toValue(_derivatives[i], _shares[i]);  // TODO might include point adapter as address(0)
+            _ethValue += ratioAdapter.toValue(_derivatives[i], _shares[i]);
             unchecked { i++; }
         }
     }
@@ -119,12 +142,12 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
         return false;
     }
-    function verifyAllocation(uint256[] memory _derivativeAmounts) public view returns (bool) {
+    function verifyProportion(uint256[] memory _derivativeAmounts) public view returns (bool) {
 
         address[] memory _derivatives = getDerivativeTokens();
         
         uint256 length = _derivatives.length;
-        if (length == 0) return false;
+        if (length <= 0) return false;
         if (length != _derivativeAmounts.length) return false;
 
         uint256 sDepositTotal = getSDepositETHTotal();
@@ -136,14 +159,15 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
             unchecked { i++; }
         }
 
-        (, uint256[] memory allocations) = getCurrentAllocation();
+        (, uint256[] memory allocations) = getCurrentAllocations();
 
         for (i = 0; i < _derivatives.length; ) {
 
-            address _derivative = _derivatives[i];
-            uint256 _allocation = stats[_derivatives[i]].allocation;
+            address _strategy = strategies[i];
+            address _derivative = stats[_strategy].derivative;
+            uint256 _allocation = stats[strategies[i]].allocation;
 
-            uint256 currentAssetAmountInETH = getSDepositETH(_derivative);
+            uint256 currentAssetAmountInETH = getSDepositETH(_strategy);
             uint256 currentProportionDiff = _allocation > allocations[i] ? _allocation - allocations[i] : allocations[i] - _allocation;
             uint256 assetNewTotalAmount = currentAssetAmountInETH + ratioAdapter.toValue(_derivative, _derivativeAmounts[i]);
             uint256 assetNewProportion = MAX_ALLOCATION.mulDiv(assetNewTotalAmount, sDepositTotal, Math.Rounding.Floor);
@@ -151,25 +175,25 @@ contract MetaLRTDerivative is MetaLRTStrategic, IMetaLRTDerivative {
 
             if (newProportionDiff > currentProportionDiff) {
 
-                if (((_allocation - 0 >= assetNewProportion) || (assetNewProportion >= _allocation + 0))) return false;  // 0 = tolerance
+                if (((_allocation - tolerance >= assetNewProportion) || (assetNewProportion >= _allocation + tolerance))) return false;
             }
             unchecked { i++; }
         }
 
         return true;
     }
-    function getCurrentAllocation() public view returns (address[] memory _derivatives, uint256[] memory _proportions) {
+    function getCurrentAllocations() public view returns (address[] memory _derivatives, uint256[] memory _proportions) {
 
         _derivatives = getDerivativeTokens();
         _proportions = new uint256[](_derivatives.length);
 
         uint256 sTotalDeposit = getSDepositETHTotal();
 
-        if (sTotalDeposit == 0) return (_derivatives, _proportions);
+        if (sTotalDeposit <= 0) return (_derivatives, _proportions);
 
         for (uint256 i = 0; i < _derivatives.length; ) {
 
-            _proportions[i] = MAX_ALLOCATION.mulDiv(getSDepositETH(_derivatives[i]), sTotalDeposit, Math.Rounding.Floor);
+            _proportions[i] = MAX_ALLOCATION.mulDiv(getSDepositByDerivativeETH(_derivatives[i]), sTotalDeposit, Math.Rounding.Floor);
             unchecked { i++; }
         }
     }
