@@ -65,14 +65,14 @@ contract Restaker is OwnableUpgradeable, IRestaker {
      * @dev __ at begining used to not override selectors accidentally.
      */
     function __setRewardCoordinator(
-        IRewardsCoordinator newRewardCoordinator
+        address newRewardCoordinator
     ) external onlyOwner {
-        newRewardCoordinator.setClaimerFor(owner());
+        IRewardsCoordinator(newRewardCoordinator).setClaimerFor(owner());
         emit RewardCoordinatorChanged(
-            address(_rewardCoordinator),
-            address(newRewardCoordinator)
+            _rewardCoordinator,
+            newRewardCoordinator
         );
-        _rewardCoordinator = address(newRewardCoordinator);
+        _rewardCoordinator = newRewardCoordinator;
     }
 
     /**

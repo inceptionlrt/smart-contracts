@@ -16,4 +16,6 @@ interface IRestaker {
     function initialize(address owner, IRestakerFacets facets) external;
 
     function __claim() external;
+
+    function __setRewardCoordinator(address newRewardCoordinator) external;
 }

@@ -777,6 +777,11 @@ contract RestakingPool is
         emit RewardsAdded(amount, startTimeline);
     }
 
+    function setRewardCoordinator(string calldata provider, address newCoordinator) external onlyOperator {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.__setRewardCoordinator(newCoordinator);
+    }
+
     /**
      * @notice Updates the duration of the rewards timeline.
      * @dev The new timeline must be at least 1 day (86400 seconds)
