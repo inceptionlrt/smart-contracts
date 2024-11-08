@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, trusteeManager) => {
+const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, wrappedAddress) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -19,12 +19,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   // 2. Mellow restaker
   const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
-  const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrappers, mellowVaults, asset, trusteeManager], { kind: "transparent" });
+  const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrappers, mellowVaults, asset, addresses.Operator], { kind: "transparent" });
   await mr.waitForDeployment();
-  const mrAddress = await iToken.getAddress();
+  const mrAddress = await mr.getAddress();
   console.log(`MellowRestaker address: ${mrAddress}`);
 
   const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
+
+  let TX = await mr.setWrapped(wrappedAddress);
+  await TX.wait();
 
   let vaultFactory = "InVault_S_E2";
   switch (vaultName) {
@@ -34,11 +37,26 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
   }
 
   // 3. Inception vault
-  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory);
+  const libFactory = await ethers.getContractFactory("InceptionLibrary");
+  const lib = await libFactory.deploy();
+  await lib.waitForDeployment();
+  const libAddress = await lib.getAddress();
+  console.log("InceptionLibrary address:", libAddress);
+
+  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, 
+    {
+    libraries: {
+      InceptionLibrary: libAddress
+    },
+  }
+);
   const iVault = await upgrades.deployProxy(
     InceptionVaultFactory,
     [vaultName, addresses.Operator, asset, iTokenAddress, mrAddress],
-    { kind: "transparent" }
+    { kind: "transparent" , 
+      unsafeAllowLinkedLibraries: true,
+      unsafeSkipStorageCheck: true,
+    }
   );
   await iVault.waitForDeployment();
   const iVaultAddress = await iVault.getAddress();

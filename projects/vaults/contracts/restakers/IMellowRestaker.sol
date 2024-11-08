@@ -42,7 +42,7 @@ contract IMellowRestaker is
     mapping(address => IMellowDepositWrapper) public mellowDepositWrappers; // mellowVault => mellowDepositWrapper
     IMellowVault[] public mellowVaults;
 
-    address public constant wsteth = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    address public wrapped;
 
     mapping(address => uint256) public allocations;
 
@@ -156,7 +156,7 @@ contract IMellowRestaker is
         bool closePrevious
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
-        amount = IWSteth(wsteth).getWstETHByStETH(amount);
+        amount = IWSteth(wrapped).getWstETHByStETH(amount);
         uint256 lpAmount = amountToLpAmount(amount, mellowVault);
         uint256[] memory minAmounts = new uint256[](1);
         minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
@@ -182,7 +182,7 @@ contract IMellowRestaker is
             );
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
-        return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
+        return IWSteth(wrapped).getStETHByWstETH(expectedAmounts[0]);
     }
 
     function withdrawEmergencyMellow(
@@ -190,7 +190,7 @@ contract IMellowRestaker is
         uint256 amount
     ) external override onlyTrustee whenNotPaused returns(uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
-        amount = IWSteth(wsteth).getWstETHByStETH(amount);
+        amount = IWSteth(wrapped).getWstETHByStETH(amount);
         uint256[] memory minAmounts = new uint256[](2);
         minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
 
@@ -203,13 +203,13 @@ contract IMellowRestaker is
 
         uint256 actualAmount;
         if (actualAmounts.length > 0) actualAmount = actualAmounts[0];
-        return IWSteth(wsteth).getStETHByWstETH(actualAmount);
+        return IWSteth(wrapped).getStETHByWstETH(actualAmount);
     }
 
     function claimableAmount() external view returns (uint256) {
         return
-            IWSteth(wsteth).getStETHByWstETH(
-                IERC20(wsteth).balanceOf(address(this))
+            IWSteth(wrapped).getStETHByWstETH(
+                IERC20(wrapped).balanceOf(address(this))
             );
     }
 
@@ -218,7 +218,7 @@ contract IMellowRestaker is
         onlyTrustee
         returns (uint256)
     {
-        uint256 amount = IERC20(wsteth).balanceOf(address(this));
+        uint256 amount = IERC20(wrapped).balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
         amount = _unwrap(amount);
@@ -364,13 +364,13 @@ contract IMellowRestaker is
             s.ratiosX96[0],
             s.ratiosX96Value
         );
-        return IWSteth(wsteth).getStETHByWstETH(wstEthAmount);
+        return IWSteth(wrapped).getStETHByWstETH(wstEthAmount);
     }
 
     function _unwrap(
         uint256 wrappedAmount
     ) private returns (uint256 baseAmount) {
-        IWSteth(wsteth).unwrap(wrappedAmount);
+        IWSteth(wrapped).unwrap(wrappedAmount);
         return IERC20(_asset).balanceOf(address(this));
     }
 
@@ -395,6 +395,11 @@ contract IMellowRestaker is
     function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
         emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
         _trusteeManager = _newTrusteeManager;
+    }
+
+    function setWrapped(address _newWrapped) external onlyOwner {
+        emit WrappedSet(wrapped, _newWrapped);
+        wrapped = _newWrapped;
     }
 
     function pause() external onlyOwner {
