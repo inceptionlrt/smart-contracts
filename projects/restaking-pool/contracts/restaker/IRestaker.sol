@@ -17,5 +17,5 @@ interface IRestaker {
 
     function __claim() external;
 
-    function __setRewardCoordinator(address newRewardCoordinator) external;
+    function __setRewardCoordinator(address newRewardCoordinator, address claimer) external;
 }

@@ -777,9 +777,14 @@ contract RestakingPool is
         emit RewardsAdded(amount, startTimeline);
     }
 
+    /**
+     * @notice Updates reward coordinator along with claimer
+     * @param provider The new duration of the rewards timeline, measured in seconds.
+     * @param newCoordinator The new reward coordinator address
+     */
     function setRewardCoordinator(string calldata provider, address newCoordinator) external onlyOperator {
         IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
-        restaker.__setRewardCoordinator(newCoordinator);
+        restaker.__setRewardCoordinator(newCoordinator, config().getGovernance());
     }
 
     /**
