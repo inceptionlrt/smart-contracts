@@ -154,6 +154,8 @@ const initVault = async (a) => {
     a.iVaultOperator,
   ]);
   mellowRestaker.address = await mellowRestaker.getAddress();
+  await mellowRestaker.setWrapped(wstEthAddress);
+  expect(await mellowRestaker.wrapped()).to.be.equal(wstEthAddress);
 
   // // 4. Delegation manager
   // console.log("- Delegation manager");
