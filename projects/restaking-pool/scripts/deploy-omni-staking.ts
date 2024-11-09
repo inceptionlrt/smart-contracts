@@ -1,4 +1,4 @@
-import { ethers, upgrades, run } from "hardhat";
+import { ethers, upgrades, run, network } from "hardhat";
 import axios from "axios";
 import * as fs from 'fs';
 import path from "path";
@@ -74,9 +74,11 @@ async function main() {
         console.log("cToken deployed at:", checkpoint.cToken);
     }
 
-    await verifyUpgradeableContract(checkpoint.ProtocolConfig, []);
-    await verifyUpgradeableContract(checkpoint.RatioFeed, [checkpoint.ProtocolConfig, 1000000]);
-    await verifyUpgradeableContract(checkpoint.cToken, [checkpoint.ProtocolConfig, "inETH", "inETH"]);
+    if (network.name !== "hardhat") {
+        await verifyUpgradeableContract(checkpoint.ProtocolConfig, []);
+        await verifyUpgradeableContract(checkpoint.RatioFeed, [checkpoint.ProtocolConfig, 1000000]);
+        await verifyUpgradeableContract(checkpoint.cToken, [checkpoint.ProtocolConfig, "inETH", "inETH"]);
+    }
 
     // ------------ Transaction 2: InceptionLibrary, RestakingPool ------------
     if (!checkpoint.InceptionLibrary) {
@@ -115,19 +117,23 @@ async function main() {
         const newMaxTVL = ethers.parseEther("101");
         await restakingPool.setMaxTVL(newMaxTVL);
 
-        await verifyNonUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
+        if (network.name !== "hardhat") {
+            await verifyNonUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
+        }
     }
 
-    await verifyNonUpgradeableContract(checkpoint.InceptionLibrary, []);
+    if (network.name !== "hardhat") {
+        await verifyNonUpgradeableContract(checkpoint.InceptionLibrary, []);
+    }
 
     // ------------ Transaction 3: XERC20Lockbox, Rebalancer ------------
     if (!checkpoint.XERC20Lockbox) {
         console.log("Deploying XERC20Lockbox...");
         const XERC20Lockbox = await ethers.getContractFactory("XERC20Lockbox");
-        const xerc20Lockbox = await XERC20Lockbox.deploy(
-            checkpoint.cToken,
-            checkpoint.cToken,
-            true
+        const xerc20Lockbox = await upgrades.deployProxy(
+            XERC20Lockbox,
+            [checkpoint.cToken, checkpoint.cToken, true],
+            { initializer: "initialize" }
         );
         await xerc20Lockbox.waitForDeployment();
         checkpoint.XERC20Lockbox = await xerc20Lockbox.getAddress();
@@ -135,11 +141,13 @@ async function main() {
         console.log("XERC20Lockbox deployed at:", checkpoint.XERC20Lockbox);
     }
 
-    await verifyNonUpgradeableContract(checkpoint.XERC20Lockbox, [checkpoint.cToken, checkpoint.cToken, true]);
+    if (network.name !== "hardhat") {
+        await verifyUpgradeableContract(checkpoint.XERC20Lockbox, [checkpoint.cToken, checkpoint.cToken, true]);
+    }
 
-    if (!checkpoint.Rebalancer) {
+    if (!checkpoint.NativeRebalancer) {
         console.log("Deploying Rebalancer...");
-        const Rebalancer = await ethers.getContractFactory("Rebalancer");
+        const Rebalancer = await ethers.getContractFactory("NativeRebalancer");
         const rebalancer = await upgrades.deployProxy(
             Rebalancer,
             [
@@ -153,16 +161,17 @@ async function main() {
             { initializer: 'initialize' }
         );
         await rebalancer.waitForDeployment();
-        checkpoint.Rebalancer = await rebalancer.getAddress();
+        checkpoint.NativeRebalancer = await rebalancer.getAddress();
         await rebalancer.addChainId(421614n); //Arbitrum Sepolia Chain
+        await rebalancer.addChainId(11155420n); //Optimism Sepolia Chain
         saveCheckpoint(checkpoint);
-        console.log("Rebalancer (proxy) deployed at:", checkpoint.Rebalancer);
+        console.log("Rebalancer (proxy) deployed at:", checkpoint.NativeRebalancer);
     }
 
     // Set target receiver in LZCrossChainAdapterL1 to Rebalancer address
     const lzCrossChainAdapterL1 = await ethers.getContractAt("ILZCrossChainAdapterL1", checkpoint.LZCrossChainAdapterL1);
     console.log("Setting target receiver on LZCrossChainAdapterL1...");
-    const setTargetReceiverTx = await lzCrossChainAdapterL1.setTargetReceiver(checkpoint.Rebalancer);
+    const setTargetReceiverTx = await lzCrossChainAdapterL1.setTargetReceiver(checkpoint.NativeRebalancer);
     await setTargetReceiverTx.wait();
     console.log("Target receiver set to Rebalancer on LZCrossChainAdapterL1.");
 
@@ -179,15 +188,15 @@ async function main() {
     const protocolConfig = await ethers.getContractAt("ProtocolConfig", checkpoint.ProtocolConfig);
     await protocolConfig.setRatioFeed(checkpoint.RatioFeed);
     await protocolConfig.setRestakingPool(checkpoint.RestakingPool);
-    await protocolConfig.setRebalancer(checkpoint.Rebalancer);
+    await protocolConfig.setRebalancer(checkpoint.NativeRebalancer);
     await protocolConfig.setCToken(checkpoint.cToken);
     console.log("ProtocolConfig addresses set successfully.");
 
     // Add a delay before verifying the Rebalancer
-    await delay(30000);
-
-    // Verifications for contracts deployed in Transaction 3
-    await verifyUpgradeableContract(checkpoint.Rebalancer, [checkpoint.cToken, checkpoint.XERC20Lockbox, checkpoint.RestakingPool, checkpoint.LZCrossChainAdapterL1, checkpoint.RatioFeed, operatorAddress]);
+    if (network.name !== "hardhat") {
+        await delay(30000);
+        await verifyUpgradeableContract(checkpoint.NativeRebalancer, [checkpoint.cToken, checkpoint.XERC20Lockbox, checkpoint.RestakingPool, checkpoint.LZCrossChainAdapterL1, checkpoint.RatioFeed, operatorAddress]);
+    }
 
     console.log("Deployment completed successfully! 🥳");
     console.log("Checkpoint saved:", checkpoint);
@@ -233,6 +242,8 @@ async function isContractVerified(contractAddress: string): Promise<boolean> {
 }
 
 async function verifyUpgradeableContract(proxyAddress: string, constructorArguments: any[]) {
+    if (network.name === "hardhat") return; // Skip verification for hardhat
+
     const implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
     const isVerifiedImplementation = await isContractVerified(implementationAddress);
@@ -271,6 +282,8 @@ async function verifyUpgradeableContract(proxyAddress: string, constructorArgume
 }
 
 async function verifyNonUpgradeableContract(contractAddress: string, constructorArguments: any[]) {
+    if (network.name === "hardhat") return; // Skip verification for hardhat
+
     const isVerified = await isContractVerified(contractAddress);
     if (isVerified) {
         console.log(`Non-upgradeable contract at ${contractAddress} is already verified.`);
