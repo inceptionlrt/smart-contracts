@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -21,9 +22,9 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 
 /**
  * @title InceptionVaultStorage_EL
+ * @author The InceptionLRT team
  * @notice Manages the storage variables and getter functions for the Inception Vault, which interacts with EigenLayer and manages delegation, withdrawals, and rewards.
  * @dev This contract extends the Pausable, Ownable, and ReentrancyGuard patterns.
- * @author The InceptionLRT team
  */
 contract InceptionVaultStorage_EL is
     PausableUpgradeable,
@@ -400,14 +401,41 @@ contract InceptionVaultStorage_EL is
             );
     }
 
-    /// TODO
+    /**
+     * @notice Sets the target and access level for a given function signature
+     * @dev Updates the `_selectorToTarget` mapping with the provided function signature, target, and access level
+     * @param sig The function signature to configure
+     * @param _target The target facet (contract) associated with the function signature
+     * @param _access The access level for the function signature
+     */
     function setSignature(
         bytes4 sig,
         FuncTarget _target,
         FuncAccess _access
     ) external onlyOwner {
         _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
-        //  emit SignatureSet(target, sig);
+        emit SignatureAdded(sig, _target, _access); // Updated event name
+    }
+
+    function setEigenLayerFacet(address newEigenLayerFacet) external onlyOwner {
+        if (!Address.isContract(newEigenLayerFacet)) revert NotContract();
+
+        emit EigenLayerFacetChanged(eigenLayerFacet, newEigenLayerFacet);
+        eigenLayerFacet = newEigenLayerFacet;
+    }
+
+    function setERC4626Facet(address newERC4626Facet) external onlyOwner {
+        if (!Address.isContract(newERC4626Facet)) revert NotContract();
+
+        emit ERC4626FacetChanged(erc4626Facet, newERC4626Facet);
+        erc4626Facet = newERC4626Facet;
+    }
+
+    function setSetterFacet(address newSetterFacet) external onlyOwner {
+        if (!Address.isContract(newSetterFacet)) revert NotContract();
+
+        emit SetterFacetChanged(setterFacet, newSetterFacet);
+        setterFacet = newSetterFacet;
     }
 
     /*********************************************************************

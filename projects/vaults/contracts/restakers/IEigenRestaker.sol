@@ -13,10 +13,12 @@ import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
-/// @author The InceptionLRT team
-/// @title The IEigenRestaker Contract
-/// @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
-/// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+/**
+ * @title The IEigenRestaker Contract
+ * @author The InceptionLRT team
+ * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ */
 contract IEigenRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -37,22 +39,23 @@ contract IEigenRestaker is
     IRewardsCoordinator internal _rewardCoordinator;
 
     modifier onlyTrustee() {
-        require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
-            "InceptionRestaker: only vault or trustee manager"
-        );
+        if (msg.sender != _vault && msg.sender != _trusteeManager)
+            revert OnlyTrusteeAllowed();
+
         _;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 
     function initialize(
+        address rewardCoordinator,
         address delegationManager,
         address strategyManager,
         address strategy,
+        address asset,
         address trusteeManager
     ) public initializer {
         __Pausable_init();
@@ -63,8 +66,9 @@ contract IEigenRestaker is
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
+        _rewardCoordinator = IRewardsCoordinator(rewardCoordinator);
         _strategy = IStrategy(strategy);
-        _asset = _strategy.underlyingToken();
+        _asset = IERC20(asset);
         _trusteeManager = trusteeManager;
         _vault = msg.sender;
 
@@ -119,8 +123,7 @@ contract IEigenRestaker is
         uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
-        IERC20 asset = _strategy.underlyingToken();
-        uint256 balanceBefore = asset.balanceOf(address(this));
+        uint256 balanceBefore = _asset.balanceOf(address(this));
 
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
@@ -130,10 +133,10 @@ contract IEigenRestaker is
         );
 
         // send tokens to the vault
-        uint256 withdrawnAmount = asset.balanceOf(address(this)) -
+        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
             balanceBefore;
 
-        asset.safeTransfer(_vault, withdrawnAmount);
+        _asset.safeTransfer(_vault, withdrawnAmount);
 
         return withdrawnAmount;
     }

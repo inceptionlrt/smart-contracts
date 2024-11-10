@@ -5,7 +5,6 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-storage-layout";
-import "hardhat-tracer";
 
 // Hardhat tasks
 import "./tasks/get-free-balances";

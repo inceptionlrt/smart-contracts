@@ -5,10 +5,13 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {IMellowHandler} from "../interfaces/symbiotic-vault/IMellowHandler.sol";
 import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
 
-/// @author The InceptionLRT team
-/// @title The MellowHandler contract
-/// @dev Serves communication with external Mellow Protocol
-/// @dev Specifically, this includes depositing, and handling withdrawal requests
+/**
+ *
+ * @author The InceptionLRT team
+ * @title The MellowHandler contract
+ * @dev Serves communication with external Mellow Protocol
+ * @dev Specifically, this includes depositing, and handling withdrawal requests
+ */
 contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     uint256 public epoch;
 
@@ -81,8 +84,10 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         return;
     }
 
-    /// @dev performs creating a withdrawal request from Mellow Protocol
-    /// @dev requires a specific amount to withdraw
+    /**
+     * @dev performs creating a withdrawal request from Mellow Protocol
+     * @dev requires a specific amount to withdraw
+     */
     function undelegateForceFrom(
         address mellowVault,
         uint256 amount
@@ -92,7 +97,9 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         return;
     }
 
-    /// @dev claims completed withdrawals from Mellow Protocol, if they exist
+    /**
+     * @dev claims completed withdrawals from Mellow Protocol, if they exist
+     */
     function claimCompletedWithdrawals()
         public
         // address mellowVault
@@ -145,7 +152,9 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     ////// GET functions //////
     ////////////////////////*/
 
-    /// @dev returns the total deposited into asset strategy
+    /**
+     * @dev returns the total deposited into asset strategy
+     */
     function getTotalDeposited() public view returns (uint256) {
         return
             getTotalDelegated() +

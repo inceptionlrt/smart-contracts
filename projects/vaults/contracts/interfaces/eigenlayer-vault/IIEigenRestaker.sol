@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import "./eigen-core/IDelegationManager.sol";
 
 interface IIEigenRestakerErrors {
+    error OnlyTrusteeAllowed();
+
     error InconsistentData();
 
     error WrongClaimWithdrawalParams();

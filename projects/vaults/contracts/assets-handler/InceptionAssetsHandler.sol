@@ -8,9 +8,11 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.sol";
 
-/// @author The InceptionLRT team
-/// @title The InceptionAssetsHandler contract
-/// @dev Handles operations with the corresponding asset
+/**
+ * @title The InceptionAssetsHandler contract
+ * @author The InceptionLRT team
+ * @dev Handles operations with the corresponding asset
+ */
 contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,

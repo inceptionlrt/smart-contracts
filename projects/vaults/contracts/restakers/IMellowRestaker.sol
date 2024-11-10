@@ -20,10 +20,12 @@ import {FullMath} from "../lib/FullMath.sol";
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
-/// @author The InceptionLRT team
-/// @title The MellowRestaker Contract
-/// @dev Handles delegation and withdrawal requests within the Mellow protocol.
-/// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+/**
+ * @author The InceptionLRT team
+ * @title The MellowRestaker Contract
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ */
 contract IMellowRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -52,7 +54,7 @@ contract IMellowRestaker is
     uint256 public withdrawSlippage;
 
     modifier onlyTrustee() {
-        if(msg.sender != _vault && msg.sender != _trusteeManager) 
+        if(msg.sender != _vault && msg.sender != _trusteeManager)
             revert NotVaultOrTrusteeManager();
         _;
     }

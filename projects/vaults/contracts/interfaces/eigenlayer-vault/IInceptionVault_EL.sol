@@ -135,4 +135,10 @@ interface IInceptionVault_EL {
     event SetterFacetChanged(address prevValue, address newValue);
 
     event ERC4626FacetChanged(address prevValue, address newValue);
+
+    event SignatureAdded(
+        bytes4 indexed sig,
+        FuncTarget target,
+        FuncAccess access
+    );
 }
