@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import path from "path";
 require("dotenv").config();
 
-const jsonFilePath = path.resolve(__dirname, "../../../deployment_checkpoint_arbitrum-sepolia.json");
+const jsonFilePath = path.resolve(__dirname, "../../../deployment_checkpoint_optimism-sepolia.json");
 const OPERATOR_ADDRESS = process.env.OPERATOR_ADDRESS;
 const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY;
 const verifiedContracts = new Set<string>();
