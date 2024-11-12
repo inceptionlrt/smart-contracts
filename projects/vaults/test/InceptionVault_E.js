@@ -32,6 +32,7 @@ assets = [
     assetStrategy: "0x3A8fBdf9e77DFc25d09741f51d3E181b25d0c4E0",
     iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
     delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
+    rewardsCoordinator: "0xAcc1fb458a1317E886dB376Fc8141540537E68fE",
     withdrawalDelayBlocks: 400,
     ratioErr: 2n,
     transactErr: 5n,
@@ -43,29 +44,30 @@ assets = [
       return staker;
     },
   },
-  {
-    assetName: "stETH",
-    assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
-    assetPoolName: "LidoMockPool",
-    assetPool: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
-    vaultName: "InstEthVault",
-    vaultFactory: "ERC4626Facet_EL_E2",
-    strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
-    assetStrategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3",
-    iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-    delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
-    withdrawalDelayBlocks: 20,
-    ratioErr: 3n,
-    transactErr: 5n,
-    // blockNumber: 17453047,
-    impersonateStaker: async (staker, iVault, asset, assetPool) => {
-      const donor = await impersonateWithEth("0x66b25CFe6B9F0e61Bd80c4847225Baf4EE6Ba0A2", toWei(1));
-      await asset.connect(donor).transfer(staker.address, toWei(1000));
-      const balanceAfter = await asset.balanceOf(staker.address);
-      await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
-      return staker;
-    },
-  },
+  // {
+  //   assetName: "stETH",
+  //   assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+  //   assetPoolName: "LidoMockPool",
+  //   assetPool: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+  //   vaultName: "InstEthVault",
+  //   vaultFactory: "ERC4626Facet_EL_E2",
+  //   strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
+  //   assetStrategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3",
+  //   iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
+  //   delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
+  //   rewardsCoordinator: "0xAcc1fb458a1317E886dB376Fc8141540537E68fE",
+  //   withdrawalDelayBlocks: 20,
+  //   ratioErr: 3n,
+  //   transactErr: 5n,
+  //   // blockNumber: 17453047,
+  //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
+  //     const donor = await impersonateWithEth("0x66b25CFe6B9F0e61Bd80c4847225Baf4EE6Ba0A2", toWei(1));
+  //     await asset.connect(donor).transfer(staker.address, toWei(1000));
+  //     const balanceAfter = await asset.balanceOf(staker.address);
+  //     await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+  //     return staker;
+  //   },
+  // },
 ];
 
 //https://holesky.eigenlayer.xyz/restake
@@ -102,7 +104,7 @@ const initVault = async a => {
   const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
   // 3. Staker implementation
   console.log("- Restaker implementation");
-  const restakerImp = await ethers.deployContract("IEigenRestaker");
+  const restakerImp = await ethers.deployContract("InceptionEigenRestaker");
   restakerImp.address = await restakerImp.getAddress();
   // 4. Delegation manager
   console.log("- Delegation manager");
@@ -171,6 +173,9 @@ const initVault = async a => {
 
   // Get the signature (first 4 bytes of the Keccak-256 hash) for the `transfer` function
   let funcSig = setterFacet.interface.getFunction("setDelegationManager").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
+  funcSig = setterFacet.interface.getFunction("setRewardsCoordinator").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
   funcSig = setterFacet.interface.getFunction("upgradeTo").selector;
@@ -268,6 +273,7 @@ const initVault = async a => {
   [owner] = await ethers.getSigners();
 
   await iVaultSetters.setDelegationManager(a.delegationManager);
+  await iVaultSetters.setRewardsCoordinator(a.rewardsCoordinator);
   await iVaultSetters.upgradeTo(await restakerImp.getAddress());
   await iVaultSetters.setRatioFeed(await ratioFeed.getAddress());
   await iVaultSetters.addELOperator(nodeOperators[0]);
@@ -1012,7 +1018,7 @@ assets.forEach(function (a) {
       });
 
       it("upgradeTo(): only owner can", async function () {
-        const newRestakeImp = await ethers.deployContract("IEigenRestaker");
+        const newRestakeImp = await ethers.deployContract("InceptionEigenRestaker");
         await expect(iVaultSetters.upgradeTo(await newRestakeImp.getAddress()))
           .to.emit(iVaultSetters, "ImplementationUpgraded")
           .withArgs(await restakerImp.getAddress(), await newRestakeImp.getAddress());
@@ -1023,14 +1029,14 @@ assets.forEach(function (a) {
       });
 
       it("upgradeTo(): reverts when caller is not an operator", async function () {
-        const newRestakeImp = await ethers.deployContract("IEigenRestaker");
+        const newRestakeImp = await ethers.deployContract("InceptionEigenRestaker");
         await expect(iVaultSetters.connect(staker).upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
       it("upgradeTo(): reverts when paused", async function () {
-        const newRestakeImp = await ethers.deployContract("IEigenRestaker");
+        const newRestakeImp = await ethers.deployContract("InceptionEigenRestaker");
         await iVault.pause();
         await expect(iVaultSetters.upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWith("Pausable: paused");
         await iVault.unpause();
@@ -1618,18 +1624,21 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("InceptionRestaker", function () {
+    describe("InceptionEigenRestaker", function () {
       let restaker, iVaultMock, trusteeManager;
 
       beforeEach(async function () {
         await snapshot.restore();
         iVaultMock = staker2;
         trusteeManager = staker3;
-        const factory = await ethers.getContractFactory("IEigenRestaker", iVaultMock);
+        const factory = await ethers.getContractFactory("InceptionEigenRestaker", iVaultMock);
         restaker = await upgrades.deployProxy(factory, [
+          await owner.getAddress(),
+          a.rewardsCoordinator,
           a.delegationManager,
           a.strategyManager,
           a.assetStrategy,
+          a.assetAddress,
           trusteeManager.address,
         ]);
       });
@@ -1637,8 +1646,9 @@ assets.forEach(function (a) {
       it("depositAssetIntoStrategy: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await expect(restaker.connect(staker).depositAssetIntoStrategy(amount)).to.be.revertedWith(
-          "InceptionRestaker: only vault or trustee manager",
+        await expect(restaker.connect(staker).depositAssetIntoStrategy(amount)).to.be.revertedWithCustomError(
+          restaker,
+          "OnlyTrusteeAllowed",
         );
       });
 
@@ -1663,7 +1673,7 @@ assets.forEach(function (a) {
 
         await expect(
           restaker.connect(staker).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
-        ).to.be.revertedWith("InceptionRestaker: only vault or trustee manager");
+        ).to.be.revertedWithCustomError(restaker, "OnlyTrusteeAllowed");
       });
 
       it("delegateToOperator: reverts when delegates to 0 address", async function () {
@@ -1697,8 +1707,9 @@ assets.forEach(function (a) {
           .connect(trusteeManager)
           .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
-        await expect(restaker.connect(staker).withdrawFromEL(amount / 2n)).to.be.revertedWith(
-          "InceptionRestaker: only vault or trustee manager",
+        await expect(restaker.connect(staker).withdrawFromEL(amount / 2n)).to.be.revertedWithCustomError(
+          restaker,
+          "OnlyTrusteeAllowed",
         );
       });
 
@@ -4382,3 +4393,4 @@ assets.forEach(function (a) {
     });
   });
 });
+

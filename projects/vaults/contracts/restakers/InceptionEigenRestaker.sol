@@ -7,25 +7,25 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIEigenRestaker, IIEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
 /**
- * @title The IEigenRestaker Contract
+ * @title The InceptionEigenRestaker Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IEigenRestaker is
+contract InceptionEigenRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIEigenRestaker,
-    IIEigenRestakerErrors
+    IInceptionEigenRestaker,
+    IInceptionEigenRestakerErrors
 {
     using SafeERC20 for IERC20;
 
@@ -36,7 +36,7 @@ contract IEigenRestaker is
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
-    IRewardsCoordinator internal _rewardCoordinator;
+    IRewardsCoordinator internal _rewardsCoordinator;
 
     modifier onlyTrustee() {
         if (msg.sender != _vault && msg.sender != _trusteeManager)
@@ -51,6 +51,7 @@ contract IEigenRestaker is
     }
 
     function initialize(
+        address ownerAddress,
         address rewardCoordinator,
         address delegationManager,
         address strategyManager,
@@ -66,11 +67,11 @@ contract IEigenRestaker is
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
-        _rewardCoordinator = IRewardsCoordinator(rewardCoordinator);
         _strategy = IStrategy(strategy);
         _asset = IERC20(asset);
         _trusteeManager = trusteeManager;
         _vault = msg.sender;
+        _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
@@ -150,16 +151,23 @@ contract IEigenRestaker is
     }
 
     function setRewardCoordinator(
-        IRewardsCoordinator newRewardCoordinator
+        address newRewardsCoordinator
     ) external onlyOwner {
-        newRewardCoordinator.setClaimerFor(owner());
+        _setRewardsCoordinator(newRewardsCoordinator, owner());
+    }
+
+    function _setRewardsCoordinator(
+        address newRewardsCoordinator,
+        address ownerAddress
+    ) internal {
+        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(ownerAddress);
 
         emit RewardCoordinatorChanged(
-            address(_rewardCoordinator),
-            address(newRewardCoordinator)
+            address(_rewardsCoordinator),
+            newRewardsCoordinator
         );
 
-        _rewardCoordinator = newRewardCoordinator;
+        _rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
     }
 
     function pause() external onlyOwner {

@@ -7,8 +7,8 @@ import "../InceptionVaultStorage_EL.sol";
 
 /**
  * @title The InceptionVault_EL contract
- * @notice Aims to maximize the profit of EigenLayer for a certain asset.
  * @author The InceptionLRT team
+ * @notice Aims to maximize the profit of EigenLayer for a certain asset.
  */
 contract EigenLayerFacet is InceptionVaultStorage_EL {
     constructor() payable {}
@@ -72,7 +72,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        IIEigenRestaker(restaker).delegateToOperator(
+        IInceptionEigenRestaker(restaker).delegateToOperator(
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
@@ -85,7 +85,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         uint256 amount
     ) internal {
         _asset.approve(restaker, amount);
-        IIEigenRestaker(restaker).depositAssetIntoStrategy(amount);
+        IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
         emit DepositedToEL(restaker, amount);
     }
@@ -124,7 +124,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-        IIEigenRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
+        IInceptionEigenRestaker(staker).withdrawFromEL(
+            _undelegate(amount, staker)
+        );
     }
 
     function _undelegate(
@@ -182,12 +184,13 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IIEigenRestaker(restaker).claimWithdrawals(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
+            withdrawnAmount = IInceptionEigenRestaker(restaker)
+                .claimWithdrawals(
+                    withdrawals,
+                    tokens,
+                    middlewareTimesIndexes,
+                    receiveAsTokens
+                );
         }
 
         emit WithdrawalClaimed(withdrawnAmount);
@@ -273,13 +276,16 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     }
 
     function _deployNewStub() internal returns (address) {
-        // if (_stakerImplementation == address(0)) revert ImplementationNotSet();
+        if (stakerImplementation == address(0)) revert ImplementationNotSet();
         // deploy new beacon proxy and do init call
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
+            "initialize(address,address,address,address,address,address,address)",
+            owner(),
+            rewardsCoordinator,
             delegationManager,
             strategyManager,
             strategy,
+            _asset,
             _operator
         );
         address deployedAddress = address(new BeaconProxy(address(this), data));
@@ -291,7 +297,11 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         return deployedAddress;
     }
 
-    /// @dev addRewards ...
+    /**
+     * @notice Adds new rewards to the contract, starting a new rewards timeline.
+     * @dev The function allows the operator to deposit Ether as rewards.
+     * It verifies that the previous rewards timeline is over before accepting new rewards.
+     */
     function addRewards(uint256 amount) external {
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {

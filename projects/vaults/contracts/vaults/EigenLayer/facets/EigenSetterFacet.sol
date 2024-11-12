@@ -5,6 +5,8 @@ import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../InceptionVaultStorage_EL.sol";
 
+import "hardhat/console.sol";
+
 contract EigenSetterFacet is InceptionVaultStorage_EL {
     function upgradeTo(address newImplementation) external {
         if (!Address.isContract(newImplementation)) revert NotContract();
@@ -130,12 +132,27 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     }
 
     /**
-     * @param newTimelineInSeconds is measured in seconds
+     * @notice Updates the duration of the rewards timeline.
+     * @dev The new timeline must be at least 1 day (86400 seconds)
+     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
      */
     function setRewardsTimeline(uint256 newTimelineInSeconds) external {
-        if (newTimelineInSeconds < 1 days) revert InconsistentData();
+        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
+            revert InconsistentData();
 
         emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
         rewardsTimeline = newTimelineInSeconds;
+    }
+
+    function setRewardsCoordinator(address newRewardsCoordinator) external {
+        console.log("rewards coordinator: ", newRewardsCoordinator);
+
+        if (!Address.isContract(newRewardsCoordinator)) revert NotContract();
+
+        emit RewardsCoordinatorChanged(
+            rewardsCoordinator,
+            newRewardsCoordinator
+        );
+        rewardsCoordinator = newRewardsCoordinator;
     }
 }

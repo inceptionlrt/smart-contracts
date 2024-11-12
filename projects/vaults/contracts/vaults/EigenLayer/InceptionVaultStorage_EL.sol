@@ -14,7 +14,7 @@ import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/I
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-import {IIEigenRestaker, IIEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 import {Convert} from "../../lib/Convert.sol";
@@ -28,8 +28,8 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
  */
 contract InceptionVaultStorage_EL is
     PausableUpgradeable,
-    OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
     IInceptionVault_EL,
     IInceptionVaultErrors
 {
@@ -109,6 +109,8 @@ contract InceptionVaultStorage_EL is
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
+    address public rewardsCoordinator;
+
     uint256 public currentRewards;
     uint256 public startTimeline;
     uint256 public rewardsTimeline;
@@ -125,6 +127,7 @@ contract InceptionVaultStorage_EL is
     ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
+
         _asset = assetAddress;
     }
 
@@ -260,7 +263,7 @@ contract InceptionVaultStorage_EL is
         return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
-    // @dev See {IERC4626-convertToShares}.
+    /// @dev See {IERC4626-convertToShares}.
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets);
     }
@@ -271,7 +274,7 @@ contract InceptionVaultStorage_EL is
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    // @dev See {IERC4626-convertToAssets}.
+    /// @dev See {IERC4626-convertToAssets}.
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares);
     }
@@ -282,7 +285,7 @@ contract InceptionVaultStorage_EL is
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
-    /*
+    /**
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to
      * deposit,

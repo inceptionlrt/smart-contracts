@@ -212,10 +212,6 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         return true;
     }
 
-    /***
-     *
-     */
-
     /// @dev The functions below serve the proper withdrawal and claiming operations
     /// @notice Since a particular LST loses some wei on each transfer,
     /// this needs to be taken into account
