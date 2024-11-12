@@ -49,6 +49,8 @@ interface IIMellowRestaker {
     event TrusteeManagerSet(address indexed _trusteeManager, address indexed _newTrusteeManager);
 
     event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
+
+    event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
     
     function getDeposited(address _mellowVault) external view returns (uint256);
 

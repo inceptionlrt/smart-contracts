@@ -227,6 +227,13 @@ contract IMellowRestaker is
         return amount;
     }
 
+    function addMellowVault(address mellowVault, address depositWrapper) external onlyOwner {
+
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(depositWrapper);
+        mellowVaults.push(IMellowVault(mellowVault));
+
+        emit VaultAdded(mellowVault, depositWrapper);
+    }
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
