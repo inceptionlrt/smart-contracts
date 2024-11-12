@@ -5,8 +5,10 @@ import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../InceptionVaultStorage_EL.sol";
 
-import "hardhat/console.sol";
-
+/**
+ * @title The EigenSetterFacet contract
+ * @author The InceptionLRT team
+ */
 contract EigenSetterFacet is InceptionVaultStorage_EL {
     function upgradeTo(address newImplementation) external {
         if (!Address.isContract(newImplementation)) revert NotContract();
@@ -145,8 +147,6 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
     }
 
     function setRewardsCoordinator(address newRewardsCoordinator) external {
-        console.log("rewards coordinator: ", newRewardsCoordinator);
-
         if (!Address.isContract(newRewardsCoordinator)) revert NotContract();
 
         emit RewardsCoordinatorChanged(

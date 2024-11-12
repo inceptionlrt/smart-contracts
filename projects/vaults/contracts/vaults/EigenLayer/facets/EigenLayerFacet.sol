@@ -6,9 +6,8 @@ import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol"
 import "../InceptionVaultStorage_EL.sol";
 
 /**
- * @title The InceptionVault_EL contract
+ * @title The EigenLayerFacet contract
  * @author The InceptionLRT team
- * @notice Aims to maximize the profit of EigenLayer for a certain asset.
  */
 contract EigenLayerFacet is InceptionVaultStorage_EL {
     constructor() payable {}
