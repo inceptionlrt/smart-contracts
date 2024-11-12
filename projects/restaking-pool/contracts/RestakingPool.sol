@@ -778,6 +778,16 @@ contract RestakingPool is
     }
 
     /**
+     * @notice Updates reward coordinator along with claimer
+     * @param provider The new duration of the rewards timeline, measured in seconds.
+     * @param newCoordinator The new reward coordinator address
+     */
+    function setRewardsCoordinator(string calldata provider, address newCoordinator, address claimer) external onlyGovernance {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.__setRewardsCoordinator(newCoordinator, claimer);
+    }
+
+    /**
      * @notice Updates the duration of the rewards timeline.
      * @dev The new timeline must be at least 1 day (86400 seconds)
      * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.

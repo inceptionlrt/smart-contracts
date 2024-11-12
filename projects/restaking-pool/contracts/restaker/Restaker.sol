@@ -17,7 +17,7 @@ import "./IRestakerFacets.sol";
 contract Restaker is OwnableUpgradeable, IRestaker {
     IRestakerFacets internal _facets;
     address internal _signer;
-    address internal _rewardCoordinator;
+    address internal _rewardsCoordinator;
 
     /*******************************************************************************
                         CONSTRUCTOR
@@ -64,15 +64,16 @@ contract Restaker is OwnableUpgradeable, IRestaker {
      * @notice Sets new RewardCoordinator
      * @dev __ at begining used to not override selectors accidentally.
      */
-    function __setRewardCoordinator(
-        IRewardsCoordinator newRewardCoordinator
+    function __setRewardsCoordinator(
+        address newRewardsCoordinator,
+        address claimer
     ) external onlyOwner {
-        newRewardCoordinator.setClaimerFor(owner());
-        emit RewardCoordinatorChanged(
-            address(_rewardCoordinator),
-            address(newRewardCoordinator)
+        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(claimer);
+        emit RewardsCoordinatorChanged(
+            _rewardsCoordinator,
+            newRewardsCoordinator
         );
-        _rewardCoordinator = address(newRewardCoordinator);
+        _rewardsCoordinator = newRewardsCoordinator;
     }
 
     /**
