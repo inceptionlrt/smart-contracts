@@ -782,7 +782,7 @@ contract RestakingPool is
      * @param provider The new duration of the rewards timeline, measured in seconds.
      * @param newCoordinator The new reward coordinator address
      */
-    function setRewardCoordinator(string calldata provider, address newCoordinator, address claimer) external onlyOperator {
+    function setRewardCoordinator(string calldata provider, address newCoordinator, address claimer) external onlyGovernance {
         IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
         restaker.__setRewardCoordinator(newCoordinator, claimer);
     }
