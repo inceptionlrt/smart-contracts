@@ -1513,7 +1513,7 @@ describe("RestakingPool", function () {
 
       rewardsCoordinator = await (await (await ethers.getContractFactory("RewardsCoordinator")).deploy()).waitForDeployment();
       
-      await pool.connect(operator).setRewardCoordinator(TEST_PROVIDER, await rewardsCoordinator.getAddress(), await deployer.getAddress());
+      await pool.connect(governance).setRewardsCoordinator(TEST_PROVIDER, await rewardsCoordinator.getAddress(), await deployer.getAddress());
 
       let coordinator = await ethers.provider.getStorage(restaker, "0x02")
       coordinator = ethers.getAddress('0x' + (Buffer.from(coordinator.replace(/^0x/, ''), 'hex')).toString('hex', 12, 32));

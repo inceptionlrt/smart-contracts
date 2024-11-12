@@ -11,11 +11,12 @@ interface IRestaker {
     error RestakerCannotClaim();
 
     event Claimed(address indexed recipient, uint256 amount);
-    event RewardCoordinatorChanged(address indexed rewardCoordinator, address indexed newRewardCoordinator);
+
+    event RewardsCoordinatorChanged(address indexed rewardCoordinator, address indexed newRewardCoordinator);
 
     function initialize(address owner, IRestakerFacets facets) external;
 
     function __claim() external;
 
-    function __setRewardCoordinator(address newRewardCoordinator, address claimer) external;
+    function __setRewardsCoordinator(address newRewardsCoordinator, address claimer) external;
 }
