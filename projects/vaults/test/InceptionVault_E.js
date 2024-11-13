@@ -700,7 +700,7 @@ assets.forEach(function (a) {
         const amount = await iVault.getFlashCapacity();
         const shares = await iVault.convertToShares(amount);
         const receiver = staker;
-        const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
+        const expectedFee = await iVault.calculateFlashWithdrawFee(await iVault.convertToAssets(shares));
         console.log(`Amount:\t\t\t\t\t${amount.format()}`);
         console.log(`Shares:\t\t\t\t\t${shares.format()}`);
         console.log(`Expected fee:\t\t\t\t${expectedFee.format()}`);
@@ -2520,7 +2520,7 @@ assets.forEach(function (a) {
           iVaultEL
             .connect(iVaultOperator)
             .delegateToOperator(freeBalance, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
-        ).to.be.revertedWith("ERC1967: beacon implementation is not a contract");
+        ).to.be.revertedWithCustomError(iVaultEL, "ImplementationNotSet");
       });
     });
 
@@ -4393,4 +4393,3 @@ assets.forEach(function (a) {
     });
   });
 });
-
