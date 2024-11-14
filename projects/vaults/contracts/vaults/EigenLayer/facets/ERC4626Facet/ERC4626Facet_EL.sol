@@ -42,7 +42,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = previewMint(shares);
+        uint256 assetsAmount = convertToAssets(shares);
         _deposit(assetsAmount, msg.sender, receiver);
 
         return assetsAmount;
