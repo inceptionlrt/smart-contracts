@@ -310,29 +310,6 @@ contract InceptionVaultStorage_EL is
     }
 
     /**
-     * @dev See {IERC4626-maxWithdraw}.
-     * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`.
-     * @return Amount of the maximum number of withdrawable underlying assets.
-     */
-    function maxWithdraw(address owner) public view returns (uint256) {
-        if (paused() || IERC20(address(inceptionToken)).balanceOf(owner) == 0) {
-            return 0;
-        } else {
-            uint256 flashCapacity = getFlashCapacity();
-            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
-                owner
-            );
-
-            uint256 ownerAssets = convertToAssets(ownerShares);
-            return
-                flashCapacity > ownerAssets
-                    ? previewRedeem(ownerShares)
-                    : flashCapacity;
-        }
-    }
-
-    /**
      * @dev See {IERC4626-maxRedeem}.
      * @notice If the function is called during the lock period the maxRedeem is `0`;
      * @param owner The address of the owner.

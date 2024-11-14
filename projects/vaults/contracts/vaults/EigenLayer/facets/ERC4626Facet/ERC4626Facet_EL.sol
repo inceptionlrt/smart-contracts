@@ -130,30 +130,6 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
 
     /**
      * @notice Utilizes `_flashWithdraw()` and Charges! a flash fee.
-     * @dev This function burns shares from the owner and sends the exact amount of asset tokens from the vault to the receiver.
-     * @dev See {IERC4626-withdraw}.
-     */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public nonReentrant returns (uint256 shares) {
-        if (owner != msg.sender) revert MsgSenderIsNotOwner();
-
-        //shares = previewWithdraw(assets);
-        shares = convertToShares(assets);
-        __beforeWithdraw(receiver, shares);
-        uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner);
-
-        emit Withdraw(owner, receiver, owner, assets, shares);
-        emit WithdrawalFee(fee);
-
-        return shares;
-    }
-
-    /**
-     * @notice Utilizes `_flashWithdraw()` and Charges! a flash fee.
      * @dev This function redeems a specific number of shares from owner and
      * sends assets of underlying token from the vault to receiver.
      * @dev See {IERC4626-withdraw}
