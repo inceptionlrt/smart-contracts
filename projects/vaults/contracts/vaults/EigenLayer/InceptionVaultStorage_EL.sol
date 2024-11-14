@@ -292,8 +292,7 @@ contract InceptionVaultStorage_EL is
     /**
      * @dev See {IERC4626-maxDeposit}.
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to
-     * deposit, the maxDeposit is 0.
+     * @notice If the vault is locked or paused, users are not allowed to deposit, the maxDeposit is 0.
      * @return Amount of the maximum underlying assets deposit amount.
      */
     function maxDeposit(address) public view returns (uint256) {
@@ -302,8 +301,7 @@ contract InceptionVaultStorage_EL is
 
     /**
      * @dev See {IERC4626-maxMint}
-     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
+     * @dev The `maxMint` function is used to calculate the maximum amount of shares you can mint.
      * @notice If the vault is locked or paused, the maxMint is 0.
      * @return Amount of the maximum shares mintable for the specified address.
      */
@@ -340,27 +338,41 @@ contract InceptionVaultStorage_EL is
      * @dev See {IERC4626-previewDeposit}.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets);
+        uint256 depositBonus;
+        if (depositBonusAmount > 0) {
+            depositBonus = calculateDepositBonus(assets);
+            if (depositBonus > depositBonusAmount)
+                depositBonus = depositBonusAmount;
+        }
+
+        return _convertToShares(assets + depositBonus);
     }
 
     /**
-     * @dev See {IERC4626-previewMint}.
+     * @notice Utilizes `inceptionToken.balanceOf()`.
+     * @dev Returns the total amount of vault shares the owner currently has.
+     * @dev See {IERC4626-balanceOf}
      */
-    function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares);
+    function balanceOf(address owner) public view returns (uint256) {
+        return IERC20(address(inceptionToken)).balanceOf(owner);
     }
 
     /**
-     * @dev See {IERC4626-previewWithdraw}
+     * @notice Utilizes `inceptionToken.totalSupply()`.
+     * @dev Returns the total number of unredeemed vault shares in circulation.
+     * @dev See {IERC4626-totalSupply}
      */
-    function previewWithdraw(uint256 assets) public view returns (uint256 shares) {
-        return _convertToShares(assets) - convertToShares(calculateFlashWithdrawFee(assets));
+    function totalSupply() public view returns (uint256) {
+        return IERC20(address(inceptionToken)).totalSupply();
     }
 
     /**
+     * @dev This function allows users to simulate the effects of their redemption at the current block.
      * @dev See {IERC4626-previewRedeem}
      */
-    function previewRedeem(uint256 shares) public view returns (uint256 assets) {
+    function previewRedeem(
+        uint256 shares
+    ) public view returns (uint256 assets) {
         return
             _convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));
