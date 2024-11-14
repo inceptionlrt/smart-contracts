@@ -907,6 +907,11 @@
   resolved "https://registry.yarnpkg.com/@layerzerolabs/ua-devtools/-/ua-devtools-1.0.5.tgz#c600d6ecee33903e5f3a7aa7b2f1d73a783630e9"
   integrity sha512-RQ8GnAH3OEQeocgZSEGBO36guQirDLs+89NidH6vVebMTcjPQ5oVAJDem3Y+AQvX7avd+ijW0IPZ2fZ2SBA3fA==
 
+"@layerzerolabs/verify-contract@^1.1.31":
+  version "1.1.31"
+  resolved "https://registry.yarnpkg.com/@layerzerolabs/verify-contract/-/verify-contract-1.1.31.tgz#22732070459c268b917e4a5cdbcdde770cc1602f"
+  integrity sha512-gY6VLgGC7Li9nv9XxTlSNIvE/aye/fymYL3d2r934Nd8HBax8lbX+24TBfeKugFdgy7uA5kQxjxg0Ia2DD2+vQ==
+
 "@mdn/browser-compat-data@^5.2.34", "@mdn/browser-compat-data@^5.3.13":
   version "5.6.9"
   resolved "https://registry.yarnpkg.com/@mdn/browser-compat-data/-/browser-compat-data-5.6.9.tgz#93392e2cbe56886d5953b615b9b38518ad54b40d"

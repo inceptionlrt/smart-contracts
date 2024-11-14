@@ -6,7 +6,7 @@ require("dotenv").config();
 
 const jsonFilePath = path.resolve(__dirname, "../../../deployment_checkpoint_optimism-sepolia.json");
 const OPERATOR_ADDRESS = process.env.OPERATOR_ADDRESS;
-const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY;
+const OPTIMISM_SEPOLIA_API_KEY = process.env.OPTIMISM_SEPOLIA_API_KEY || "C3JF1ZDIQ4TT388IVSIW8WHAZRKZH5R9XJ";
 const verifiedContracts = new Set<string>();
 
 async function main() {
@@ -92,25 +92,36 @@ async function main() {
     saveCheckpoint(checkpoint);
 
     // Optional: Verification logic
-    const shouldVerify = !["hardhat", "optimism", "optimism-sepolia"].includes(network.name);
+    // const shouldVerify = network.name === "optimismSepolia";
+    const shouldVerify = true;
     if (shouldVerify) {
-        await verifyUpgradeableContract(checkpoint.InceptionToken, ["InceptionToken", "iTOKEN"]);
+        await verifyUpgradeableContract(checkpoint.InceptionToken, []);
         await verifyUpgradeableContract(checkpoint.InceptionRatioFeed, []);
-        await verifyUpgradeableContract(checkpoint.InceptionOmniVault, [
-            "InceptionOmniVault",
-            OPERATOR_ADDRESS,
-            checkpoint.InceptionToken,
-            lzCrossChainAdapterL2Address,
-        ]);
+        await verifyUpgradeableContract(checkpoint.InceptionOmniVault, []);
     }
 
     console.log("Deployment completed successfully! 🥳");
     console.log("Checkpoint saved:", checkpoint);
 }
 
-// Function to save checkpoint
-function saveCheckpoint(checkpoint: any) {
-    fs.writeFileSync(jsonFilePath, JSON.stringify(checkpoint, null, 2));
+function saveCheckpoint(newCheckpoint: { [key: string]: string }) {
+    // Load existing data, if available
+    let existingCheckpoint = {};
+    if (fs.existsSync(jsonFilePath)) {
+        try {
+            const fileData = fs.readFileSync(jsonFilePath, "utf-8");
+            existingCheckpoint = JSON.parse(fileData);
+        } catch (error) {
+            console.error("Error reading existing checkpoint file:", error);
+        }
+    }
+
+    // Merge new checkpoint data with existing data
+    const updatedCheckpoint = { ...existingCheckpoint, ...newCheckpoint };
+
+    // Write the merged data back to the file
+    fs.writeFileSync(jsonFilePath, JSON.stringify(updatedCheckpoint, null, 2));
+    console.log("Checkpoint file updated:", jsonFilePath);
 }
 
 // Verification helper functions
@@ -158,7 +169,7 @@ async function isContractVerified(contractAddress: string): Promise<boolean> {
         return true;
     }
 
-    const apiUrl = `https://api.arbiscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ARBISCAN_API_KEY}`;
+    const apiUrl = `https://api-sepolia-optimistic.etherscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${OPTIMISM_SEPOLIA_API_KEY}`;
 
     try {
         const response = await axios.get(apiUrl);

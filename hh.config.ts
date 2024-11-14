@@ -41,6 +41,12 @@ export const CONFIG = {
       gasPrice,
       accounts,
       eid: 40161,
+      verify: {
+        etherscan: {
+          apiKey: process.env.ETHERSCAN_API_KEY,
+          apiUrl: "https://api-sepolia.etherscan.io",
+        },
+      },
     },
     optimism: {
       url: process.env.RPC_URL_OPTIMISM,
@@ -48,6 +54,12 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
+      verify: {
+        etherscan: {
+          apiKey: process.env.OPTIMISM_API_KEY,
+          apiUrl: "https://api-optimistic.etherscan.io/api",
+        },
+      },
     },
     arbitrumSepolia: {
       url: process.env.RPC_URL_ARBITRUM_TESTNET,
@@ -138,6 +150,8 @@ export const CONFIG = {
       sepolia: process.env.ETHERSCAN_API_KEY,
       arbitrum: process.env.ARBISCAN_API_KEY,
       arbitrumSepolia: process.env.ARBISCAN_API_KEY,
+      optimism: process.env.OPTIMISM_API_KEY,
+      optimismSepolia: process.env.OPTIMISM_API_KEY,
     },
     customChains: [
       {
@@ -154,6 +168,15 @@ export const CONFIG = {
         urls: {
           apiURL: "https://api-sepolia.arbiscan.io/api",
           browserURL: "https://sepolia.arbiscan.io",
+        },
+      },
+
+      {
+        network: "optimismSepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io/",
         },
       },
     ],

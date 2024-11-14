@@ -118,7 +118,7 @@ async function main() {
         await restakingPool.setMaxTVL(newMaxTVL);
 
         if (network.name !== "hardhat") {
-            await verifyNonUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
+            await verifyUpgradeableContract(checkpoint.RestakingPool, [checkpoint.ProtocolConfig, 30000000, 100000000]);
         }
     }
 
