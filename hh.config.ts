@@ -73,9 +73,11 @@ export const CONFIG = {
     },
     hardhat: {
       forking: {
-        url: `${process.env.RPC_URL_HOLESKY}`,
-        blockNumber: 1442030,
+        url: `${process.env.RPC_URL_SEPOLIA}`,
       },
+      accounts: process.env.DEPLOYER_PRIVATE_KEY
+        ? [{ privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance: "10000000000000000000" }]
+        : []
     },
   },
   solidity: {
@@ -131,10 +133,11 @@ export const CONFIG = {
   },
   etherscan: {
     apiKey: {
-      holesky: "PP5CDPZBG6AF6FBGE9CJNYGCRYXYN549M1",
+      holesky: process.env.HOLESKY_ETHERSCAN_API_KEY,
       mainnet: process.env.ETHERSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
-      arbitrumTestnet: process.env.ARBISCAN_API_KEY,
+      arbitrum: process.env.ARBISCAN_API_KEY,
+      arbitrumSepolia: process.env.ARBISCAN_API_KEY,
     },
     customChains: [
       {
@@ -143,6 +146,14 @@ export const CONFIG = {
         urls: {
           apiURL: "https://api-holesky.etherscan.io/api",
           browserURL: "https://holesky.etherscan.io",
+        },
+      },
+      {
+        network: "arbitrumSepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],
