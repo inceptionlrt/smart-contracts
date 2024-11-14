@@ -316,13 +316,14 @@ contract InceptionVaultStorage_EL is
      * @return Amount of the maximum number of withdrawable underlying assets.
      */
     function maxWithdraw(address owner) public view returns (uint256) {
-        if (paused()) {
+        if (paused() || IERC20(address(inceptionToken)).balanceOf(owner) == 0) {
             return 0;
         } else {
             uint256 flashCapacity = getFlashCapacity();
             uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
                 owner
             );
+
             uint256 ownerAssets = convertToAssets(ownerShares);
             return
                 flashCapacity > ownerAssets
