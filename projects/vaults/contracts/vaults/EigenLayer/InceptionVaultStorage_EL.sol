@@ -306,7 +306,7 @@ contract InceptionVaultStorage_EL is
      * @return Amount of the maximum shares mintable for the specified address.
      */
     function maxMint(address receiver) public view returns (uint256) {
-        return !paused() ? convertToShares(_asset.balanceOf(receiver)) : 0;
+        return !paused() ? previewDeposit(_asset.balanceOf(receiver)) : 0;
     }
 
     /**
@@ -316,12 +316,19 @@ contract InceptionVaultStorage_EL is
      * @return Amount of the maximum number of withdrawable underlying assets.
      */
     function maxWithdraw(address owner) public view returns (uint256) {
-        return
-            !paused()
-                ? _convertToAssets(
-                    IERC20(address(inceptionToken)).balanceOf(owner)
-                )
-                : 0;
+        if (paused()) {
+            return 0;
+        } else {
+            uint256 flashCapacity = getFlashCapacity();
+            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
+                owner
+            );
+            uint256 ownerAssets = convertToAssets(ownerShares);
+            return
+                flashCapacity > ownerAssets
+                    ? previewRedeem(ownerShares)
+                    : flashCapacity;
+        }
     }
 
     /**
@@ -331,7 +338,15 @@ contract InceptionVaultStorage_EL is
      * @return Amount of the maximum number of redeemable shares.
      */
     function maxRedeem(address owner) public view returns (uint256) {
-        return !paused() ? IERC20(address(inceptionToken)).balanceOf(owner) : 0;
+        if (paused()) {
+            return 0;
+        } else {
+            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
+                owner
+            );
+            uint256 flashShares = convertToShares(getFlashCapacity());
+            return flashShares > ownerShares ? ownerShares : flashShares;
+        }
     }
 
     /**
