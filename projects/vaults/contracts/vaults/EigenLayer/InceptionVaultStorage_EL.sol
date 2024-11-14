@@ -295,8 +295,8 @@ contract InceptionVaultStorage_EL is
      * @notice If the vault is locked or paused, users are not allowed to deposit, the maxDeposit is 0.
      * @return Amount of the maximum underlying assets deposit amount.
      */
-    function maxDeposit(address) public view returns (uint256) {
-        return !paused() ? type(uint256).max : 0;
+    function maxDeposit(address receiver) public view returns (uint256) {
+        return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
     /**
@@ -305,8 +305,8 @@ contract InceptionVaultStorage_EL is
      * @notice If the vault is locked or paused, the maxMint is 0.
      * @return Amount of the maximum shares mintable for the specified address.
      */
-    function maxMint(address) public view returns (uint256) {
-        return !paused() ? type(uint256).max : 0;
+    function maxMint(address receiver) public view returns (uint256) {
+        return !paused() ? convertToShares(_asset.balanceOf(receiver)) : 0;
     }
 
     /**
