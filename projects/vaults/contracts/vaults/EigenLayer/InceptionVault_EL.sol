@@ -83,7 +83,7 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
 
     fallback() external {
         (address target, FuncAccess access) = _getSelectorToTarget(msg.sig);
-        require(target != address(0));
+        if (target == address(0)) revert FunctionNotSupported();
         _verifyAccess(access);
         assembly {
             // copy function selector and any arguments

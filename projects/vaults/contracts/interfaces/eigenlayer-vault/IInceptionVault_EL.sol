@@ -94,6 +94,8 @@ interface IInceptionVault_EL {
         uint256 amount
     );
 
+    event WithdrawalFee(uint256 fee);
+
     event RedeemedRequests(uint256[] withdrawals);
 
     event OperatorChanged(address prevValue, address newValue);

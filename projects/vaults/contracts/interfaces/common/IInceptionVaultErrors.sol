@@ -2,6 +2,12 @@
 pragma solidity ^0.8.20;
 
 interface IInceptionVaultErrors {
+    error ExceededMaxMint(address receiver, uint256 shares, uint256 maxShares);
+
+    error MsgSenderIsNotOwner();
+
+    error FunctionNotSupported();
+
     error TransferAssetFailed(address assetAddress);
 
     error TransferAssetFromFailed(address assetAddress);

@@ -263,7 +263,9 @@ contract InceptionVaultStorage_EL is
         return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
-    /// @dev See {IERC4626-convertToShares}.
+    /**
+     * @dev See {IERC4626-convertToShares}.
+     */
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets);
     }
@@ -274,7 +276,9 @@ contract InceptionVaultStorage_EL is
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    /// @dev See {IERC4626-convertToAssets}.
+    /**
+     * @dev See {IERC4626-convertToAssets}.
+     */
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares);
     }
@@ -286,10 +290,10 @@ contract InceptionVaultStorage_EL is
     }
 
     /**
+     * @dev See {IERC4626-maxDeposit}.
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
      * @notice If the vault is locked or paused, users are not allowed to
-     * deposit,
-     * the maxDeposit is 0.
+     * deposit, the maxDeposit is 0.
      * @return Amount of the maximum underlying assets deposit amount.
      */
     function maxDeposit(address) public view returns (uint256) {
@@ -297,6 +301,7 @@ contract InceptionVaultStorage_EL is
     }
 
     /**
+     * @dev See {IERC4626-maxMint}
      * @dev The `maxMint` function is used to calculate the maximum amount of
      * shares you can mint.
      * @notice If the vault is locked or paused, the maxMint is 0.
@@ -323,8 +328,7 @@ contract InceptionVaultStorage_EL is
 
     /**
      * @dev See {IERC4626-maxRedeem}.
-     * @notice If the function is called during the lock period the maxRedeem is
-     * `0`;
+     * @notice If the function is called during the lock period the maxRedeem is `0`;
      * @param owner The address of the owner.
      * @return Amount of the maximum number of redeemable shares.
      */
@@ -349,15 +353,17 @@ contract InceptionVaultStorage_EL is
     /**
      * @dev See {IERC4626-previewWithdraw}
      */
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets);
+    function previewWithdraw(uint256 assets) public view returns (uint256 shares) {
+        return _convertToShares(assets) - convertToShares(calculateFlashWithdrawFee(assets));
     }
 
     /**
      * @dev See {IERC4626-previewRedeem}
      */
-    function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares);
+    function previewRedeem(uint256 shares) public view returns (uint256 assets) {
+        return
+            _convertToAssets(shares) -
+            calculateFlashWithdrawFee(convertToAssets(shares));
     }
 
     /***********************************************************************
@@ -459,15 +465,20 @@ contract InceptionVaultStorage_EL is
     ) internal view returns (address, FuncAccess) {
         _requireNotPaused();
         FuncData memory target = _selectorToTarget[sig];
-        if (target.facet == FuncTarget.ERC4626_FACET) {
+        if (
+            target.facet == FuncTarget.SETTER_FACET &&
+            target.access == FuncAccess.EVERYONE
+        ) return (address(0), FuncAccess.EVERYONE);
+
+        if (target.facet == FuncTarget.ERC4626_FACET)
             return (erc4626Facet, target.access);
-        }
-        if (target.facet == FuncTarget.EIGEN_LAYER_FACET) {
+
+        if (target.facet == FuncTarget.EIGEN_LAYER_FACET)
             return (eigenLayerFacet, target.access);
-        }
-        if (target.facet == FuncTarget.SETTER_FACET) {
+
+        if (target.facet == FuncTarget.SETTER_FACET)
             return (setterFacet, target.access);
-        }
+
         return (address(0), FuncAccess.EVERYONE);
     }
 

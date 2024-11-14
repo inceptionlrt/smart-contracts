@@ -253,10 +253,18 @@ const initVault = async a => {
   funcSig = ERC4626FacetFactory.interface.getFunction("deposit").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
+  funcSig = ERC4626FacetFactory.interface.getFunction("mint").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
   funcSig = ERC4626FacetFactory.interface.getFunction("depositWithReferral").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("withdraw").selector;
+  funcSig = ERC4626FacetFactory.interface.getFunction("withdraw(uint256,address)").selector;
+  console.log(`funcSig: ${funcSig.toString()}`);
+  await iVault.setSignature(funcSig, facetId, accessId);
+
+  funcSig = ERC4626FacetFactory.interface.getFunction("withdraw(uint256,address,address)").selector;
+  console.log(`funcSig: ${funcSig.toString()}`);
   await iVault.setSignature(funcSig, facetId, accessId);
 
   funcSig = ERC4626FacetFactory.interface.getFunction("flashWithdraw").selector;
@@ -265,7 +273,10 @@ const initVault = async a => {
   funcSig = ERC4626FacetFactory.interface.getFunction("isAbleToRedeem").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("redeem").selector;
+  funcSig = ERC4626FacetFactory.interface.getFunction("redeem(address)").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
+  funcSig = ERC4626FacetFactory.interface.getFunction("redeem(uint256,address,address)").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
   /// ================================= ####### =================================
@@ -430,6 +441,171 @@ assets.forEach(function (a) {
       if (delegationManager) {
         await delegationManager.removeAllListeners();
       }
+    });
+
+    describe("Base flow::ERC4626", function () {
+      let deposited, extra;
+      before(async function () {
+        await snapshot.restore();
+      });
+
+      it("Initial ratio is 1e18", async function () {
+        const ratio = await iVault.ratio();
+        console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+        expect(await iVault.asset()).to.be.eq(await asset.getAddress());
+        expect(ratio).to.be.eq(e18);
+      });
+
+      it("Initial delegation is 0", async function () {
+        expect(await iVault.getTotalDelegated()).to.be.eq(0n);
+      });
+
+      it("Deposit to Vault", async function () {
+        deposited = toWei(20);
+        const expectedShares = (deposited * e18) / (await iVault.ratio());
+        const tx = await iVault4626.connect(staker).mint(expectedShares, staker.address);
+        const receipt = await tx.wait();
+        const events = receipt.logs?.filter(e => e.eventName === "Deposit");
+        expect(events.length).to.be.eq(1);
+        expect(events[0].args["sender"]).to.be.eq(staker.address);
+        expect(events[0].args["receiver"]).to.be.eq(staker.address);
+        expect(events[0].args["amount"]).to.be.closeTo(deposited, transactErr);
+        expect(events[0].args["iShares"]).to.be.closeTo(expectedShares, transactErr);
+        console.log(`Ratio after: ${await iVault.ratio()}`);
+
+        expect(await iToken.balanceOf(staker.address)).to.be.closeTo(expectedShares, transactErr);
+        expect(await iVault.totalAssets()).to.be.closeTo(deposited, transactErr);
+        expect(await iVault.getTotalDeposited()).to.be.closeTo(deposited, transactErr);
+        expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
+        expect(await iVault.ratio()).to.be.eq(e18);
+      });
+
+      it("Update asset ratio", async function () {
+        await asset.connect(staker).transfer(iVault.address, e18);
+
+        const ratio = await calculateRatio(iVault, iToken);
+        console.log(`Calculated ratio:\t\t\t\t${ratio.format()}`);
+        await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
+        console.log(`New ratio is:\t\t\t\t\t${(await iVault.ratio()).format()}`);
+        expect(await iVault.ratio()).lt(e18);
+      });
+
+      it("withdraw(ERC4626) a half of capacity", async function () {
+        const sharesBefore = await iToken.balanceOf(staker);
+        const assetBalanceBefore = await asset.balanceOf(staker);
+        const treasuryBalanceBefore = await asset.balanceOf(treasury);
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        const totalAssetsBefore = await iVault.totalAssets();
+        const flashCapacityBefore = await iVault.getFlashCapacity();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+        console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
+        console.log(`Free balance before:\t${freeBalanceBefore.format()}`);
+
+        let amount = await iVault.getFlashCapacity();
+        console.log(amount);
+        amount = amount / 2n;
+        const shares = await iVault.convertToShares(amount);
+        const receiver = staker;
+        const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
+        console.log(`Amount:\t\t\t\t\t${amount.format()}`);
+        console.log(`Shares:\t\t\t\t\t${shares.format()}`);
+        console.log(`Expected fee:\t\t\t\t${expectedFee.format()}`);
+
+        let tx = await iVault4626
+          .connect(staker)
+          ["withdraw(uint256,address,address)"](amount, receiver.address, staker.address);
+
+        const receipt = await tx.wait();
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
+        expect(withdrawEvent.length).to.be.eq(1);
+        expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
+        expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
+        expect(withdrawEvent[0].args["owner"]).to.be.eq(staker.address);
+        expect(withdrawEvent[0].args["amount"]).to.be.closeTo(amount - expectedFee, transactErr);
+        expect(withdrawEvent[0].args["iShares"]).to.be.closeTo(shares, transactErr);
+        const withdrawalFeeEvent = receipt.logs?.filter(e => e.eventName === "WithdrawalFee");
+        expect(withdrawalFeeEvent.length).to.be.eq(1);
+        expect(withdrawalFeeEvent[0].args["fee"]).to.be.closeTo(expectedFee, transactErr);
+
+        const collectedFees = withdrawalFeeEvent[0].args["fee"];
+        depositFees = collectedFees / 2n;
+
+        const sharesAfter = await iToken.balanceOf(staker);
+        const assetBalanceAfter = await asset.balanceOf(staker);
+        const treasuryBalanceAfter = await asset.balanceOf(treasury);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalAssetsAfter = await iVault.totalAssets();
+        const flashCapacityAfter = await iVault.getFlashCapacity();
+        console.log(`Shares balance diff:\t${(sharesBefore - sharesAfter).format()}`);
+        console.log(`Total deposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
+        console.log(`Total assets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
+        console.log(`Flash capacity diff:\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
+        console.log(`Fee collected:\t\t\t${collectedFees.format()}`);
+
+        expect(sharesBefore - sharesAfter).to.be.eq(shares);
+        expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee, 2n);
+        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 2n);
+        expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
+        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, transactErr);
+        expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, transactErr);
+      });
+
+      it("redeem(ERC4626) a remaining capacity", async function () {
+        const sharesBefore = await iToken.balanceOf(staker);
+        const assetBalanceBefore = await asset.balanceOf(staker);
+        const treasuryBalanceBefore = await asset.balanceOf(treasury);
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        const totalAssetsBefore = await iVault.totalAssets();
+        const flashCapacityBefore = await iVault.getFlashCapacity();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+        console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
+        console.log(`Free balance before:\t${freeBalanceBefore.format()}`);
+
+        const amount = await iVault.convertToAssets(sharesBefore);
+        const shares = sharesBefore;
+        const receiver = staker;
+        const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
+
+        console.log(`Balance of staker:\t\t\t\t\t${sharesBefore.format()}`);
+        console.log(`Amount:\t\t\t\t\t${amount.format()}`);
+        console.log(`Shares:\t\t\t\t\t${shares.format()}`);
+        console.log(`Expected fee:\t\t\t\t${expectedFee.format()}`);
+
+        let tx = await iVault4626.connect(staker).redeem(shares, receiver.address, staker.address);
+        const receipt = await tx.wait();
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
+        expect(withdrawEvent.length).to.be.eq(1);
+        expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
+        expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
+        expect(withdrawEvent[0].args["owner"]).to.be.eq(staker.address);
+        expect(withdrawEvent[0].args["amount"]).to.be.closeTo(amount - expectedFee, transactErr);
+        expect(withdrawEvent[0].args["iShares"]).to.be.closeTo(shares, transactErr);
+        const withdrawalFeeEvent = receipt.logs?.filter(e => e.eventName === "WithdrawalFee");
+        expect(withdrawalFeeEvent.length).to.be.eq(1);
+        expect(withdrawalFeeEvent[0].args["fee"]).to.be.closeTo(expectedFee, transactErr);
+
+        const collectedFees = withdrawalFeeEvent[0].args["fee"];
+        depositFees = collectedFees / 2n;
+
+        const sharesAfter = await iToken.balanceOf(staker);
+        const assetBalanceAfter = await asset.balanceOf(staker);
+        const treasuryBalanceAfter = await asset.balanceOf(treasury);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalAssetsAfter = await iVault.totalAssets();
+        const flashCapacityAfter = await iVault.getFlashCapacity();
+        console.log(`Shares balance diff:\t${(sharesBefore - sharesAfter).format()}`);
+        console.log(`Total deposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
+        console.log(`Total assets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
+        console.log(`Flash capacity diff:\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
+        console.log(`Fee collected:\t\t\t${collectedFees.format()}`);
+
+        expect(sharesBefore - sharesAfter).to.be.eq(shares);
+        expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee, 2n);
+        expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 2n);
+        expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
+        expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, transactErr);
+        expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, transactErr);
+      });
     });
 
     describe("Base flow", function () {
@@ -4393,3 +4569,4 @@ assets.forEach(function (a) {
     });
   });
 });
+

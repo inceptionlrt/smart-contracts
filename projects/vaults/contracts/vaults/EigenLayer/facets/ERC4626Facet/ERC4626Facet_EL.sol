@@ -21,32 +21,26 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @dev Transfers the msg.sender's assets to the vault.
      * @dev Mints Inception tokens in accordance with the current ratio.
      * @dev Issues the tokens to the specified receiver address.
+     * @dev See {IERC4626-deposit}.
      */
     function deposit(
         uint256 amount,
         address receiver
-    ) public whenNotPaused returns (uint256) {
+    ) public returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
     /**
      * @dev The `mint` function is used to mint the specified amount of shares
-     * in
-     * exchange of the corresponding assets amount from owner.
+     * in exchange of the corresponding assets amount from owner.
      * @param shares The shares amount to be converted into underlying assets.
      * @param receiver The address of the shares receiver.
-     * @return Amount of underlying assets deposited in exchange of the
-     * specified
-     * amount of shares.
+     * @dev See {IERC4626-mint}.
      */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public whenNotPaused returns (uint256) {
+    function mint(uint256 shares, address receiver) public returns (uint256) {
         uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            //  revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
+        if (shares > maxShares)
+            revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = previewMint(shares);
         _deposit(assetsAmount, msg.sender, receiver);
@@ -59,7 +53,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 amount,
         address receiver,
         bytes32 code
-    ) external whenNotPaused returns (uint256) {
+    ) external returns (uint256) {
         emit ReferralCode(code);
         return _deposit(amount, msg.sender, receiver);
     }
@@ -105,9 +99,11 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         if (!_verifyDelegated()) revert InceptionOnPause();
     }
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @dev Performs burning iToken from mgs.sender
+     * @dev Creates a withdrawal requests based on the current ratio
+     * @param iShares is measured in Inception token(shares)
+     */
     function withdraw(uint256 iShares, address receiver) external {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
@@ -132,19 +128,62 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
-    function flashWithdraw(uint256 iShares, address receiver) external {
-        __beforeWithdraw(receiver, iShares);
+    /**
+     * @dev This function burns shares from owner and send exactly assets token from the vault to receiver.
+     * @dev See {IERC4626-withdraw}
+     */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public nonReentrant returns (uint256 shares) {
+        if (owner != msg.sender) revert MsgSenderIsNotOwner();
 
-        address claimer = msg.sender;
+        //shares = previewWithdraw(assets);
+        shares = convertToShares(assets);
+        __beforeWithdraw(receiver, shares);
+        uint256 fee;
+        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+
+        emit Withdraw(owner, receiver, owner, assets, shares);
+        emit WithdrawalFee(fee);
+
+        return shares;
+    }
+
+    /**
+     * @dev This function redeems a specific number of shares from owner and
+     * sends assets of underlying token from the vault to receiver.
+     * @dev See {IERC4626-withdraw}
+     */
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) public nonReentrant returns (uint256 assets) {
+        if (owner != msg.sender) revert MsgSenderIsNotOwner();
+        __beforeWithdraw(receiver, shares);
+        assets = previewRedeem(shares);
+        uint256 fee;
+        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+
+        emit Withdraw(owner, receiver, owner, assets, shares);
+        emit WithdrawalFee(fee);
+
+        return assets;
+    }
+
+    function _flashWithdraw(
+        uint256 iShares,
+        address receiver,
+        address owner
+    ) internal returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
 
         // burn Inception token in view of the current ratio
-        inceptionToken.burn(claimer, iShares);
+        inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
         if (fee == 0) revert ZeroFlashWithdrawFee();
@@ -158,6 +197,25 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
+        return (amount, fee);
+    }
+
+    /**
+     * @dev Performs burning iToken from mgs.sender
+     * @dev Creates a withdrawal requests based on the current ratio
+     * @param iShares is measured in Inception token(shares)
+     */
+    function flashWithdraw(
+        uint256 iShares,
+        address receiver
+    ) external nonReentrant {
+        __beforeWithdraw(receiver, iShares);
+        address claimer = msg.sender;
+        (uint256 amount, uint256 fee) = _flashWithdraw(
+            iShares,
+            receiver,
+            claimer
+        );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
