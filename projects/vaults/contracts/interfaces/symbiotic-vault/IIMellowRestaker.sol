@@ -47,8 +47,6 @@ interface IIMellowRestaker {
     event NewSlippages(uint256 _deposit, uint256 _withdraw);
 
     event TrusteeManagerSet(address indexed _trusteeManager, address indexed _newTrusteeManager);
-
-    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
     
     function getDeposited(address _mellowVault) external view returns (uint256);
 

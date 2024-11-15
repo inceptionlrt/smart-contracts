@@ -95,7 +95,6 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawals()
         public
-        // address mellowVault
         whenNotPaused
         nonReentrant
     {
