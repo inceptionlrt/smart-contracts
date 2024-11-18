@@ -42,6 +42,7 @@ contract IMellowRestaker is
     IMellowVault[] public mellowVaults;
 
     mapping(address => uint256) public allocations;
+    uint256 public totalAllocations;
 
     uint256 public requestDeadline;
 
@@ -111,21 +112,15 @@ contract IMellowRestaker is
 
     function delegate(
         uint256 deadline
-    )
-        external
-        onlyTrustee
-        whenNotPaused
-        returns (uint256 amount, uint256 lpAmount)
-    {
-        uint256 MAX_TARGET_PERCENT = IMellowHandler(_vault)
-            .MAX_TARGET_PERCENT();
-        uint256 total = IMellowHandler(_vault).getTotalDeposited();
+    ) external onlyTrustee whenNotPaused returns (uint256 amount, uint256 lpAmount) {
+        uint256 totalBalance = IMellowHandler(_vault).getFreeBalance();
+        uint256 allocationsTotal = totalAllocations;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            uint256 allocation = allocations[address(mellowVaults[i])]; // in %
+            uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
                 uint256 bal = getDeposited(address(mellowVaults[i]));
-                if ((bal * MAX_TARGET_PERCENT) / total < allocation) {
-                    bal = ((total * allocation) / MAX_TARGET_PERCENT) - bal;
+                if ((bal * allocationsTotal) / totalBalance < allocation) {
+                    bal = ((totalBalance * allocation) / allocationsTotal) - bal;
                     if (
                         IMellowHandler(_vault).getFreeBalance() >= bal &&
                         bal > 0
@@ -227,6 +222,13 @@ contract IMellowRestaker is
         return amount;
     }
 
+    function addMellowVault(address mellowVault, address depositWrapper) external onlyOwner {
+
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(depositWrapper);
+        mellowVaults.push(IMellowVault(mellowVault));
+
+        emit VaultAdded(mellowVault, depositWrapper);
+    }
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
@@ -234,18 +236,10 @@ contract IMellowRestaker is
         if (mellowVault == address(0)) revert ZeroAddress();
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
-        if (!_isValidAllocation()) revert InvalidAllocation();
+
+        totalAllocations = totalAllocations + newAllocation - oldAllocation;
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
-    }
-
-    function _isValidAllocation() private view returns (bool) {
-        uint256 totalAllocations;
-        for (uint256 i = 0; i < mellowVaults.length; i++) {
-            totalAllocations += allocations[address(mellowVaults[i])];
-        }
-        totalAllocations += IMellowHandler(_vault).targetCapacity();
-        return totalAllocations <= IMellowHandler(_vault).MAX_TARGET_PERCENT();
     }
 
     function pendingMellowRequest(
