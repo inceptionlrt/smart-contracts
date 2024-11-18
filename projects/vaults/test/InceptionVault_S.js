@@ -44,7 +44,7 @@ const assets = [
       await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
       return staker;
     },
-    addMellowVaultRewards: async function (amount, mellowVault) {
+    addRewardsMellowVault: async function (amount, mellowVault) {
       const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
       const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
       await stEth.connect(donor).approve(this.assetAddress, amount);
@@ -592,7 +592,7 @@ assets.forEach(function (a) {
       });
 
       it("Update asset ratio", async function () {
-        await a.addMellowVaultRewards(e18, mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         console.log(`New ratio is:\t\t\t\t\t${(await iVault.ratio()).format()}`);
@@ -1402,7 +1402,7 @@ assets.forEach(function (a) {
         await iVault.connect(staker3).deposit(e18, staker3.address);
         const amount = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, amount);
-        await a.addMellowVaultRewards(e18, mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         ratio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
         console.log(`Initial ratio: ${ratio.format()}`);
@@ -1699,7 +1699,7 @@ assets.forEach(function (a) {
               .connect(iVaultOperator)
               .delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance - flashCapacityBefore);
             await iVault.setTargetFlashCapacity(targetCapacityPercent);
-            await a.addMellowVaultRewards(e18, mellowVaults[0].vaultAddress);
+            await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
             const calculatedRatio = await calculateRatio(iVault, iToken);
             await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
 
@@ -1766,7 +1766,7 @@ assets.forEach(function (a) {
         await iVault.connect(staker3).deposit(e18, staker3.address);
         firstDeposit = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, firstDeposit);
-        await a.addMellowVaultRewards(toWei(0.001), mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         ratio = await iVault.ratio();
@@ -2069,7 +2069,7 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         const freeBalance = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance);
-        await a.addMellowVaultRewards(e18, mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         totalDeposited = await iVault.getTotalDeposited();
@@ -2180,7 +2180,7 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(toWei(10), staker.address);
         const freeBalance = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance);
-        await a.addMellowVaultRewards(toWei(0.001), mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       });
@@ -2273,7 +2273,7 @@ assets.forEach(function (a) {
         const freeBalance = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance);
 
-        await a.addMellowVaultRewards(e18, mellowVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         await iVault.setTargetFlashCapacity(targetCapacityPercent);
