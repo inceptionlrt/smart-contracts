@@ -146,7 +146,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
             getTotalDelegated() +
             totalAssets() +
             getPendingWithdrawalAmountFromMellow() -
-            redeemReservedAmount -
+            // redeemReservedAmount - subtracted offchain
             depositBonusAmount;
     }
 

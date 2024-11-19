@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, wrappedAddress) => {
+const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -25,9 +25,6 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
   console.log(`MellowRestaker address: ${mrAddress}`);
 
   const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
-
-  let TX = await mr.setWrapped(wrappedAddress);
-  await TX.wait();
 
   let vaultFactory = "InVault_S_E2";
   switch (vaultName) {

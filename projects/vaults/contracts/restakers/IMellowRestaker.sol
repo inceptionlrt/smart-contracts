@@ -224,6 +224,14 @@ contract IMellowRestaker is
 
     function addMellowVault(address mellowVault, address depositWrapper) external onlyOwner {
 
+        if (mellowVault == address(0) || depositWrapper == address(0)) revert ZeroAddress();
+
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                revert AlreadyAdded();
+            }
+        }
+
         mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(depositWrapper);
         mellowVaults.push(IMellowVault(mellowVault));
 

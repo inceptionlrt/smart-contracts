@@ -207,7 +207,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             block.timestamp
         );
 
-        emit Delegated(address(0), amount, lpAmount);
+        emit Delegated(address(mellowRestaker), amount, lpAmount);
     }
 
     /*///////////////////////////////////////

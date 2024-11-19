@@ -31,6 +31,8 @@ interface IIEigenRestakerErrors {
     error InvalidAllocation();
 
     error TooMuchSlippage();
+
+    error AlreadyAdded();
 }
 
 interface IIMellowRestaker {
