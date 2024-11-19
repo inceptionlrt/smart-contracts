@@ -65,7 +65,7 @@ contract MetaLRTStrategic is MetaLRTCore, IMetaLRTStrategic {
 
         (, uint256[] memory _subAmounts) = split(_amount);
 
-        for (uint8 i = 0; i < _subAmounts.length; i++) {
+        for (uint8 i = 0; i < _subAmounts.length; ) {
 
             if (_subAmounts[i] <= 0) continue;
             IStrategyBase(strategies[i]).deposit(_subAmounts[i]);
