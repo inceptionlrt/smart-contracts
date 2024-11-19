@@ -1833,7 +1833,7 @@ assets.forEach(function (a) {
         console.log(`Initial ratio: ${ratio.format()}`);
       });
 
-      const args2 = [
+      const args = [
         {
           name: "random amounts ~ e18",
           depositAmount: async () => toWei(1),
@@ -1844,7 +1844,7 @@ assets.forEach(function (a) {
         },
       ];
 
-      args2.forEach(function (arg) {
+      args.forEach(function (arg) {
         it(`Deposit and delegate ${arg.name} many times`, async function () {
           await iVault.setTargetFlashCapacity(1n);
           let totalDelegated = 0n;
@@ -1885,7 +1885,7 @@ assets.forEach(function (a) {
         });
       });
 
-      const args3 = [
+      const args2 = [
         {
           name: "by the same staker",
           staker: async () => staker,
@@ -1896,7 +1896,7 @@ assets.forEach(function (a) {
         },
       ];
 
-      args3.forEach(function (arg) {
+      args2.forEach(function (arg) {
         it(`Deposit many times and delegate once ${arg.name}`, async function () {
           await iVault.setTargetFlashCapacity(1n);
           let totalDeposited = 0n;
@@ -1936,7 +1936,7 @@ assets.forEach(function (a) {
         });
       });
 
-      const args4 = [
+      const args3 = [
         {
           name: "to the different operators",
           count: 20,
@@ -1949,7 +1949,7 @@ assets.forEach(function (a) {
         },
       ];
 
-      args4.forEach(function (arg) {
+      args3.forEach(function (arg) {
         it(`Delegate many times ${arg.name}`, async function () {
           for (let i = 1; i < mellowVaults.length; i++) {
             await mellowRestaker.addMellowVault(mellowVaults[i].vaultAddress, mellowVaults[i].wrapperAddress);
@@ -2003,6 +2003,30 @@ assets.forEach(function (a) {
           expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
         });
       });
+
+      //Delegate auto
+      const args4 = [
+        {
+          name: "1 vault; allocation 100%",
+        },
+        {
+          name: "1 vault; allocation 100% and 0% to unregistered",
+        },
+        {
+          name: "1 vault; allocation 50% and 50% to unregistered",
+        },
+        {
+          name: "2 vaults; allocations: 100%, 0%",
+        },
+        {
+          name: "2 vaults; allocations: 50%, 50%",
+        },
+        {
+          name: "3 vaults; allocations: 33%, 33%, 33%",
+        },
+      ];
+
+      args4.forEach(function (arg) {});
 
       //Delegate invalid params
       const invalidArgs = [
@@ -2704,6 +2728,11 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
 
         await iVault.connect(iVaultOperator).claimCompletedWithdrawals();
+        console.log("getTotalDelegated", await iVault.getTotalDelegated());
+        console.log("totalAssets", await iVault.totalAssets());
+        console.log("getPendingWithdrawalAmountFromMellow", await iVault.getPendingWithdrawalAmountFromMellow());
+        console.log("redeemReservedAmount", await iVault.redeemReservedAmount());
+        console.log("depositBonusAmount", await iVault.depositBonusAmount());
 
         const totalAssetsAfter = await iVault.totalAssets();
         const restakerBalanceAfter = await mellowRestaker.claimableAmount();
