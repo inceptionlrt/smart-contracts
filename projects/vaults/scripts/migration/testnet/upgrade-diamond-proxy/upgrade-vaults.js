@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 
-const IVAULT_ADDRESS = "0x4267Cf4df74C5cBDC2E97F0633f2caBFe9F999F2",
-  libAddress = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
+const IVAULT_ADDRESS = "0x838a7fe80f1af808bc5ad0f9b1ac6e26b2475e17",
+  INCEPTION_LIBRARY = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -14,16 +14,19 @@ async function main() {
    *********** DEPLOYMENT ***********
    **********************************/
 
-  const InceptionVaultFactory = await ethers.getContractFactory("InVault_E2", {
+  const InceptionVaultFactory = await ethers.getContractFactory("InceptionVault_EL", {
     libraries: {
-      InceptionLibrary: libAddress,
+      InceptionLibrary: INCEPTION_LIBRARY,
     },
   });
 
-  await upgrades.upgradeProxy(IVAULT_ADDRESS, InceptionVaultFactory, {
+  let tx = await upgrades.upgradeProxy(IVAULT_ADDRESS, InceptionVaultFactory, {
     kind: "transparent",
     unsafeAllowLinkedLibraries: true,
+    unsafeAllowRenames: true,
   });
+  await tx.waitForDeployment();
+
   console.log("InceptionVault upgraded");
 }
 

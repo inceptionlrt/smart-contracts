@@ -91,7 +91,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
 
     /// @dev performs creating a withdrawal request from EigenLayer
     /// @dev requires a specific amount to withdraw
-    function undelegateVault(uint256 amount) external {
+    function undelegateVault(uint256 amount) external nonReentrant {
         address staker = address(this);
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
@@ -118,7 +118,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     function undelegateFrom(
         address elOperatorAddress,
         uint256 amount
-    ) external {
+    ) external nonReentrant {
         address staker = _operatorRestakers[elOperatorAddress];
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
@@ -159,7 +159,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     function claimCompletedWithdrawals(
         address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
-    ) public {
+    ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
         uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
@@ -227,7 +227,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         return withdrawnAmount;
     }
 
-    function updateEpoch() external {
+    function updateEpoch() external nonReentrant {
         _updateEpoch(getFreeBalance());
     }
 
@@ -261,7 +261,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         uint256 amount,
         address restaker
     ) external {
-        //   if (restaker == address(0)) revert NullParams();
+        if (restaker == address(0)) revert NullParams();
         for (uint256 i = 0; i < restakers.length; ++i) {
             if (
                 restakers[i] == restaker &&
@@ -301,7 +301,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
      * @dev The function allows the operator to deposit Ether as rewards.
      * It verifies that the previous rewards timeline is over before accepting new rewards.
      */
-    function addRewards(uint256 amount) external {
+    function addRewards(uint256 amount) external nonReentrant {
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;

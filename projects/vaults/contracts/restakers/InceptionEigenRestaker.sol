@@ -36,7 +36,7 @@ contract InceptionEigenRestaker is
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
-    IRewardsCoordinator internal _rewardsCoordinator;
+    IRewardsCoordinator public rewardsCoordinator;
 
     modifier onlyTrustee() {
         if (msg.sender != _vault && msg.sender != _trusteeManager)
@@ -150,7 +150,7 @@ contract InceptionEigenRestaker is
         return 2;
     }
 
-    function setRewardCoordinator(
+    function setRewardsCoordinator(
         address newRewardsCoordinator
     ) external onlyOwner {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
@@ -163,11 +163,11 @@ contract InceptionEigenRestaker is
         IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(ownerAddress);
 
         emit RewardCoordinatorChanged(
-            address(_rewardsCoordinator),
+            address(rewardsCoordinator),
             newRewardsCoordinator
         );
 
-        _rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+        rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
     }
 
     function pause() external onlyOwner {

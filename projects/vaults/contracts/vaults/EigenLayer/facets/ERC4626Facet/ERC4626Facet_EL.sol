@@ -4,8 +4,6 @@ pragma solidity ^0.8.23;
 import "../../InceptionVaultStorage_EL.sol";
 
 contract ERC4626Facet_EL is InceptionVaultStorage_EL {
-    constructor() payable {}
-
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
@@ -26,7 +24,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     function deposit(
         uint256 amount,
         address receiver
-    ) public returns (uint256) {
+    ) public nonReentrant returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -37,7 +35,10 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @param receiver The address of the shares receiver.
      * @dev See {IERC4626-mint}.
      */
-    function mint(uint256 shares, address receiver) public returns (uint256) {
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public nonReentrant returns (uint256) {
         uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
@@ -53,7 +54,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 amount,
         address receiver,
         bytes32 code
-    ) external returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         emit ReferralCode(code);
         return _deposit(amount, msg.sender, receiver);
     }
@@ -104,7 +105,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @dev Creates a withdrawal requests based on the current ratio
      * @param iShares is measured in Inception token(shares)
      */
-    function withdraw(uint256 iShares, address receiver) external {
+    function withdraw(uint256 iShares, address receiver) external nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = convertToAssets(iShares);
@@ -197,7 +198,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
-    function redeem(address receiver) external {
+    function redeem(address receiver) external nonReentrant {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );

@@ -1,9 +1,9 @@
 const { ethers } = require("hardhat");
 const fs = require("fs");
 
-const INCEPTION_LIBRARY = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
+// const INCEPTION_LIBRARY = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
 
-async function main() {
+async function deployFacets(InceptionLibraryAddress) {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying with the account: ${deployer.address}`);
@@ -15,7 +15,7 @@ async function main() {
    *********************************************/
 
   const EigenLayerFacet_Factory = await hre.ethers.getContractFactory("EigenLayerFacet", {
-    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
+    libraries: { InceptionLibrary: InceptionLibraryAddress },
   });
   const eigenFacet = await EigenLayerFacet_Factory.deploy();
   await eigenFacet.waitForDeployment();
@@ -27,7 +27,7 @@ async function main() {
    ********************************************/
 
   const EigenSetterFacet_Factory = await ethers.getContractFactory("EigenSetterFacet", {
-    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
+    libraries: { InceptionLibrary: InceptionLibraryAddress },
   });
   const eigenSetterFacet = await EigenSetterFacet_Factory.deploy();
   await eigenSetterFacet.waitForDeployment();
@@ -39,7 +39,7 @@ async function main() {
    ********************************************/
 
   const ERC4626Facet_EL_E2_Factory = await ethers.getContractFactory("ERC4626Facet_EL_E2", {
-    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
+    libraries: { InceptionLibrary: InceptionLibraryAddress },
   });
   const erc4626Facet = await ERC4626Facet_EL_E2_Factory.deploy();
   await erc4626Facet.waitForDeployment();
@@ -63,10 +63,6 @@ async function main() {
   fs.writeFileSync(`./scripts/migration/facet_addresses/${network.name}.json`, json_addresses);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
-
+module.exports = {
+  deployFacets,
+};

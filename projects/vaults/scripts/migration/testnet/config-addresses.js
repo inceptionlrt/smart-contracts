@@ -1,4 +1,5 @@
 const addresses = {
+  RewardsCoordinator: "0xAcc1fb458a1317E886dB376Fc8141540537E68fE",
   Operator: "0x292fC68C55572cf8bb680e6eED639899e83D2e06",
   AnkrOperator: "0x30b837c791caf71781db9637a276b2e9ec1daf63",
   StrategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
@@ -10,3 +11,4 @@ const addresses = {
 module.exports = {
   addresses,
 };
+

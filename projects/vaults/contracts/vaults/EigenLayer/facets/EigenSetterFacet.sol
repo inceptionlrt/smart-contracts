@@ -10,6 +10,8 @@ import "../InceptionVaultStorage_EL.sol";
  * @author The InceptionLRT team
  */
 contract EigenSetterFacet is InceptionVaultStorage_EL {
+    constructor() payable {}
+
     function upgradeTo(address newImplementation) external {
         if (!Address.isContract(newImplementation)) revert NotContract();
 

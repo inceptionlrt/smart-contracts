@@ -1,4 +1,5 @@
 const addresses = {
+  RewardsCoordinator: "0x7750d328b314EfFa365A0402CcfD489B80B0adda",
   Operator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
   StrategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
   AnkrStrategy: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",

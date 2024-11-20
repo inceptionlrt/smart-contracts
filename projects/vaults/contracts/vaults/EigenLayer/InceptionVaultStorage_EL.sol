@@ -73,12 +73,8 @@ contract InceptionVaultStorage_EL is
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    address public eigenLayerFacet;
-    address public erc4626Facet;
-    address public setterFacet;
-
     /// @dev constants are not stored in the storage
-    uint256[50 - 16] private __reserver;
+    uint256[50 - 13] private __reserver;
 
     IInceptionToken public inceptionToken;
 
@@ -111,6 +107,10 @@ contract InceptionVaultStorage_EL is
 
     address public rewardsCoordinator;
 
+    address public eigenLayerFacet;
+    address public erc4626Facet;
+    address public setterFacet;
+
     uint256 public currentRewards;
     uint256 public startTimeline;
     uint256 public rewardsTimeline;
@@ -127,6 +127,7 @@ contract InceptionVaultStorage_EL is
     ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
+        __Ownable_init();
 
         _asset = assetAddress;
     }
@@ -415,6 +416,34 @@ contract InceptionVaultStorage_EL is
             );
     }
 
+
+    /**
+     * @notice Sets the target and access level for a given function signature
+     * @dev Updates the `_selectorToTarget` mapping with the provided function signature, target, and access level
+     * @param sigs The function signature to configure
+     * @param targets The target facet (contract) associated with the function signature
+     * @param accesses The access level for the function signature
+     */
+    function setSignaturesBatch(
+        bytes4[] calldata sigs,
+        FuncTarget[] calldata targets,
+        FuncAccess[] calldata accesses
+    ) external onlyOwner {
+        uint256 num = sigs.length;
+        if (num != targets.length || num != accesses.length)
+            revert InconsistentData();
+
+        for (uint256 i = 0; i < num; ) {
+            _selectorToTarget[sigs[i]] = FuncData({
+                facet: targets[i],
+                access: accesses[i]
+            });
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     /**
      * @notice Sets the target and access level for a given function signature
      * @dev Updates the `_selectorToTarget` mapping with the provided function signature, target, and access level
@@ -428,7 +457,7 @@ contract InceptionVaultStorage_EL is
         FuncAccess _access
     ) external onlyOwner {
         _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
-        emit SignatureAdded(sig, _target, _access); // Updated event name
+        emit SignatureAdded(sig, _target, _access);
     }
 
     function setEigenLayerFacet(address newEigenLayerFacet) external onlyOwner {

@@ -172,7 +172,6 @@ const initVault = async a => {
   let facetId = "0";
   let accessId = "2";
 
-  // Get the signature (first 4 bytes of the Keccak-256 hash) for the `transfer` function
   let funcSig = setterFacet.interface.getFunction("setDelegationManager").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
@@ -4683,3 +4682,4 @@ assets.forEach(function (a) {
     });
   });
 });
+

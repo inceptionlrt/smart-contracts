@@ -53,5 +53,5 @@ interface IInceptionEigenRestaker {
         bool[] calldata receiveAsTokens
     ) external returns (uint256);
 
-    function setRewardCoordinator(address newRewardCoordinator) external;
+    function setRewardsCoordinator(address newRewardCoordinator) external;
 }
