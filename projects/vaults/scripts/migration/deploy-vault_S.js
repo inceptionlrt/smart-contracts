@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset) => {
+const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, ratioFeed) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -60,13 +60,6 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
   console.log(`InceptionVault address: ${iVaultAddress}`);
   const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
 
-  // 4. set the vault
-  tx = await iToken.setVault(iVaultAddress);
-  await tx.wait();
-
-  const fininalBalance = await deployer.provider.getBalance(deployer.address);
-  console.log(`deployed spent: ${initBalance - fininalBalance}`);
-
   const iAddresses = {
     iVaultAddress: iVaultAddress,
     iVaultImpl: iVaultImplAddress,
@@ -78,6 +71,26 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   const json_addresses = JSON.stringify(iAddresses);
   fs.writeFileSync(`./scripts/migration/addresses/${network.name}_${vaultName}.json`, json_addresses);
+
+  // 4. set the vault
+  tx = await iToken.setVault(iVaultAddress);
+  await tx.wait();
+  console.log("iToken vault set");
+
+  tx = await mr.setVault(await iVault.getAddress());
+  await tx.wait();
+  console.log("restaker vault set");
+
+  tx = await iVault.setTargetFlashCapacity("5000000000000000000"); // 5%
+  await tx.wait();
+  console.log("iVault target flash capacity set");
+
+  tx = await iVault.setRatioFeed(ratioFeed);
+  await tx.wait();
+  console.log("iVault ratioFeed set");
+
+  const fininalBalance = await deployer.provider.getBalance(deployer.address);
+  console.log(`deployed spent: ${initBalance - fininalBalance}`);
 };
 
 module.exports = {
