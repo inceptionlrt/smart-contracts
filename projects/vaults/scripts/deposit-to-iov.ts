@@ -1,17 +1,26 @@
 import { ethers } from "hardhat";
+import axios from "axios";
 import * as fs from 'fs';
+import path from "path";
+require("dotenv").config();
 
-const CHECKPOINT_FILE = "deployment_checkpoint.json";
+
 
 async function main() {
     const [deployer] = await ethers.getSigners();
+    const jsonFilePath = path.resolve(__dirname, "../../../deployment_checkpoint_arbitrum-sepolia.json");
     console.log(`Deployer Address: ${deployer.address}`);
 
-    // Load the checkpoint data to get the InceptionOmniVault, RatioFeed, and InceptionToken addresses
-    const checkpoint = loadCheckpoint();
+    if (!fs.existsSync(jsonFilePath)) {
+        console.error(`Error: JSON file does not exist at path: ${jsonFilePath}`);
+        process.exit(1);
+    }
+
+    const checkpoint = JSON.parse(fs.readFileSync(jsonFilePath, "utf-8"));
+
     const inceptionOmniVaultAddress = checkpoint.InceptionOmniVault;
-    const ratioFeedAddress = checkpoint.RatioFeed;
-    const inceptionTokenAddress = checkpoint.InceptionToken;
+
+    console.log(`inceptionOmniVaultAddress: ${inceptionOmniVaultAddress}`);
 
     // Create a contract instance for the InceptionOmniVault
     const inceptionOmniVaultContract = await ethers.getContractAt("InceptionOmniVault", inceptionOmniVaultAddress);

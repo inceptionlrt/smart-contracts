@@ -18,7 +18,7 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "@layerzerolabs/lz-v2-utilities": "^3.0.7",
+        "@layerzerolabs/lz-v2-utilities": "^3.0.15",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
         "@nomicfoundation/hardhat-ethers": "^3.0.5",
         "@nomicfoundation/hardhat-network-helpers": "^1.0.9",

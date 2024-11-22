@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import * as fs from "fs";
 import path from "path";
 
-const checkpointPath = path.join(__dirname, '../../../deployment_checkpoint_arbitrum-sepolia.json');
+const checkpointPath = path.join(__dirname, '../../../deployment_checkpoint_optimism-sepolia.json');
 
 async function main() {
     if (!fs.existsSync(checkpointPath)) {
@@ -61,7 +61,7 @@ async function main() {
         console.log("Initial Flash Capacity:", ethers.formatUnits(flashCapacityBefore, "ether"));
 
         // Adjust deposit amount if necessary
-        const depositAmount = ethers.parseUnits("0.005", "ether");
+        const depositAmount = ethers.parseUnits("0.001", "ether");
         if (flashCapacityBefore >= depositAmount) {
             console.log(`Attempting to deposit ${ethers.formatUnits(depositAmount, "ether")} ETH to mint inception tokens...`);
             const tx = await inceptionOmniVault.deposit(signer.address, { value: depositAmount });

@@ -462,10 +462,10 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@layerzerolabs/lz-v2-utilities@^3.0.7":
-  version "3.0.7"
-  resolved "https://registry.yarnpkg.com/@layerzerolabs/lz-v2-utilities/-/lz-v2-utilities-3.0.7.tgz#f64475d30d151cfd670fd73b791aa807b865ed1b"
-  integrity sha512-82gK2cT3wMMwN2BgX1uUnJPhRD4/uk4Bwjd44/7KyIdx8aqdZobHZ6Z/xrCfsc4ADGEn2S6r5+CSDN9Xs7IcRg==
+"@layerzerolabs/lz-v2-utilities@^3.0.15":
+  version "3.0.15"
+  resolved "https://registry.yarnpkg.com/@layerzerolabs/lz-v2-utilities/-/lz-v2-utilities-3.0.15.tgz#e6fd32e00b9075591753f1164d6692851cd0a010"
+  integrity sha512-WP2VJXfXuE2tAsEliBEGLjeMHXeMxaoG7nIZxgMRExRultOSdExNh+GKIamXMTwFO4LP1nH/dVCKMfxrNxpUwQ==
   dependencies:
     "@ethersproject/abi" "^5.7.0"
     "@ethersproject/address" "^5.7.0"
