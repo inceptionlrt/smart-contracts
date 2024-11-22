@@ -12,12 +12,12 @@ const PA1 = "0x2A089327A9B17AEcb75132CF015f556F2046739c",
 
 async function main() {
 
-    const fetchedToken    = await ethers.getContractAt(iTokenAddress, "InVault_S_E2");
-    const fetchedVault    = await ethers.getContractAt(iVaultAddress, "InVault_S_E2");
-    const fetchedRestaker = await ethers.getContractAt(iRestaker, "InVault_S_E2");
-    const fetchedPA1      = await ethers.getContractAt(PA1, "InVault_S_E2");
-    const fetchedPA2      = await ethers.getContractAt(PA2, "InVault_S_E2");
-    const fetchedPA3      = await ethers.getContractAt(PA3, "InVault_S_E2");
+    const fetchedToken    = await ethers.getContractAt("InVault_S_E2", iTokenAddress);
+    const fetchedVault    = await ethers.getContractAt("InVault_S_E2", iVaultAddress);
+    const fetchedRestaker = await ethers.getContractAt("InVault_S_E2", iRestaker);
+    const fetchedPA1      = await ethers.getContractAt("InVault_S_E2", PA1);
+    const fetchedPA2      = await ethers.getContractAt("InVault_S_E2", PA2);
+    const fetchedPA3      = await ethers.getContractAt("InVault_S_E2", PA3);
 
     let TX = await fetchedToken.transferOwnership(multisig);    await TX.wait(); console.log("1");
     TX     = await fetchedVault.transferOwnership(multisig);    await TX.wait(); console.log("2");
