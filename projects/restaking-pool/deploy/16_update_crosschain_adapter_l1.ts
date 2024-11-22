@@ -7,7 +7,7 @@ const func: DeployFunction = async function ({ deployments }) {
   const nativeRebalancer = await get("NativeRebalancer");
   console.log("NativeRebalancer address:", nativeRebalancer.address);
 
-  const crossChainBridgeAddress = "0xC18e569881A00f571526889a37388699f4031ab2"; //replace with actual address!
+  const crossChainBridgeAddress = ""; //replace with actual address!
   if (!crossChainBridgeAddress) {
     throw new Error("CROSS_CHAIN_BRIDGE environment variable is not set");
   }

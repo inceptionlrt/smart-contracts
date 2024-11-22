@@ -13,7 +13,7 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
   const restakingPool = await get("RestakingPool");
   const ratioFeed = await get("RatioFeed");
 
-  const crossChainBridge = "0xC18e569881A00f571526889a37388699f4031ab2"; //TODO! Replace this with actual address
+  const crossChainBridge = ""; //TODO! Replace this with actual address
   if (!crossChainBridge) {
     throw new Error("CROSS_CHAIN_BRIDGE environment variable is not set");
   }
