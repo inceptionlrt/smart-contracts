@@ -10,8 +10,8 @@ import "./interfaces/IProtocolConfig.sol";
 import "./restaker/IRestakerDeployer.sol";
 
 /**
- * @title General variables of Genesis Liquid Restaking protocol.
- * @author GenesisLRT
+ * @title General variables of InceptionLRT Liquid Restaking protocol.
+ * @author InceptionLRT V2
  */
 contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
     using StorageSlot for bytes32;

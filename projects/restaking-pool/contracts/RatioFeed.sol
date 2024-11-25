@@ -9,7 +9,7 @@ import "./interfaces/IProtocolConfig.sol";
 
 /**
  * @title Stores ratio of inETH
- * @author GenesisLRT
+ * @author InceptionLRT
  */
 contract RatioFeed is Configurable, IRatioFeed {
     uint32 public constant MAX_THRESHOLD = uint32(1e8); // 100000000

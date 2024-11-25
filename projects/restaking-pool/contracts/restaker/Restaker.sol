@@ -11,7 +11,7 @@ import "./IRestakerFacets.sol";
 
 /**
  * @title Modified ERC-2535 to make calls with context of this contract.
- * @author GenesisLRT
+ * @author InceptionLRT
  * @dev To make a call to any contract from facet just wrap address to needed interface.
  */
 contract Restaker is OwnableUpgradeable, IRestaker {

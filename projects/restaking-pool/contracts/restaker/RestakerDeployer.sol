@@ -10,7 +10,7 @@ import "./IRestakerFacets.sol";
 
 /**
  * @title create2 deployer of {Restaker}
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice Not upgradeable contracts makes possible to everyone deploy new instance of Restaker.
  */
 contract RestakerDeployer is IRestakerDeployer {

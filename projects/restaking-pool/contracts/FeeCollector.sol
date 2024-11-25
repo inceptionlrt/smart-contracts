@@ -8,7 +8,7 @@ import "./interfaces/IFeeCollector.sol";
 
 /**
  * @title MEV & Tips fee recipient
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice Contract receives EL (tips/MEV) rewards and send them to RestakingPool
  */
 contract FeeCollector is
