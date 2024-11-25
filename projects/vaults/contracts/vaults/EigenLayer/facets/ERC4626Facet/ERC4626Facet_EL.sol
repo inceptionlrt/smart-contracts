@@ -24,7 +24,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     function deposit(
         uint256 amount,
         address receiver
-    ) public nonReentrant returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -38,7 +38,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     function mint(
         uint256 shares,
         address receiver
-    ) public nonReentrant returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
@@ -139,7 +139,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 shares,
         address receiver,
         address owner
-    ) public nonReentrant returns (uint256 assets) {
+    ) external nonReentrant returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
         assets = convertToAssets(shares);

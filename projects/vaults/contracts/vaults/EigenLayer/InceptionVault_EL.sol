@@ -37,7 +37,6 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) internal {
-        __Ownable_init();
         __EigenLayerHandler_init(_strategyManager, _assetStrategy);
 
         name = vaultName;

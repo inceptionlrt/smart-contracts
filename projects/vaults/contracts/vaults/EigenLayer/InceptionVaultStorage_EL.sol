@@ -286,7 +286,7 @@ contract InceptionVaultStorage_EL is
 
     function _convertToAssets(
         uint256 iShares
-    ) public view returns (uint256 assets) {
+    ) internal view returns (uint256 assets) {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 

@@ -12,7 +12,9 @@ import "../InceptionVaultStorage_EL.sol";
 contract EigenLayerFacet is InceptionVaultStorage_EL {
     constructor() payable {}
 
-    /// @dev checks whether it's still possible to deposit into the strategy
+    /**
+     * @dev checks whether it's still possible to deposit into the strategy
+     */
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         if (amount > getFreeBalance())
             revert InsufficientCapacity(totalAssets());
@@ -64,7 +66,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         emit DelegatedTo(restaker, elOperator, amount);
     }
 
-    /// @dev delegates assets held in the strategy to the EL operator.
+    /**
+     * @dev delegates assets held in the strategy to the EL operator.
+     */
     function _delegateToOperator(
         address restaker,
         address elOperator,
@@ -89,8 +93,10 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         emit DepositedToEL(restaker, amount);
     }
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
+    /**
+     * @dev performs creating a withdrawal request from EigenLayer
+     * @dev requires a specific amount to withdraw
+     */
     function undelegateVault(uint256 amount) external nonReentrant {
         address staker = address(this);
 
@@ -113,8 +119,10 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         delegationManager.queueWithdrawals(withdrawals);
     }
 
-    /// @dev performs creating a withdrawal request from EigenLayer
-    /// @dev requires a specific amount to withdraw
+    /**
+     * @dev performs creating a withdrawal request from EigenLayer
+     * @dev requires a specific amount to withdraw
+     */
     function undelegateFrom(
         address elOperatorAddress,
         uint256 amount
@@ -155,7 +163,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         return shares;
     }
 
-    /// @dev claims completed withdrawals from EigenLayer, if they exist
+    /**
+     * @dev claims completed withdrawals from EigenLayer, if they exist
+     */
     function claimCompletedWithdrawals(
         address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
