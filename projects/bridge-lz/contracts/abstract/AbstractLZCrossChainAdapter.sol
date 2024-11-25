@@ -99,7 +99,12 @@ abstract contract AbstractLZCrossChainAdapter is
         );
 
         uint256 fee = receipt.fee.nativeFee - this.getValueFromOpts(_options);
-        emit CrossChainMessageSent(_chainId, msg.value, _payload, fee);
+        emit CrossChainMessageSent(
+            _chainId,
+            this.getValueFromOpts(_options),
+            _payload,
+            fee
+        );
     }
 
     function getValueFromOpts(
