@@ -14,7 +14,6 @@ import {IIMellowRestaker, IIEigenRestakerErrors} from "../interfaces/symbiotic-v
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/mellow-core/IMellowHandler.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
-import {IWSteth} from "../interfaces/common/IWSteth.sol";
 import {FullMath} from "../lib/FullMath.sol";
 
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
@@ -42,17 +41,16 @@ contract IMellowRestaker is
     mapping(address => IMellowDepositWrapper) public mellowDepositWrappers; // mellowVault => mellowDepositWrapper
     IMellowVault[] public mellowVaults;
 
-    address public constant wsteth = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-
     mapping(address => uint256) public allocations;
+    uint256 public totalAllocations;
 
     uint256 public requestDeadline;
 
-    uint256 public depositSlippage;  // BasisPoints 10,000 = 100%
+    uint256 public depositSlippage; // BasisPoints 10,000 = 100%
     uint256 public withdrawSlippage;
 
     modifier onlyTrustee() {
-        if(msg.sender != _vault && msg.sender != _trusteeManager) 
+        if (msg.sender != _vault && msg.sender != _trusteeManager)
             revert NotVaultOrTrusteeManager();
         _;
     }
@@ -73,7 +71,8 @@ contract IMellowRestaker is
         __Ownable_init();
         __ERC165_init();
 
-        if(_mellowDepositWrapper.length != _mellowVault.length) revert LengthMismatch();
+        if (_mellowDepositWrapper.length != _mellowVault.length)
+            revert LengthMismatch();
 
         for (uint256 i = 0; i < _mellowDepositWrapper.length; i++) {
             mellowDepositWrappers[
@@ -85,7 +84,7 @@ contract IMellowRestaker is
         _trusteeManager = trusteeManager;
 
         requestDeadline = 15 days;
-        depositSlippage = 1500;  // 15%
+        depositSlippage = 1500; // 15%
         withdrawSlippage = 10;
     }
 
@@ -95,12 +94,12 @@ contract IMellowRestaker is
         address mellowVault
     ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
-        if(address(wrapper) == address(0)) revert InactiveWrapper();
+        if (address(wrapper) == address(0)) revert InactiveWrapper();
         // transfer from the vault
         _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
-        uint256 minAmount = amount * (10000 - depositSlippage) / 10000;
+        uint256 minAmount = (amount * (10000 - depositSlippage)) / 10000;
         return
             wrapper.deposit(
                 address(this),
@@ -114,15 +113,14 @@ contract IMellowRestaker is
     function delegate(
         uint256 deadline
     ) external onlyTrustee whenNotPaused returns (uint256 amount, uint256 lpAmount) {
-        uint256 MAX_TARGET_PERCENT = IMellowHandler(_vault)
-            .MAX_TARGET_PERCENT();
-        uint256 total = IMellowHandler(_vault).getTotalDeposited();
+        uint256 totalBalance = IMellowHandler(_vault).getFreeBalance();
+        uint256 allocationsTotal = totalAllocations;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            uint256 allocation = allocations[address(mellowVaults[i])]; // in %
+            uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
                 uint256 bal = getDeposited(address(mellowVaults[i]));
-                if ((bal * MAX_TARGET_PERCENT) / total < allocation) {
-                    bal = ((total * allocation) / MAX_TARGET_PERCENT) - bal;
+                if ((bal * allocationsTotal) / totalBalance < allocation) {
+                    bal = ((totalBalance * allocation) / allocationsTotal) - bal;
                     if (
                         IMellowHandler(_vault).getFreeBalance() >= bal &&
                         bal > 0
@@ -135,7 +133,8 @@ contract IMellowRestaker is
                             address(wrapper),
                             bal
                         );
-                        uint256 minAmount = bal * (10000 - depositSlippage) / 10000;
+                        uint256 minAmount = (bal * (10000 - depositSlippage)) /
+                            10000;
                         lpAmount += wrapper.deposit(
                             address(this),
                             address(_asset),
@@ -156,12 +155,12 @@ contract IMellowRestaker is
         bool closePrevious
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
-        amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256 lpAmount = amountToLpAmount(amount, mellowVault);
         uint256[] memory minAmounts = new uint256[](1);
-        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
+        minAmounts[0] = (amount * (10000 - withdrawSlippage)) / 10000; // slippage
 
-        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+        if (address(mellowDepositWrappers[_mellowVault]) == address(0))
+            revert InvalidVault();
 
         mellowVault.registerWithdrawal(
             address(this),
@@ -182,19 +181,19 @@ contract IMellowRestaker is
             );
 
         if (!isProcessingPossible) revert BadMellowWithdrawRequest();
-        return IWSteth(wsteth).getStETHByWstETH(expectedAmounts[0]);
+        return expectedAmounts[0];
     }
 
     function withdrawEmergencyMellow(
         address _mellowVault,
         uint256 amount
-    ) external override onlyTrustee whenNotPaused returns(uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
-        amount = IWSteth(wsteth).getWstETHByStETH(amount);
         uint256[] memory minAmounts = new uint256[](2);
-        minAmounts[0] = amount * (10000 - withdrawSlippage) / 10000; // slippage
+        minAmounts[0] = (amount * (10000 - withdrawSlippage)) / 10000; // slippage
 
-        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+        if (address(mellowDepositWrappers[_mellowVault]) == address(0))
+            revert InvalidVault();
 
         uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(
             minAmounts,
@@ -203,14 +202,11 @@ contract IMellowRestaker is
 
         uint256 actualAmount;
         if (actualAmounts.length > 0) actualAmount = actualAmounts[0];
-        return IWSteth(wsteth).getStETHByWstETH(actualAmount);
+        return actualAmount;
     }
 
     function claimableAmount() external view returns (uint256) {
-        return
-            IWSteth(wsteth).getStETHByWstETH(
-                IERC20(wsteth).balanceOf(address(this))
-            );
+        return _asset.balanceOf(address(this));
     }
 
     function claimMellowWithdrawalCallback()
@@ -218,15 +214,29 @@ contract IMellowRestaker is
         onlyTrustee
         returns (uint256)
     {
-        uint256 amount = IERC20(wsteth).balanceOf(address(this));
+        uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
-        amount = _unwrap(amount);
         _asset.safeTransfer(_vault, amount);
 
         return amount;
     }
 
+    function addMellowVault(address mellowVault, address depositWrapper) external onlyOwner {
+
+        if (mellowVault == address(0) || depositWrapper == address(0)) revert ZeroAddress();
+
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                revert AlreadyAdded();
+            }
+        }
+
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(depositWrapper);
+        mellowVaults.push(IMellowVault(mellowVault));
+
+        emit VaultAdded(mellowVault, depositWrapper);
+    }
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
@@ -234,18 +244,10 @@ contract IMellowRestaker is
         if (mellowVault == address(0)) revert ZeroAddress();
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
-        if (!_isValidAllocation()) revert InvalidAllocation();
+
+        totalAllocations = totalAllocations + newAllocation - oldAllocation;
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
-    }
-
-    function _isValidAllocation() private view returns (bool) {
-        uint256 totalAllocations;
-        for (uint256 i = 0; i < mellowVaults.length; i++) {
-            totalAllocations += allocations[address(mellowVaults[i])];
-        }
-        totalAllocations += IMellowHandler(_vault).targetCapacity();
-        return totalAllocations <= IMellowHandler(_vault).MAX_TARGET_PERCENT();
     }
 
     function pendingMellowRequest(
@@ -364,14 +366,7 @@ contract IMellowRestaker is
             s.ratiosX96[0],
             s.ratiosX96Value
         );
-        return IWSteth(wsteth).getStETHByWstETH(wstEthAmount);
-    }
-
-    function _unwrap(
-        uint256 wrappedAmount
-    ) private returns (uint256 baseAmount) {
-        IWSteth(wsteth).unwrap(wrappedAmount);
-        return IERC20(_asset).balanceOf(address(this));
+        return wstEthAmount;
     }
 
     function setVault(address vault) external onlyOwner {
@@ -385,8 +380,12 @@ contract IMellowRestaker is
         requestDeadline = newDealine;
     }
 
-    function setSlippages(uint256 _depositSlippage, uint256 _withdrawSlippage) external onlyOwner {
-        if (_depositSlippage > 3000 || _withdrawSlippage > 3000) revert TooMuchSlippage();
+    function setSlippages(
+        uint256 _depositSlippage,
+        uint256 _withdrawSlippage
+    ) external onlyOwner {
+        if (_depositSlippage > 3000 || _withdrawSlippage > 3000)
+            revert TooMuchSlippage();
         depositSlippage = _depositSlippage;
         withdrawSlippage = _withdrawSlippage;
         emit NewSlippages(_depositSlippage, _withdrawSlippage);

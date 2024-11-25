@@ -31,6 +31,8 @@ interface IIEigenRestakerErrors {
     error InvalidAllocation();
 
     error TooMuchSlippage();
+
+    error AlreadyAdded();
 }
 
 interface IIMellowRestaker {
@@ -47,6 +49,10 @@ interface IIMellowRestaker {
     event NewSlippages(uint256 _deposit, uint256 _withdraw);
 
     event TrusteeManagerSet(address indexed _trusteeManager, address indexed _newTrusteeManager);
+
+    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
+
+    event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
     
     function getDeposited(address _mellowVault) external view returns (uint256);
 
