@@ -349,10 +349,11 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         if (_stakerImplementation == address(0)) revert ImplementationNotSet();
         // deploy new beacon proxy and do init call
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
+            "initialize(address,address,address,address,address)",
             delegationManager,
             strategyManager,
             strategy,
+            _asset,
             _operator
         );
         address deployedAddress = address(new BeaconProxy(address(this), data));
