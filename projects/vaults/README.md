@@ -61,6 +61,9 @@ Additionally, the corresponding _RateProviders_ were deployed for all LRT (Incep
   - [InlsEthVault](https://etherscan.io/address/0x6E17a8b5D33e6DBdB9fC61d758BF554b6AD93322).
   - [InlsETH](https://etherscan.io/address/0x94B888E11a9E960A9c3B3528EB6aC807B27Ca62E).
   - [InlsETHRateProvider](https://etherscan.io/address/0x20f6d8e1e821Bd5B94f7bF725AF304Bc5ef09c36).
+- [x] [wstETH](https://etherscan.io/address/0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0): Wrapped liquid staked Ether 2.0.
+  - [inwstETHVault_S](https://etherscan.io/address/0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97).
+  - [inwstETHs](https://etherscan.io/address/0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552).
 
 ## Testing
 
