@@ -18,6 +18,7 @@ import {
   RatioFeed,
   RestakingPool,
 } from "../typechain-types";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
@@ -1194,7 +1195,6 @@ describe("Omnivault integration tests", function () {
           expect(await adapter.owner()).to.equal(newOwner.address);
         });
 
-
         it("Endpoint", async function () {
           const endpoint = adapterArg.endpoint();
           expect(await adapter.endpoint()).to.be.eq(endpoint.address);
@@ -1256,6 +1256,10 @@ describe("Omnivault integration tests", function () {
             amount: async () => randomBI(17),
           },
           {
+            name: "1wei",
+            amount: async () => 1n,
+          },
+          {
             name: "Restaking pool min amount",
             amount: async () => await restakingPool.getMinStake(),
           },
@@ -1277,7 +1281,7 @@ describe("Omnivault integration tests", function () {
 
             await expect(tx)
               .emit(fromAdapter, "CrossChainMessageSent")
-              .withArgs(direction.toChainID, amountWithFees, "0x", fee);
+              .withArgs(direction.toChainID, amount, "0x", fee);
             await expect(tx).emit(toAdapter, "CrossChainEthDeposit").withArgs(direction.fromChainID, amount);
             if (direction.toChainID === ETH_ID) {
               await expect(tx).emit(target, "ETHReceived").withArgs(toAdapter.address, amount);
@@ -1297,7 +1301,7 @@ describe("Omnivault integration tests", function () {
 
           await expect(tx)
             .emit(fromAdapter, "CrossChainMessageSent")
-            .withArgs(direction.toChainID, 3202200000000000n, "0x", 3202199999800000n);
+            .withArgs(direction.toChainID, 0n, "0x", 3202200000000000n);
           await expect(tx).not.emit(toAdapter, "CrossChainEthDeposit");
           await expect(tx).not.emit(rebalancer, "ETHReceived");
           await expect(tx).to.changeEtherBalance(target.address, amount);
@@ -2405,7 +2409,6 @@ describe("Omnivault integration tests", function () {
         expect(await omniVault.treasury()).to.be.eq(newTreasury);
       });
 
-
       it("setTreasuryAddress(): reverts when set to zero address", async function () {
         await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(
           omniVault,
@@ -2488,7 +2491,6 @@ describe("Omnivault integration tests", function () {
         // Verify the cross-chain adapter address has been updated
         expect(await omniVault.crossChainAdapter()).to.be.eq(newValue);
       });
-
 
       it("setCrossChainAdapter(): reverts when set to zero address", async function () {
         await expect(omniVault.setCrossChainAdapter(ethers.ZeroAddress)).to.be.revertedWithCustomError(
