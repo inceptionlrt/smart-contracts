@@ -23,6 +23,7 @@ abstract contract AbstractLZCrossChainAdapter is
 {
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
+    error OptionsTooShort();
 
     mapping(uint32 => uint256) public eidToChainId;
     mapping(uint256 => uint32) public chainIdToEid;
@@ -110,6 +111,10 @@ abstract contract AbstractLZCrossChainAdapter is
     function getValueFromOpts(
         bytes calldata _options
     ) public pure override returns (uint256) {
+        require(_options.length >= 16, OptionsTooShort());
+        if (_options.length == 16) {
+            return 0;
+        }
         uint256 valueStart = _options.length - 16;
         uint256 valueEnd = _options.length;
         return uint256(uint128(bytes16(_options[valueStart:valueEnd])));
