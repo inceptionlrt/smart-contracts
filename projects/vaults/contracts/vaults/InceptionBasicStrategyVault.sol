@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
@@ -60,7 +61,7 @@ contract InceptionStrategyBaseVault is
         IStrategy _assetStrategy,
         IERC20 asset
     ) internal {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __EigenLayerHandler_init(_strategyManager, _assetStrategy, asset);
 
         name = vaultName;
@@ -376,7 +377,12 @@ contract InceptionStrategyBaseVault is
     function upgradeTo(
         address newImplementation
     ) external whenNotPaused onlyOwner {
-        if (!Address.isContract(newImplementation)) revert NotContract();
+        // Check if the address is a contract
+        uint256 size;
+        assembly {
+            size := extcodesize(newImplementation)
+        }
+        if (size == 0) revert NotContract();
 
         emit ImplementationUpgraded(_stakerImplementation, newImplementation);
         _stakerImplementation = newImplementation;

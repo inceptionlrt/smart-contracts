@@ -49,7 +49,7 @@ contract Eigen is OwnableUpgradeable, ERC20Upgradeable {
         uint256[] memory mintingAllowances,
         uint256[] memory mintAllowedAfters
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(initialOwner);
         __ERC20_init("Eigen", "EIGEN");
         _transferOwnership(initialOwner);
 
@@ -166,28 +166,30 @@ contract Eigen is OwnableUpgradeable, ERC20Upgradeable {
     }
 
     /**
-     * @notice Overrides the beforeTokenTransfer function to enforce transfer restrictions
+     * @notice Updates the transfer of tokens to enforce transfer restrictions.
      * @param from the address tokens are being transferred from
      * @param to the address tokens are being transferred to
      * @param amount the amount of tokens being transferred
      */
-    function _beforeTokenTransfer(
+    function _update(
         address from,
         address to,
         uint256 amount
     ) internal override {
-        // if transfer restrictions are enabled
+        // If transfer restrictions are enabled
         if (block.timestamp <= transferRestrictionsDisabledAfter) {
-            // if both from and to are not whitelisted
+            // Check if both `from` and `to` are whitelisted or involve the contract address
             require(
                 from == address(0) ||
                     from == address(this) ||
                     to == address(this) ||
                     allowedFrom[from] ||
                     allowedTo[to],
-                "Eigen._beforeTokenTransfer: from or to must be whitelisted"
+                "Eigen._update: from or to must be whitelisted"
             );
         }
-        super._beforeTokenTransfer(from, to, amount);
+
+        // Call the parent contract's `_update` logic for token transfer
+        super._update(from, to, amount);
     }
 }
