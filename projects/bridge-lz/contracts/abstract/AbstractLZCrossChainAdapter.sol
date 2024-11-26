@@ -112,7 +112,7 @@ abstract contract AbstractLZCrossChainAdapter is
         bytes calldata _options
     ) public pure override returns (uint256) {
         require(_options.length >= 16, OptionsTooShort());
-        if (_options.length == 16) {
+        if (_options.length <= 32) {
             return 0;
         }
         uint256 valueStart = _options.length - 16;
