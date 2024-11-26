@@ -1,5 +1,6 @@
 import 'dotenv/config'
 
+import { CONFIG } from "../../hh.config";
 import 'hardhat-deploy'
 import 'hardhat-contract-sizer'
 import '@nomiclabs/hardhat-ethers'
@@ -11,6 +12,7 @@ import { HardhatUserConfig, HttpNetworkAccountsUserConfig } from 'hardhat/types'
 const accounts: HttpNetworkAccountsUserConfig | undefined = [`${process.env.DEPLOYER_PRIVATE_KEY}`]
 
 const config: HardhatUserConfig = {
+    ...(CONFIG as HardhatUserConfig),
     paths: {
         cache: 'cache/hardhat',
     },
