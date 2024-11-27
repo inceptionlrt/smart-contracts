@@ -95,7 +95,7 @@ contract RestakingPool is
     uint256 public currentRewards;
     /// @dev blockTime
     uint256 public startTimeline;
-    /// @dev in days
+    /// @dev in seconds
     uint256 public rewardsTimeline;
 
     /**
@@ -125,10 +125,10 @@ contract RestakingPool is
         __RestakingPool_init(distributeGasLimit, newMaxTVL);
     }
 
-    function __RestakingPool_init(
-        uint32 distributeGasLimit,
-        uint256 newMaxTVL
-    ) internal onlyInitializing {
+    function __RestakingPool_init(uint32 distributeGasLimit, uint256 newMaxTVL)
+        internal
+        onlyInitializing
+    {
         _setDistributeGasLimit(distributeGasLimit);
         _setMaxTVL(newMaxTVL);
     }
@@ -230,10 +230,10 @@ contract RestakingPool is
      * @param shares The number of shares to be unstaked.
      * @param receiver The address that will receive the withdrawn amount.
      */
-    function flashUnstake(
-        uint256 shares,
-        address receiver
-    ) external nonReentrant {
+    function flashUnstake(uint256 shares, address receiver)
+        external
+        nonReentrant
+    {
         if (targetCapacity == 0) revert TargetCapacityNotSet();
 
         address claimer = msg.sender;
@@ -291,10 +291,10 @@ contract RestakingPool is
         _pendingUnstakes.push(Unstake(recipient, amount));
     }
 
-    function claimRestaker(
-        string calldata provider,
-        uint256 fee
-    ) external onlyOperator {
+    function claimRestaker(string calldata provider, uint256 fee)
+        external
+        onlyOperator
+    {
         IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
         uint256 balanceBefore = address(this).balance;
         restaker.__claim();
@@ -630,9 +630,11 @@ contract RestakingPool is
      * @notice Get waiting unstakes.
      * @dev Avoid to use not in view methods.
      */
-    function getUnstakesOf(
-        address recipient
-    ) external view returns (Unstake[] memory unstakes) {
+    function getUnstakesOf(address recipient)
+        external
+        view
+        returns (Unstake[] memory unstakes)
+    {
         unstakes = new Unstake[](_pendingUnstakes.length - _pendingGap);
         uint256 j;
         for (uint256 i = _pendingGap; i < _pendingUnstakes.length; i++) {
@@ -652,9 +654,11 @@ contract RestakingPool is
      *
      * @notice Get total amount of waiting unstakes of user.
      */
-    function getTotalUnstakesOf(
-        address recipient
-    ) public view returns (uint256) {
+    function getTotalUnstakesOf(address recipient)
+        public
+        view
+        returns (uint256)
+    {
         return _totalUnstakesOf[recipient];
     }
 
@@ -673,24 +677,30 @@ contract RestakingPool is
         return _claimable[claimer];
     }
 
-    function getRestaker(
-        string calldata provider
-    ) public view returns (address) {
+    function getRestaker(string calldata provider)
+        public
+        view
+        returns (address)
+    {
         return _restakers[_getProviderHash(provider)];
     }
 
-    function _getRestakerOrRevert(
-        string memory provider
-    ) internal view returns (address restaker) {
+    function _getRestakerOrRevert(string memory provider)
+        internal
+        view
+        returns (address restaker)
+    {
         restaker = _restakers[_getProviderHash(provider)];
         if (restaker == address(0)) {
             revert PoolRestakerNotExists();
         }
     }
 
-    function _getProviderHash(
-        string memory providerName
-    ) internal pure returns (bytes32) {
+    function _getProviderHash(string memory providerName)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(bytes(providerName));
     }
 
@@ -703,10 +713,11 @@ contract RestakingPool is
         return _calculateStakeBonus(getFlashCapacity(), amount);
     }
 
-    function _calculateStakeBonus(
-        uint256 capacity,
-        uint256 amount
-    ) internal view returns (uint256) {
+    function _calculateStakeBonus(uint256 capacity, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 targetCap = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
@@ -724,9 +735,11 @@ contract RestakingPool is
      * @param amount The amount for which the flash unstake fee is to be calculated.
      * @return The calculated flash unstake fee.
      */
-    function calculateFlashUnstakeFee(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateFlashUnstakeFee(uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
         uint256 targetCap = _getTargetCapacity();
@@ -744,10 +757,15 @@ contract RestakingPool is
     /*******************************************************************************
                         Rewards
     *******************************************************************************/
-    /// @dev addRewards
+    /**
+     * @notice Adds new rewards to the contract, starting a new rewards timeline.
+     * @dev The function allows the operator to deposit Ether as rewards.
+     * It verifies that the previous rewards timeline is over before accepting new rewards.
+     */
     function addRewards() external payable onlyOperator {
         uint256 amount = msg.value;
-        /// @dev verify whether the prev timeline is over
+
+        /// @dev Verify whether the previous timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;
             uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
@@ -759,10 +777,27 @@ contract RestakingPool is
         emit RewardsAdded(amount, startTimeline);
     }
 
-    /// @dev setRewardsTimeline ...
-    /// @dev newTimelineInDays is measured in seconds
-    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyGovernance {
-        if (newTimelineInSeconds < 1 days) revert InconsistentData();
+    /**
+     * @notice Updates reward coordinator along with claimer
+     * @param provider The new duration of the rewards timeline, measured in seconds.
+     * @param newCoordinator The new reward coordinator address
+     */
+    function setRewardsCoordinator(string calldata provider, address newCoordinator, address claimer) external onlyGovernance {
+        IRestaker restaker = IRestaker(_getRestakerOrRevert(provider));
+        restaker.__setRewardsCoordinator(newCoordinator, claimer);
+    }
+
+    /**
+     * @notice Updates the duration of the rewards timeline.
+     * @dev The new timeline must be at least 1 day (86400 seconds)
+     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
+     */
+    function setRewardsTimeline(uint256 newTimelineInSeconds)
+        external
+        onlyGovernance
+    {
+        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
+            revert InconsistentData();
 
         emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
         rewardsTimeline = newTimelineInSeconds;
@@ -801,16 +836,29 @@ contract RestakingPool is
         _distributeGasLimit = newValue;
     }
 
+    /**
+     * @notice Updates the minimum stake amount required for staking.
+     * @param newValue The new minimum stake amount.
+     */
     function setMinStake(uint256 newValue) external onlyGovernance {
         emit MinStakeChanged(_minStakeAmount, newValue);
         _minStakeAmount = newValue;
     }
 
+    /**
+     * @notice Updates the minimum unstake amount allowed for unstaking.
+     * @param newValue The new minimum unstake amount.
+     */
     function setMinUnstake(uint256 newValue) external onlyGovernance {
-        emit MinUntakeChanged(_minUnstakeAmount, newValue);
+        emit MinUnstakeChanged(_minUnstakeAmount, newValue);
         _minUnstakeAmount = newValue;
     }
 
+    /**
+     * @notice Updates the maximum Total Value Locked (TVL) in the contract.
+     * @dev Calls the internal function `_setMaxTVL` to perform the update.
+     * @param newValue The new maximum TVL value.
+     */
     function setMaxTVL(uint256 newValue) external onlyGovernance {
         _setMaxTVL(newValue);
     }
@@ -861,6 +909,11 @@ contract RestakingPool is
         );
     }
 
+    /**
+     * @notice Updates the protocol fee percentage used in the contract.
+     * @dev The new protocol fee must not exceed `MAX_PERCENT`.
+     * @param newProtocolFee The new protocol fee percentage, represented as a `uint64`.
+     */
     function setProtocolFee(uint64 newProtocolFee) external onlyGovernance {
         if (newProtocolFee > MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
@@ -869,9 +922,15 @@ contract RestakingPool is
         protocolFee = newProtocolFee;
     }
 
-    function setTargetFlashCapacity(
-        uint64 newTargetCapacity
-    ) external onlyGovernance {
+    /**
+     * @notice Updates the target flash loan capacity of the contract.
+     * @dev Sets a new target capacity for flash loans.
+     * @param newTargetCapacity The new target flash loan capacity, represented as a `uint64`.
+     */
+    function setTargetFlashCapacity(uint64 newTargetCapacity)
+        external
+        onlyGovernance
+    {
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
