@@ -1,4 +1,3 @@
-import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { ozDeploy } from "../scripts/deploy-helpers";
 
@@ -33,7 +32,7 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
     restakingPool.address,
     crossChainBridge,
     ratioFeed.address,
-    operator
+    operator,
   ]);
 
   console.log("NativeRebalancer deployed at:", nativeRebalancer.address);
@@ -46,7 +45,8 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments }) 
 };
 
 module.exports = func;
-module.exports.tags = ["15_native_rebalancer_deploy"];
+module.exports.tags = ["17_native_rebalancer_deploy"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "15";
+module.exports.id = "17";
+

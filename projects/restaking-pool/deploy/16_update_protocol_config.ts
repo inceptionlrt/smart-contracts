@@ -38,7 +38,8 @@ const func: DeployFunction = async function ({ deployments, network }) {
 };
 
 module.exports = func;
-module.exports.tags = ["14_update_protocol_config"];
+module.exports.tags = ["16_update_protocol_config"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "14";
+module.exports.id = "16";
+

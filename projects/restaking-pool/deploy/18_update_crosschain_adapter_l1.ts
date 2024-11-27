@@ -22,7 +22,8 @@ const func: DeployFunction = async function ({ deployments }) {
 };
 
 module.exports = func;
-module.exports.tags = ["16_update_crosschain_adapter_l1"];
+module.exports.tags = ["18_update_crosschain_adapter_l1"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "16";
+module.exports.id = "18";
+

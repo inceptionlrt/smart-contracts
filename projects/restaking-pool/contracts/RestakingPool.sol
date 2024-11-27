@@ -163,7 +163,7 @@ contract RestakingPool is
         uint256 stakeBonus;
         if (
             stakeBonusAmount > 0 &&
-            msg.sender != address(config().getRebalancer())
+            _msgSender() != address(config().getRebalancer())
         ) {
             uint256 capacity = getFlashCapacity();
             if (capacity < amount) {
