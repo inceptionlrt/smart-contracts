@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
+import {IERC20, InceptionLibrary, Convert} from "../assets-handler/InceptionAssetsHandler.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import "../eigenlayer-handler/EigenLayerHandler.sol";
+import {EigenLayerHandler, IStrategyManager, IStrategy} from "../eigenlayer-handler/EigenLayerHandler.sol";
+import {Convert} from "../lib/Convert.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
@@ -56,7 +58,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) internal {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __EigenLayerHandler_init(_strategyManager, _assetStrategy);
 
         name = vaultName;
@@ -370,7 +372,7 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     function upgradeTo(
         address newImplementation
     ) external whenNotPaused onlyOwner {
-        if (!Address.isContract(newImplementation)) revert NotContract();
+        if (!_isContract(newImplementation)) revert NotContract();
 
         emit ImplementationUpgraded(_stakerImplementation, newImplementation);
         _stakerImplementation = newImplementation;
@@ -563,6 +565,16 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
         emit ELOperatorAdded(newELOperator);
+    }
+
+    // @dev added to replace the removed Address.isContract() from OZ, to be removed later
+    function _isContract(address account) internal view returns (bool) {
+        // This method checks the size of the code at the address.
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 
     /*///////////////////////////////

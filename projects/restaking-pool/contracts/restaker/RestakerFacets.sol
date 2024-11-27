@@ -11,7 +11,7 @@ import "./IRestakerFacets.sol";
 
 /**
  * @title Facets of Restaker
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice Stores the targets of method signatures.
  */
 contract RestakerFacets is OwnableUpgradeable, IRestakerFacets {

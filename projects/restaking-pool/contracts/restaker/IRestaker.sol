@@ -5,7 +5,7 @@ import "./IRestakerFacets.sol";
 
 /**
  * @title Diamond-like implementation which support call with context (simple call).
- * @author GenesisLST
+ * @author InceptionLRT
  */
 interface IRestaker {
     error RestakerCannotClaim();

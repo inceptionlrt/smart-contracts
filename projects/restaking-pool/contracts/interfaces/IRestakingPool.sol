@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.26;
 
 interface IRestakingPool {
     /* structs */
@@ -132,4 +132,8 @@ interface IRestakingPool {
         string memory provider,
         bool revertIfNoBalance
     ) external;
+
+    function stake() external payable;
+
+    function availableToStake() external view returns (uint256);
 }

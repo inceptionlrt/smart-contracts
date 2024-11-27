@@ -8,3 +8,9 @@ typechain-types
 # Hardhat files
 cache
 artifacts
+*.bin
+*.abi
+
+# Inception LRT custom ignore
+*.tgz
+/projects/tests/omnivault-rebalancer/contracts/

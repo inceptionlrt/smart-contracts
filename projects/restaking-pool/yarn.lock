@@ -462,6 +462,20 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
+"@layerzerolabs/lz-v2-utilities@^3.0.15":
+  version "3.0.15"
+  resolved "https://registry.yarnpkg.com/@layerzerolabs/lz-v2-utilities/-/lz-v2-utilities-3.0.15.tgz#e6fd32e00b9075591753f1164d6692851cd0a010"
+  integrity sha512-WP2VJXfXuE2tAsEliBEGLjeMHXeMxaoG7nIZxgMRExRultOSdExNh+GKIamXMTwFO4LP1nH/dVCKMfxrNxpUwQ==
+  dependencies:
+    "@ethersproject/abi" "^5.7.0"
+    "@ethersproject/address" "^5.7.0"
+    "@ethersproject/bignumber" "^5.7.0"
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/keccak256" "^5.7.0"
+    "@ethersproject/solidity" "^5.7.0"
+    bs58 "^5.0.0"
+    tiny-invariant "^1.3.1"
+
 "@metamask/eth-sig-util@^4.0.0":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@metamask/eth-sig-util/-/eth-sig-util-4.0.1.tgz#3ad61f6ea9ad73ba5b19db780d40d9aae5157088"
@@ -692,10 +706,10 @@
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-toolbox/-/hardhat-toolbox-4.0.0.tgz#eb1f619218dd1414fa161dfec92d3e5e53a2f407"
   integrity sha512-jhcWHp0aHaL0aDYj8IJl80v4SZXWMS1A2XxXa1CA6pBiFfJKuZinCkO6wb+POAt0LIfXB3gA3AgdcOccrcwBwA==
 
-"@nomicfoundation/hardhat-verify@^2.0.5":
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.5.tgz#dcc2cb5e5c55a39704c7d492436f80f05a4ca5a3"
-  integrity sha512-Tg4zu8RkWpyADSFIgF4FlJIUEI4VkxcvELsmbJn2OokbvH2SnUrqKmw0BBfDrtvP0hhmx8wsnrRKP5DV/oTyTA==
+"@nomicfoundation/hardhat-verify@^2.0.11":
+  version "2.0.11"
+  resolved "http://localhost:4873/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.11.tgz#4ce12b592e01ee93a81933924609c233ed00d951"
+  integrity sha512-lGIo4dNjVQFdsiEgZp3KP6ntLiF7xJEJsbNHfSyIiFCyI0Yv0518ElsFtMC5uCuHEChiBBMrib9jWQvHHT+X3Q==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@ethersproject/address" "^5.0.2"
@@ -988,12 +1002,10 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
-"@solidity-parser/parser@^0.16.0":
-  version "0.16.1"
-  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.16.1.tgz#f7c8a686974e1536da0105466c4db6727311253c"
-  integrity sha512-PdhRFNhbTtu3x8Axm0uYpqOy/lODYQK+MlYSgqIsq2L8SFYEHJPHNUiOTAJbDGzNjjr1/n9AcIayxafR/fWmYw==
-  dependencies:
-    antlr4ts "^0.5.0-alpha.4"
+"@solidity-parser/parser@^0.18.0":
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.18.0.tgz#8e77a02a09ecce957255a2f48c9a7178ec191908"
+  integrity sha512-yfORGUIPgLck41qyN7nbwJRAx17/jAIXCTanHOJZhB6PJ1iAk/84b/xlsVKFSyNyLXIj0dhppoE0+CRws7wlzA==
 
 "@tsconfig/node10@^1.0.7":
   version "1.0.9"
@@ -1189,11 +1201,6 @@ acorn@^8.4.1:
   version "8.10.0"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.10.0.tgz#8be5b3907a67221a81ab23c7889c4c5526b62ec5"
   integrity sha512-F0SAmZ8iUtS//m8DmCTA0jlh6TDKkHQyK6xc6V4KDTyZKA9dnvX9/3sRTVQrWm79glUAZbnmmNcdYwUIHWVybw==
-
-address@^1.0.1:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/address/-/address-1.2.2.tgz#2b5248dac5485a6390532c6a517fda2e3faac89e"
-  integrity sha512-4B/qKCfeE/ODUaAUpSwfzazo5x29WD4r3vXiWsB7I2mSDAihwEqKO+g8GELZUQSSAo5e1XTYh3ZVfLyxBc12nA==
 
 adm-zip@^0.4.16:
   version "0.4.16"
@@ -1464,6 +1471,11 @@ base-x@^3.0.2:
   dependencies:
     safe-buffer "^5.0.1"
 
+base-x@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/base-x/-/base-x-4.0.0.tgz#d0e3b7753450c73f8ad2389b5c018a4af7b2224a"
+  integrity sha512-FuwxlW4H5kh37X/oW59pwTzzTKRzfrrQwhmyspRM7swOEZcHtDZSCt45U6oKgtuFE+WYPblePMVIPR4RZrh/hw==
+
 base64-js@^1.0.2, base64-js@^1.3.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
@@ -1564,6 +1576,13 @@ bs58@^4.0.0:
   integrity sha512-Ok3Wdf5vOIlBrgCvTq96gBkJw+JUEzdBgyaza5HLtPm7yTHkjRy8+JzNyHF7BHa0bNWOQIp3m5YF0nnFcOIKLw==
   dependencies:
     base-x "^3.0.2"
+
+bs58@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/bs58/-/bs58-5.0.0.tgz#865575b4d13c09ea2a84622df6c8cbeb54ffc279"
+  integrity sha512-r+ihvQJvahgYT50JD05dyJNKlmmSlMoOGwn1lCcEzanPglg7TxYjioQUYehQ9mAR/+hOSd2jRc/Z2y5UxBymvQ==
+  dependencies:
+    base-x "^4.0.0"
 
 bs58check@^2.1.2:
   version "2.1.2"
@@ -1955,14 +1974,6 @@ depd@2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/depd/-/depd-2.0.0.tgz#b696163cc757560d09cf22cc8fad1571b79e76df"
   integrity sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==
-
-detect-port@^1.3.0:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/detect-port/-/detect-port-1.5.1.tgz#451ca9b6eaf20451acb0799b8ab40dff7718727b"
-  integrity sha512-aBzdj76lueB6uUst5iAs7+0H/oOjqI5D16XUWxlWMIMROhcM0rfsNVk93zTngq1dDNpoXRr++Sus7ETAExppAQ==
-  dependencies:
-    address "^1.0.1"
-    debug "4"
 
 diff@5.0.0:
   version "5.0.0"
@@ -3458,7 +3469,7 @@ mnemonist@^0.38.0:
   dependencies:
     obliterator "^2.0.0"
 
-mocha@10.2.0, mocha@^10.0.0, mocha@^10.2.0:
+mocha@^10.0.0, mocha@^10.2.0:
   version "10.2.0"
   resolved "https://registry.yarnpkg.com/mocha/-/mocha-10.2.0.tgz#1fd4a7c32ba5ac372e03a17eef435bd00e5c68b8"
   integrity sha512-IDY7fl/BecMwFHzoqF2sg/SHHANeBoMMXFlS9r0OXKDssYE1M5O43wUY/9BVPeIvfH2zmEbBfseqN9gBQZzXkg==
@@ -3609,6 +3620,16 @@ once@1.x, once@^1.3.0:
   integrity sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==
   dependencies:
     wrappy "1"
+
+"openzeppelin-4-upgradeable@npm:@openzeppelin/contracts-upgradeable@4.5.0":
+  version "4.5.0"
+  resolved "http://localhost:4873/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.5.0.tgz#1aceb1303611e3b8e416e031bb9f8f211fbbbf8b"
+  integrity sha512-5540xxycH2aDFI3e+5Mqd0GDeozkSKSEaNWoM65l90OYxZxOs9YQMqa+b4fR+363BXXSXoC1DTXut2TuqViwPA==
+
+"openzeppelin-4@npm:@openzeppelin/contracts@4.5.0":
+  version "4.5.0"
+  resolved "http://localhost:4873/@openzeppelin/contracts/-/contracts-4.5.0.tgz#3fd75d57de172b3743cdfc1206883f56430409cc"
+  integrity sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA==
 
 optionator@^0.8.1:
   version "0.8.3"
@@ -4147,24 +4168,23 @@ solidity-ast@^0.4.51:
   dependencies:
     array.prototype.findlast "^1.2.2"
 
-solidity-coverage@^0.8.4:
-  version "0.8.5"
-  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.8.5.tgz#64071c3a0c06a0cecf9a7776c35f49edc961e875"
-  integrity sha512-6C6N6OV2O8FQA0FWA95FdzVH+L16HU94iFgg5wAFZ29UpLFkgNI/DRR2HotG1bC0F4gAc/OMs2BJI44Q/DYlKQ==
+solidity-coverage@^0.8.13:
+  version "0.8.13"
+  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.8.13.tgz#8eeada2e82ae19d25568368aa782a2baad0e0ce7"
+  integrity sha512-RiBoI+kF94V3Rv0+iwOj3HQVSqNzA9qm/qDP1ZDXK5IX0Cvho1qiz8hAXTsAo6KOIUeP73jfscq0KlLqVxzGWA==
   dependencies:
     "@ethersproject/abi" "^5.0.9"
-    "@solidity-parser/parser" "^0.16.0"
+    "@solidity-parser/parser" "^0.18.0"
     chalk "^2.4.2"
     death "^1.1.0"
-    detect-port "^1.3.0"
     difflib "^0.2.4"
     fs-extra "^8.1.0"
     ghost-testrpc "^0.0.2"
     global-modules "^2.0.0"
     globby "^10.0.1"
     jsonschema "^1.2.4"
-    lodash "^4.17.15"
-    mocha "10.2.0"
+    lodash "^4.17.21"
+    mocha "^10.2.0"
     node-emoji "^1.10.0"
     pify "^4.0.1"
     recursive-readdir "^2.2.2"
@@ -4385,6 +4405,11 @@ then-request@^6.0.0:
     http-response-object "^3.0.1"
     promise "^8.0.0"
     qs "^6.4.0"
+
+tiny-invariant@^1.3.1:
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/tiny-invariant/-/tiny-invariant-1.3.3.tgz#46680b7a873a0d5d10005995eb90a70d74d60127"
+  integrity sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==
 
 tmp@0.0.33:
   version "0.0.33"

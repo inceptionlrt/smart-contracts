@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.27;
 
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Configurable} from "./Configurable.sol";
@@ -161,7 +161,10 @@ contract RestakingPool is
             revert PoolStakeAmGreaterThanAvailable();
 
         uint256 stakeBonus;
-        if (stakeBonusAmount > 0) {
+        if (
+            stakeBonusAmount > 0 &&
+            msg.sender != address(config().getRebalancer())
+        ) {
             uint256 capacity = getFlashCapacity();
             if (capacity < amount) {
                 stakeBonus = _calculateStakeBonus(0, amount);

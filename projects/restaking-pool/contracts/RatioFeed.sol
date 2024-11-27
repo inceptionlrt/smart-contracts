@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -9,7 +9,7 @@ import "./interfaces/IProtocolConfig.sol";
 
 /**
  * @title Stores ratio of inETH
- * @author GenesisLRT
+ * @author InceptionLRT
  */
 contract RatioFeed is Configurable, IRatioFeed {
     uint32 public constant MAX_THRESHOLD = uint32(1e8); // 100000000
@@ -150,9 +150,16 @@ contract RatioFeed is Configurable, IRatioFeed {
     *******************************************************************************/
 
     /**
-     * @notice Get ratio of a token.
+     * @notice Deprecated. Left for compatibility
      */
     function getRatio(address token) public view override returns (uint256) {
+        return _ratios[token];
+    }
+
+    /**
+     * @notice Get ratio of a token.
+     */
+    function getRatioFor(address token) public view override returns (uint256) {
         return _ratios[token];
     }
 

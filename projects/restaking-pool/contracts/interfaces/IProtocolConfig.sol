@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "./IRatioFeed.sol";
 import "./ICToken.sol";
 import "./IRestakingPool.sol";
 import "./IEigenPodManager.sol";
 import "../restaker/IRestakerDeployer.sol";
+import "./INativeRebalancer.sol";
 
 interface IProtocolConfig {
     /* errors */
@@ -22,6 +23,10 @@ interface IProtocolConfig {
     event RestakingPoolChanged(
         IRestakingPool prevValue,
         IRestakingPool newValue
+    );
+    event RebalancerChanged(
+        INativeRebalancer prevValue,
+        INativeRebalancer newValue
     );
     event EigenManagerChanged(
         IEigenPodManager prevValue,
@@ -45,6 +50,11 @@ interface IProtocolConfig {
     function getRatioFeed() external view returns (IRatioFeed feed);
 
     function getRestakingPool() external view returns (IRestakingPool pool);
+
+    function getRebalancer()
+        external
+        view
+        returns (INativeRebalancer rebalancer);
 
     function getRestakerDeployer()
         external

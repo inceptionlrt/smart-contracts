@@ -1,6 +1,6 @@
 {
     "name": "genesis-smart-contracts",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "",
     "main": "truffle-config.js",
     "directories": {
@@ -18,11 +18,12 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@layerzerolabs/lz-v2-utilities": "^3.0.15",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
         "@nomicfoundation/hardhat-ethers": "^3.0.5",
         "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
         "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-        "@nomicfoundation/hardhat-verify": "^2.0.5",
+        "@nomicfoundation/hardhat-verify": "^2.0.11",
         "@nomiclabs/hardhat-ethers": "^2.2.3",
         "@openzeppelin/contracts": "^5.0.0",
         "@openzeppelin/contracts-upgradeable": "^5.0.0",
@@ -40,7 +41,9 @@
         "hardhat-deploy": "^0.11.45",
         "hardhat-gas-reporter": "^1.0.9",
         "hardhat-tracer": "^2.7.0",
-        "solidity-coverage": "^0.8.4",
+        "openzeppelin-4": "npm:@openzeppelin/contracts@4.5.0",
+        "openzeppelin-4-upgradeable": "npm:@openzeppelin/contracts-upgradeable@4.5.0",
+        "solidity-coverage": "^0.8.13",
         "ts-node": "^10.9.1",
         "typechain": "^8.3.2",
         "typescript": "^5.2.2"

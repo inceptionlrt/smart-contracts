@@ -37,7 +37,7 @@ contract BackingEigen is OwnableUpgradeable, ERC20Upgradeable {
      * @notice An initializer function that sets initial values for the contract's state variables.
      */
     function initialize(address initialOwner) public initializer {
-        __Ownable_init();
+        __Ownable_init(initialOwner);
         __ERC20_init("Backing Eigen", "bEIGEN");
         _transferOwnership(initialOwner);
 
@@ -105,24 +105,22 @@ contract BackingEigen is OwnableUpgradeable, ERC20Upgradeable {
     }
 
     /**
-     * @notice Overrides the beforeTokenTransfer function to enforce transfer restrictions
+     * @notice Override the `_update` function to implement transfer restrictions.
      * @param from the address tokens are being transferred from
      * @param to the address tokens are being transferred to
-     * @param amount the amount of tokens being transferred
+     * @param value the amount of tokens being transferred
      */
-    function _beforeTokenTransfer(
+    function _update(
         address from,
         address to,
-        uint256 amount
+        uint256 value
     ) internal override {
-        // if transfer restrictions are enabled
         if (block.timestamp <= transferRestrictionsDisabledAfter) {
-            // if both from and to are not whitelisted
             require(
                 allowedFrom[from] || allowedTo[to] || from == address(0),
-                "BackingEigen._beforeTokenTransfer: from or to must be whitelisted"
+                "From or to must be whitelisted"
             );
         }
-        super._beforeTokenTransfer(from, to, amount);
+        super._update(from, to, value);
     }
 }

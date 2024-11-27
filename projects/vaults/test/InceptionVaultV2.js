@@ -739,7 +739,10 @@ assets.forEach(function (a) {
       });
 
       it("setTreasuryAddress(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setTreasuryAddress(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setTreasuryAddress(staker2.address)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("setOperator(): only owner can", async function () {
@@ -761,7 +764,10 @@ assets.forEach(function (a) {
       });
 
       it("setOperator(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("addELOperator(): only owner can", async function () {
@@ -774,7 +780,10 @@ assets.forEach(function (a) {
       });
 
       it("addELOperator(): reverts when caller is not an owner", async function () {
-        await expect(iVault.connect(iVaultOperator).addELOperator(nodeOperators[0])).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(iVaultOperator).addELOperator(nodeOperators[0])).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("addELOperator(): reverts when address is not a staker-operator", async function () {
@@ -797,8 +806,11 @@ assets.forEach(function (a) {
         );
       });
 
-      it("setDelegationManager(): reverts when caller is not an operator", async function () {
-        await expect(iVault.connect(staker).setDelegationManager(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+      it("setDelegationManager(): reverts when caller is not an owner", async function () {
+        await expect(iVault.connect(staker).setDelegationManager(staker2.address)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("setRatioFeed(): only owner can", async function () {
@@ -814,7 +826,10 @@ assets.forEach(function (a) {
 
       it("setRatioFeed(): reverts when caller is not an owner", async function () {
         const newRatioFeed = ethers.Wallet.createRandom().address;
-        await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("setMinAmount(): only owner can", async function () {
@@ -830,7 +845,10 @@ assets.forEach(function (a) {
       });
 
       it("setMinAmount(): another address can not", async function () {
-        await expect(iVault.connect(staker).setMinAmount(randomBI(3))).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setMinAmount(randomBI(3))).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("setName(): only owner can", async function () {
@@ -845,12 +863,18 @@ assets.forEach(function (a) {
       });
 
       it("setName(): another address can not", async function () {
-        await expect(iVault.connect(staker).setName("New name")).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setName("New name")).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("updateEpoch(): reverts when paused", async function () {
         await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).updateEpoch()).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(iVaultOperator).updateEpoch()).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
       });
 
       it("pause(): only owner can", async function () {
@@ -860,12 +884,15 @@ assets.forEach(function (a) {
       });
 
       it("pause(): another address can not", async function () {
-        await expect(iVault.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).pause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("pause(): reverts when already paused", async function () {
         await iVault.pause();
-        await expect(iVault.pause()).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.pause()).to.be.revertedWithCustomError(iVault, "EnforcedPause");
       });
 
       it("unpause(): only owner can", async function () {
@@ -879,7 +906,10 @@ assets.forEach(function (a) {
       it("unpause(): another address can not", async function () {
         await iVault.pause();
         expect(await iVault.paused()).is.true;
-        await expect(iVault.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).unpause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("upgradeTo(): only owner can", async function () {
@@ -898,15 +928,19 @@ assets.forEach(function (a) {
 
       it("upgradeTo(): reverts when caller is not an operator", async function () {
         const newRestakeImp = await ethers.deployContract("InceptionRestaker");
-        await expect(iVault.connect(staker).upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWith(
-          "Ownable: caller is not the owner"
+        await expect(iVault.connect(staker).upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
         );
       });
 
       it("upgradeTo(): reverts when paused", async function () {
         const newRestakeImp = await ethers.deployContract("InceptionRestaker");
         await iVault.pause();
-        await expect(iVault.upgradeTo(await newRestakeImp.getAddress())).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.upgradeTo(await newRestakeImp.getAddress())).revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
         await iVault.unpause();
       });
 
@@ -921,7 +955,10 @@ assets.forEach(function (a) {
 
       it("setTargetFlashCapacity(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(18);
-        await expect(iVault.connect(staker).setTargetFlashCapacity(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setTargetFlashCapacity(newValue)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
@@ -938,7 +975,10 @@ assets.forEach(function (a) {
 
       it("setProtocolFee(): reverts when caller is not an owner", async function () {
         const newValue = randomBI(10);
-        await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
     });
 
@@ -1138,8 +1178,10 @@ assets.forEach(function (a) {
 
       it("setDepositBonusParams reverts when caller is not an owner", async function () {
         await expect(
-          iVault.connect(staker).setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+          iVault
+            .connect(staker)
+            .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
+        ).to.be.revertedWithCustomError(iToken, "OwnableUnauthorizedAccount");
       });
     });
 
@@ -1355,7 +1397,7 @@ assets.forEach(function (a) {
           iVault
             .connect(staker)
             .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        ).to.be.revertedWithCustomError(iToken, "OwnableUnauthorizedAccount");
       });
     });
 
@@ -1382,7 +1424,10 @@ assets.forEach(function (a) {
       });
 
       it("setVault(): another address can not", async function () {
-        await expect(iToken.connect(staker).setVault(staker2.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iToken.connect(staker).setVault(staker2.address)).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("pause(): only owner can", async function () {
@@ -1392,7 +1437,10 @@ assets.forEach(function (a) {
       });
 
       it("pause(): another address can not", async function () {
-        await expect(iToken.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iToken.connect(staker).pause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("pause(): reverts when it has already been paused", async function () {
@@ -1424,7 +1472,10 @@ assets.forEach(function (a) {
       it("unpause(): another address can not", async function () {
         await iToken.pause();
         expect(await iToken.paused()).is.true;
-        await expect(iToken.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(iToken.connect(staker).unpause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("unpause(): when it is not paused", async function () {
@@ -1531,7 +1582,10 @@ assets.forEach(function (a) {
       });
 
       it("pause(): another address can not", async function () {
-        await expect(restaker.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(restaker.connect(staker).pause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
 
       it("unpause(): only owner can", async function () {
@@ -1545,7 +1599,10 @@ assets.forEach(function (a) {
       it("unpause(): another address can not", async function () {
         await restaker.connect(iVaultMock).pause();
         expect(await restaker.paused()).is.true;
-        await expect(restaker.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(restaker.connect(staker).unpause()).to.be.revertedWithCustomError(
+          iToken,
+          "OwnableUnauthorizedAccount",
+        );
       });
     });
 
@@ -1722,7 +1779,10 @@ assets.forEach(function (a) {
       it("Reverts: deposit when iVault is paused", async function () {
         await iVault.pause();
         const depositAmount = randomBI(19);
-        await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
         await iVault.unpause();
       });
 
@@ -1730,7 +1790,9 @@ assets.forEach(function (a) {
         await iVault.pause();
         const depositAmount = randomBI(19);
         const code = ethers.encodeBytes32String(randomAddress().slice(0, 8));
-        await expect(iVault.connect(staker).depositWithReferral(depositAmount, staker, code)).to.be.revertedWith("Pausable: paused");
+        await expect(
+          iVault.connect(staker).depositWithReferral(depositAmount, staker, code),
+        ).to.be.revertedWithCustomError(iVault, "EnforcedPause");
         await iVault.unpause();
       });
 
@@ -2236,8 +2298,10 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(amount, staker.address);
         await iVault.pause();
         await expect(
-          iVault.connect(iVaultOperator).delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0])
-        ).to.be.revertedWith("Pausable: paused");
+          iVault
+            .connect(iVaultOperator)
+            .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
+        ).to.be.revertedWithCustomError(iVault, "EnforcedPause");
         await iVault.unpause();
       });
 
@@ -2403,28 +2467,28 @@ assets.forEach(function (a) {
           name: "> balance",
           amount: async () => (await iToken.balanceOf(staker.address)) + 1n,
           receiver: () => staker.address,
-          isCustom: false,
-          error: "ERC20: burn amount exceeds balance",
+          contract: () => iToken,
+          error: "ERC20InsufficientBalance",
         },
         {
           name: "< min amount",
           amount: async () => (await iVault.minAmount()) - 1n,
           receiver: () => staker.address,
-          isCustom: true,
+          contract: () => iVault,
           error: "LowerMinAmount",
         },
         {
           name: "0",
           amount: async () => 0n,
           receiver: () => staker.address,
-          isCustom: true,
+          contract: () => iVault,
           error: "NullParams",
         },
         {
           name: "to zero address",
           amount: async () => randomBI(15),
           receiver: () => ethers.ZeroAddress,
-          isCustom: true,
+          contract: () => iVault,
           error: "NullParams",
         },
       ];
@@ -2433,11 +2497,10 @@ assets.forEach(function (a) {
         it(`Reverts: withdraws ${test.name}`, async function () {
           const amount = await test.amount();
           const receiver = test.receiver();
-          if (test.isCustom) {
-            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWithCustomError(iVault, test.error);
-          } else {
-            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWith(test.error);
-          }
+          await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWithCustomError(
+            test.contract(),
+            test.error,
+          );
         });
       });
 
@@ -2462,7 +2525,10 @@ assets.forEach(function (a) {
 
       it("Reverts: withdraw when iVault is paused", async function () {
         await iVault.pause();
-        await expect(iVault.connect(staker).withdraw(toWei(0.1), staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
         await iVault.unpause();
       });
 
@@ -2615,7 +2681,10 @@ assets.forEach(function (a) {
         await iVault.connect(staker).deposit(toWei(0.001), staker.address);
         await iVault.pause();
         const amount = await iVault.getFlashCapacity();
-        await expect(iVault.connect(staker).flashWithdraw(amount, staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(staker).flashWithdraw(amount, staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
       });
     });
 
@@ -3168,7 +3237,9 @@ assets.forEach(function (a) {
       it("Reverts: undelegate when iVault is paused", async function () {
         const amount = randomBI(18);
         await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount)).to.be.revertedWith("Pausable: paused");
+        await expect(
+          iVault.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount),
+        ).to.be.revertedWithCustomError(iVault, "EnforcedPause");
         await iVault.unpause();
       });
     });
@@ -3214,7 +3285,10 @@ assets.forEach(function (a) {
       it("Reverts: undelegate when iVault is paused", async function () {
         const amount = randomBI(18);
         await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).undelegateVault(amount)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(iVaultOperator).undelegateVault(amount)).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
         await iVault.unpause();
       });
     });
@@ -3377,7 +3451,9 @@ assets.forEach(function (a) {
 
       it("Reverts: when iVault is paused", async function () {
         await iVault.pause();
-        await expect(iVault.claimCompletedWithdrawals(withdrawalData[2], [withdrawalData])).to.be.revertedWith("Pausable: paused");
+        await expect(
+          iVault.claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]),
+        ).to.be.revertedWithCustomError(iVault, "EnforcedPause");
       });
 
       it("Reverts: when claim without delay", async function () {
@@ -3536,7 +3612,10 @@ assets.forEach(function (a) {
 
       it("Reverts: redeem when iVault is paused", async function () {
         await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "EnforcedPause",
+        );
       });
 
       it("Unpause after previous test", async function () {

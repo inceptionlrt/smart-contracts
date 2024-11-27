@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
@@ -8,7 +8,7 @@ import "./interfaces/IFeeCollector.sol";
 
 /**
  * @title MEV & Tips fee recipient
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice Contract receives EL (tips/MEV) rewards and send them to RestakingPool
  */
 contract FeeCollector is

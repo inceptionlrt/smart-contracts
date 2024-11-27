@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -9,7 +9,7 @@ import "./interfaces/ICToken.sol";
 
 /**
  * @title Staked token.
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice cToken accumulates interest through their exchange ratio — over time, cToken becomes convertible into an increasing
  * amount of ETH, even while the number of cTokens in your wallet stays the same.
  *
@@ -74,7 +74,7 @@ contract cToken is Configurable, ERC20PausableUpgradeable, ICToken {
     function mint(
         address account,
         uint256 shares
-    ) external override whenNotPaused onlyRestakingPool {
+    ) external override whenNotPaused onlyMinter {
         _mint(account, shares);
     }
 
@@ -86,7 +86,7 @@ contract cToken is Configurable, ERC20PausableUpgradeable, ICToken {
     function burn(
         address account,
         uint256 shares
-    ) external override whenNotPaused onlyRestakingPool {
+    ) external override whenNotPaused onlyMinter {
         _burn(account, shares);
     }
 
@@ -122,8 +122,8 @@ contract cToken is Configurable, ERC20PausableUpgradeable, ICToken {
     }
 
     /**
-     * @dev Returns the total amount of the ETH that is “managed” by Genesis.
-     * @return totalManagedEth Total ETH amount into Genesis protocol.
+     * @dev Returns the total amount of the ETH that is “managed” by InceptionLRT.
+     * @return totalManagedEth Total ETH amount into InceptionLRT protocol.
      */
     function totalAssets()
         external

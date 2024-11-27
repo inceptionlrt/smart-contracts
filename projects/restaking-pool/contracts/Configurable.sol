@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -12,7 +12,7 @@ import "./interfaces/IProtocolConfig.sol";
 abstract contract Configurable is Initializable, ContextUpgradeable {
     error OnlyGovernanceAllowed();
     error OnlyOperatorAllowed();
-    error OnlyRestakingPoolAllowed();
+    error OnlyMinterAllowed();
 
     IProtocolConfig private _config;
     uint256[50 - 1] private __reserved;
@@ -31,9 +31,12 @@ abstract contract Configurable is Initializable, ContextUpgradeable {
         _;
     }
 
-    modifier onlyRestakingPool() virtual {
-        if (_msgSender() != address(_config.getRestakingPool())) {
-            revert OnlyRestakingPoolAllowed();
+    modifier onlyMinter() virtual {
+        if (
+            (_msgSender() != address(_config.getRestakingPool()) &&
+                (_msgSender() != address(_config.getRebalancer())))
+        ) {
+            revert OnlyMinterAllowed();
         }
         _;
     }

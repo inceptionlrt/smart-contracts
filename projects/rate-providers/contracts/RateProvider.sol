@@ -13,7 +13,7 @@ interface IRateProvider {
 
 /**
  * @title RateProvider
- * @author GenesisLRT
+ * @author InceptionLRT
  * @notice Redemption rate provider for balancer.
  */
 contract InEthRateProvider is IRateProvider {
