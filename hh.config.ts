@@ -20,6 +20,7 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
+      eid: 40217,
       verify: {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY,
@@ -33,6 +34,7 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
+      eid: 30110,
     },
     sepolia: {
       url: process.env.RPC_URL_SEPOLIA,
@@ -54,6 +56,7 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
+      eid: 30111,
       verify: {
         etherscan: {
           apiKey: process.env.OPTIMISM_API_KEY,
