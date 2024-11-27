@@ -11,6 +11,11 @@ const func: DeployFunction = async function ({ deployments, network }) {
   const currentImpl = await upgrades.erc1967.getImplementationAddress(ProtocolConfig.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", protocolConfigAdmin);
 
+  const [deployer] = await ethers.getSigners();
+
+  console.log(`deployer address: ${deployer.address}`);
+  console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
+
   // Prepare ProtocolConfig contract factory
   const ProtocolConfigFactory = await ethers.getContractFactory("ProtocolConfig");
 

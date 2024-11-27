@@ -1,13 +1,21 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
-const func: DeployFunction = async function ({ deployments }) {
+const func: DeployFunction = async function ({ deployments, network }) {
   const { get } = deployments;
 
   const nativeRebalancer = await get("NativeRebalancer");
   console.log("NativeRebalancer address:", nativeRebalancer.address);
 
-  const crossChainBridgeAddress = ""; //replace with actual address!
+  let crossChainBridgeAddress = "";
+  if (network.name === "mainnet") {
+    // TODO
+    crossChainBridgeAddress = "";
+  } else {
+    // TODO
+    crossChainBridgeAddress = "";
+  }
+
   if (!crossChainBridgeAddress) {
     throw new Error("CROSS_CHAIN_BRIDGE environment variable is not set");
   }

@@ -1,11 +1,23 @@
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { ozDeploy } from "../scripts/deploy-helpers";
 
-const func: DeployFunction = async function ({ getNamedAccounts, deployments }) {
+const func: DeployFunction = async function ({ getNamedAccounts, deployments, network }) {
   const { deployer, operator } = await getNamedAccounts();
   const { get, execute } = deployments;
 
-  const lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
+  console.log(`deployer address: ${deployer}`);
+  console.log(`deployer balance: ${await ethers.provider.getBalance(deployer)}`);
+
+  /// 1. InceptionLibrary Deployment
+  let lockboxAddress = "";
+  if (network.name === "mainnet") {
+    // TODO
+    lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
+  } else {
+    // TODO
+    lockboxAddress = "TODO";
+  }
 
   // Load existing contract addresses
   const inceptionToken = await get("cToken");
