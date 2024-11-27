@@ -6,11 +6,12 @@ const func: DeployFunction = async function ({ deployments, network }) {
   const { get } = deployments;
   const RestakingPool = await get("RestakingPool");
   console.log("Restaking Pool address: ", RestakingPool.address);
-  const [deployer] = await ethers.getSigners();
 
   const restakinPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
   const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
+
+  const [deployer] = await ethers.getSigners();
 
   console.log(`deployer address: ${deployer.address}`);
   console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
@@ -22,7 +23,7 @@ const func: DeployFunction = async function ({ deployments, network }) {
   } else {
     libAddress = "0x4db1487f376efe5116af8491ece85f52e7082ce8";
   }
-  console.log("InceptionLibrary address(11):", libAddress);
+  console.log("InceptionLibrary address(13):", libAddress);
 
   /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
@@ -59,3 +60,4 @@ module.exports.tags = ["13_upgrade_pool"];
 module.exports.dependencies = [];
 module.exports.skip = false;
 module.exports.id = "13";
+

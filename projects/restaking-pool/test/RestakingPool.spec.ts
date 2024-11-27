@@ -68,6 +68,7 @@ describe("RestakingPool", function () {
     expensiveStaker: ExpensiveStakerMock;
   let snapshot: SnapshotRestorer;
   let MAX_PERCENT;
+  let rewardsCoordinator;
 
   async function getTargetCapacity() {
     const targetCapacityPercent = await pool.targetCapacity();
@@ -176,7 +177,7 @@ describe("RestakingPool", function () {
           .to.emit(pool, "RewardsTimelineChanged")
           .withArgs(prevValue, newValue);
 
-      expect(prevValue).to.be.eq(day * 7n); //default value is 7d
+      expect(prevValue).to.be.eq(0); //default value is 7d
       expect(await pool.rewardsTimeline()).to.be.eq(newValue);
     })
 
@@ -1339,7 +1340,7 @@ describe("RestakingPool", function () {
       expect(totalAssets).to.be.eq(totalPendingB4);
       console.log(totalPendingB4);
 
-      await pool.connect(governance).setRewardsTimeline(604900); // Around 7 days
+      await pool.connect(governance).setRewardsTimeline(604800); // Around 7 days
       await pool.connect(operator).addRewards({value: toWei(5)});
 
       const latest = await time.latest();
@@ -1506,7 +1507,20 @@ describe("RestakingPool", function () {
       await snapshot.restore();
       await pool.connect(governance).setRewardsTimeline(totalDays * 86400n);
     });
+    it("setRewardsCoordinator", async function () {
+      await pool.addRestaker(TEST_PROVIDER);
+      const restaker = await pool.getRestaker(TEST_PROVIDER);
 
+      rewardsCoordinator = await (await (await ethers.getContractFactory("RewardsCoordinator")).deploy()).waitForDeployment();
+      
+      await pool.connect(governance).setRewardsCoordinator(TEST_PROVIDER, await rewardsCoordinator.getAddress(), await deployer.getAddress());
+
+      let coordinator = await ethers.provider.getStorage(restaker, "0x02")
+      coordinator = ethers.getAddress('0x' + (Buffer.from(coordinator.replace(/^0x/, ''), 'hex')).toString('hex', 12, 32));
+
+      expect(await rewardsCoordinator.getAddress()).to.be.equal(coordinator);
+      expect(await rewardsCoordinator.claimerFor(restaker)).to.be.equal(await deployer.getAddress());
+    })
     it("addRewards when there are no other rewards have been added", async function () {
       const operatorBalanceBefore = await ethers.provider.getBalance(operator.address);
       const poolBalanceBefore = await ethers.provider.getBalance(pool.address);

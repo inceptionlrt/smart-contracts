@@ -55,7 +55,7 @@ interface IRestakingPool {
 
     event MinStakeChanged(uint256 prevValue, uint256 newValue);
 
-    event MinUntakeChanged(uint256 prevValue, uint256 newValue);
+    event MinUnstakeChanged(uint256 prevValue, uint256 newValue);
 
     event MaxTVLChanged(uint256 prevValue, uint256 newValue);
 
@@ -120,7 +120,10 @@ interface IRestakingPool {
 
     event RewardsAdded(uint256 amount, uint256 startTimeline);
 
-    event RewardsTimelineChanged(uint256 rewardsTimeline, uint256 newTimelineInSeconds);
+    event RewardsTimelineChanged(
+        uint256 rewardsTimeline,
+        uint256 newTimelineInSeconds
+    );
 
     /* functions */
 
