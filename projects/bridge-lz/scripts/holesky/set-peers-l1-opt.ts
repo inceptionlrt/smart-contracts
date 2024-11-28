@@ -6,7 +6,7 @@ async function main() {
     const [deployer] = await ethers.getSigners();
 
     const CrossChainBridgeEthereumAddress = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
-    const CrossChainBridgeOptimismAddress = "0xF634bCddFCB5F02b1E4Cd8A9057069ca24884fE2";
+    const CrossChainBridgeOptimismAddress = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
 
     if (!CrossChainBridgeEthereumAddress || !CrossChainBridgeOptimismAddress) {
         throw new Error("CrossChainBridge addresses not found in the checkpoint files.");
