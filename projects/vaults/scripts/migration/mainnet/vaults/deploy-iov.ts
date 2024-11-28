@@ -12,11 +12,19 @@ async function main() {
     switch (networkName) {
         case "arbitrum":
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO! Insert LZCrossChainBridgeL2 address for Arbitrum here
+            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Arbitrum here
             break;
         case "optimism":
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO! Insert LZCrossChainBridgeL2 address for Optimism here
+            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
+            break;
+        case "arbitrumSepolia":
+            INCEPTION_TOKEN_ADDRESS = "0xCDeA808c1C43F95309C8ca398DF41a257aF2Dc8a";
+            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0xb7A8CA74cbfe313804c3D52663e9b0C0585B5C4e";
+            break;
+        case "optimismSepolia":
+            INCEPTION_TOKEN_ADDRESS = "0x983c2239ad08307F978096844166c67E0f1b2630";
+            CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
             break;
         default:
             throw new Error(`Unsupported network: ${networkName}`);
@@ -31,7 +39,7 @@ async function main() {
         throw new Error("Please set the OPERATOR_ADDRESS environment variable");
     }
 
-    const vaultName = "Inception OmniVault";
+    const vaultName = "InceptionOmniVault";
 
     console.log("Deployment parameters:");
     console.log("Network:", networkName);
@@ -62,6 +70,34 @@ async function main() {
 
     const adminAddress = await upgrades.erc1967.getAdminAddress(deployedAddress);
     console.log("Proxy Admin Address:", adminAddress);
+
+    console.log("Setting bridge limits on IXERC20 contract...");
+
+    const ixerc20 = await ethers.getContractAt("IXERC20", INCEPTION_TOKEN_ADDRESS);
+
+    const bigNumberLimit = ethers.constants.MaxUint256.div(100); // NB! very big number
+    const tx1 = await ixerc20.setBridgeLimits(deployedAddress, bigNumberLimit, bigNumberLimit);
+
+    console.log("Waiting for bridge limits transaction to complete...");
+    await tx1.wait();
+
+    console.log(`Bridge limits set successfully on IXERC20 contract for bridge: ${deployedAddress}`);
+
+    console.log("Setting target receiver on LZCrossChainAdapterL2...");
+
+    const lzCrossChainAdapterL2 = await ethers.getContractAt(
+        "LZCrossChainAdapterL2",
+        CROSS_CHAIN_BRIDGE_ADDRESS_L2
+    );
+
+    const tx2 = await lzCrossChainAdapterL2.setTargetReceiver(deployedAddress);
+
+    console.log("Waiting for target receiver transaction to complete...");
+    await tx2.wait();
+
+    console.log(
+        `Target receiver set successfully on LZCrossChainAdapterL2: ${deployedAddress}`
+    );
 
     console.log("Deployment complete.");
 }
