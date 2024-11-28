@@ -149,7 +149,7 @@ export const CONFIG = {
   },
   etherscan: {
     apiKey: {
-      holesky: process.env.HOLESKY_ETHERSCAN_API_KEY,
+      holesky: process.env.ETHERSCAN_API_KEY,
       mainnet: process.env.ETHERSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       arbitrum: process.env.ARBISCAN_API_KEY,
