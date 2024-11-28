@@ -5,6 +5,8 @@ import 'hardhat-deploy'
 import 'hardhat-contract-sizer'
 import '@nomiclabs/hardhat-ethers'
 import '@layerzerolabs/toolbox-hardhat'
+import "hardhat-deploy";
+import "@openzeppelin/hardhat-upgrades";
 import '@nomicfoundation/hardhat-verify';
 import { HardhatUserConfig, HttpNetworkAccountsUserConfig } from 'hardhat/types'
 
