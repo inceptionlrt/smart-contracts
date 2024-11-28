@@ -119,6 +119,6 @@ const deploy: DeployFunction = async (hre) => {
     }
 };
 
-deploy.tags = ['l1'];
+deploy.tags = ['l2'];
 
 export default deploy;
