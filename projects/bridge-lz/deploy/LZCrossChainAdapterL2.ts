@@ -1,124 +1,124 @@
-import assert from 'assert';
-import { DeployFunction } from 'hardhat-deploy/types';
-import { ethers, run, network } from 'hardhat';
+import assert from "assert";
+import { DeployFunction } from "hardhat-deploy/types";
+import { ethers, upgrades, network, run } from "hardhat";
 
-const contractName = 'LZCrossChainAdapterL1';
+const contractName = "LZCrossChainAdapterL2";
 
 const deploy: DeployFunction = async (hre) => {
-    const { getNamedAccounts, deployments } = hre;
-    const { deploy, save } = deployments;
+    const { getNamedAccounts } = hre;
     const { deployer } = await getNamedAccounts();
 
-    assert(deployer, 'Missing named deployer account');
+    assert(deployer, "Missing named deployer account");
     console.log(`Deployer Address: ${deployer}`);
 
-    // Check TARGET_NETWORK or default to the actual network name
-    const targetNetwork = process.env.TARGET_NETWORK || network.name;
-    const validNetworksForVerification = ['ethereum', 'sepolia', 'arbitrum', 'arbitrum-sepolia'];
+    const targetNetwork = network.name;
 
-    const isSepoliaDeployment = targetNetwork === 'sepolia';
+    const testnetNames = ["optimismSepolia", "arbitrumSepolia", "hardhat"];
+    const mainnetNames = ["arbitrum", "optimism"];
 
-    // 1. Deploy the CrossChainBridge implementation contract
-    console.log('Deploying implementation contract...');
-    const implementationDeployment = await deploy(contractName, {
-        from: deployer,
-        args: [],
-        log: true,
-        skipIfAlreadyDeployed: false,
+    const isTestnet = testnetNames.includes(targetNetwork);
+    const isMainnet = mainnetNames.includes(targetNetwork);
+
+    if (!isTestnet && !isMainnet) {
+        throw new Error(`Unsupported network: ${targetNetwork}`);
+    }
+
+    console.log(`Target Network: ${targetNetwork}`);
+    console.log(`Is Testnet: ${isTestnet}`);
+    console.log(`Is Mainnet: ${isMainnet}`);
+
+    const endpointAddresses: Record<string, string> = {
+        mainnet: "0x1a44076050125825900e736c501f859c50fE728c",
+        holesky: "0x6EDCE65403992e310A62460808c4b910D972f10f",
+        sepolia: "0x6EDCE65403992e310A62460808c4b910D972f10f",
+        arbitrum: "0x1a44076050125825900e736c501f859c50fE728c",
+        arbitrumSepolia: "0x6EDCE65403992e310A62460808c4b910D972f10f",
+        optimism: "0x1a44076050125825900e736c501f859c50fE728c",
+        optimismSepolia: "0x6EDCE65403992e310A62460808c4b910D972f10f",
+    };
+
+    const endpointAddress = endpointAddresses[targetNetwork];
+    if (!endpointAddress) {
+        throw new Error(`No EndpointV2 address configured for network: ${targetNetwork}`);
+    }
+
+    console.log(`Using EndpointV2 Address: ${endpointAddress}`);
+
+    const testEids = [40161, 40231, 40232, 40217];
+    const testChainIds = [11155111, 421614, 11155420, 17000];
+
+    const mainnetEids = [30110, 30111, 30101];
+    const mainnetChainIds = [42161, 10, 1];
+
+    const eIds = isTestnet ? testEids : mainnetEids;
+    const chainIds = isTestnet ? testChainIds : mainnetChainIds;
+    const l1ChainId = isTestnet ? 17000 : 1;
+
+    console.log(`EIDs: ${eIds}`);
+    console.log(`Chain IDs: ${chainIds}`);
+
+    const args_x = [
+        endpointAddress,
+        deployer,
+        l1ChainId,
+        eIds,
+        chainIds,
+    ];
+
+    // Deploy the Proxy
+    console.log("Deploying TransparentUpgradeableProxy...");
+    const contractFactory = await ethers.getContractFactory(contractName);
+    const contract = await upgrades.deployProxy(contractFactory, args_x, {
+        kind: "transparent",
     });
+    await contract.deployed();
+    console.log(`${contractName} Proxy deployed at:`, contract.address);
 
-    const implementationAddress = implementationDeployment.address;
-    console.log(`Deployed ${contractName} implementation at: ${implementationAddress}`);
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(contract.address);
+    console.log("ProxyAdmin deployed at:", proxyAdminAddress);
 
-    // 2. Deploy ProxyAdmin using Hardhat's deploy function
-    console.log('Deploying ProxyAdmin...');
-    let proxyAdminAddress;
-    const existingProxyAdmin = await deployments.getOrNull('ProxyAdmin');
-    if (!existingProxyAdmin) {
-        try {
-            const proxyAdminDeployment = await deploy('ProxyAdmin', {
-                from: deployer,
-                args: [deployer],
-                log: true,
-                skipIfAlreadyDeployed: true,
-            });
-            proxyAdminAddress = proxyAdminDeployment.address;
-        } catch (error) {
-            console.error('Error deploying ProxyAdmin:', error);
-            return;
-        }
-    } else {
-        proxyAdminAddress = existingProxyAdmin.address;
-    }
+    const implementationAddress = await upgrades.erc1967.getImplementationAddress(contract.address);
+    console.log("Implementation deployed at:", implementationAddress);
 
-    // 3. Get the address of the EndpointV2 contract (assuming it's deployed)
-    console.log('Fetching EndpointV2 contract...');
-    const endpointV2Deployment = await deployments.get('EndpointV2');
 
-    const eIds = [40161, 40231, 40232, 40217, 30110, 30111, 30101];
-    const chainIds = [11155111, 421614, 11155420, 17000, 42161, 10, 1];
 
-    // 4. Encode the initialize function call for the proxy
-    console.log('Encoding initialize function call...');
-    const initializeData = (await ethers.getContractFactory(contractName)).interface.encodeFunctionData(
-        'initialize',
-        [
-            endpointV2Deployment.address,
-            deployer,
-            eIds,
-            chainIds
-        ]
-    );
+    // Verification
+    console.log("Verifying contracts...");
 
-    let proxyDeployment;
+    // Verify Implementation
     try {
-        proxyDeployment = await deploy('TransparentUpgradeableProxy', {
-            contract: 'contracts/proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
-            from: deployer,
-            args: [implementationAddress, proxyAdminAddress, initializeData],
-            log: true,
-            skipIfAlreadyDeployed: false,
+        await run("verify:verify", {
+            address: implementationAddress,
+            constructorArguments: [],
         });
-
-        const existingDeployment = await deployments.getOrNull(contractName);
-        await save(contractName, {
-            abi: implementationDeployment.abi,
-            address: proxyDeployment.address,
-            ...existingDeployment,
-        });
-
-        console.log(`${contractName} deployed as upgradeable contract through proxy at network: ${targetNetwork}, address: ${proxyDeployment.address}`);
+        console.log("Implementation contract verified!");
     } catch (error) {
-        console.error('Error during TransparentUpgradeableProxy deployment:', error);
-        return;
+        console.error("Error verifying Implementation contract:", error);
     }
 
-    // 7. Verify contracts if network or forced verification allows
-    const shouldVerify = validNetworksForVerification.includes(targetNetwork) || isSepoliaDeployment;
-    if (shouldVerify) {
-        console.log('Verifying contracts...');
-        try {
-            // Verify the CrossChainBridge implementation contract
-            await run('verify:verify', {
-                address: implementationAddress,
-                constructorArguments: [],
-            });
-            console.log('Verified CrossChainBridge implementation!');
-
-            // Verify the TransparentUpgradeableProxy contract
-            await run('verify:verify', {
-                address: proxyDeployment.address,
-                constructorArguments: [implementationAddress, proxyAdminAddress, initializeData],
-            });
-            console.log('Verified TransparentUpgradeableProxy!');
-        } catch (error) {
-            console.error('Verification error:', error);
-        }
-    } else {
-        console.log(`Skipping verification. Network '${targetNetwork}' is not supported for verification.`);
+    // Verify ProxyAdmin
+    try {
+        await run("verify:verify", {
+            address: proxyAdminAddress,
+            constructorArguments: [],
+        });
+        console.log("ProxyAdmin contract verified!");
+    } catch (error) {
+        console.error("Error verifying ProxyAdmin contract:", error);
     }
+
+    // // Verify Proxy
+    // try {
+    //     await run("verify:verify", {
+    //         address: contract.address,
+    //         constructorArguments: [],
+    //     });
+    //     console.log("Proxy contract verified!");
+    // } catch (error) {
+    //     console.error("Error verifying Proxy contract:", error);
+    // }
 };
 
-deploy.tags = ['l2'];
+deploy.tags = ["l2"];
 
 export default deploy;

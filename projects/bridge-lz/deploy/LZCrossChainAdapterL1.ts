@@ -13,8 +13,8 @@ const deploy: DeployFunction = async (hre) => {
 
     const targetNetwork = network.name;
 
-    const testnetNames = ["holesky", "sepolia", "optimismSepolia", "arbitrumSepolia", "hardhat"];
-    const mainnetNames = ["mainnet", "arbitrum", "optimism"];
+    const testnetNames = ["holesky", "sepolia", "hardhat"];
+    const mainnetNames = ["mainnet"];
 
     const isTestnet = testnetNames.includes(targetNetwork);
     const isMainnet = mainnetNames.includes(targetNetwork);
@@ -79,7 +79,7 @@ const deploy: DeployFunction = async (hre) => {
     console.log("Implementation deployed at:", implementationAddress);
 
 
-    
+
     // Verification
     console.log("Verifying contracts...");
 
@@ -104,17 +104,6 @@ const deploy: DeployFunction = async (hre) => {
     } catch (error) {
         console.error("Error verifying ProxyAdmin contract:", error);
     }
-
-    // // Verify Proxy
-    // try {
-    //     await run("verify:verify", {
-    //         address: contract.address,
-    //         constructorArguments: [],
-    //     });
-    //     console.log("Proxy contract verified!");
-    // } catch (error) {
-    //     console.error("Error verifying Proxy contract:", error);
-    // }
 };
 
 deploy.tags = ["l1"];
