@@ -106,17 +106,6 @@ const deploy: DeployFunction = async (hre) => {
     } catch (error) {
         console.error("Error verifying ProxyAdmin contract:", error);
     }
-
-    // // Verify Proxy
-    // try {
-    //     await run("verify:verify", {
-    //         address: contract.address,
-    //         constructorArguments: [],
-    //     });
-    //     console.log("Proxy contract verified!");
-    // } catch (error) {
-    //     console.error("Error verifying Proxy contract:", error);
-    // }
 };
 
 deploy.tags = ["l2"];
