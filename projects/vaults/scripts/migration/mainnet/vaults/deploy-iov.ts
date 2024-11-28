@@ -19,7 +19,7 @@ async function main() {
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
             break;
         case "arbitrumSepolia":
-            INCEPTION_TOKEN_ADDRESS = "0xb1692ed9b08f8dd641f4109568ed6f471166c7e5";
+            INCEPTION_TOKEN_ADDRESS = "";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0xb7A8CA74cbfe313804c3D52663e9b0C0585B5C4e";
             break;
         case "optimismSepolia":
@@ -48,7 +48,7 @@ async function main() {
     console.log("Inception Token Address:", INCEPTION_TOKEN_ADDRESS);
     console.log("CrossChainBridge Address:", CROSS_CHAIN_BRIDGE_ADDRESS_L2);
 
-    const InceptionOmniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+    const InceptionOmniVaultFactory = await ethers.getContractFactory("IXERC20");
     console.log("Deploying Transparent Proxy...");
 
     const inceptionOmniVault = await upgrades.deployProxy(
