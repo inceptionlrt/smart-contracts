@@ -19,11 +19,11 @@ async function main() {
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
             break;
         case "arbitrumSepolia":
-            INCEPTION_TOKEN_ADDRESS = "0xCDeA808c1C43F95309C8ca398DF41a257aF2Dc8a";
+            INCEPTION_TOKEN_ADDRESS = "0xb1692ed9b08f8dd641f4109568ed6f471166c7e5";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0xb7A8CA74cbfe313804c3D52663e9b0C0585B5C4e";
             break;
         case "optimismSepolia":
-            INCEPTION_TOKEN_ADDRESS = "0x983c2239ad08307F978096844166c67E0f1b2630";
+            INCEPTION_TOKEN_ADDRESS = "0xb1692ed9b08f8dd641f4109568ed6f471166c7e5";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
             break;
         default:

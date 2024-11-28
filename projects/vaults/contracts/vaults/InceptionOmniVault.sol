@@ -73,12 +73,29 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
      * @param _inceptionToken Address of the Inception token.
      * @param _crossChainAdapter Address of the cross-chain adapter.
      */
-    function __InceptionOmniVault_init(
+    function initialize(
         string memory vaultName,
         address _operator,
         address _inceptionToken,
         ICrossChainBridgeL2 _crossChainAdapter
     ) public initializer {
+        __InceptionOmniVault_init(
+            vaultName,
+            _operator,
+            _inceptionToken,
+            _crossChainAdapter
+        );
+    }
+
+    /**
+     * @dev Internal initializer function. Called by `initialize`.
+     */
+    function __InceptionOmniVault_init(
+        string memory vaultName,
+        address _operator,
+        address _inceptionToken,
+        ICrossChainBridgeL2 _crossChainAdapter
+    ) internal {
         __Ownable_init(msg.sender);
         __InceptionOmniAssetsHandler_init();
 
@@ -86,17 +103,13 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             revert NullParams();
 
         name = vaultName;
-
         operator = _operator;
         treasury = msg.sender;
-
         inceptionToken = IInceptionToken(_inceptionToken);
         crossChainAdapter = _crossChainAdapter;
 
         minAmount = 100;
-
         targetCapacity = 1;
-
         protocolFee = 50 * 1e8;
 
         depositUtilizationKink = 25 * 1e8;
@@ -380,10 +393,6 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             );
     }
 
-    /*//////////////////////////////
-    ////// Factory functions //////
-    ////////////////////////////*/
-
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
@@ -399,7 +408,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
                 : getFlashCapacity() - targetCapacity;
     }
 
-    function _inceptionTokenSupply() public view returns (uint256) {
+    function _inceptionTokenSupply() internal view returns (uint256) {
         return IERC20(address(inceptionToken)).totalSupply();
     }
 
