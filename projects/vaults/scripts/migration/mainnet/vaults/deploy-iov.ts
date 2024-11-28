@@ -55,7 +55,7 @@ async function main() {
         InceptionOmniVaultFactory,
         [vaultName, operatorAddress, INCEPTION_TOKEN_ADDRESS, CROSS_CHAIN_BRIDGE_ADDRESS_L2],
         {
-            initializer: "__InceptionOmniVault_init",
+            initializer: "initialize",
         }
     );
 
@@ -73,10 +73,10 @@ async function main() {
 
     console.log("Setting bridge limits on IXERC20 contract...");
 
-    const ixerc20 = await ethers.getContractAt("IXERC20", INCEPTION_TOKEN_ADDRESS);
+    const ixerc20 = await ethers.getContractAt("InceptionToken", INCEPTION_TOKEN_ADDRESS);
 
 
-    const bigNumberLimit = BigInt(9007199254740991);
+    const bigNumberLimit = BigInt(900719925474099100000);
 
 
     const tx1 = await ixerc20.setBridgeLimits(deployedAddress, bigNumberLimit, bigNumberLimit);
