@@ -89,7 +89,7 @@ export const CONFIG = {
     },
     hardhat: {
       forking: {
-        url: `${process.env.RPC_URL_SEPOLIA}`,
+        url: `${process.env.HOLESKY_RPC}`,
       },
       accounts: process.env.DEPLOYER_PRIVATE_KEY
         ? [{ privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance: "10000000000000000000" }]

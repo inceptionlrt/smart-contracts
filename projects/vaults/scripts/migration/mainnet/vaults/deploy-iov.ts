@@ -76,7 +76,7 @@ async function main() {
     const ixerc20 = await ethers.getContractAt("IXERC20", INCEPTION_TOKEN_ADDRESS);
 
 
-    const bigNumberLimit = ethers.constants.MaxUint256 / BigInt(100); // NB! very big number
+    const bigNumberLimit = BigInt(9007199254740991);
 
 
     const tx1 = await ixerc20.setBridgeLimits(deployedAddress, bigNumberLimit, bigNumberLimit);

@@ -11,13 +11,8 @@ const func: DeployFunction = async function ({ deployments, network }) {
   if (network.name === "mainnet") {
     // TODO
     crossChainBridgeAddress = "";
-  } else {
-    // TODO
-    crossChainBridgeAddress = "";
-  }
-
-  if (!crossChainBridgeAddress) {
-    throw new Error("CROSS_CHAIN_BRIDGE environment variable is not set");
+  } else if (network.name === "holesky") {
+    crossChainBridgeAddress = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
   }
 
   const lzCrossChainAdapterL1 = await ethers.getContractAt("ILZCrossChainAdapterL1", crossChainBridgeAddress);
@@ -30,8 +25,8 @@ const func: DeployFunction = async function ({ deployments, network }) {
 };
 
 module.exports = func;
-module.exports.tags = ["18_update_crosschain_adapter_l1"];
+module.exports.tags = ["17_update_crosschain_adapter_l1"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "18";
+module.exports.id = "17";
 

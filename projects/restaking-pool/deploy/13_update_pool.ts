@@ -20,10 +20,10 @@ const func: DeployFunction = async function ({ deployments, network }) {
   let libAddress = "";
   if (network.name === "mainnet") {
     libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
-  } else {
+  } else if (network.name === "holesky") {
     libAddress = "0x4db1487f376efe5116af8491ece85f52e7082ce8";
   }
-  console.log("InceptionLibrary address(13):", libAddress);
+  console.log("InceptionLibrary address:", libAddress);
 
   /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
