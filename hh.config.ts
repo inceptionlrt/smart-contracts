@@ -13,6 +13,7 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
+      eid: 30101
     },
     holesky: {
       url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",

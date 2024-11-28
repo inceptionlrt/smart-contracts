@@ -55,8 +55,8 @@ const deploy: DeployFunction = async (hre) => {
     console.log('Fetching EndpointV2 contract...');
     const endpointV2Deployment = await deployments.get('EndpointV2');
 
-    const eIds = [40161, 40231, 40232];
-    const chainIds = [11155111, 421614, 11155420];
+    const eIds = [40161, 40231, 40232, 40217, 30110, 30111, 30101];
+    const chainIds = [11155111, 421614, 11155420, 17000, 42161, 10, 1];
 
     const l1ChainId = 11155111; //Sepolia Chain ID
     // 4. Encode the initialize function call for the proxy
