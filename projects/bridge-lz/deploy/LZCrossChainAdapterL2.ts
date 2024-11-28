@@ -2,7 +2,7 @@ import assert from 'assert';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { ethers, run, network } from 'hardhat';
 
-const contractName = 'LZCrossChainAdapterL2';
+const contractName = 'LZCrossChainAdapterL1';
 
 const deploy: DeployFunction = async (hre) => {
     const { getNamedAccounts, deployments } = hre;
@@ -55,20 +55,18 @@ const deploy: DeployFunction = async (hre) => {
     console.log('Fetching EndpointV2 contract...');
     const endpointV2Deployment = await deployments.get('EndpointV2');
 
-    const eIds = [40161, 40231, 40232];
-    const chainIds = [11155111, 421614, 11155420];
+    const eIds = [40161, 40231, 40232, 40217, 30110, 30111, 30101];
+    const chainIds = [11155111, 421614, 11155420, 17000, 42161, 10, 1];
 
-    const l1ChainId = 11155111; //Sepolia Chain ID
     // 4. Encode the initialize function call for the proxy
     console.log('Encoding initialize function call...');
     const initializeData = (await ethers.getContractFactory(contractName)).interface.encodeFunctionData(
         'initialize',
         [
-            endpointV2Deployment.address, // LayerZero's EndpointV2 address
-            deployer,                     // Owner address
-            l1ChainId,                    // _l1ChainId
-            eIds,                         // eIds array
-            chainIds                      // chainIds array
+            endpointV2Deployment.address,
+            deployer,
+            eIds,
+            chainIds
         ]
     );
 
@@ -82,7 +80,6 @@ const deploy: DeployFunction = async (hre) => {
             skipIfAlreadyDeployed: false,
         });
 
-        // Save the proxy contract's deployment with the correct ABI without overwriting
         const existingDeployment = await deployments.getOrNull(contractName);
         await save(contractName, {
             abi: implementationDeployment.abi,
@@ -122,6 +119,6 @@ const deploy: DeployFunction = async (hre) => {
     }
 };
 
-deploy.tags = ['l2'];
+deploy.tags = ['l1'];
 
 export default deploy;
