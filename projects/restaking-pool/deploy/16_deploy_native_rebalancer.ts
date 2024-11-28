@@ -10,7 +10,7 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments, ne
   console.log(`deployer balance: ${await ethers.provider.getBalance(deployer)}`);
 
   /// 1. InceptionLibrary Deployment
-  let lockboxAddress = "";
+  let lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
   if (network.name === "mainnet") {
     // TODO
     lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
