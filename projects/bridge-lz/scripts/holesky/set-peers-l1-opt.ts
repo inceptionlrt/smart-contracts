@@ -16,7 +16,9 @@ async function main() {
     const CrossChainBridgeSepolia = await ethers.getContractAt("LZCrossChainAdapterL1", CrossChainBridgeEthereumAddress);
     const eIDOptimismSepolia = 40232; //Optimism Sepolia eID
 
-    await CrossChainBridgeSepolia.connect(deployer).setPeer(eIDOptimismSepolia, ethers.utils.zeroPad(CrossChainBridgeOptimismAddress, 32));
+    const tx = await CrossChainBridgeSepolia.connect(deployer).setPeer(eIDOptimismSepolia, ethers.utils.zeroPad(CrossChainBridgeEthereumAddress, 32));
+    await tx.wait();
+    
     console.log("Peers set successfully");
 }
 

@@ -17,7 +17,8 @@ async function main() {
     const eIdSepolia = 40217; //Holesky eID
 
     // Set peer for Holesky
-    await CrossChainBridgeOptimism.connect(deployer).setPeer(eIdSepolia, ethers.utils.zeroPad(CrossChainBridgeEthereumAddress, 32));
+    const tx = await CrossChainBridgeOptimism.connect(deployer).setPeer(eIdSepolia, ethers.utils.zeroPad(CrossChainBridgeEthereumAddress, 32));
+    await tx.wait();
     console.log(`Bridge at address ${CrossChainBridgeOptimismAddress} was set successfully with peer at address ${CrossChainBridgeEthereumAddress} at Ethereum`);
 }
 
