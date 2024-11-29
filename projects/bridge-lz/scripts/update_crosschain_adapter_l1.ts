@@ -14,7 +14,7 @@ async function main() {
         nativeRebalancerAddress = "";
         crossChainBridgeAddress = "";
     } else if (network.name === "holesky") {
-        nativeRebalancerAddress = ""; //TODO !!! paste NativeRebalancer address here!
+        nativeRebalancerAddress = "0xd13469584C26c329D56176b243f0507f84Fb778A";
         crossChainBridgeAddress = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
     } else {
         throw new Error(`Unknown network: ${network.name}`);
