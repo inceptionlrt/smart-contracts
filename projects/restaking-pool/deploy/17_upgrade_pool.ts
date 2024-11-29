@@ -3,20 +3,20 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { schedule } from "../scripts/deploy-helpers";
 
 const func: DeployFunction = async function ({ deployments, network }) {
-  const { get } = deployments;
+  const { get, save } = deployments;
   const RestakingPool = await get("RestakingPool");
   console.log("Restaking Pool address: ", RestakingPool.address);
 
-  const restakinPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
+  const restakingPoolAdmin = await upgrades.erc1967.getAdminAddress(RestakingPool.address);
   const currentImpl = await upgrades.erc1967.getImplementationAddress(RestakingPool.address);
-  const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakinPoolAdmin);
+  const proxyAdmin = await ethers.getContractAt("IProxyAdmin", restakingPoolAdmin);
 
   const [deployer] = await ethers.getSigners();
 
   console.log(`deployer address: ${deployer.address}`);
   console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
 
-  /// 1. InceptionLibrary Deployment
+  // InceptionLibrary Deployment
   let libAddress = "";
   if (network.name === "mainnet") {
     libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
@@ -25,7 +25,7 @@ const func: DeployFunction = async function ({ deployments, network }) {
   }
   console.log("InceptionLibrary address(15):", libAddress);
 
-  /// 2. RestakingPool Upgrade
+  // RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
     libraries: {
       InceptionLibrary: libAddress,
@@ -52,6 +52,15 @@ const func: DeployFunction = async function ({ deployments, network }) {
     console.log("upgrade tx", upgradeTx);
   }
 
+  const restakingPoolDeployment = {
+    address: RestakingPool.address,
+    abi: JSON.parse(RestakingPoolFactory.interface.formatJson()),
+    implementation: newImpl,
+  };
+
+  await save("RestakingPool", restakingPoolDeployment);
+  console.log(`Deployment metadata for RestakingPool updated.`);
+
   return true;
 };
 
@@ -60,4 +69,3 @@ module.exports.tags = ["17_upgrade_pool"];
 module.exports.dependencies = [];
 module.exports.skip = false;
 module.exports.id = "17";
-
