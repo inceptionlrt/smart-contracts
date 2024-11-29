@@ -3,7 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { schedule } from "../scripts/deploy-helpers";
 
 const func: DeployFunction = async function ({ deployments, network }) {
-  const { get } = deployments;
+  const { get, save } = deployments;
   const ProtocolConfig = await get("ProtocolConfig");
   console.log("ProtocolConfig proxy address:", ProtocolConfig.address);
 
@@ -16,7 +16,6 @@ const func: DeployFunction = async function ({ deployments, network }) {
   console.log(`deployer address: ${deployer.address}`);
   console.log(`deployer balance: ${await ethers.provider.getBalance(deployer.address)}`);
 
-  // Prepare ProtocolConfig contract factory
   const ProtocolConfigFactory = await ethers.getContractFactory("ProtocolConfig");
 
   const newImpl = await upgrades.prepareUpgrade(ProtocolConfig.address, ProtocolConfigFactory);
@@ -39,6 +38,15 @@ const func: DeployFunction = async function ({ deployments, network }) {
     console.log("Upgrade transaction executed:", upgradeTx);
   }
 
+  const protocolConfigDeployment = {
+    address: ProtocolConfig.address,
+    abi: JSON.parse(ProtocolConfigFactory.interface.formatJson()),
+    implementation: newImpl,
+  };
+
+  await save("ProtocolConfig", protocolConfigDeployment);
+  console.log(`Deployment metadata for ProtocolConfig updated.`);
+
   return true;
 };
 
@@ -47,4 +55,3 @@ module.exports.tags = ["15_update_protocol_config"];
 module.exports.dependencies = [];
 module.exports.skip = false;
 module.exports.id = "15";
-
