@@ -1,17 +1,11 @@
-import 'dotenv/config'
-
+import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
-import 'hardhat-deploy'
-import 'hardhat-contract-sizer'
-import '@nomiclabs/hardhat-ethers'
-import '@layerzerolabs/toolbox-hardhat'
+import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
-import '@nomicfoundation/hardhat-verify';
-import { HardhatUserConfig, HttpNetworkAccountsUserConfig } from 'hardhat/types'
+import "@nomicfoundation/hardhat-verify";
 
-
-const accounts: HttpNetworkAccountsUserConfig | undefined = [`${process.env.DEPLOYER_PRIVATE_KEY}`]
 
 const config: HardhatUserConfig = {
     ...(CONFIG as HardhatUserConfig),
