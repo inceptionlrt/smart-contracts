@@ -48,7 +48,7 @@ async function main() {
     console.log("Inception Token Address:", INCEPTION_TOKEN_ADDRESS);
     console.log("CrossChainBridge Address:", CROSS_CHAIN_BRIDGE_ADDRESS_L2);
 
-    const InceptionOmniVaultFactory = await ethers.getContractFactory("IXERC20");
+    const InceptionOmniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
     console.log("Deploying Transparent Proxy...");
 
     const inceptionOmniVault = await upgrades.deployProxy(
@@ -73,7 +73,7 @@ async function main() {
 
     console.log("Setting bridge limits on IXERC20 contract...");
 
-    const ixerc20 = await ethers.getContractAt("InceptionToken", INCEPTION_TOKEN_ADDRESS);
+    const ixerc20 = await ethers.getContractAt("IXERC20", INCEPTION_TOKEN_ADDRESS);
 
 
     const bigNumberLimit = BigInt(900719925474099100000);
