@@ -4,7 +4,7 @@ async function main() {
     console.log("Deploying InceptionOmniVault...");
 
     const network = await ethers.provider.getNetwork();
-    const networkName = network.name.toLowerCase();
+    const networkName = network.name;
 
     let INCEPTION_TOKEN_ADDRESS: string;
     let CROSS_CHAIN_BRIDGE_ADDRESS_L2: string;
