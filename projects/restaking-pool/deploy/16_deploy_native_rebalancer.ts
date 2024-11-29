@@ -9,22 +9,34 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments, ne
   console.log(`deployer address: ${deployer}`);
   console.log(`deployer balance: ${await ethers.provider.getBalance(deployer)}`);
 
-  /// 1. InceptionLibrary Deployment
-  let lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
+  // Lockbox address
+  let lockboxAddress = "";
   if (network.name === "mainnet") {
     // TODO
     lockboxAddress = "0x1016F41e5b7D192cecE4C38D098A12EbE195CaF4";
-  } else if (network.name === "holesky" || network.name === "hardhat") {
+  } else if (network.name === "holesky") {
     lockboxAddress = "0xDb545414FfCcd1D5E9c626Be95831095c85D26fF";
   }
 
-  // Load existing contract addresses
-  const inceptionTokenAddress = "0x76944d54c9eF0a7A563E43226e998F382714C92f";
-  // const restakingPool = await get("RestakingPool");
-  const restakingPool = { address: "0xEAA6d9f33c7095218Ed9cD4f0D7FB6551A14005f" };
+  // inETH address
+  let inceptionTokenAddress = "";
+  if (network.name === "mainnet") {
+    inceptionTokenAddress = "0xf073bAC22DAb7FaF4a3Dd6c6189a70D54110525C";
+  } else if (network.name === "holesky") {
+    inceptionTokenAddress = "0x76944d54c9eF0a7A563E43226e998F382714C92f";
+  }
+
+  const restakingPool = await get("RestakingPool");
   const ratioFeed = await get("RatioFeed");
 
-  const crossChainBridge = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
+  // CrossChainBridge address
+  let crossChainBridge = "";
+  if (network.name === "mainnet") {
+    //TODO fill this for mainnet
+    crossChainBridge = "";
+  } else if (network.name === "holesky") {
+    crossChainBridge = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
+  }
 
   console.log("Deploying NativeRebalancer with:");
   console.log("Deployer:", deployer);
