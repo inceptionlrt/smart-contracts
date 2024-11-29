@@ -13,7 +13,7 @@ async function main() {
         // TODO
         nativeRebalancerAddress = "";
         crossChainBridgeAddress = "";
-    } else if (network.name === "localhost") {
+    } else if (network.name === "holesky") {
         nativeRebalancerAddress = ""; //TODO !!! paste NativeRebalancer address here!
         crossChainBridgeAddress = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
     } else {
