@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat";
 async function main() {
     console.log("Setting up InceptionOmniVault...");
 
-    const networkName = network.name; // Use Hardhat's `network` module for the network name
+    const networkName = network.name;
     console.log(`Network: ${networkName}`);
 
 

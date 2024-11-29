@@ -56,8 +56,8 @@ const func: DeployFunction = async function ({ deployments, network }) {
 };
 
 module.exports = func;
-module.exports.tags = ["18_upgrade_pool"];
+module.exports.tags = ["17_upgrade_pool"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "18";
+module.exports.id = "17";
 
