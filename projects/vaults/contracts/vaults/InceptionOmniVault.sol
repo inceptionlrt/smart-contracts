@@ -315,7 +315,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 freeBalance = getFreeBalance();
         if (freeBalance == 0) revert FreeBalanceIsZero();
 
-        crossChainAdapter.sendEthCrossChain{value: freeBalance + msg.value}(
+        crossChainAdapter.sendEthCrossChain{value: freeBalance}(
             _chainId,
             _options
         );
