@@ -1,7 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { schedule } from "../scripts/deploy-helpers";
-import { FormatTypes } from "ethers";
 
 const func: DeployFunction = async function ({ deployments, network }) {
   const { get, save } = deployments;
@@ -39,10 +38,9 @@ const func: DeployFunction = async function ({ deployments, network }) {
 
   const updatedDeployment = {
     address: CToken.address,
-    abi: JSON.parse((factory.interface.format(FormatTypes.json) as string[]).join("")),
+    abi: JSON.parse(factory.interface.formatJson()),
     implementation: newImpl,
   };
-
 
   await save("cToken", updatedDeployment);
 
