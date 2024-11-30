@@ -39,9 +39,11 @@ const func: DeployFunction = async function ({ deployments, network }) {
 
   const updatedDeployment = {
     address: CToken.address,
-    abi: factory.interface.format(FormatTypes.json) as string[],
+    abi: JSON.parse((factory.interface.format(FormatTypes.json) as string[]).join("")),
     implementation: newImpl,
   };
+
+
   await save("cToken", updatedDeployment);
 
   return true;
