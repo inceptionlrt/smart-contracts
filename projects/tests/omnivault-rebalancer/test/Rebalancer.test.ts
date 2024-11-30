@@ -250,7 +250,7 @@ describe("Omnivault integration tests", function () {
     const omniVault = await upgrades.deployProxy(
       omniVaultFactory,
       ["OmniVault", operator.address, iToken.address, adapterArb.address],
-      { initializer: "__InceptionOmniVault_init" },
+      { initializer: "initialize" },
     );
     omniVault.address = await omniVault.getAddress();
     await omniVault.setRatioFeed(ratioFeedL2.address);
@@ -2470,7 +2470,7 @@ describe("Omnivault integration tests", function () {
         const omniVault = await upgrades.deployProxy(
           omniVaultFactory,
           ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
-          { initializer: "__InceptionOmniVault_init" },
+          { initializer: "initialize" },
         );
         omniVault.address = await omniVault.getAddress();
         await iToken.setVault(omniVault.address);
@@ -2789,7 +2789,7 @@ describe("Omnivault integration tests", function () {
           const newOmniVault = await upgrades.deployProxy(
             omniVaultFactory,
             ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
-            { initializer: "__InceptionOmniVault_init" },
+            { initializer: "initialize" },
           );
           newOmniVault.address = await newOmniVault.getAddress();
           await newOmniVault.setRatioFeed(ratioFeedL2.address);
