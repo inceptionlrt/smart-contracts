@@ -109,7 +109,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         crossChainAdapter = _crossChainAdapter;
 
         minAmount = 100;
-        targetCapacity = 1;
+        targetCapacity = 0.5 ether;
         protocolFee = 50 * 1e8;
 
         depositUtilizationKink = 25 * 1e8;
