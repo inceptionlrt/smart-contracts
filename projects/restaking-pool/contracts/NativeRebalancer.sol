@@ -31,6 +31,8 @@ contract NativeRebalancer is
     mapping(uint256 => address payable) adapters;
     address payable public defaultAdapter;
     uint256[] public chainIds;
+    uint256 public syncedSuppy;
+    bool public updateable;
 
     modifier onlyOperator() {
         require(
@@ -123,6 +125,7 @@ contract NativeRebalancer is
      * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
      */
     function updateTreasuryData() public {
+        require(updateable, TreasuryUpdatesPaused());
         uint256 totalL2InETH = 0;
 
         uint256[] memory allChainIds = chainIds;
@@ -137,15 +140,13 @@ contract NativeRebalancer is
             totalL2InETH += txData.inceptionTokenBalance;
         }
 
-        uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
-
-        if (lastUpdateTotalL2InEth < totalL2InETH) {
-            uint amountToMint = totalL2InETH - lastUpdateTotalL2InEth;
+        if (syncedSuppy < totalL2InETH) {
+            uint amountToMint = totalL2InETH - syncedSuppy;
             _mintInceptionToken(amountToMint);
-        } else if (lastUpdateTotalL2InEth > totalL2InETH) {
-            uint amountToBurn = lastUpdateTotalL2InEth - totalL2InETH;
+        } else if (syncedSuppy > totalL2InETH) {
+            uint amountToBurn = syncedSuppy - totalL2InETH;
             _burnInceptionToken(amountToBurn);
-        } else {
+        } else if (syncedSuppy == totalL2InETH) {
             revert NoRebalancingRequired();
         }
 
@@ -171,10 +172,6 @@ contract NativeRebalancer is
         IInceptionToken cToken = IInceptionToken(inceptionToken);
         cToken.burn(lockboxAddress, _amountToBurn);
         emit TreasuryUpdateBurn(_amountToBurn);
-    }
-
-    function _lastUpdateTotalL2InEth() internal view returns (uint256) {
-        return IERC20(inceptionToken).balanceOf(lockboxAddress);
     }
 
     /**
@@ -353,6 +350,24 @@ contract NativeRebalancer is
         chainIds[index] = chainIds[chainIds.length - 1];
         chainIds.pop();
         emit ChainIdDeleted(_chainId, index);
+    }
+
+    /**
+     * @notice Updates the supply share of the total supply
+     * @param _syncedSupply the new synced supply share of the total supply
+     */
+    function setSyncedSupply(uint256 _syncedSupply) external onlyOwner {
+        emit SyncedSupplyChanged(syncedSuppy, _syncedSupply);
+        syncedSuppy = _syncedSupply;
+    }
+
+    /**
+     * @notice sets updateable value allowing to turn on/off updateTreasuryData
+     * @param _updateable the flag which determines if updateTreasuryData is calleable
+     */
+    function setUpdateable(bool _updateable) external onlyOwner {
+        emit UpdateableChanged(updateable, _updateable);
+        updateable = _updateable;
     }
 
     /**

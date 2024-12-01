@@ -32,6 +32,11 @@ interface INativeRebalancer {
         address indexed prevDefaultAdapter,
         address indexed newDefaultAdapter
     );
+    event SyncedSupplyChanged(
+        uint256 prevSyncedSupply,
+        uint256 nextSyncedSupply
+    );
+    event UpdateableChanged(bool prevUpdateable, bool nextUpdateable);
     event ChainIdAdded(uint256 chainId);
     event ChainIdDeleted(uint256 chainId, uint256 index);
 
@@ -56,6 +61,7 @@ interface INativeRebalancer {
     error NoRebalancingRequired();
     error IndexOutOfBounds(uint256 index, uint256 length);
     error NoAdapterAvailable(uint256 _chainId);
+    error TreasuryUpdatesPaused();
 
     function handleL2Info(
         uint256 _chainId,
