@@ -323,7 +323,7 @@ contract NativeRebalancer is
         defaultAdapter = _newDefaultAdapter;
     }
 
-    function addChainId(uint256 _newChainId) external onlyOperator {
+    function addChainId(uint256 _newChainId) external onlyOwner {
         _addChainId(_newChainId);
     }
 
@@ -331,7 +331,7 @@ contract NativeRebalancer is
      * @notice Removes a specific `chainId` from the `chainIds` array.
      * @param _chainId The Chain ID to delete.
      */
-    function deleteChainId(uint256 _chainId) public onlyOperator {
+    function deleteChainId(uint256 _chainId) public onlyOwner {
         uint256 index;
         bool found = false;
 
