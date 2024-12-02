@@ -39,7 +39,6 @@ interface INativeRebalancer {
     event UpdateableChanged(bool prevUpdateable, bool nextUpdateable);
     event ChainIdAdded(uint256 chainId);
     event ChainIdDeleted(uint256 chainId, uint256 index);
-    event SyncedSupplyChanged(bool mintOperation, uint256 amountToMint);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
