@@ -523,30 +523,27 @@ describe("Omnivault integration tests", function () {
         });
       });
 
-      it("addChainId operator can", async function () {
+      it("addChainId owner can", async function () {
         let chain = randomBI(4);
-        await expect(rebalancer.connect(operator).addChainId(chain))
-          .to.emit(rebalancer, "ChainIdAdded")
-          .withArgs(chain);
+        await expect(rebalancer.connect(owner).addChainId(chain)).to.emit(rebalancer, "ChainIdAdded").withArgs(chain);
         expect(await rebalancer.chainIds(2n)).to.be.eq(chain);
       });
 
       it("addChainId skips if the chain has been added already", async function () {
         let chain = randomBI(4);
-        await rebalancer.connect(operator).addChainId(chain);
-        await expect(rebalancer.connect(operator).addChainId(chain)).to.not.emit(rebalancer, "ChainIdAdded");
+        await rebalancer.connect(owner).addChainId(chain);
+        await expect(rebalancer.connect(owner).addChainId(chain)).to.not.emit(rebalancer, "ChainIdAdded");
       });
 
       it("addChainId reverts when called by not an owner", async function () {
-        await expect(rebalancer.connect(signer1).addChainId(randomBI(4))).to.be.revertedWithCustomError(
-          rebalancer,
-          "OnlyOperator",
-        );
+        await expect(rebalancer.connect(signer1).addChainId(randomBI(4)))
+          .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
+          .withArgs(signer1.address);
       });
 
       it("deleteChainId operator can delete the 1st chain in the list", async function () {
         const chain = ARB_ID;
-        await expect(rebalancer.connect(operator).deleteChainId(chain))
+        await expect(rebalancer.connect(owner).deleteChainId(chain))
           .to.emit(rebalancer, "ChainIdDeleted")
           .withArgs(chain, 0n);
         expect(await rebalancer.chainIds(0n)).to.be.eq(OPT_ID);
@@ -564,16 +561,15 @@ describe("Omnivault integration tests", function () {
 
       it("deleteChainId reverts when chain does not exist", async function () {
         let chain = randomBI(4);
-        await expect(rebalancer.connect(operator).deleteChainId(chain))
+        await expect(rebalancer.connect(owner).deleteChainId(chain))
           .to.be.revertedWithCustomError(rebalancer, "ChainIdNotFound")
           .withArgs(chain);
       });
 
       it("addChainId reverts when called by not an owner", async function () {
-        await expect(rebalancer.connect(signer1).deleteChainId(ARB_ID)).to.be.revertedWithCustomError(
-          rebalancer,
-          "OnlyOperator",
-        );
+        await expect(rebalancer.connect(signer1).deleteChainId(ARB_ID))
+          .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
+          .withArgs(signer1.address);
       });
 
       it("addAdapter for a new chain", async function () {
@@ -648,6 +644,14 @@ describe("Omnivault integration tests", function () {
         initialArbSupply = initialAmount / 2n;
         initialOptAmount = initialAmount - initialArbAmount;
         initialOptSupply = initialAmount - initialArbAmount;
+      });
+
+      it("Enable update", async function () {
+        expect(await rebalancer.updateable()).to.be.false;
+
+        await expect(rebalancer.setUpdateable(true)).to.emit(rebalancer, "UpdateableChanged").withArgs(false, true);
+
+        expect(await rebalancer.updateable()).to.be.true;
       });
 
       it("Reverts when there is no data for one of the chains", async function () {
@@ -766,15 +770,18 @@ describe("Omnivault integration tests", function () {
             initialOptSupply += arg.opt.l2TotalSupplyDiff();
             await adapterOpt.sendData(timestamp, initialOptAmount, initialOptSupply);
           }
-          console.log(`Expected supply diff: ${expectedTotalSupplyDiff.format()}`);
           const expectedLockboxBalance = initialArbSupply + initialOptSupply;
           const totalSupplyBefore = await inEth.totalSupply();
+          console.log(`Total supply before: ${totalSupplyBefore.format()}`);
+          console.log(`Lockbox balance before: ${(await inEth.balanceOf(lockboxAddress)).format()}`);
+          console.log(`Expected supply diff: ${expectedTotalSupplyDiff.format()}`);
 
           let tx = await rebalancer.updateTreasuryData();
 
           const totalSupplyAfter = await inEth.totalSupply();
           const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
           console.log("Lockbox inEth balance:", lockboxBalanceAfter.format());
+          console.log("TotalSupply diff:", (totalSupplyAfter - totalSupplyBefore).format());
 
           expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedTotalSupplyDiff);
           expect(lockboxBalanceAfter).to.be.eq(expectedLockboxBalance);
