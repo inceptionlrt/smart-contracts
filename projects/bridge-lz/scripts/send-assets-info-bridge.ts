@@ -7,8 +7,8 @@ async function main() {
     const [signer] = await ethers.getSigners();
     console.log("Using signer address:", await signer.getAddress());
 
-    const tokensAmount = ethers.parseUnits("524000001092000000", 18); // inETH balance of Lockbox after tx 0xfa1dc117491f1bd52f1e088782e6b441ad0239a91a6d096d5cee00d9a8f08d76
-    const blockTimestamp = Math.floor(Date.now() / 1000); // Current time in seconds
+    const tokensAmount = ethers.parseUnits("524000001092000000", 0);
+    const blockTimestamp = Math.floor(Date.now() / 1000);
     const ethAmount = 0;
 
     const LZCrossChainAdapterL2 = await ethers.getContractAt("LZCrossChainAdapterL2", LZ_CROSS_CHAIN_ADAPTER_L2_ADDRESS);
