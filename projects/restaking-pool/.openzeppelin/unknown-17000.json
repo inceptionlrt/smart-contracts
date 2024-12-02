@@ -4525,6 +4525,243 @@
           ]
         }
       }
+    },
+    "4eee5e63020bf884298de913dbc730e69eb7d788b2a59059a672ba7e33be0faf": {
+      "address": "0x15C2AcADcBF3d06c592a3a192d64C3e329b6792E",
+      "txHash": "0x4cca70d6ea06836c0354c17c5127fe289b6c5f3226a885789fc0fa130c9e161f",
+      "layout": {
+        "solcVersion": "0.8.27",
+        "storage": [
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:24"
+          },
+          {
+            "label": "lockboxAddress",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:25"
+          },
+          {
+            "label": "liqPool",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address_payable",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:26"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:27"
+          },
+          {
+            "label": "operator",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_address",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:28"
+          },
+          {
+            "label": "txs",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_uint256,t_struct(Transaction)9801_storage)",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:30"
+          },
+          {
+            "label": "adapters",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_mapping(t_uint256,t_address_payable)",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:31"
+          },
+          {
+            "label": "defaultAdapter",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_address_payable",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:32"
+          },
+          {
+            "label": "chainIds",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:33"
+          },
+          {
+            "label": "syncedSupply",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_uint256",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:34"
+          },
+          {
+            "label": "updateable",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_bool",
+            "contract": "NativeRebalancer",
+            "src": "contracts/NativeRebalancer.sol:35"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)105_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Ownable2StepStorage)14_storage": {
+            "label": "struct Ownable2StepUpgradeable.Ownable2StepStorage",
+            "members": [
+              {
+                "label": "_pendingOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)55_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_address_payable)": {
+            "label": "mapping(uint256 => address payable)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Transaction)9801_storage)": {
+            "label": "mapping(uint256 => struct INativeRebalancer.Transaction)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Transaction)9801_storage": {
+            "label": "struct INativeRebalancer.Transaction",
+            "members": [
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "ethBalance",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "inceptionTokenBalance",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable2Step": [
+            {
+              "contract": "Ownable2StepUpgradeable",
+              "label": "_pendingOwner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:23",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }
