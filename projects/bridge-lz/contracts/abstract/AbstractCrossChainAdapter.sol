@@ -22,13 +22,6 @@ abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
 
     modifier onlyOwnerRestricted() virtual;
 
-    modifier onlyTargetReceiver() {
-        if (msg.sender != targetReceiver) {
-            revert NotTargetReceiver(msg.sender);
-        }
-        _;
-    }
-
     function setTargetReceiver(
         address _newTargetReceiver
     ) external override onlyOwnerRestricted {
