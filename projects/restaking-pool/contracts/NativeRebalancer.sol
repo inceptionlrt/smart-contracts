@@ -141,12 +141,14 @@ contract NativeRebalancer is
         }
 
         if (syncedSuppy < totalL2InETH) {
-            uint amountToMint = totalL2InETH - syncedSuppy;
+            uint256 amountToMint = totalL2InETH - syncedSuppy;
             _mintInceptionToken(amountToMint);
+            syncedSuppy += amountToMint;
         } else if (syncedSuppy > totalL2InETH) {
-            uint amountToBurn = syncedSuppy - totalL2InETH;
+            uint256 amountToBurn = syncedSuppy - totalL2InETH;
             _burnInceptionToken(amountToBurn);
-        } else if (syncedSuppy == totalL2InETH) {
+            syncedSuppy -= amountToBurn;
+        } else {
             revert NoRebalancingRequired();
         }
 
