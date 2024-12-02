@@ -130,6 +130,8 @@ contract NativeRebalancer is
 
         uint256[] memory allChainIds = chainIds;
 
+        require(chainIds.length > 0, NoChainIdsConfigured());
+
         for (uint i = 0; i < allChainIds.length; i++) {
             uint256 chainId = allChainIds[i];
             Transaction memory txData = getTransactionData(chainId);
@@ -144,10 +146,12 @@ contract NativeRebalancer is
             uint256 amountToMint = totalL2InETH - syncedSupply;
             _mintInceptionToken(amountToMint);
             syncedSupply += amountToMint;
+            emit SyncedSupplyChanged(true, amountToMint);
         } else if (syncedSupply > totalL2InETH) {
             uint256 amountToBurn = syncedSupply - totalL2InETH;
             _burnInceptionToken(amountToBurn);
             syncedSupply -= amountToBurn;
+            emit SyncedSupplyChanged(false, amountToBurn);
         } else {
             revert NoRebalancingRequired();
         }
