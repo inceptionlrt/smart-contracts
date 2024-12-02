@@ -31,7 +31,7 @@ contract NativeRebalancer is
     mapping(uint256 => address payable) adapters;
     address payable public defaultAdapter;
     uint256[] public chainIds;
-    uint256 public syncedSuppy;
+    uint256 public syncedSupply;
     bool public updateable;
 
     modifier onlyOperator() {
@@ -140,14 +140,14 @@ contract NativeRebalancer is
             totalL2InETH += txData.inceptionTokenBalance;
         }
 
-        if (syncedSuppy < totalL2InETH) {
-            uint256 amountToMint = totalL2InETH - syncedSuppy;
+        if (syncedSupply < totalL2InETH) {
+            uint256 amountToMint = totalL2InETH - syncedSupply;
             _mintInceptionToken(amountToMint);
-            syncedSuppy += amountToMint;
-        } else if (syncedSuppy > totalL2InETH) {
-            uint256 amountToBurn = syncedSuppy - totalL2InETH;
+            syncedSupply += amountToMint;
+        } else if (syncedSupply > totalL2InETH) {
+            uint256 amountToBurn = syncedSupply - totalL2InETH;
             _burnInceptionToken(amountToBurn);
-            syncedSuppy -= amountToBurn;
+            syncedSupply -= amountToBurn;
         } else {
             revert NoRebalancingRequired();
         }
@@ -359,8 +359,8 @@ contract NativeRebalancer is
      * @param _syncedSupply the new synced supply share of the total supply
      */
     function setSyncedSupply(uint256 _syncedSupply) external onlyOwner {
-        emit SyncedSupplyChanged(syncedSuppy, _syncedSupply);
-        syncedSuppy = _syncedSupply;
+        emit SyncedSupplyChanged(syncedSupply, _syncedSupply);
+        syncedSupply = _syncedSupply;
     }
 
     /**
