@@ -2,7 +2,6 @@ import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
-import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-storage-layout";
 
@@ -25,3 +24,4 @@ const config: HardhatUserConfig = {
 };
 
 export default config;
+

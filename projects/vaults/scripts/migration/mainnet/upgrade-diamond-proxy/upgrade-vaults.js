@@ -18,7 +18,7 @@ async function main() {
 
   await upgradeInceptionVault(libAddress, "diamond_proxy", InVault_E2, "InVault_E2");
 
-  await upgradeInceptionVault(libAddress, "flash_withdrawal", InVault_E1, "InVault_E1");
+  await upgradeInceptionVault(libAddress, "diamond_proxy", InVault_E1, "InVault_E1");
 }
 
 const upgradeInceptionVault = async (libAddress, upgradeName, address, vaultImplContract) => {
@@ -36,7 +36,7 @@ const upgradeInceptionVault = async (libAddress, upgradeName, address, vaultImpl
 
   const proxyAdmin = await upgrades.erc1967.getAdminAddress(address);
   const provider = await deployer.provider.getNetwork();
-  new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider)
+  new BatchBuilder("", `${upgradeName}_${address}`, "diamon_proxy", provider)
     .addOzUpgrade(proxyAdmin, address, impl)
     .save();
 };
