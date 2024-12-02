@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts/utils/StorageSlot.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 import {INativeRebalancer} from "./interfaces/INativeRebalancer.sol";
+import {IRestakerDeployer} from "./restaker/IRestakerDeployer.sol";
 import "./interfaces/IProtocolConfig.sol";
-import "./restaker/IRestakerDeployer.sol";
 
 /**
  * @title General variables of InceptionLRT Liquid Restaking protocol.
@@ -57,7 +57,7 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
 
     /*******************************************************************************
                             CONSTRUCTOR
-        *******************************************************************************/
+    *******************************************************************************/
 
     /// @dev https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializing_the_implementation_contract
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -89,7 +89,7 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
 
     /*******************************************************************************
                             WRITE FUNCTIONS
-        *******************************************************************************/
+    *******************************************************************************/
 
     function setGovernance(address newValue) external onlyGovernance {
         _setGovernance(newValue);
@@ -161,7 +161,7 @@ contract ProtocolConfig is Initializable, ContextUpgradeable, IProtocolConfig {
 
     /*******************************************************************************
                             READ FUNCTIONS
-        *******************************************************************************/
+    *******************************************************************************/
 
     function getGovernance() public view virtual returns (address) {
         return _GOVERNANCE_SLOT.getAddressSlot().value;
