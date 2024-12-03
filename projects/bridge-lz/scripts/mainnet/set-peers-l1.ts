@@ -17,7 +17,7 @@ async function main() {
     // Get contract instances
     const CrossChainBridgeSepolia = await ethers.getContractAt("LZCrossChainAdapterL1", CrossChainBridgeEthereumAddress);
     const eIDArbitrumSepolia = 30110; //Arbitrum Mainnet eID
-    const eIDOptimismSepolia = 30111; //Sepolia Mainnet eID
+    const eIDOptimismSepolia = 30111; //Optimism Mainnet eID
 
     // Set peer for OptimismSepolia
     await CrossChainBridgeSepolia.connect(deployer).setPeer(eIDOptimismSepolia, ethers.utils.zeroPad(CrossChainBridgeOptimismAddress, 32));
