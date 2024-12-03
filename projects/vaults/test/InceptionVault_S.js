@@ -1817,7 +1817,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("Deposit and delegateToMellowVault", function () {
+    describe("Delegate to mellow vault", function () {
       let ratio, firstDeposit;
 
       beforeEach(async function () {
@@ -2004,30 +2004,6 @@ assets.forEach(function (a) {
         });
       });
 
-      //Delegate auto
-      const args4 = [
-        {
-          name: "1 vault; allocation 100%",
-        },
-        {
-          name: "1 vault; allocation 100% and 0% to unregistered",
-        },
-        {
-          name: "1 vault; allocation 50% and 50% to unregistered",
-        },
-        {
-          name: "2 vaults; allocations: 100%, 0%",
-        },
-        {
-          name: "2 vaults; allocations: 50%, 50%",
-        },
-        {
-          name: "3 vaults; allocations: 33%, 33%, 33%",
-        },
-      ];
-
-      args4.forEach(function (arg) {});
-
       //Delegate invalid params
       const invalidArgs = [
         {
@@ -2106,6 +2082,244 @@ assets.forEach(function (a) {
           iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, amount),
         ).to.be.revertedWith("Pausable: paused");
         await iVault.unpause();
+      });
+    });
+
+    describe("Delegate auto according allocation", function () {
+      describe("Set allocation", function () {
+        before(async function () {
+          await snapshot.restore();
+          await mellowRestaker.addMellowVault(mellowVaults[1].vaultAddress, mellowVaults[1].wrapperAddress);
+        });
+
+        const args = [
+          {
+            name: "Set allocation for the 1st vault",
+            vault: () => mellowVaults[0].vaultAddress,
+            shares: randomBI(2),
+          },
+          {
+            name: "Set allocation for another vault",
+            vault: () => mellowVaults[1].vaultAddress,
+            shares: randomBI(2),
+          },
+          {
+            name: "Change allocation",
+            vault: () => mellowVaults[1].vaultAddress,
+            shares: randomBI(2),
+          },
+          {
+            name: "Set allocation for address that is not in the list",
+            vault: () => ethers.Wallet.createRandom().address,
+            shares: randomBI(2),
+          },
+          {
+            name: "Change allocation to 0",
+            vault: () => mellowVaults[1].vaultAddress,
+            shares: 0n,
+          },
+        ];
+
+        args.forEach(function (arg) {
+          it(`${arg.name}`, async function () {
+            const vaultAddress = arg.vault();
+            const totalAllocationBefore = await mellowRestaker.totalAllocations();
+            const sharesBefore = await mellowRestaker.allocations(vaultAddress);
+
+            await expect(mellowRestaker.changeAllocation(vaultAddress, arg.shares))
+              .to.be.emit(mellowRestaker, "AllocationChanged")
+              .withArgs(vaultAddress, sharesBefore, arg.shares);
+
+            const totalAllocationAfter = await mellowRestaker.totalAllocations();
+            const sharesAfter = await mellowRestaker.allocations(vaultAddress);
+            console.log("Total allocation after:", totalAllocationAfter.format());
+            console.log("Restaker allocation after:", sharesAfter.format());
+
+            expect(sharesAfter).to.be.eq(arg.shares);
+            expect(totalAllocationAfter - totalAllocationBefore).to.be.eq(sharesAfter - sharesBefore);
+          });
+        });
+
+        it("Reverts when vault is 0 address", async function () {
+          const shares = randomBI(2);
+          const vaultAddress = ethers.ZeroAddress;
+          await expect(mellowRestaker.changeAllocation(vaultAddress, shares)).to.be.revertedWithCustomError(
+            mellowRestaker,
+            "ZeroAddress",
+          );
+        });
+
+        it("Reverts when called by not an owner", async function () {
+          const shares = randomBI(2);
+          const vaultAddress = mellowVaults[1].vaultAddress;
+          await expect(mellowRestaker.connect(staker).changeAllocation(vaultAddress, shares)).to.be.revertedWith(
+            "Ownable: caller is not the owner",
+          );
+        });
+      });
+
+      describe("Delegate auto", function () {
+        let totalDeposited;
+
+        beforeEach(async function () {
+          await snapshot.restore();
+          await iVault.setTargetFlashCapacity(1n);
+          totalDeposited = randomBI(19);
+          await iVault.connect(staker).deposit(totalDeposited, staker.address);
+        });
+
+        const args = [
+          {
+            name: "1 vault, no allocation",
+            addVaults: [],
+            allocations: [],
+          },
+          {
+            name: "1 vault; allocation 100%",
+            addVaults: [],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+            ],
+          },
+          {
+            name: "1 vault; allocation 100% and 0% to unregistered",
+            addVaults: [],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[1].vaultAddress,
+                amount: 0n,
+              },
+            ],
+          },
+          {
+            name: "1 vault; allocation 50% and 50% to unregistered",
+            addVaults: [],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[1].vaultAddress,
+                amount: 1n,
+              },
+            ],
+          },
+          {
+            name: "2 vaults; allocations: 100%, 0%",
+            addVaults: [mellowVaults[1]],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[1].vaultAddress,
+                amount: 0n,
+              },
+            ],
+          },
+          {
+            name: "2 vaults; allocations: 50%, 50%",
+            addVaults: [mellowVaults[1]],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[1].vaultAddress,
+                amount: 1n,
+              },
+            ],
+          },
+          {
+            name: "3 vaults; allocations: 33%, 33%, 33%",
+            addVaults: [mellowVaults[1], mellowVaults[2]],
+            allocations: [
+              {
+                vault: mellowVaults[0].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[1].vaultAddress,
+                amount: 1n,
+              },
+              {
+                vault: mellowVaults[2].vaultAddress,
+                amount: 1n,
+              },
+            ],
+          },
+        ];
+
+        args.forEach(function (arg) {
+          it(`Delegate auto when ${arg.name}`, async function () {
+            //Add restakers
+            const addedVaults = [mellowVaults[0].vaultAddress];
+            for (const vault of arg.addVaults) {
+              await mellowRestaker.addMellowVault(vault.vaultAddress, vault.wrapperAddress);
+              addedVaults.push(vault.vaultAddress);
+            }
+            //Set allocations
+            let totalAllocations = 0n;
+            for (const allocation of arg.allocations) {
+              await mellowRestaker.changeAllocation(allocation.vault, allocation.amount);
+              totalAllocations += allocation.amount;
+            }
+            //Calculate expected delegated amounts
+            const freeBalance = await iVault.getFreeBalance();
+            expect(freeBalance).to.be.closeTo(totalDeposited, 1n);
+            let expectedDelegated = 0n;
+            const expectedDelegations = new Map();
+            for (const allocation of arg.allocations) {
+              let amount = 0n;
+              if (addedVaults.includes(allocation.vault)) {
+                amount += (freeBalance * allocation.amount) / totalAllocations;
+              }
+              expectedDelegations.set(allocation.vault, amount);
+              expectedDelegated += amount;
+            }
+
+            await iVault.connect(iVaultOperator).delegateAuto();
+
+            const totalDepositedAfter = await iVault.getTotalDeposited();
+            const totalDelegatedAfter = await iVault.getTotalDelegated();
+            const totalAssetsAfter = await iVault.totalAssets();
+            console.log(`Total deposited after: ${totalDepositedAfter.format()}`);
+            console.log(`Total delegated after: ${totalDelegatedAfter.format()}`);
+            console.log(`Total assets after: ${totalAssetsAfter.format()}`);
+
+            expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr * BigInt(addedVaults.length));
+            expect(totalDelegatedAfter).to.be.closeTo(expectedDelegated, transactErr * BigInt(addedVaults.length));
+            expect(totalAssetsAfter).to.be.closeTo(totalDeposited - expectedDelegated, transactErr);
+
+            for (const allocation of arg.allocations) {
+              expect(expectedDelegations.get(allocation.vault)).to.be.closeTo(
+                await iVault.getDelegatedTo(allocation.vault),
+                transactErr,
+              );
+            }
+          });
+        });
+
+        it("delegateAuto reverts when called by not an owner", async function () {
+          await mellowRestaker.changeAllocation(mellowVaults[0].vaultAddress, 1n);
+          await expect(iVault.connect(staker).delegateAuto()).to.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+        });
+
+        it("delegateAuto reverts when iVault is paused", async function () {
+          await mellowRestaker.changeAllocation(mellowVaults[0].vaultAddress, 1n);
+          await iVault.pause();
+          await expect(iVault.delegateAuto()).to.be.revertedWith("Pausable: paused");
+        });
       });
     });
 
@@ -2485,7 +2699,7 @@ assets.forEach(function (a) {
         console.log("Total deposited after", await iVault.getTotalDeposited());
       });
 
-      it("addMellowVault with different wrapper", async function () {
+      it("addMellowVault with wrong wrapper and update", async function () {
         const mellowVault = mellowVaults[1].vaultAddress;
         const wrongWrapper = ethers.Wallet.createRandom().address;
         await expect(mellowRestaker.addMellowVault(mellowVault, wrongWrapper))
@@ -2508,15 +2722,28 @@ assets.forEach(function (a) {
       it("addMellowVault vault is 0 address", async function () {
         const mellowVault = ethers.ZeroAddress;
         const wrapper = mellowVaults[1].wrapperAddress;
-        await expect(mellowRestaker.addMellowVault(mellowVault, wrapper))
-          .to.emit(mellowRestaker, "VaultAdded")
-          .withArgs(mellowVault, wrapper);
-        expect(await mellowRestaker.mellowDepositWrappers(mellowVault)).to.be.eq(wrapper);
+        await expect(mellowRestaker.addMellowVault(mellowVault, wrapper)).to.revertedWithCustomError(
+          mellowRestaker,
+          "ZeroAddress",
+        );
       });
 
-      it("addMellowVault wrapper is 0 address", async function () {});
+      it("addMellowVault wrapper is 0 address", async function () {
+        const mellowVault = mellowVaults[1].vaultAddress;
+        const wrapper = ethers.ZeroAddress;
+        await expect(mellowRestaker.addMellowVault(mellowVault, wrapper)).to.revertedWithCustomError(
+          mellowRestaker,
+          "ZeroAddress",
+        );
+      });
 
-      it("addMellowVault reverts when called by not an owner", async function () {});
+      it("addMellowVault reverts when called by not an owner", async function () {
+        const mellowVault = mellowVaults[1].vaultAddress;
+        const wrapper = mellowVaults[1].wrapperAddress;
+        await expect(mellowRestaker.connect(staker).addMellowVault(mellowVault, wrapper)).to.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
     });
 
     describe("UndelegateFrom: request withdrawal from mellow vault", function () {
