@@ -230,11 +230,11 @@ class BatchBuilder {
   add({ to, value, method, args }, abi) {
     this.data.transactions.push(
       Object.assign({}, GS_TX_TEMPLATE, {
-        contractMethod: abi.find((v) => v.name === method && v.type === "function"),
+        // contractMethod: abi.getFunction(v => v.name === method && v.type === "function"),
         to,
         value: value || "0",
         contractInputsValues: args,
-      })
+      }),
     );
     return this;
   }
@@ -249,7 +249,7 @@ class BatchBuilder {
           implementation: impl,
         },
       },
-      admin.abi || TUProxyAdmin
+      admin.abi || TUProxyAdmin,
     );
 
     return this;
@@ -265,7 +265,7 @@ class BatchBuilder {
           data: "0x",
         },
       },
-      ERC1967ProxyABI
+      ERC1967ProxyABI,
     );
 
     return this;
@@ -285,3 +285,4 @@ class BatchBuilder {
 module.exports = {
   BatchBuilder,
 };
+

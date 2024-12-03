@@ -1,48 +1,4 @@
-const fs = require("fs").promises;
-const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
 const { ethers } = require("hardhat");
-
-const { addresses } = require("../config-addresses");
-
-async function setSignatureBatch(IVaultAddress, InceptionLibraryAddress) {
-  const [deployer] = await ethers.getSigners();
-
-  console.log("Setting signatures with the account:", deployer.address);
-  const initBalance = await deployer.provider.getBalance(deployer.address);
-  console.log("Account balance:", initBalance.toString());
-
-  const iVault = await ethers.getContractAt("InceptionVault_EL", IVaultAddress);
-  const [eigenSetterFacetAddress, erc4626FacetAddress, eigenFacetAddress] = await getFacetAddresses();
-
-  let tx = await iVault.setSetterFacet(eigenSetterFacetAddress);
-  await tx.wait();
-
-  tx = await iVault.setEigenLayerFacet(eigenFacetAddress);
-  await tx.wait();
-
-  tx = await iVault.setERC4626Facet(erc4626FacetAddress);
-  await tx.wait();
-
-  const [sigs, accesses, targets] = await generateTransactionData();
-
-  if (network.name === "mainnet") {
-    await gnosisSafe([sigs, accesses, targets]);
-  } else {
-    tx = await iVault.setSignaturesBatch(sigs, targets, accesses);
-    await tx.wait();
-  }
-
-  const setterFacetFactory = await ethers.getContractFactory("EigenSetterFacet", {
-    libraries: { InceptionLibrary: InceptionLibraryAddress },
-  });
-  const setterFacet = setterFacetFactory.attach(IVaultAddress);
-
-  tx = await setterFacet.setRewardsCoordinator(addresses.RewardsCoordinator);
-  await tx.wait();
-
-  console.log("The signatures have been set");
-  console.log(`spent: ${(initBalance - (await deployer.provider.getBalance(deployer.address))).toString()}`);
-}
 
 async function generateTransactionData(InceptionLibraryAddress) {
   /**
@@ -61,75 +17,77 @@ async function generateTransactionData(InceptionLibraryAddress) {
     libraries: { InceptionLibrary: InceptionLibraryAddress },
   });
 
+  console.log(setterFacetFactory.interface.getSighash("setDelegationManager"));
+
   let facetId = "0";
   let accessId = "2";
 
-  let funcSig = setterFacetFactory.interface.getFunction("setDelegationManager").selector;
+  let funcSig = setterFacetFactory.interface.getSighash("setDelegationManager");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setRewardsCoordinator").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setRewardsCoordinator");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("upgradeTo").selector;
+  funcSig = setterFacetFactory.interface.getSighash("upgradeTo");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setRatioFeed").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setRatioFeed");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("addELOperator").selector;
+  funcSig = setterFacetFactory.interface.getSighash("addELOperator");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setTreasuryAddress").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setTreasuryAddress");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setOperator").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setOperator");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setMinAmount").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setMinAmount");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setName").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setName");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setTargetFlashCapacity").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setTargetFlashCapacity");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setProtocolFee").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setProtocolFee");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setDepositBonusParams").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setDepositBonusParams");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setFlashWithdrawFeeParams").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setFlashWithdrawFeeParams");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = setterFacetFactory.interface.getFunction("setRewardsTimeline").selector;
+  funcSig = setterFacetFactory.interface.getSighash("setRewardsTimeline");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
@@ -145,40 +103,40 @@ async function generateTransactionData(InceptionLibraryAddress) {
   facetId = "1";
   accessId = "1";
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("delegateToOperator").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("delegateToOperator");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("undelegateFrom").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("undelegateFrom");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("undelegateVault").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("undelegateVault");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("claimCompletedWithdrawals").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("claimCompletedWithdrawals");
   /// Everyone is able to claim
   // await iVault.setSignature(funcSig, facetId, "0");
   sigs.push(funcSig);
   facetIds.push(facetId);
   accesses.push("0");
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("updateEpoch").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("updateEpoch");
   // await iVault.setSignature(funcSig, facetId, "0");
   sigs.push(funcSig);
   facetIds.push(facetId);
   accesses.push("0");
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("addRewards").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("addRewards");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = eigenLayerFacetFactory.interface.getFunction("forceUndelegateRecovery").selector;
+  funcSig = eigenLayerFacetFactory.interface.getSighash("forceUndelegateRecovery");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
@@ -194,42 +152,42 @@ async function generateTransactionData(InceptionLibraryAddress) {
   facetId = "2";
   accessId = "0";
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("deposit").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("deposit");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("mint").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("mint");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("depositWithReferral").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("depositWithReferral");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("withdraw(uint256,address)").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("withdraw(uint256,address)");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("flashWithdraw").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("flashWithdraw");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("isAbleToRedeem").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("isAbleToRedeem");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("redeem(address)").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("redeem(address)");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
 
-  funcSig = ERC4626FacetFactory.interface.getFunction("redeem(uint256,address,address)").selector;
+  funcSig = ERC4626FacetFactory.interface.getSighash("redeem(uint256,address,address)");
   sigs.push(funcSig);
   accesses.push(accessId);
   facetIds.push(facetId);
@@ -237,38 +195,7 @@ async function generateTransactionData(InceptionLibraryAddress) {
   return [sigs, accesses, facetIds];
 }
 
-async function gnosisSafe(signaturesData) {
-  //   {
-  //       to: existing.address,
-  //       value: 0,
-  //       method: "setPartnersContract",
-  //       args: {
-  //         newValue: partnersContract,
-  //       },
-  //     },
-
-  new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider)
-    .add({
-      to: existing.address,
-      value: 0,
-      method: "setSignaturesBatch",
-      args: {
-        newValue: signaturesData,
-      },
-    })
-    .save();
-}
-
-async function getFacetAddresses() {
-  const filePath = `./scripts/migration/facet_addresses/${network.name}.json`;
-  const jsonString = await fs.readFile(filePath, "utf8");
-  const jsonObject = JSON.parse(jsonString);
-  const dataMap = new Map(Object.entries(jsonObject));
-
-  return [dataMap.get("eigenSetterFacet"), dataMap.get("erc4626Facet"), dataMap.get("eigenFacet")];
-}
-
 module.exports = {
-  setSignatureBatch,
+  generateTransactionData,
 };
 
