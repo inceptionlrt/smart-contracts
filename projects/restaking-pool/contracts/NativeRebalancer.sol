@@ -145,13 +145,13 @@ contract NativeRebalancer is
         if (syncedSupply < totalL2InETH) {
             uint256 amountToMint = totalL2InETH - syncedSupply;
             _mintInceptionToken(amountToMint);
+            emit SyncedSupplyChanged(syncedSupply, syncedSupply + amountToMint);
             syncedSupply += amountToMint;
-            emit SyncedSupplyChanged(true, amountToMint);
         } else if (syncedSupply > totalL2InETH) {
             uint256 amountToBurn = syncedSupply - totalL2InETH;
             _burnInceptionToken(amountToBurn);
+            emit SyncedSupplyChanged(syncedSupply, syncedSupply - amountToBurn);
             syncedSupply -= amountToBurn;
-            emit SyncedSupplyChanged(false, amountToBurn);
         } else {
             revert NoRebalancingRequired();
         }
