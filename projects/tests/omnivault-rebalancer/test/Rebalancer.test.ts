@@ -458,6 +458,10 @@ describe("Omnivault integration tests", function () {
           await expect(upgrades.deployProxy(NativeRebalancer, args)).to.be.reverted;
         });
       });
+
+      it("Synced Supply", async function () {
+        expect(await rebalancer.syncedSupply()).to.be.eq(0n);
+      });
     });
 
     describe("Getters and setters", function () {
@@ -629,29 +633,52 @@ describe("Omnivault integration tests", function () {
         expect(txData.ethBalance).to.be.eq(0n);
         expect(txData.inceptionTokenBalance).to.be.eq(0n);
       });
-    });
 
-    describe("Update data", function () {
-      let initialArbAmount, initialArbSupply;
-      let initialOptAmount, initialOptSupply;
-
-      before(async function () {
-        await snapshot.restore();
-        const amount = 2n * e18;
-        await restakingPool.connect(signer1)["stake()"]({ value: amount });
-        const initialAmount = await inEth.balanceOf(lockboxAddress);
-        initialArbAmount = initialAmount / 2n;
-        initialArbSupply = initialAmount / 2n;
-        initialOptAmount = initialAmount - initialArbAmount;
-        initialOptSupply = initialAmount - initialArbAmount;
-      });
-
-      it("Enable update", async function () {
+      it("Enable and disable update", async function () {
         expect(await rebalancer.updateable()).to.be.false;
 
         await expect(rebalancer.setUpdateable(true)).to.emit(rebalancer, "UpdateableChanged").withArgs(false, true);
-
         expect(await rebalancer.updateable()).to.be.true;
+
+        await expect(rebalancer.setUpdateable(false)).to.emit(rebalancer, "UpdateableChanged").withArgs(true, false);
+        expect(await rebalancer.updateable()).to.be.false;
+      });
+
+      it("setUpdateable reverts when called by not an owner", async function () {
+        await expect(rebalancer.connect(signer1).setUpdateable(true))
+          .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
+          .withArgs(signer1.address);
+      });
+
+      it("setSyncedSupply owner can", async function () {
+        const prevValue = await rebalancer.syncedSupply();
+        const newValue = randomBI(18);
+        await expect(rebalancer.setSyncedSupply(newValue))
+          .to.emit(rebalancer, "SyncedSupplyChanged")
+          .withArgs(prevValue, newValue);
+
+        expect(await rebalancer.syncedSupply()).to.be.eq(newValue);
+      });
+
+      it("setSyncedSupply reverts when called by not an owner", async function () {
+        const newValue = randomBI(18);
+        await expect(rebalancer.connect(signer1).setSyncedSupply(newValue))
+          .to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount")
+          .withArgs(signer1.address);
+      });
+    });
+
+    describe("Update data", function () {
+      let currentArbAmount = 0n;
+      let currentArbSupply = 0n;
+      let currentOptAmount = 0n;
+      let currentOptSupply = 0n;
+      let initialLockBoxBalance;
+
+      before(async function () {
+        await snapshot.restore();
+        initialLockBoxBalance = await inEth.balanceOf(lockboxAddress);
+        await rebalancer.setUpdateable(true);
       });
 
       it("Reverts when there is no data for one of the chains", async function () {
@@ -690,14 +717,14 @@ describe("Omnivault integration tests", function () {
         {
           name: "Increase only inEth supply ARB",
           arb: {
-            l2BalanceDiff: () => 0n,
+            l2BalanceDiff: () => e18,
             l2TotalSupplyDiff: () => ethers.parseEther("1.5"),
           },
         },
         {
           name: "Increase only inEth supply OPT",
           opt: {
-            l2BalanceDiff: () => 0n,
+            l2BalanceDiff: () => e18,
             l2TotalSupplyDiff: () => ethers.parseEther("1.5"),
           },
         },
@@ -740,15 +767,15 @@ describe("Omnivault integration tests", function () {
         {
           name: "Decrease to 0 ARB",
           arb: {
-            l2BalanceDiff: () => -initialArbSupply,
-            l2TotalSupplyDiff: () => -initialArbSupply,
+            l2BalanceDiff: () => -currentArbSupply,
+            l2TotalSupplyDiff: () => -currentArbSupply,
           },
         },
         {
           name: "Decrease to 0 OPT",
           opt: {
-            l2BalanceDiff: () => -initialOptSupply,
-            l2TotalSupplyDiff: () => -initialOptSupply,
+            l2BalanceDiff: () => -currentOptSupply,
+            l2TotalSupplyDiff: () => -currentOptSupply,
           },
         },
       ];
@@ -760,43 +787,55 @@ describe("Omnivault integration tests", function () {
           let expectedTotalSupplyDiff = 0n;
           if (arg.arb) {
             expectedTotalSupplyDiff += arg.arb.l2TotalSupplyDiff();
-            initialArbAmount += arg.arb.l2BalanceDiff();
-            initialArbSupply += arg.arb.l2TotalSupplyDiff();
-            await adapterArb.sendData(timestamp, initialArbAmount, initialArbSupply);
+            currentArbAmount += arg.arb.l2BalanceDiff();
+            currentArbSupply += arg.arb.l2TotalSupplyDiff();
+            await adapterArb.sendData(timestamp, currentArbAmount, currentArbSupply);
           }
           if (arg.opt) {
             expectedTotalSupplyDiff += arg.opt.l2TotalSupplyDiff();
-            initialOptAmount += arg.opt.l2BalanceDiff();
-            initialOptSupply += arg.opt.l2TotalSupplyDiff();
-            await adapterOpt.sendData(timestamp, initialOptAmount, initialOptSupply);
+            currentOptAmount += arg.opt.l2BalanceDiff();
+            currentOptSupply += arg.opt.l2TotalSupplyDiff();
+            await adapterOpt.sendData(timestamp, currentOptAmount, currentOptSupply);
           }
-          const expectedLockboxBalance = initialArbSupply + initialOptSupply;
           const totalSupplyBefore = await inEth.totalSupply();
-          console.log(`Total supply before: ${totalSupplyBefore.format()}`);
-          console.log(`Lockbox balance before: ${(await inEth.balanceOf(lockboxAddress)).format()}`);
-          console.log(`Expected supply diff: ${expectedTotalSupplyDiff.format()}`);
+          const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
+          const syncedSupplyBefore = await rebalancer.syncedSupply();
 
           let tx = await rebalancer.updateTreasuryData();
+          await expect(tx)
+            .to.emit(rebalancer, "SyncedSupplyChanged")
+            .withArgs(syncedSupplyBefore, syncedSupplyBefore + expectedTotalSupplyDiff);
 
           const totalSupplyAfter = await inEth.totalSupply();
           const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-          console.log("Lockbox inEth balance:", lockboxBalanceAfter.format());
-          console.log("TotalSupply diff:", (totalSupplyAfter - totalSupplyBefore).format());
+          const syncedSupplyAfter = await rebalancer.syncedSupply();
+
+          console.log("Total supply diff:", (totalSupplyAfter - totalSupplyBefore).format());
+          console.log("Lockbox balance diff:", (lockboxBalanceAfter - lockboxBalanceBefore).format());
+          console.log("Synced supply diff:", (syncedSupplyAfter - syncedSupplyBefore).format());
 
           expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedTotalSupplyDiff);
-          expect(lockboxBalanceAfter).to.be.eq(expectedLockboxBalance);
+          expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.eq(expectedTotalSupplyDiff);
+          expect(syncedSupplyAfter - syncedSupplyBefore).to.be.eq(expectedTotalSupplyDiff);
           if (expectedTotalSupplyDiff > 0n) {
+            console.log("Mint");
             await expect(tx).emit(rebalancer, "TreasuryUpdateMint").withArgs(expectedTotalSupplyDiff);
           }
           if (expectedTotalSupplyDiff == 0n) {
+            console.log("No mint, no burn");
             await expect(tx)
               .to.not.emit(rebalancer, "TreasuryUpdateMint")
               .and.to.not.emit(rebalancer, "TreasuryUpdateBurn");
           }
           if (expectedTotalSupplyDiff < 0n) {
+            console.log("Burn");
             await expect(tx).emit(rebalancer, "TreasuryUpdateBurn").withArgs(-expectedTotalSupplyDiff);
           }
         });
+      });
+
+      it("Lockbox balance is the ame after all", async function () {
+        expect(await inEth.balanceOf(lockboxAddress)).to.be.eq(initialLockBoxBalance);
       });
 
       it("updateTreasuryData reverts when total supply is the same", async function () {
@@ -812,8 +851,14 @@ describe("Omnivault integration tests", function () {
         );
       });
 
+      it("Reverts when updateable is false", async function () {
+        await snapshot.restore();
+        await expect(rebalancer.updateTreasuryData()).to.revertedWithCustomError(rebalancer, "TreasuryUpdatesPaused");
+      });
+
       it("inEth leftover on rebalancer will be transferred to the lockbox", async function () {
         await snapshot.restore();
+        await rebalancer.setUpdateable(true);
         const block = await ethers.provider.getBlock("latest");
         const timestamp = block.timestamp;
         await restakingPool.connect(signer1)["stake()"]({ value: 2n * e18 });
@@ -821,9 +866,10 @@ describe("Omnivault integration tests", function () {
         const totalSupplyBefore = await inEth.totalSupply();
         const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
         //Report L2 info
-        const l2SupplyChange = e18;
-        await adapterArb.sendData(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
-        await adapterOpt.sendData(timestamp, lockboxBalanceBefore / 2n, lockboxBalanceBefore / 2n + l2SupplyChange);
+        const inEthChange = e18;
+        const supplyChange = e18;
+        await adapterArb.sendData(timestamp, inEthChange, supplyChange);
+        await adapterOpt.sendData(timestamp, inEthChange, supplyChange);
 
         const amount = randomBI(17);
         await inEth.connect(signer1).transfer(rebalancer.address, amount);
@@ -835,8 +881,8 @@ describe("Omnivault integration tests", function () {
 
         const totalSupplyAfter = await inEth.totalSupply();
         const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-        expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(l2SupplyChange * 2n, 1n);
-        expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(l2SupplyChange * 2n + amount, 1n);
+        expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(supplyChange * 2n, 1n);
+        expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(supplyChange * 2n + amount, 1n);
       });
     });
 
@@ -937,24 +983,35 @@ describe("Omnivault integration tests", function () {
           amount: async amount => amount / 2n,
           chainId: ARB_ID,
           adapter: () => adapterArb,
+          sender: () => operator,
+        },
+        {
+          name: "Part of the balance to ARB by owner",
+          amount: async amount => amount / 2n,
+          chainId: ARB_ID,
+          adapter: () => adapterArb,
+          sender: () => owner,
         },
         {
           name: "Part of the balance to OPT",
           amount: async amount => amount / 2n,
           chainId: OPT_ID,
           adapter: () => adapterOpt,
+          sender: () => operator,
         },
         {
           name: "All balance to ARB",
           amount: async amount => amount,
           chainId: ARB_ID,
           adapter: () => adapterArb,
+          sender: () => operator,
         },
         {
           name: "All balance to OPT",
           amount: async amount => amount,
           chainId: OPT_ID,
           adapter: () => adapterOpt,
+          sender: () => operator,
         },
       ];
 
@@ -965,11 +1022,11 @@ describe("Omnivault integration tests", function () {
 
           const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
           const fees = await rebalancer.quoteSendEthToL2(arg.chainId, options);
-          const tx = await rebalancer.connect(operator).sendEthToL2(arg.chainId, amount, options, { value: fees });
+          const tx = await rebalancer.connect(arg.sender()).sendEthToL2(arg.chainId, amount, options, { value: fees });
           await expect(tx).to.emit(adapterEth, "CrossChainMessageSent");
           await expect(tx).to.changeEtherBalance(omniVault, amount);
           await expect(tx).to.changeEtherBalance(rebalancer, -amount);
-          await expect(tx).to.changeEtherBalance(operator, -fees, { includeFee: false });
+          await expect(tx).to.changeEtherBalance(arg.sender(), -fees, { includeFee: false });
         });
       });
 
@@ -1313,6 +1370,17 @@ describe("Omnivault integration tests", function () {
           await expect(tx).not.emit(rebalancer, "ETHReceived");
           await expect(tx).to.changeEtherBalance(target.address, amount);
           await expect(tx).to.changeEtherBalance(owner.address, -amountWithFees, { includeFee: false });
+        });
+
+        it("sendEthCrossChain reverts when called by not a target", async function () {
+          await snapshot.restore();
+
+          const amount = randomBI(18);
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+          const fees = await fromAdapter.quoteSendEth(direction.toChainID, options);
+          await expect(fromAdapter.connect(signer1).sendEthCrossChain(direction.toChainID, options, { value: fees }))
+            .to.revertedWithCustomError(toAdapter, "NotTargetReceiver")
+            .withArgs(signer1.address);
         });
 
         it("sendEthCrossChain reverts when caller is not endpoint", async function () {
@@ -1732,6 +1800,66 @@ describe("Omnivault integration tests", function () {
           expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
           expect(depositEvent[0].args["amount"]).to.be.eq(amount);
           expect(depositEvent[0].args["iShares"]).to.be.closeTo(convertedShares, 1n);
+          //DepositBonus event
+          const actualBonus = receipt?.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n;
+          console.log(`Actual bonus:\t\t\t${actualBonus.format()}`);
+
+          const stakerSharesAfter = await iToken.balanceOf(receiver);
+          const totalAssetsAfter = await omniVault.totalAssets();
+          const flashCapacityAfter = await omniVault.getFlashCapacity();
+          console.log(`Bonus after:\t\t\t${availableBonus.format()}`);
+
+          expect(stakerSharesAfter - stakerSharesBefore).to.be.closeTo(expectedShares, 1n);
+          expect(stakerSharesAfter - stakerSharesBefore).to.be.closeTo(convertedShares, 1n);
+          expect(totalAssetsAfter - totalAssetsBefore).to.be.eq(amount); //omniVault balance is the same
+          expect(actualBonus).to.be.closeTo(expectedBonus, 1n);
+          expect(flashCapacityAfter - flashCapacityBefore).to.be.closeTo(amount + expectedBonus, 1n); //rewarded bonus goes to flash capacity
+        });
+        it(`Deposit with referral code ${arg.name}`, async function () {
+          //Predeposit
+          const predepositAmount = arg.predepositAmount();
+          if (predepositAmount > 0n) {
+            const randomAddress = ethers.Wallet.createRandom().address;
+            await omniVault.connect(signer3).deposit(randomAddress, { value: predepositAmount });
+            expect(await omniVault.getFlashCapacity()).to.be.closeTo(predepositAmount, 2n);
+          }
+
+          //Add rewards
+          let availableBonus = await addReplenishBonusToOmniVault(arg.withdrawFeeFrom());
+
+          if (arg.ratio) {
+            await ratioFeedL2.updateRatioBatch([await iToken.getAddress()], [arg.ratio]);
+            console.log(`Ratio updated:\t\t\t${(await omniVault.ratio()).format()}`);
+          }
+
+          const receiver = arg.receiver();
+          const stakerSharesBefore = await iToken.balanceOf(receiver);
+          const totalAssetsBefore = await omniVault.totalAssets();
+          const flashCapacityBefore = await omniVault.getFlashCapacity();
+          console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
+
+          const amount = await arg.amount();
+          console.log(`Amount:\t\t\t\t\t${amount.format()}`);
+          const calculatedBonus = await omniVault.calculateDepositBonus(amount);
+          console.log(`Preview bonus:\t\t\t${calculatedBonus.format()}`);
+          console.log(`Available bonus:\t\t${availableBonus.format()}`);
+          const expectedBonus = calculatedBonus <= availableBonus ? calculatedBonus : availableBonus;
+          availableBonus -= expectedBonus;
+          console.log(`Expected bonus:\t\t\t${expectedBonus.format()}`);
+          const convertedShares = await omniVault.convertToShares(amount + expectedBonus);
+          const expectedShares = ((amount + expectedBonus) * (await omniVault.ratio())) / e18;
+
+          const code = ethers.encodeBytes32String("code");
+          const tx = await omniVault.connect(signer1).depositWithReferral(receiver, code, { value: amount });
+          const receipt = await tx.wait();
+          const depositEvent = receipt?.logs.filter(e => e.eventName === "Deposit");
+          expect(depositEvent.length).to.be.eq(1);
+          expect(depositEvent[0].args["sender"]).to.be.eq(signer1.address);
+          expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
+          expect(depositEvent[0].args["amount"]).to.be.eq(amount);
+          expect(depositEvent[0].args["iShares"]).to.be.closeTo(convertedShares, 1n);
+          await expect(tx).to.emit(omniVault, "ReferralCode").withArgs(signer1.address, code);
+
           //DepositBonus event
           const actualBonus = receipt?.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n;
           console.log(`Actual bonus:\t\t\t${actualBonus.format()}`);
@@ -2470,6 +2598,10 @@ describe("Omnivault integration tests", function () {
           omniVault,
           "OwnableUnauthorizedAccount",
         );
+      });
+
+      it("setOperator(): reverts when set to 0 address", async function () {
+        await expect(omniVault.setOperator(ethers.ZeroAddress)).to.be.revertedWithCustomError(omniVault, "NullParams");
       });
 
       it("ratio() reverts when ratioFeed is 0 address", async function () {
