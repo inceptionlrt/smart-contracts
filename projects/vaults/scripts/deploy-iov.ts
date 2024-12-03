@@ -71,33 +71,6 @@ async function main() {
     const adminAddress = await upgrades.erc1967.getAdminAddress(deployedAddress);
     console.log("Proxy Admin Address:", adminAddress);
 
-    console.log("Setting bridge limits on IXERC20 contract...");
-
-    const ixerc20 = await ethers.getContractAt("IXERC20", INCEPTION_TOKEN_ADDRESS);
-
-
-    const bigNumberLimit = BigInt(900719925474099100000);
-
-
-    const tx1 = await ixerc20.setBridgeLimits(deployedAddress, bigNumberLimit, bigNumberLimit);
-
-    console.log("Waiting for bridge limits transaction to complete...");
-    await tx1.wait();
-
-    console.log(`Bridge limits set successfully on IXERC20 contract for bridge: ${deployedAddress}`);
-
-    console.log("Setting target receiver on LZCrossChainAdapterL2...");
-
-    const lzCrossChainAdapterL2 = await ethers.getContractAt(
-        "LZCrossChainAdapterL2",
-        CROSS_CHAIN_BRIDGE_ADDRESS_L2
-    );
-
-    const tx2 = await lzCrossChainAdapterL2.setTargetReceiver(deployedAddress);
-
-    console.log("Waiting for target receiver transaction to complete...");
-    await tx2.wait();
-
     console.log(
         `Target receiver set successfully on LZCrossChainAdapterL2: ${deployedAddress}`
     );

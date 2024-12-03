@@ -9,23 +9,33 @@ async function main() {
 
     let INCEPTION_TOKEN_ADDRESS: string;
     let CROSS_CHAIN_BRIDGE_ADDRESS_L2: string;
+    let IOV_ADDRESS: string;
+    let RATIO_FEED: string;
 
     switch (networkName) {
         case "arbitrum":
+            IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Arbitrum here
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Arbitrum here
+            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
             break;
         case "optimism":
+            IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Optimism here
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
+            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
             break;
         case "arbitrumSepolia":
+            IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Arbitrum Sepolia here
             INCEPTION_TOKEN_ADDRESS = "";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0xb7A8CA74cbfe313804c3D52663e9b0C0585B5C4e";
+            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
             break;
         case "optimismSepolia":
+            IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Optimism Sepolia here
             INCEPTION_TOKEN_ADDRESS = "0xb1692ed9b08f8dd641f4109568ed6f471166c7e5";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
+            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
             break;
         default:
             throw new Error(`Unsupported network: ${networkName}`);
@@ -44,6 +54,7 @@ async function main() {
     console.log("Network:", networkName);
     console.log("Operator Address:", operatorAddress);
     console.log("Inception Token Address:", INCEPTION_TOKEN_ADDRESS);
+    console.log("Inception Omni Vault:", IOV_ADDRESS);
     console.log("CrossChainBridge Address:", CROSS_CHAIN_BRIDGE_ADDRESS_L2);
 
     console.log("Setting target receiver on LZCrossChainAdapterL2...");
@@ -53,15 +64,14 @@ async function main() {
         CROSS_CHAIN_BRIDGE_ADDRESS_L2
     );
 
-    const iovAddress = "0x55ec970B8629E01d26BAA7b5d092DD26784136bb";
 
-    const tx2 = await lzCrossChainAdapterL2.setTargetReceiver(iovAddress);
+    const tx2 = await lzCrossChainAdapterL2.setTargetReceiver(IOV_ADDRESS);
 
     console.log("Waiting for target receiver transaction to complete...");
     await tx2.wait();
 
     console.log(
-        `Target receiver set successfully on LZCrossChainAdapterL2: ${iovAddress}`
+        `Target receiver set successfully on LZCrossChainAdapterL2: ${IOV_ADDRESS}`
     );
 
     console.log("Deployment complete.");
