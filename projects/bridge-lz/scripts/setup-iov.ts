@@ -17,13 +17,13 @@ async function main() {
             IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Arbitrum here
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Arbitrum here
-            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
+            RATIO_FEED = "0xfE715358368416E01d3A961D3a037b7359735d5e"; //value from inception-service contracts-prod.yaml
             break;
         case "optimism":
             IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Optimism here
             INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
             CROSS_CHAIN_BRIDGE_ADDRESS_L2 = ""; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
-            RATIO_FEED = ""; // TODO: Insert IInceptionRatioFeed address here
+            RATIO_FEED = "0xfD07fD5EBEa6F24888a397997E262179Bf494336"; //value from inception-service contracts-prod.yaml
             break;
         case "arbitrumSepolia":
             IOV_ADDRESS = "";  // TODO: Insert InceptionOmniVault address for Arbitrum Sepolia here
