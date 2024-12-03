@@ -6,10 +6,11 @@ const VaultName = "inwstETHVault_S",
   TokenSymbol = "inwstETHs",
   mellowWrappers = [],
   mellowVaults = [],
-  asset = "0xB82381A3fBD3FaFA77B3a7bE693342618240067b";
+  asset = "0xB82381A3fBD3FaFA77B3a7bE693342618240067b",
+  ratioFeed = "0xF155Db20A00e53671880611cBb626B66539c418A";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol, mellowWrappers, mellowVaults, asset);
+  await deployVault(addresses, VaultName, TokenName, TokenSymbol, mellowWrappers, mellowVaults, asset, ratioFeed);
 }
 
 main()

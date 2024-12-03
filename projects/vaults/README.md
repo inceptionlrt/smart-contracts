@@ -61,6 +61,9 @@ Additionally, the corresponding _RateProviders_ were deployed for all LRT (Incep
   - [InlsEthVault](https://etherscan.io/address/0x6E17a8b5D33e6DBdB9fC61d758BF554b6AD93322).
   - [InlsETH](https://etherscan.io/address/0x94B888E11a9E960A9c3B3528EB6aC807B27Ca62E).
   - [InlsETHRateProvider](https://etherscan.io/address/0x20f6d8e1e821Bd5B94f7bF725AF304Bc5ef09c36).
+- [x] [wstETH](https://etherscan.io/address/0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0): Wrapped liquid staked Ether 2.0.
+  - [inwstETHVault_S](https://etherscan.io/address/0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97).
+  - [inwstETHs](https://etherscan.io/address/0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552).
 
 ## Testing
 
@@ -85,3 +88,42 @@ To run tests for the Inception Protocol, please follow these instructions:
 
 - Running all tests at once:
   `npx hardhat test`
+
+## InceptionVault_S
+1. User flow:
+   
+    1. Deposit
+        - Approve vault's underlying `InceptionVault_S.asset()` to the vault
+        - Call `deposit(uint256 amount, address receiver)`
+        - Receive inception token as vault shares
+    2. Redeem
+        - Call `redeem(uint256 shares, address receiver, address owner)`
+        - Vault burns inception tokens of `owner` equal to `shares`
+        - Corresponding vault's underlying `InceptionVault_S.asset()` are received by `receiver`
+2. Mellow Integration:
+   
+    1. Deposit flow
+        - `InceptionVault_S` via the `IMellowRestaker` deposits assets into mellow vaults proportional to assigned allocations
+        - `InceptionVault_S.delegateToMellowVault(address mellowVault, uint256 amount)` calls `IMellowRestaker.delegateMellow(uint256 amount, uint256 deadline, address mellowVault)` to forward assets to `IMellowRestaker`
+        - `IMellowRestaker` then calls `MellowWrapper.deposit(address to, address token, uint256 amount, uint256 minLpAmount, uint256 deadline)` to deposit assets to Mellow Vault
+    2. Withdraw flow
+        - `InceptionVault_S.undelegateFrom(address mellowVault, uint256 amount)` calls `IMellowRestaker.withdrawMellow(mellowVault, amount, true)` with `closePrevious` set to `true`
+        - `IMellowRestaker` then calls `registerWithdrawal(address to, uint256 lpAmount, uint256[] memory minAmounts, uint256 deadline, uint256 requestDeadline, bool closePrevious)` to generate withdrawal request
+    3. Emergency withdraw
+        - `InceptionVault_S` does support emergency withdraw using `undelegateForceFrom(address mellowVault, uint256 amount)`
+        - This inturn calls `IMellowRestaker.withdrawEmergencyMellow(address _mellowVault, uint256 amount)` which calls `mellowVault.function emergencyWithdraw(uint256[] memory minAmounts, uint256 deadline)`
+    4. Mellow rewards
+        - Mellow staking rewards accumulation are reflected by `InceptionVault_S.ratio()` which takes into account the balance + rewards
+    5. Flash withdraw
+        - `InceptionVault_S` does support flash withdrawal since withdrawal from mellow has withdrawal process delay
+        - `InceptionVault_S.flashWithdraw(uint256 iShares, address receiver)` allows the user to receive assets immediately on withdrawal transaction
+        - Flash withdrawal incurs additional flash fees, which are calculated by `InceptionLibrary` based on utilization and optimal rate
+        - Part of fees go to Protocol and part are added to `depositBonusAmount` for depositors
+3. Mainnet params:
+   
+    - Operator = 0xd87D15b80445EC4251e33dBe0668C335624e54b7
+    - withdrawUtilizationKink = 25 * 1e8
+    - optimalWithdrawalRate = 5 * 1e7
+    - Supported vaults = [MEV: 0x5fD13359Ba15A84B76f7F87568309040176167cd]
+
+        
