@@ -53,6 +53,7 @@ interface IInceptionOmniVault {
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
 
     error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
+    error FeesAboveMsgValue(uint256 msgValue, uint256 fees);
 
     /*///////////////////////////////////////////////////
     / ******************** Events ******************** /

@@ -284,7 +284,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             payload,
             _options
         );
-        require(msg.value > fees, FeesAboveMsgValue(msg.value, fees));
+        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
 
         uint256 unusedFees = msg.value - fees;
 
@@ -332,7 +332,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             _options
         );
 
-        require(msg.value > fees, FeesAboveMsgValue(msg.value, fees));
+        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
 
         uint256 unusedFees = msg.value - fees;
 
