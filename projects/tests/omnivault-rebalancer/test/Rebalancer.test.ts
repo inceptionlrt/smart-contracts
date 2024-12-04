@@ -2772,6 +2772,15 @@ describe("Omnivault integration tests", function () {
           await omniVault.setTargetFlashCapacity(TARGET);
         });
 
+        it("fee", async function () {
+          for (let i = 0n; i < 10n; i++) {
+            const gasLimit = i * 100_000n;
+            const options = Options.newOptions().addExecutorLzReceiveOption(gasLimit, e18).toHex().toString();
+            const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+            console.log(fee.format());
+          }
+        });
+
         const args = [
           {
             name: "without extra value",
@@ -2797,6 +2806,7 @@ describe("Omnivault integration tests", function () {
             const sender = arg.sender();
 
             const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+            console.log("fee", fee.format());
             const extraValue = arg.extraValue;
             const tx = await omniVault.connect(sender).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
 
@@ -2805,8 +2815,23 @@ describe("Omnivault integration tests", function () {
               .withArgs(amount + fee + extraValue, ETH_ID);
             await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
             await expect(tx).to.changeEtherBalance(sender.address, -fee, { includeFee: false });
-            await expect(tx).to.changeEtherBalance(omniVault.address, -amount); //Extra value stays at omniVault
+            await expect(tx).to.changeEtherBalance(omniVault.address, -amount); //Extra value returned to sender
+
+            if (extraValue > 0n) {
+              await expect(tx).to.emit(omniVault, "UnusedFeesSentBackToOperator").withArgs(extraValue);
+            }
           });
+        });
+
+        it("Reverts when fee is not enough", async function () {
+          await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
+          const amount = await omniVault.getFreeBalance();
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+
+          const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+          await expect(omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee - 1n }))
+            .to.revertedWithCustomError(omniVault, "FeesAboveMsgValue")
+            .withArgs(fee - 1n);
         });
 
         it("Reverts when there is no free balance", async function () {
@@ -2870,6 +2895,22 @@ describe("Omnivault integration tests", function () {
             sentToL1EthAmount: amount => amount - TARGET,
             msgSender: () => owner,
           },
+          {
+            name: "With extra fee operator",
+            depositedEthAmount: () => TARGET + randomBI(18),
+            depositBonus: true,
+            sentToL1EthAmount: amount => amount - TARGET,
+            msgSender: () => operator,
+            extra: randomBI(16),
+          },
+          {
+            name: "With extra fee owner",
+            depositedEthAmount: () => TARGET + randomBI(18),
+            depositBonus: true,
+            sentToL1EthAmount: amount => amount - TARGET,
+            msgSender: () => owner,
+            extra: randomBI(16),
+          },
         ];
         args.forEach(function (arg) {
           it(`sendAssetsInfoToL1 ${arg.name}`, async function () {
@@ -2906,8 +2947,13 @@ describe("Omnivault integration tests", function () {
             expect(vaultBalance).to.be.eq(expectedVaultBalance);
 
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            let extraValue = 0n;
+            if (arg.extra) {
+              extraValue = arg.extra;
+            }
             const fee = await omniVault.quoteSendAssetsInfoToL1(options);
-            const tx = await omniVault.connect(arg.msgSender()).sendAssetsInfoToL1(options, { value: fee });
+            const sender = arg.msgSender();
+            const tx = await omniVault.connect(sender).sendAssetsInfoToL1(options, { value: fee + extraValue });
             const rec = await tx.wait();
             const block = await ethers.provider.getBlock(rec?.blockNumber);
             await expect(tx)
@@ -2918,6 +2964,10 @@ describe("Omnivault integration tests", function () {
             expect(txData.timestamp).to.be.eq(block?.timestamp);
             expect(txData.ethBalance).to.be.eq(amount - sentToL1Amount);
             expect(txData.inceptionTokenBalance).to.be.eq(totalSupply);
+            await expect(tx).to.changeEtherBalance(sender.address, -fee, { includeFee: false });
+            if (extraValue > 0n) {
+              await expect(tx).to.emit(omniVault, "UnusedFeesSentBackToOperator").withArgs(extraValue);
+            }
           });
         });
 
@@ -2927,6 +2977,14 @@ describe("Omnivault integration tests", function () {
           await expect(
             omniVault.connect(signer1).sendAssetsInfoToL1(options, { value: fee }),
           ).to.revertedWithCustomError(omniVault, "OnlyOwnerOrOperator");
+        });
+
+        it("Reverts when fee is not enough", async function () {
+          const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+          const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+          await expect(omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee - 1n }))
+            .to.revertedWithCustomError(omniVault, "FeesAboveMsgValue")
+            .withArgs(fee - 1n);
         });
 
         it("Reverts when crosschain adapter is 0 address", async function () {
