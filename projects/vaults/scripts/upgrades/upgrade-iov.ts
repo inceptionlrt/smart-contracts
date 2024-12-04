@@ -1,62 +1,50 @@
-import { ethers, upgrades } from "hardhat";
-import * as fs from 'fs';
-import hre from 'hardhat'; // Import hre
-
-const CHECKPOINT_FILE = "deployment_checkpoint.json";
+import { ethers, upgrades, network } from "hardhat";
+import * as fs from "fs";
+import hre from "hardhat";
 
 async function main() {
-    // Load checkpoint data (if it exists)
-    const checkpoint = loadCheckpoint();
-    const existingAddress = checkpoint.InceptionOmniVault;
+    let proxyAddress: string;
 
-    if (!existingAddress) {
-        console.error("InceptionOmniVault address not found in checkpoint.");
-        process.exit(1);
+    if (network.name === "arbitrum") {
+        proxyAddress = "0x7EEd6897D9F032AbccffD2f6AAFCfb59b24BD58E";
+    } else if (network.name === "optimism") {
+        proxyAddress = "0x7EEd6897D9F032AbccffD2f6AAFCfb59b24BD58E";
+    } else if (network.name === "optimismSepolia") {
+        proxyAddress = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
+    } else if (network.name === "arbitrumSepolia") {
+        proxyAddress = "";
+        throw new Error(`Not configured yet: ${network.name}`);
+    } else {
+        throw new Error(`Unknown network: ${network.name}`);
     }
 
-    // Get the contract factory for the upgraded version
     const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
 
-    // Check the existing implementation address before upgrading
-    const currentImplementationAddress = await upgrades.erc1967.getImplementationAddress(existingAddress);
+    console.log(`Force importing proxy at address: ${proxyAddress}`);
+    await upgrades.forceImport(proxyAddress, InceptionOmniVault, { kind: "transparent" });
+
+    const currentImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
     console.log(`Current implementation address before upgrade: ${currentImplementationAddress}`);
 
-    // Upgrade the contract
-    console.log(`Upgrading InceptionOmniVault at address: ${existingAddress}...`);
-    const upgradedContract = await upgrades.upgradeProxy(existingAddress, InceptionOmniVault);
+    console.log(`Upgrading InceptionOmniVault at address: ${proxyAddress}...`);
+    const upgradedContract = await upgrades.upgradeProxy(proxyAddress, InceptionOmniVault);
 
-    // Wait for the upgrade to complete
     await upgradedContract.waitForDeployment();
 
-    // Wait for the upgrade to complete (using waitForDeployment is incorrect here)
     console.log("Contract upgraded successfully");
 
-    // Check the implementation address after upgrading
-    const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(existingAddress);
+    const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
     console.log(`New implementation address after upgrade: ${newImplementationAddress}`);
 
-    // Log the address of the upgraded contract
-    console.log(`Successfully upgraded InceptionOmniVault. Proxy address remains: ${existingAddress}`);
+    console.log(`Successfully upgraded InceptionOmniVault. Proxy address remains: ${proxyAddress}`);
 
-    // Verify the new implementation on Etherscan
     console.log(`Verifying new implementation on Etherscan...`);
     await hre.run("verify:verify", {
         address: newImplementationAddress,
     });
-
-
 }
 
-// Load deployment checkpoint
-function loadCheckpoint(): any {
-    if (fs.existsSync(CHECKPOINT_FILE)) {
-        return JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf8'));
-    }
-    return {};
-}
-
-// Execute the script
 main().catch((error) => {
-    console.error(error);
+    console.error("Error during upgrade:", error);
     process.exitCode = 1;
 });
