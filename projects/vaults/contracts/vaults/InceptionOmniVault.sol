@@ -288,9 +288,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
         uint256 unusedFees = msg.value - fees;
 
-        operator.call{value: unusedFees}("");
-
-        emit UnusedFeesSentBackToOperator(unusedFees);
+        if (unusedFees > 0) {
+            operator.call{value: unusedFees}("");
+            emit UnusedFeesSentBackToOperator(unusedFees);
+        }
 
         emit MessageToL1Sent(tokensAmount, ethAmount);
     }
@@ -336,9 +337,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
         uint256 unusedFees = msg.value - fees;
 
-        operator.call{value: unusedFees}("");
-
-        emit UnusedFeesSentBackToOperator(unusedFees);
+        if (unusedFees > 0) {
+            operator.call{value: unusedFees}("");
+            emit UnusedFeesSentBackToOperator(unusedFees);
+        }
 
         emit EthCrossChainSent(freeBalance, _chainId);
     }
