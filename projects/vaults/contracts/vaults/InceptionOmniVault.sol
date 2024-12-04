@@ -336,14 +336,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
         uint256 msgValue = msg.value;
 
-        uint256 fees = crossChainAdapter.sendEthCrossChain{value: freeBalance}(
-            _chainId,
-            _options
-        );
-
         require(
             msg.value >= quoteSendAssetsInfoToL1(_options),
             FeesAboveMsgValue(msgValue)
+        );
+
+        uint256 fees = crossChainAdapter.sendEthCrossChain{value: freeBalance}(
+            _chainId,
+            _options
         );
 
         uint256 unusedFees = msg.value - fees;
