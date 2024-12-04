@@ -4,9 +4,6 @@ const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
 // InstEthVault - "InVault_E2"
 const InVault_E2 = "0x814CC6B8fd2555845541FB843f37418b05977d8d";
 
-// InankrEthVault - "InVault_E1"
-const InVault_E1 = "0x36B429439AB227fAB170A4dFb3321741c8815e55";
-
 let deployer;
 
 async function main() {
@@ -16,9 +13,7 @@ async function main() {
   const libAddress = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
   console.log("InceptionLibrary deployed to:", libAddress);
 
-  await upgradeInceptionVault(libAddress, "diamond_proxy", InVault_E2, "InVault_E2");
-
-  await upgradeInceptionVault(libAddress, "diamond_proxy", InVault_E1, "InVault_E1");
+  await upgradeInceptionVault(libAddress, "diamond_proxy", InVault_E2, "InceptionVault_EL");
 }
 
 const upgradeInceptionVault = async (libAddress, upgradeName, address, vaultImplContract) => {
