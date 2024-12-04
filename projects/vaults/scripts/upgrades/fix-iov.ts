@@ -11,7 +11,7 @@ async function main() {
     await upgrades.forceImport(proxyAddress, InceptionOmniVault, { kind: "transparent" });
 
     console.log(`Upgrading proxy to ensure correct implementation for InceptionOmniVault...`);
-    const upgradedContract = await upgrades.upgradeProxy(proxyAddress, InceptionOmniVault);
+    const upgradedContract = await upgrades.upgradeProxy(proxyAddress, InceptionOmniVault, { redeployImplementation: 'always' });
 
     await upgradedContract.waitForDeployment();
 
