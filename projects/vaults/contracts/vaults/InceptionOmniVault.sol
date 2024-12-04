@@ -336,14 +336,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
         uint256 msgValue = msg.value;
 
+        require(
+            msg.value >= this.quoteSendEthCrossChain(_chainId, _options),
+            FeesAboveMsgValue(msgValue)
+        );
+
         uint256 fees = crossChainAdapter.sendEthCrossChain{value: freeBalance}(
             _chainId,
             _options
-        );
-
-        require(
-            msg.value >= quoteSendAssetsInfoToL1(_options),
-            FeesAboveMsgValue(msgValue)
         );
 
         uint256 unusedFees = msg.value - fees;
@@ -364,7 +364,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     function quoteSendEthCrossChain(
         uint256 _chainId,
         bytes calldata _options
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         require(
             address(crossChainAdapter) != address(0),
             CrossChainAdapterNotSet()
