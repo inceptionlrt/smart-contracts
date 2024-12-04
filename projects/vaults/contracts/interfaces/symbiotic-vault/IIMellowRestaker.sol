@@ -28,6 +28,8 @@ interface IIEigenRestakerErrors {
 
     error ZeroAddress();
 
+    error NoWrapperExists();
+
     error InvalidAllocation();
 
     error TooMuchSlippage();
@@ -53,6 +55,8 @@ interface IIMellowRestaker {
     event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
 
     event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
+
+    event WrapperChanged(address indexed _mellowVault, address indexed _oldWrapper, address indexed _newWrapper);
     
     function getDeposited(address _mellowVault) external view returns (uint256);
 

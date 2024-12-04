@@ -237,6 +237,17 @@ contract IMellowRestaker is
 
         emit VaultAdded(mellowVault, depositWrapper);
     }
+    function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
+
+        if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
+        
+        address oldWrapper = address(mellowDepositWrappers[mellowVault]);
+        if (oldWrapper == address(0)) revert NoWrapperExists();
+
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(newDepositWrapper);
+
+        emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
+    }
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation

@@ -177,7 +177,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _beforeDeposit(amount);
         _depositAssetIntoMellow(amount, mellowVault);
 
-        emit DelegatedTo(address(0), mellowVault, amount);
+        emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
     }
 

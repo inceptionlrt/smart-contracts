@@ -59,4 +59,6 @@ interface IInceptionVaultErrors {
     error ExceededMaxMint(address, uint256, uint256);
 
     error MsgSenderIsNotOwner();
+
+    error InvalidAddress();
 }
