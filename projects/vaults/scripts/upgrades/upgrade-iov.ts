@@ -1,5 +1,4 @@
 import { ethers, upgrades, network } from "hardhat";
-import * as fs from "fs";
 import hre from "hardhat";
 
 async function main() {
@@ -10,7 +9,7 @@ async function main() {
     } else if (network.name === "optimism") {
         proxyAddress = "0x7EEd6897D9F032AbccffD2f6AAFCfb59b24BD58E";
     } else if (network.name === "optimismSepolia") {
-        proxyAddress = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
+        proxyAddress = "0x55ec970B8629E01d26BAA7b5d092DD26784136bb";
     } else if (network.name === "arbitrumSepolia") {
         proxyAddress = "";
         throw new Error(`Not configured yet: ${network.name}`);
@@ -26,22 +25,34 @@ async function main() {
     const currentImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
     console.log(`Current implementation address before upgrade: ${currentImplementationAddress}`);
 
-    console.log(`Upgrading InceptionOmniVault at address: ${proxyAddress}...`);
-    const upgradedContract = await upgrades.upgradeProxy(proxyAddress, InceptionOmniVault);
+    console.log(`Upgrading InceptionOmniVault at address: ${proxyAddress} using upgradeAndCall...`);
 
-    await upgradedContract.waitForDeployment();
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+    const proxyAdmin = await ethers.getContractAt(
+        ["function upgradeAndCall(address proxy, address implementation, bytes data) external"],
+        proxyAdminAddress
+    );
 
-    console.log("Contract upgraded successfully");
+    const newImplementation = await upgrades.prepareUpgrade(proxyAddress, InceptionOmniVault);
+    console.log(`New implementation deployed at: ${newImplementation}`);
 
-    const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-    console.log(`New implementation address after upgrade: ${newImplementationAddress}`);
+    const data = "0x";
 
-    console.log(`Successfully upgraded InceptionOmniVault. Proxy address remains: ${proxyAddress}`);
+    const tx = await proxyAdmin.upgradeAndCall(proxyAddress, newImplementation, data);
+    console.log(`Upgrade transaction sent: ${tx.hash}`);
+
+    const receipt = await tx.wait();
+    console.log(`Upgrade transaction confirmed in block: ${receipt.blockNumber}`);
+
+    const updatedImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+    console.log(`New implementation address after upgrade: ${updatedImplementationAddress}`);
 
     console.log(`Verifying new implementation on Etherscan...`);
     await hre.run("verify:verify", {
-        address: newImplementationAddress,
+        address: updatedImplementationAddress,
     });
+
+    console.log(`Successfully upgraded InceptionOmniVault. Proxy address remains: ${proxyAddress}`);
 }
 
 main().catch((error) => {
