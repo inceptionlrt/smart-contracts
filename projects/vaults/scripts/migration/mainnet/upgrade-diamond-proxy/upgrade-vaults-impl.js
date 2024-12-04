@@ -42,9 +42,9 @@ const upgradeVaultImpl = async (vaultAddress, newImpl) => {
 const getNewImplFor = async newImpl => {
   switch (newImpl) {
     case "InVault_E2":
-      return "0x4fbF33A215861e2BFe01C90760Ad5C58921dEF36";
+      return "0x99d64871c9848FDA3B3FF1eC2Fc84033401CCd5B";
     case "InVault_E1":
-      return "0x6bb087367a5d2F5ac35a25AD69d97a3FBF663495";
+      return "0x99d64871c9848FDA3B3FF1eC2Fc84033401CCd5B";
   }
   return "";
 };
