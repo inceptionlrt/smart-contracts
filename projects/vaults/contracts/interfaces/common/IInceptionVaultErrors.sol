@@ -55,4 +55,8 @@ interface IInceptionVaultErrors {
     error EigenLayerOperatorAlreadyExists();
 
     error TimelineNotOver();
+
+    error ExceededMaxMint(address, uint256, uint256);
+
+    error MsgSenderIsNotOwner();
 }
