@@ -3802,7 +3802,7 @@ assets.forEach(function (a) {
         ratio = await iVault.ratio();
       });
 
-      it("Stakers deposit", async function () {
+      it("Deposit and Delegate", async function () {
         stakerAmount = 9399680561290658040n;
         await iVault4626.connect(staker).deposit(stakerAmount, staker.address);
         staker2Amount = 1348950494309030813n;
