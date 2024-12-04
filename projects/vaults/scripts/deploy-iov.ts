@@ -12,11 +12,11 @@ async function main() {
   switch (networkName) {
     case "arbitrum":
       INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x19Ba5CcC603e1224B8502C56087e4147cEDD2522"; // TODO: Insert LZCrossChainBridgeL2 address for Arbitrum here
+      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x19Ba5CcC603e1224B8502C56087e4147cEDD2522";
       break;
     case "optimism":
       INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x19Ba5CcC603e1224B8502C56087e4147cEDD2522"; // TODO: Insert LZCrossChainBridgeL2 address for Optimism here
+      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x19Ba5CcC603e1224B8502C56087e4147cEDD2522";
       break;
     case "arbitrumSepolia":
       INCEPTION_TOKEN_ADDRESS = "";

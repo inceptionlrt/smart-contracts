@@ -11,10 +11,27 @@ async function main() {
 
     console.log(`Preparing to upgrade InceptionOmniVault at address ${proxyAddress}`);
 
-    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+    let proxyAdminAddress;
+
+    try {
+        proxyAdminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+        if (proxyAdminAddress === ethers.ZeroAddress) {
+            throw new Error("Proxy Admin address is 0x0");
+        }
+    } catch (error) {
+        console.log(
+            "Proxy Admin not managed by Hardhat. Attempting to resolve manually from storage slot."
+        );
+        const proxyAdminSlot = ethers.keccak256(
+            ethers.toUtf8Bytes("eip1967.proxy.admin") + "00".repeat(12)
+        );
+        const adminAddress = await ethers.provider.getStorage(proxyAddress, proxyAdminSlot);
+        proxyAdminAddress = ethers.getAddress(`0x${adminAddress.slice(-40)}`);
+    }
+
     console.log(`Proxy Admin address: ${proxyAdminAddress}`);
 
-    const proxyAdmin = await ethers.getContractAt(PROXY_ADMIN_ABI, proxyAdminAddress);
+    const proxyAdmin = new ethers.Contract(proxyAdminAddress, PROXY_ADMIN_ABI, ethers.provider.getSigner());
 
     const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
 
@@ -32,17 +49,6 @@ async function main() {
 
     const verifiedImplAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
     console.log(`Verified new implementation address: ${verifiedImplAddress}`);
-
-    const factoryAbi = JSON.parse(InceptionOmniVault.interface.formatJson() as string);
-    const updatedDeployment = {
-        address: proxyAddress,
-        abi: factoryAbi,
-        implementation: verifiedImplAddress,
-    };
-
-    const { save } = require("hardhat-deploy/dist/src/deployments");
-    await save("InceptionOmniVault", updatedDeployment);
-    console.log(`Deployment metadata for InceptionOmniVault updated.`);
 }
 
 main().catch((error) => {
