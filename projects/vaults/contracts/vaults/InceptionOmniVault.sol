@@ -267,8 +267,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     function sendAssetsInfoToL1(
         bytes memory _options
     ) external payable onlyOwnerOrOperator {
-        if (address(crossChainAdapter) == address(0))
-            revert CrossChainAdapterNotSet();
+        require(
+            address(crossChainAdapter) != address(0),
+            CrossChainAdapterNotSet()
+        );
 
         uint256 tokensAmount = _inceptionTokenSupply();
         uint256 ethAmount = getFlashCapacity() - msg.value;
@@ -282,12 +284,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             payload,
             _options
         );
+        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
 
         uint256 unusedFees = msg.value - fees;
 
-        operator.call{value: unusedFees}("");
-
-        emit UnusedFeesSentBackToOperator(unusedFees);
+        if (unusedFees > 0) {
+            operator.call{value: unusedFees}("");
+            emit UnusedFeesSentBackToOperator(unusedFees);
+        }
 
         emit MessageToL1Sent(tokensAmount, ethAmount);
     }
@@ -329,11 +333,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             _options
         );
 
+        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
+
         uint256 unusedFees = msg.value - fees;
 
-        msg.sender.call{value: unusedFees}("");
-
-        emit UnusedFeesSentBackToOperator(unusedFees);
+        if (unusedFees > 0) {
+            operator.call{value: unusedFees}("");
+            emit UnusedFeesSentBackToOperator(unusedFees);
+        }
 
         emit EthCrossChainSent(freeBalance, _chainId);
     }
