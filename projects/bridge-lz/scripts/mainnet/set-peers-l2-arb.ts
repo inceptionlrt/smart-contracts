@@ -9,7 +9,7 @@ async function main() {
     const CrossChainBridgeArbitrumAddress = ""; //TODO! Insert LZCrossChainBridgeL2 Arbitrum address here
 
     if (!CrossChainBridgeEthereumAddress || !CrossChainBridgeArbitrumAddress) {
-        throw new Error("CrossChainBridge addresses not found in the checkpoint files.");
+        throw new Error("CrossChainBridge addresses are not set.");
     }
 
     // Get contract instance
