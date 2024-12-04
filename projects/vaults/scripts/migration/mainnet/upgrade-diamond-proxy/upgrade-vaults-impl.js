@@ -25,7 +25,7 @@ const upgradeVaultImpl = async (vaultAddress, newImpl) => {
 
   const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(vaultAddress);
   const proxyAdmin = await ethers.getContractAt("ProxyAdminMock", proxyAdminAddress);
-  const transaction = await proxyAdmin.upgradeTo.populateTransaction(vaultAddress, newImpl);
+  const transaction = await proxyAdmin.upgrade.populateTransaction(vaultAddress, newImpl);
 
   const res = await timelock.schedule(
     transaction.to,
