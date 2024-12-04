@@ -272,6 +272,8 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             CrossChainAdapterNotSet()
         );
 
+        uint256 msgValue = msg.value;
+
         uint256 tokensAmount = _inceptionTokenSupply();
         uint256 ethAmount = getFlashCapacity() - msg.value;
         bytes memory payload = abi.encode(
@@ -284,7 +286,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             payload,
             _options
         );
-        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
+        require(msgValue >= fees, FeesAboveMsgValue(msgValue, fees));
 
         uint256 unusedFees = msg.value - fees;
 
@@ -328,12 +330,14 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 freeBalance = getFreeBalance();
         if (freeBalance == 0) revert FreeBalanceIsZero();
 
+        uint256 msgValue = msg.value;
+
         uint256 fees = crossChainAdapter.sendEthCrossChain{value: freeBalance}(
             _chainId,
             _options
         );
 
-        require(msg.value >= fees, FeesAboveMsgValue(msg.value, fees));
+        require(msgValue >= fees, FeesAboveMsgValue(msgValue, fees));
 
         uint256 unusedFees = msg.value - fees;
 
