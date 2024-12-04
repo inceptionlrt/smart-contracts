@@ -278,7 +278,16 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             ethAmount
         );
 
-        crossChainAdapter.sendDataL1{value: msg.value}(payload, _options);
+        uint256 fees = crossChainAdapter.sendDataL1{value: msg.value}(
+            payload,
+            _options
+        );
+
+        uint256 unusedFees = msg.value - fees;
+
+        operator.call{value: unusedFees}("");
+
+        emit UnusedFeesSentBackToOperator(unusedFees);
 
         emit MessageToL1Sent(tokensAmount, ethAmount);
     }
@@ -315,10 +324,16 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 freeBalance = getFreeBalance();
         if (freeBalance == 0) revert FreeBalanceIsZero();
 
-        crossChainAdapter.sendEthCrossChain{value: freeBalance}(
+        uint256 fees = crossChainAdapter.sendEthCrossChain{value: freeBalance}(
             _chainId,
             _options
         );
+
+        uint256 unusedFees = msg.value - fees;
+
+        operator.call{value: unusedFees}("");
+
+        emit UnusedFeesSentBackToOperator(unusedFees);
 
         emit EthCrossChainSent(freeBalance, _chainId);
     }

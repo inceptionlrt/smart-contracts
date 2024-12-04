@@ -5,6 +5,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Origin, MessagingReceipt, MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 
 import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.sol";
 import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
@@ -21,6 +22,8 @@ abstract contract AbstractLZCrossChainAdapter is
     ICrossChainBridge,
     OAppUpgradeable
 {
+    using OptionsBuilder for bytes;
+
     error NoDestEidFoundForChainId(uint256 chainId);
     error ArraysLengthsMismatch();
     error OptionsTooShort();
@@ -34,8 +37,8 @@ abstract contract AbstractLZCrossChainAdapter is
     function sendEthCrossChain(
         uint256 _chainId,
         bytes memory _options
-    ) external payable override onlyTargetReceiverRestricted {
-        _sendCrosschain(_chainId, new bytes(0), _options);
+    ) external payable override onlyTargetReceiverRestricted returns (uint256) {
+        return _sendCrosschain(_chainId, new bytes(0), _options);
     }
 
     function _quote(
@@ -89,7 +92,7 @@ abstract contract AbstractLZCrossChainAdapter is
         uint256 _chainId,
         bytes memory _payload,
         bytes memory _options
-    ) internal {
+    ) internal returns (uint256) {
         uint32 dstEid = getEidFromChainId(_chainId);
         MessagingReceipt memory receipt = _lzSend(
             dstEid,
@@ -106,6 +109,8 @@ abstract contract AbstractLZCrossChainAdapter is
             _payload,
             fee
         );
+
+        return fee;
     }
 
     function getValueFromOpts(
@@ -118,5 +123,20 @@ abstract contract AbstractLZCrossChainAdapter is
         uint256 valueStart = _options.length - 16;
         uint256 valueEnd = _options.length;
         return uint256(uint128(bytes16(_options[valueStart:valueEnd])));
+    }
+
+    /// @notice Creates options for executing `lzReceive` on the destination chain.
+    /// @param _gas The gas amount for the `lzReceive` execution.
+    /// @param _value The msg.value for the `lzReceive` execution.
+    /// @return bytes-encoded option set for `lzReceive` executor.
+    function createLzReceiveOption(
+        uint256 _gas,
+        uint256 _value
+    ) public pure returns (bytes memory) {
+        return
+            OptionsBuilder.newOptions().addExecutorLzReceiveOption(
+                uint128(_gas),
+                uint128(_value)
+            );
     }
 }

@@ -12,5 +12,5 @@ interface ICrossChainBridgeL2 is ICrossChainBridge {
     function sendDataL1(
         bytes calldata _payload,
         bytes memory _options
-    ) external payable;
+    ) external payable returns (uint256);
 }

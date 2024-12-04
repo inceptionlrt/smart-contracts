@@ -128,4 +128,6 @@ interface IInceptionOmniVault {
     event EthSentToL1(uint256 ethAmount);
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
+
+    event UnusedFeesSentBackToOperator(uint256 unusedFees);
 }

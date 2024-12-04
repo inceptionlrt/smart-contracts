@@ -65,8 +65,8 @@ contract LZCrossChainAdapterL2 is
     function sendDataL1(
         bytes calldata _payload,
         bytes memory _options
-    ) external payable override onlyTargetReceiverRestricted {
-        _sendCrosschain(l1ChainId, _payload, _options);
+    ) external payable override onlyTargetReceiverRestricted returns (uint256) {
+        return _sendCrosschain(l1ChainId, _payload, _options);
     }
 
     function _lzReceive(
