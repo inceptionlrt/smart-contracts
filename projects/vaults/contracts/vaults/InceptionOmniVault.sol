@@ -267,8 +267,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     function sendAssetsInfoToL1(
         bytes memory _options
     ) external payable onlyOwnerOrOperator {
-        if (address(crossChainAdapter) == address(0))
-            revert CrossChainAdapterNotSet();
+        require(
+            address(crossChainAdapter) != address(0),
+            CrossChainAdapterNotSet()
+        );
 
         uint256 tokensAmount = _inceptionTokenSupply();
         uint256 ethAmount = getFlashCapacity() - msg.value;
@@ -282,6 +284,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             payload,
             _options
         );
+        require(msg.value > fees, FeesAboveMsgValue(msg.value, fees));
 
         uint256 unusedFees = msg.value - fees;
 
@@ -328,6 +331,8 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             _chainId,
             _options
         );
+
+        require(msg.value > fees, FeesAboveMsgValue(msg.value, fees));
 
         uint256 unusedFees = msg.value - fees;
 
