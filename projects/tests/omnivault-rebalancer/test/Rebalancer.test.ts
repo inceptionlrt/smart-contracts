@@ -2776,10 +2776,17 @@ describe("Omnivault integration tests", function () {
           {
             name: "without extra value",
             extraValue: 0n,
+            sender: () => operator,
           },
           {
-            name: "with extra value",
-            extraValue: 3n * 10n ** 16n,
+            name: "with extra value by operator",
+            extraValue: randomBI(16),
+            sender: () => operator,
+          },
+          {
+            name: "with extra value by owner",
+            extraValue: randomBI(16),
+            sender: () => owner,
           },
         ];
         args.forEach(function (arg) {
@@ -2787,19 +2794,18 @@ describe("Omnivault integration tests", function () {
             await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
             const amount = await omniVault.getFreeBalance();
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
+            const sender = arg.sender();
 
             const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
             const extraValue = arg.extraValue;
-            const tx = await omniVault
-              .connect(operator)
-              .sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
+            const tx = await omniVault.connect(sender).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
 
             await expect(tx)
               .emit(omniVault, "EthCrossChainSent")
               .withArgs(amount + fee + extraValue, ETH_ID);
             await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
-            await expect(tx).to.changeEtherBalance(operator.address, -fee - extraValue, { includeFee: false });
-            await expect(tx).to.changeEtherBalance(omniVault.address, -amount + extraValue); //Extra value stays at omniVault
+            await expect(tx).to.changeEtherBalance(sender.address, -fee, { includeFee: false });
+            await expect(tx).to.changeEtherBalance(omniVault.address, -amount); //Extra value stays at omniVault
           });
         });
 
