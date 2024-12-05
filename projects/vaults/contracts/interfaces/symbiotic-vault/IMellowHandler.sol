@@ -13,7 +13,7 @@ interface IMellowHandler {
 
     event StartMellowWithdrawal(
         address indexed stakerAddress,
-        uint256 amount
+        uint256 indexed actualAmounts
     );
 
     event DelegatedTo(

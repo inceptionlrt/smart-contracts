@@ -185,19 +185,18 @@ contract IMellowRestaker is
     }
 
     function withdrawEmergencyMellow(
-        address _mellowVault,
-        uint256 amount
+        address _mellowVault
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256[] memory minAmounts = new uint256[](2);
-        minAmounts[0] = (amount * (10000 - withdrawSlippage)) / 10000; // slippage
+        minAmounts[0] = (pendingMellowRequest(IMellowVault(_mellowVault)).lpAmount * (10000 - withdrawSlippage)) / 10000; // slippage
 
         if (address(mellowDepositWrappers[_mellowVault]) == address(0))
             revert InvalidVault();
 
         uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(
             minAmounts,
-            block.timestamp + 15 days
+            block.timestamp
         );
 
         uint256 actualAmount;
@@ -237,6 +236,17 @@ contract IMellowRestaker is
 
         emit VaultAdded(mellowVault, depositWrapper);
     }
+    function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
+
+        if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
+        
+        address oldWrapper = address(mellowDepositWrappers[mellowVault]);
+        if (oldWrapper == address(0)) revert NoWrapperExists();
+
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(newDepositWrapper);
+
+        emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
+    }
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
@@ -252,7 +262,7 @@ contract IMellowRestaker is
 
     function pendingMellowRequest(
         IMellowVault mellowVault
-    ) external view override returns (IMellowVault.WithdrawalRequest memory) {
+    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
         return mellowVault.withdrawalRequest(address(this));
     }
 

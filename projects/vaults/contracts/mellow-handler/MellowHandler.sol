@@ -76,6 +76,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         address mellowVault,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
+        if (mellowVault == address(0)) revert InvalidAddress();
         amount = mellowRestaker.withdrawMellow(mellowVault, amount, true);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
@@ -84,10 +85,10 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
     function undelegateForceFrom(
-        address mellowVault,
-        uint256 amount
+        address mellowVault
     ) external whenNotPaused nonReentrant onlyOperator {
-        amount = mellowRestaker.withdrawEmergencyMellow(mellowVault, amount);
+        if (mellowVault == address(0)) revert InvalidAddress();
+        uint256 amount = mellowRestaker.withdrawEmergencyMellow(mellowVault);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }
