@@ -3,7 +3,6 @@
   "proxies": [
     {
       "address": "0x55ec970B8629E01d26BAA7b5d092DD26784136bb",
-      "txHash": "0x501b610a4efb09ad9749afaa14305fec2c8a75a6b57bf76a40fe7e04136b05a4",
       "kind": "transparent"
     }
   ],
@@ -318,7 +317,7 @@
       }
     },
     "b65be722b8e7511695692f2a3d9e906fa6e96d7ff2072c972aa622e9dc91824d": {
-      "address": "0x8C674c6257AE0e589D9710aB57438Cda591d1129",
+      "address": "0xF634bCddFCB5F02b1E4Cd8A9057069ca24884fE2",
       "txHash": "0x98a9ebbd9759e1f2b94ad165a1593613f72f34a5527e3a0ab137424af432b0f1",
       "layout": {
         "solcVersion": "0.8.27",
@@ -556,6 +555,315 @@
             "numberOfBytes": "20"
           },
           "t_contract(IInceptionToken)1531": {
+            "label": "contract IInceptionToken",
+            "numberOfBytes": "20"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable2Step": [
+            {
+              "contract": "Ownable2StepUpgradeable",
+              "label": "_pendingOwner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "747c28f4a2bc0b4bb0fc033daf251dbc325092757f2930c2cdc9c26f9235d675": {
+      "address": "0x9F91f163A819A85923e9AA339afc8417a2960a85",
+      "txHash": "0xb100e189c639a96f946d5dac339e87909a9a59f41cedc74bcd709eff7f2149c0",
+      "layout": {
+        "solcVersion": "0.8.27",
+        "storage": [
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "InceptionOmniAssetsHandler",
+            "src": "contracts/assets-handler/InceptionOmniAssetsHandler.sol:21"
+          },
+          {
+            "label": "inceptionToken",
+            "offset": 0,
+            "slot": "50",
+            "type": "t_contract(IInceptionToken)1543",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:22"
+          },
+          {
+            "label": "minAmount",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_uint256",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:25"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_string_storage",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:28"
+          },
+          {
+            "label": "operator",
+            "offset": 0,
+            "slot": "53",
+            "type": "t_address",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:30"
+          },
+          {
+            "label": "ratioFeed",
+            "offset": 0,
+            "slot": "54",
+            "type": "t_contract(IInceptionRatioFeed)1512",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:32"
+          },
+          {
+            "label": "crossChainAdapter",
+            "offset": 0,
+            "slot": "55",
+            "type": "t_contract(ICrossChainBridgeL2)1120",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:34"
+          },
+          {
+            "label": "depositBonusAmount",
+            "offset": 0,
+            "slot": "56",
+            "type": "t_uint256",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:40"
+          },
+          {
+            "label": "targetCapacity",
+            "offset": 0,
+            "slot": "57",
+            "type": "t_uint256",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:43"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "58",
+            "type": "t_address",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:48"
+          },
+          {
+            "label": "protocolFee",
+            "offset": 20,
+            "slot": "58",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:49"
+          },
+          {
+            "label": "maxBonusRate",
+            "offset": 0,
+            "slot": "59",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:52"
+          },
+          {
+            "label": "optimalBonusRate",
+            "offset": 8,
+            "slot": "59",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:53"
+          },
+          {
+            "label": "depositUtilizationKink",
+            "offset": 16,
+            "slot": "59",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:54"
+          },
+          {
+            "label": "maxFlashFeeRate",
+            "offset": 24,
+            "slot": "59",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:57"
+          },
+          {
+            "label": "optimalWithdrawalRate",
+            "offset": 0,
+            "slot": "60",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:58"
+          },
+          {
+            "label": "withdrawUtilizationKink",
+            "offset": 8,
+            "slot": "60",
+            "type": "t_uint64",
+            "contract": "InceptionOmniVault",
+            "src": "contracts/vaults/InceptionOmniVault.sol:59"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)146_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Ownable2StepStorage)14_storage": {
+            "label": "struct Ownable2StepUpgradeable.Ownable2StepStorage",
+            "members": [
+              {
+                "label": "_pendingOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)74_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)242_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)319_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(ICrossChainBridgeL2)1120": {
+            "label": "contract ICrossChainBridgeL2",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionRatioFeed)1512": {
+            "label": "contract IInceptionRatioFeed",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IInceptionToken)1543": {
             "label": "contract IInceptionToken",
             "numberOfBytes": "20"
           },
