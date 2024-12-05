@@ -9,7 +9,7 @@ import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
-import {IERC20Metadata}  from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
@@ -102,7 +102,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function deposit(
         uint256 amount,
         address receiver
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -152,8 +152,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function mint(
         uint256 shares,
         address receiver
-    ) external nonReentrant returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        uint256 maxShares = maxMint(msg.sender);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
@@ -238,7 +238,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         uint256 shares,
         address receiver,
         address owner
-    ) external nonReentrant returns (uint256 assets) {
+    ) external nonReentrant whenNotPaused returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
         assets = convertToAssets(shares);
@@ -299,7 +299,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) external whenNotPaused nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
-        (uint256 amount, uint256 fee) = _flashWithdraw(iShares, receiver, claimer);
+        (uint256 amount, uint256 fee) = _flashWithdraw(
+            iShares,
+            receiver,
+            claimer
+        );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
@@ -308,7 +312,6 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         address receiver,
         address owner
     ) private returns (uint256, uint256) {
-
         uint256 amount = convertToAssets(iShares);
 
         if (amount < minAmount) revert LowerMinAmount(minAmount);
@@ -423,20 +426,18 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
-        return !paused() ? previewDeposit(IERC20(asset()).balanceOf(receiver)) : 0;
+        return
+            !paused() ? previewDeposit(IERC20(asset()).balanceOf(receiver)) : 0;
     }
 
-    /** @dev See {IERC4626-maxWithdraw}. */
-    function maxWithdraw(address owner) public view returns (uint256) {
-        return convertToAssets(IERC20(address(inceptionToken)).balanceOf(owner));
-    }
-    
     /** @dev See {IERC4626-maxRedeem}. */
     function maxRedeem(address owner) public view returns (uint256) {
         if (paused()) {
             return 0;
         } else {
-            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(owner);
+            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
+                owner
+            );
             uint256 flashShares = convertToShares(getFlashCapacity());
             return flashShares > ownerShares ? ownerShares : flashShares;
         }
@@ -455,8 +456,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
-    function previewRedeem(uint256 shares) public view returns (uint256 assets) {
-        return convertToAssets(shares) - calculateFlashWithdrawFee(convertToAssets(shares));
+    function previewRedeem(
+        uint256 shares
+    ) public view returns (uint256 assets) {
+        return
+            convertToAssets(shares) -
+            calculateFlashWithdrawFee(convertToAssets(shares));
     }
 
     /*//////////////////////////////
