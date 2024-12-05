@@ -125,7 +125,7 @@ export const CONFIG = {
       mainnet: "0x00Fd4edEd5BB37d19F98Ab49722Ef51E84745928",
     },
     operator: {
-      default: "0x064B9a8cd35ad4dB117617A3773F8129E9515967",
+      default: "0x292fC68C55572cf8bb680e6eED639899e83D2e06",
       mainnet: "0x078dc682083132b4E86731062FCF95A729Bac067",
     },
     governance: {
@@ -153,8 +153,10 @@ export const CONFIG = {
       mainnet: process.env.ETHERSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       arbitrum: process.env.ARBISCAN_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
       arbitrumSepolia: process.env.ARBISCAN_API_KEY,
       optimism: process.env.OPTIMISM_API_KEY,
+      optimisticEthereum: process.env.OPTIMISM_API_KEY,
       optimismSepolia: process.env.OPTIMISM_API_KEY,
     },
     customChains: [
