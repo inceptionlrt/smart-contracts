@@ -295,7 +295,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 unusedFees = msgValue - fees;
 
         if (unusedFees > 0) {
-            operator.call{value: unusedFees}("");
+            msg.sender.call{value: unusedFees}("");
             emit UnusedFeesSentBackToOperator(unusedFees);
         }
 
@@ -349,7 +349,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 unusedFees = msg.value - fees;
 
         if (unusedFees > 0) {
-            operator.call{value: unusedFees}("");
+            msg.sender.call{value: unusedFees}("");
             emit UnusedFeesSentBackToOperator(unusedFees);
         }
 
