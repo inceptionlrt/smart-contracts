@@ -189,7 +189,7 @@ contract IMellowRestaker is
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256[] memory minAmounts = new uint256[](2);
-        minAmounts[0] = (getDeposited(_mellowVault) * (10000 - withdrawSlippage)) / 10000; // slippage
+        minAmounts[0] = (pendingMellowRequest(IMellowVault(_mellowVault)).lpAmount * (10000 - withdrawSlippage)) / 10000; // slippage
 
         if (address(mellowDepositWrappers[_mellowVault]) == address(0))
             revert InvalidVault();
@@ -262,7 +262,7 @@ contract IMellowRestaker is
 
     function pendingMellowRequest(
         IMellowVault mellowVault
-    ) external view override returns (IMellowVault.WithdrawalRequest memory) {
+    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
         return mellowVault.withdrawalRequest(address(this));
     }
 
