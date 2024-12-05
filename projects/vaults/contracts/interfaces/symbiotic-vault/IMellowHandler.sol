@@ -16,6 +16,11 @@ interface IMellowHandler {
         uint256 indexed actualAmounts
     );
 
+    event StartEmergencyMellowWithdrawal(
+        address indexed stakerAddress,
+        uint256 indexed actualAmounts
+    );
+
     event DelegatedTo(
         address indexed stakerAddress,
         address indexed operatorAddress,
