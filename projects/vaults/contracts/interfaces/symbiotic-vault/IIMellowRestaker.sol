@@ -80,8 +80,7 @@ interface IIMellowRestaker {
 
     
     function withdrawEmergencyMellow(
-        address _mellowVault,
-        uint256 amount
+        address _mellowVault
     ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);
