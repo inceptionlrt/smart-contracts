@@ -20,7 +20,7 @@ interface IInceptionOmniVault {
     error OnlyOwnerOrOperator();
     error ResultISharesZero();
     error RatioFeedNotSet();
-    error FreeBalanceIsZero();
+    error FreeBalanceTooLow(uint256 freeBalance, uint256 msgValue);
 
     error NullParams();
 

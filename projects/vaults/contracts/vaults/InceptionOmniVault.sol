@@ -332,7 +332,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         bytes memory _options
     ) external payable onlyOwnerOrOperator {
         uint256 freeBalance = getFreeBalance();
-        if (freeBalance == 0) revert FreeBalanceIsZero();
+        require(
+            freeBalance > msg.value,
+            FreeBalanceTooLow(freeBalance, msg.value)
+        );
         uint256 msgValue = msg.value;
 
         require(
@@ -345,8 +348,6 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             _options
         );
 
-        uint256 callValue = crossChainAdapter.getValueFromOpts(_options);
-
         uint256 unusedFees = msg.value - fees;
 
         if (unusedFees > 0) {
@@ -356,7 +357,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             }
         }
 
-        emit EthCrossChainSent(callValue, _chainId);
+        emit EthCrossChainSent(freeBalance - msg.value, _chainId);
     }
 
     /**
