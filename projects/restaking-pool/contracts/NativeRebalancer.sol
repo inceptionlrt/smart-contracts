@@ -191,10 +191,10 @@ contract NativeRebalancer is
             _amount <= address(this).balance,
             StakeAmountExceedsEthBalance(_amount, address(this).balance)
         );
-        require(
-            _amount <= IRestakingPool(liqPool).availableToStake(),
-            StakeAmountExceedsMaxTVL()
-        );
+        // require(
+        //     _amount <= IRestakingPool(liqPool).availableToStake(),
+        //     StakeAmountExceedsMaxTVL()
+        // );
         (bool success, ) = liqPool.call{value: _amount}("");
 
         require(success, TransferToLockboxFailed());
