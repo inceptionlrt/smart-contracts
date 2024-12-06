@@ -295,8 +295,10 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         uint256 unusedFees = msgValue - fees;
 
         if (unusedFees > 0) {
-            msg.sender.call{value: unusedFees}("");
-            emit UnusedFeesSentBackToOperator(unusedFees);
+            (bool success, ) = msg.sender.call{value: unusedFees}("");
+            if (success) {
+                emit UnusedFeesSentBackToOperator(unusedFees);
+            }
         }
 
         emit MessageToL1Sent(tokensAmount, ethAmount);
