@@ -200,6 +200,7 @@ contract NativeRebalancer is
         uint256 inceptionTokenBalance = IERC20(inceptionToken).balanceOf(
             address(this)
         );
+
         require(
             IERC20(inceptionToken).transfer(
                 lockboxAddress,
@@ -207,6 +208,12 @@ contract NativeRebalancer is
             ),
             TransferToLockboxFailed()
         );
+        emit SyncedSupplyChanged(
+            syncedSupply,
+            syncedSupply + inceptionTokenBalance
+        );
+        syncedSupply += inceptionTokenBalance;
+
         emit InceptionTokenDepositedToLockbox(inceptionTokenBalance);
     }
 
