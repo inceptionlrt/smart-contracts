@@ -195,26 +195,11 @@ contract NativeRebalancer is
             _amount <= IRestakingPool(liqPool).availableToStake(),
             StakeAmountExceedsMaxTVL()
         );
-        IRestakingPool(liqPool).stake{value: _amount}();
+        (bool success, ) = liqPool.call{value: _amount}("");
 
-        uint256 inceptionTokenBalance = IERC20(inceptionToken).balanceOf(
-            address(this)
-        );
+        require(success, TransferToLockboxFailed());
 
-        require(
-            IERC20(inceptionToken).transfer(
-                lockboxAddress,
-                inceptionTokenBalance
-            ),
-            TransferToLockboxFailed()
-        );
-        emit SyncedSupplyChanged(
-            syncedSupply,
-            syncedSupply + inceptionTokenBalance
-        );
-        syncedSupply += inceptionTokenBalance;
-
-        emit InceptionTokenDepositedToLockbox(inceptionTokenBalance);
+        emit TransferToLockbox(_amount);
     }
 
     /**

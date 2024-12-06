@@ -39,6 +39,7 @@ interface INativeRebalancer {
     event UpdateableChanged(bool prevUpdateable, bool nextUpdateable);
     event ChainIdAdded(uint256 chainId);
     event ChainIdDeleted(uint256 chainId, uint256 index);
+    event TransferToLockbox(uint256 amount);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
