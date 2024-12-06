@@ -359,7 +359,9 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             }
         }
 
-        emit EthCrossChainSent(freeBalance - msg.value, _chainId);
+        uint256 callValue = crossChainAdapter.getValueFromOpts(_options);
+
+        emit EthCrossChainSent(callValue, _chainId);
     }
 
     /**
