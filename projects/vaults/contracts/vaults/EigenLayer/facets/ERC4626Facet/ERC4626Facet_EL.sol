@@ -39,7 +39,7 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
         uint256 shares,
         address receiver
     ) external nonReentrant returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
+        uint256 maxShares = maxMint(msg.sender);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
