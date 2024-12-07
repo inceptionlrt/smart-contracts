@@ -5,6 +5,7 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import "@nomicfoundation/hardhat-verify";
+import "@typechain/hardhat";
 
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
