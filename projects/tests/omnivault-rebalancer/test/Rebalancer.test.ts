@@ -1,6 +1,6 @@
 import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
-import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
+import { takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
 import { e18, getSlotByName, randomBI, randomBIMax, toWei } from "./helpers/utils.js";
 import { SnapshotRestorer } from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import { AbiCoder, Signer } from "ethers";
@@ -19,6 +19,7 @@ import {
   RestakingPool,
 } from "../typechain-types";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { min } from "hardhat/internal/util/bigint";
 
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
@@ -53,7 +54,7 @@ describe("Omnivault integration tests", function () {
   let restakingPoolConfig: ProtocolConfig;
   //L2
   let iToken: InceptionToken;
-  let omniVault: InceptionOmniVault;
+  let omniVault: InceptionOmniVault; //Arbitrum
   let ratioFeedL2: InceptionRatioFeed;
 
   let owner: Signer;
@@ -222,7 +223,7 @@ describe("Omnivault integration tests", function () {
     ]);
     rebalancer.address = await rebalancer.getAddress();
     await rebalancer.connect(owner).addChainId(ARB_ID);
-    await rebalancer.connect(owner).addChainId(OPT_ID);
+    // await rebalancer.connect(owner).addChainId(OPT_ID);
     await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
 
     //    ___                  ___     __          _ _     _     ____
@@ -340,6 +341,298 @@ describe("Omnivault integration tests", function () {
       it("Get min stake amount", async function () {
         console.log("Min stake amount: ", await restakingPool.getMinStake());
       });
+    });
+  });
+
+  describe("Bridge base flow", function () {
+    const TARGET = e18 / 10n;
+    let iTokenOpt: InceptionToken;
+    let omniVaultOpt: InceptionOmniVault;
+    let ratioFeedL2Opt: InceptionRatioFeed;
+    before(async function () {
+      await snapshot.restore();
+
+      console.log("============ OmniVault Layer2 Optimism============");
+      console.log("=== iTokenOpt");
+      const iTokenFactory = await ethers.getContractFactory("InceptionToken", owner);
+      iTokenOpt = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+      await iTokenOpt.waitForDeployment();
+      iTokenOpt.address = await iTokenOpt.getAddress();
+
+      console.log("=== InceptionRatioFeed");
+      const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
+      ratioFeedL2Opt = await upgrades.deployProxy(iRatioFeedFactory, []);
+      ratioFeedL2Opt.waitForDeployment();
+      ratioFeedL2Opt.address = await ratioFeedL2Opt.getAddress();
+      await (await ratioFeedL2Opt.updateRatioBatch([iTokenOpt.address], [e18])).wait();
+
+      console.log("=== OmniVault");
+      const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault", owner);
+      omniVaultOpt = await upgrades.deployProxy(
+        omniVaultFactory,
+        ["omniVaultOpt", operator.address, iTokenOpt.address, adapterOpt.address],
+        { initializer: "initialize" },
+      );
+      omniVaultOpt.address = await omniVaultOpt.getAddress();
+      await omniVaultOpt.setRatioFeed(ratioFeedL2Opt.address);
+      await omniVaultOpt.setTreasuryAddress(treasury.address);
+      await iTokenOpt.setVault(omniVaultOpt.address);
+
+      await omniVault.setTargetFlashCapacity(TARGET);
+      await omniVaultOpt.setTargetFlashCapacity(TARGET);
+
+      await rebalancer.setUpdateable(true);
+    });
+
+    it("Sync ratio from ETH to ARB and OPT", async function () {
+      const l1Ratio = await inEth.ratio();
+      console.log("L1 ratio:", l1Ratio.format());
+      await ratioFeedL2.updateRatioBatch([iToken.address], [l1Ratio]);
+      await ratioFeedL2Opt.updateRatioBatch([iTokenOpt.address], [l1Ratio]);
+      console.log("ARB ratio:", (await omniVault.ratio()).format());
+      console.log("OPT ratio:", (await omniVaultOpt.ratio()).format());
+      console.log("Available to stake:", (await restakingPool.availableToStake()).format());
+    });
+
+    it("Stake on ARB", async function () {
+      await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
+      await omniVault.connect(signer2).deposit(signer2, { value: e18 });
+      expect(await omniVault.getFreeBalance()).to.be.eq(e18 + e18);
+      console.log(await iToken.totalSupply());
+      console.log(await omniVault.getFlashCapacity());
+      console.log(await omniVault.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVault.address));
+    });
+
+    it("Stake on OPT", async function () {
+      await omniVaultOpt.connect(signer1).deposit(signer1, { value: TARGET + e18 });
+      expect(await omniVaultOpt.getFreeBalance()).to.be.eq(e18);
+      console.log(await iTokenOpt.totalSupply());
+      console.log(await omniVaultOpt.getFlashCapacity());
+      console.log(await omniVaultOpt.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVaultOpt.address));
+    });
+
+    let mintShares = 0n;
+    it("Send info from ARB", async function () {
+      const totalSupply = await iToken.totalSupply();
+      mintShares += totalSupply;
+      const ethBalance = await omniVault.getFlashCapacity();
+
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+      const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+      const timestamp = (await time.latest()) + 1;
+      const tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+      const txData = await rebalancer.getTransactionData(ARB_ID);
+      await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(ARB_ID, timestamp, ethBalance, totalSupply);
+      expect(txData.inceptionTokenBalance).to.be.eq(totalSupply);
+      expect(txData.ethBalance).to.be.eq(ethBalance);
+      expect(txData.timestamp).to.be.eq(timestamp);
+    });
+
+    it("Add OPT and send data from OPT", async function () {
+      await rebalancer.connect(owner).addChainId(OPT_ID);
+      await adapterOpt.connect(owner).setTargetReceiver(omniVaultOpt.address);
+
+      const totalSupply = await iTokenOpt.totalSupply();
+      mintShares += totalSupply;
+      const ethBalance = await omniVaultOpt.getFlashCapacity();
+
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+      const fee = await omniVaultOpt.quoteSendAssetsInfoToL1(options);
+      const timestamp = (await time.latest()) + 1;
+      const tx = await omniVaultOpt.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+      const txData = await rebalancer.getTransactionData(OPT_ID);
+      await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(OPT_ID, timestamp, ethBalance, totalSupply);
+      expect(txData.inceptionTokenBalance).to.be.eq(totalSupply);
+      expect(txData.ethBalance).to.be.eq(ethBalance);
+      expect(txData.timestamp).to.be.eq(timestamp);
+    });
+
+    it("Update data and mint", async function () {
+      const inEthSupplyBefore = await inEth.totalSupply();
+
+      const tx = await rebalancer.connect(signer1).updateTreasuryData();
+
+      const inEthSupplyAfter = await inEth.totalSupply();
+      await expect(tx).to.emit(rebalancer, "SyncedSupplyChanged").withArgs(0n, mintShares);
+      await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(mintShares);
+      await expect(tx).changeTokenBalance(inEth, lockboxAddress, mintShares);
+      expect(inEthSupplyAfter - inEthSupplyBefore).to.be.eq(mintShares);
+    });
+
+    it("updateTreasuryData reverts when there are no changes", async function () {
+      await expect(rebalancer.connect(signer1).updateTreasuryData()).to.be.revertedWithCustomError(
+        rebalancer,
+        "NoRebalancingRequired",
+      );
+    });
+
+    it("Send free balance from ARB", async function () {
+      const inEthSupplyBefore = await inEth.totalSupply();
+
+      const freeBalance = await omniVault.getFreeBalance();
+
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, freeBalance).toHex().toString();
+      const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+      const tx = await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee });
+
+      const inEthSupplyAfter = await inEth.totalSupply();
+      console.log(await omniVault.getFlashCapacity());
+      console.log(await omniVault.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVault.address));
+
+      await expect(tx).changeEtherBalance(rebalancer, freeBalance);
+      expect(inEthSupplyAfter).to.be.eq(inEthSupplyBefore);
+    });
+
+    /**
+     * Stake() only transfers Eth to restakingPool without minting new shares,
+     * as the number of shares managed separately by updateTreasuryData()
+     */
+    it("Stake eth by rebalancer", async function () {
+      const inEthSupplyBefore = await inEth.totalSupply();
+      const pendingBefore = await restakingPool.getPending();
+
+      const amount = await ethers.provider.getBalance(rebalancer.address);
+      const tx = await rebalancer.connect(operator).stake(amount);
+
+      const pendingAfter = await restakingPool.getPending();
+
+      await expect(tx).changeEtherBalance(restakingPool, amount);
+      const inEthSupplyAfter = await inEth.totalSupply();
+      expect(inEthSupplyAfter).to.be.eq(inEthSupplyBefore);
+      expect(pendingAfter - pendingBefore).to.be.eq(amount);
+    });
+
+    let burntShares;
+    it("Flash withdraw on ARB", async function () {
+      const iTokenSupplyBefore = await iToken.totalSupply();
+
+      burntShares = await omniVault.convertToShares(await omniVault.getFlashCapacity());
+      await omniVault.connect(signer2).flashWithdraw(burntShares, signer2.address);
+
+      console.log(await omniVault.getFlashCapacity());
+      console.log(await omniVault.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVault.address));
+
+      const iTokenSupplyAfter = await iToken.totalSupply();
+      expect(iTokenSupplyBefore - iTokenSupplyAfter).to.be.eq(burntShares);
+    });
+
+    it("Update data and burn", async function () {
+      mintShares = await iToken.totalSupply();
+      const ethBalance = await omniVault.getFlashCapacity();
+
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+      const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+      const timestamp = (await time.latest()) + 1;
+      let tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+      await expect(tx).to.emit(omniVault, "MessageToL1Sent").withArgs(mintShares, ethBalance);
+
+      const txData = await rebalancer.getTransactionData(ARB_ID);
+      await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(ARB_ID, timestamp, ethBalance, mintShares);
+      expect(txData.inceptionTokenBalance).to.be.eq(mintShares);
+      expect(txData.ethBalance).to.be.eq(ethBalance);
+      expect(txData.timestamp).to.be.eq(timestamp);
+
+      const inEthSupplyBefore = await inEth.totalSupply();
+      const syncBefore = await rebalancer.syncedSupply();
+      tx = await rebalancer.connect(signer1).updateTreasuryData();
+
+      const inEthSupplyAfter = await inEth.totalSupply();
+      await expect(tx)
+        .to.emit(rebalancer, "SyncedSupplyChanged")
+        .withArgs(syncBefore, syncBefore - burntShares);
+      await expect(tx).to.emit(rebalancer, "TreasuryUpdateBurn").withArgs(burntShares);
+      await expect(tx).changeTokenBalance(inEth, lockboxAddress, -burntShares);
+      expect(inEthSupplyBefore - inEthSupplyAfter).to.be.eq(burntShares);
+    });
+
+    it("Deposit on ARB", async function () {
+      const depositBonus = await omniVault.depositBonusAmount();
+      const amount = e18 * 2n;
+      const expectedShars = await omniVault.convertToShares(amount + depositBonus);
+      const balanceBefore = await iToken.balanceOf(signer2);
+
+      let tx = await omniVault.connect(signer2).deposit(signer2, { value: amount });
+
+      const balanceAfter = await iToken.balanceOf(signer2);
+
+      expect(balanceAfter - balanceBefore).to.be.closeTo(expectedShars, 1n);
+      mintShares = balanceAfter - balanceBefore;
+      console.log(await omniVault.getFlashCapacity());
+      console.log(await omniVault.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVault.address));
+    });
+
+    it("Send free balance from ARB", async function () {
+      const freeBalance = await omniVault.getFreeBalance();
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, freeBalance).toHex().toString();
+      const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+      let tx = await omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee });
+
+      await expect(tx).changeEtherBalance(rebalancer, freeBalance);
+      console.log(await omniVault.getFlashCapacity());
+      console.log(await omniVault.getFreeBalance());
+      console.log(await ethers.provider.getBalance(omniVault.address));
+
+      const inEthSupplyBefore = await inEth.totalSupply();
+      const amount = await ethers.provider.getBalance(rebalancer.address);
+      tx = await rebalancer.connect(operator).stake(amount);
+
+      await expect(tx).changeEtherBalance(restakingPool, amount);
+      const inEthSupplyAfter = await inEth.totalSupply();
+      expect(inEthSupplyAfter).to.be.eq(inEthSupplyBefore);
+    });
+
+    it("Send info and update data", async function () {
+      const totalSupplyArb = await iToken.totalSupply();
+      const ethBalance = await omniVault.getFlashCapacity();
+
+      const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+      const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+      const timestamp = (await time.latest()) + 1;
+      let tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+      const txData = await rebalancer.getTransactionData(ARB_ID);
+      await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(ARB_ID, timestamp, ethBalance, totalSupplyArb);
+      expect(txData.inceptionTokenBalance).to.be.eq(totalSupplyArb);
+      expect(txData.ethBalance).to.be.eq(ethBalance);
+      expect(txData.timestamp).to.be.eq(timestamp);
+
+      const inEthSupplyBefore = await inEth.totalSupply();
+      const syncBefore = await rebalancer.syncedSupply();
+      tx = await rebalancer.connect(signer1).updateTreasuryData();
+
+      const inEthSupplyAfter = await inEth.totalSupply();
+      const syncAfter = await rebalancer.syncedSupply();
+      await expect(tx)
+        .to.emit(rebalancer, "SyncedSupplyChanged")
+        .withArgs(syncBefore, syncBefore + mintShares);
+      await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(mintShares);
+      await expect(tx).changeTokenBalance(inEth, lockboxAddress, mintShares);
+      expect(inEthSupplyAfter - inEthSupplyBefore).to.be.eq(mintShares);
+      expect(syncAfter - syncBefore).to.be.eq(mintShares);
+    });
+
+    it("Stake to restaking pool", async function () {
+      const amount = await restakingPool.availableToStake();
+      const expectedShares = await inEth.convertToShares(amount);
+      const totalSupplyBefore = await inEth.totalSupply();
+      const pendingBefore = await restakingPool.getPending();
+
+      let tx = await restakingPool.connect(signer1)["stake()"]({ value: amount });
+
+      const totalSupplyAfter = await inEth.totalSupply();
+      const pendingAfter = await restakingPool.getPending();
+
+      await expect(tx).changeEtherBalance(restakingPool, amount);
+      await expect(tx).changeTokenBalance(inEth, signer1, expectedShares);
+      expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedShares);
+      expect(pendingAfter - pendingBefore).to.be.eq(amount);
     });
   });
 
@@ -467,6 +760,7 @@ describe("Omnivault integration tests", function () {
     describe("Getters and setters", function () {
       beforeEach(async function () {
         await snapshot.restore();
+        await rebalancer.connect(owner).addChainId(OPT_ID);
       });
 
       const setters = [
@@ -677,6 +971,7 @@ describe("Omnivault integration tests", function () {
 
       before(async function () {
         await snapshot.restore();
+        await rebalancer.connect(owner).addChainId(OPT_ID);
         initialLockBoxBalance = await inEth.balanceOf(lockboxAddress);
         await rebalancer.setUpdateable(true);
       });
@@ -889,6 +1184,7 @@ describe("Omnivault integration tests", function () {
     describe("Stake", function () {
       beforeEach(async function () {
         await snapshot.restore();
+        await rebalancer.connect(owner).addChainId(OPT_ID);
       });
 
       const args = [
@@ -907,6 +1203,11 @@ describe("Omnivault integration tests", function () {
           balance: async () => await restakingPool.availableToStake(),
           amount: async () => await restakingPool.getMinStake(),
         },
+        {
+          name: "Less than restaking pool min amount",
+          balance: async () => await restakingPool.availableToStake(),
+          amount: async () => (await restakingPool.getMinStake()) - 1n,
+        },
       ];
 
       args.forEach(function (arg) {
@@ -919,19 +1220,15 @@ describe("Omnivault integration tests", function () {
           const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
           const tx = await rebalancer.connect(operator).stake(amount);
-          await expect(tx)
-            .emit(rebalancer, "InceptionTokenDepositedToLockbox")
-            .withArgs(shares)
-            .and.emit(restakingPool, "Staked")
-            .withArgs(rebalancer.address, amount, shares);
+          await expect(tx).emit(restakingPool, "Received").withArgs(rebalancer.address, amount);
 
           const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
           console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
           console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
           console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
 
-          //Everything was staked goes to the lockbox
-          expect(lockboxInEthBalanceAfter - lockboxInEthBalanceBefore).to.be.eq(shares);
+          //No new shares minted
+          expect(lockboxInEthBalanceAfter).to.be.eq(lockboxInEthBalanceBefore);
           expect(await inEth.balanceOf(rebalancer.address)).to.be.eq(0n);
         });
       });
@@ -954,7 +1251,7 @@ describe("Omnivault integration tests", function () {
         );
       });
 
-      it("Reverts when amount < restaking pool min stake", async function () {
+      it.skip("Reverts when amount < restaking pool min stake", async function () {
         const amount = (await restakingPool.getMinStake()) - 1n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
         await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(
@@ -2772,36 +3069,37 @@ describe("Omnivault integration tests", function () {
           await omniVault.setTargetFlashCapacity(TARGET);
         });
 
-        it("fee", async function () {
-          for (let i = 0n; i < 10n; i++) {
-            const gasLimit = i * 100_000n;
-            const options = Options.newOptions().addExecutorLzReceiveOption(gasLimit, e18).toHex().toString();
-            const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
-            console.log(fee.format());
-          }
-        });
-
         const args = [
           {
             name: "without extra value",
             extraValue: 0n,
             sender: () => operator,
+            amount: async () => await omniVault.getFreeBalance(),
           },
           {
             name: "with extra value by operator",
             extraValue: randomBI(16),
             sender: () => operator,
+            amount: async () => await omniVault.getFreeBalance(),
           },
           {
             name: "with extra value by owner",
             extraValue: randomBI(16),
             sender: () => owner,
+            amount: async () => await omniVault.getFreeBalance(),
+          },
+          {
+            name: "options amount < freeBalance",
+            extraValue: 0n,
+            sender: () => operator,
+            amount: async () => 1n,
           },
         ];
         args.forEach(function (arg) {
           it(`sendEthToL1 ${arg.name}`, async function () {
             await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
-            const amount = await omniVault.getFreeBalance();
+            const freeBalance = await omniVault.getFreeBalance();
+            const amount = await arg.amount();
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, amount).toHex().toString();
             const sender = arg.sender();
 
@@ -2810,9 +3108,7 @@ describe("Omnivault integration tests", function () {
             const extraValue = arg.extraValue;
             const tx = await omniVault.connect(sender).sendEthCrossChain(ETH_ID, options, { value: fee + extraValue });
 
-            await expect(tx)
-              .emit(omniVault, "EthCrossChainSent")
-              .withArgs(amount + fee + extraValue, ETH_ID);
+            await expect(tx).emit(omniVault, "EthCrossChainSent").withArgs(amount, ETH_ID);
             await expect(tx).to.changeEtherBalance(rebalancer.address, amount);
             await expect(tx).to.changeEtherBalance(sender.address, -fee, { includeFee: false });
             await expect(tx).to.changeEtherBalance(omniVault.address, -amount); //Extra value returned to sender
@@ -2821,6 +3117,20 @@ describe("Omnivault integration tests", function () {
               await expect(tx).to.emit(omniVault, "UnusedFeesSentBackToOperator").withArgs(extraValue);
             }
           });
+        });
+
+        it("Reverts freeBalance < options amount", async function () {
+          await omniVault.connect(signer1).deposit(signer1, { value: TARGET + e18 });
+          const amount = await omniVault.getFreeBalance();
+          const options = Options.newOptions()
+            .addExecutorLzReceiveOption(200_000n, amount + 1n)
+            .toHex()
+            .toString();
+
+          const fee = await omniVault.quoteSendEthCrossChain(ETH_ID, options);
+          await expect(
+            omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: fee }),
+          ).to.be.revertedWith("LayerZeroMock: not enough native for fees");
         });
 
         it("Reverts when fee is not enough", async function () {
@@ -2835,13 +3145,13 @@ describe("Omnivault integration tests", function () {
         });
 
         it("Reverts when there is no free balance", async function () {
-          await omniVault.connect(signer1).deposit(signer1, { value: TARGET });
+          await omniVault.connect(signer1).deposit(signer1, { value: TARGET - 10n });
           expect(await omniVault.getFreeBalance()).to.be.eq(0n);
 
           const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
           await expect(
             omniVault.connect(operator).sendEthCrossChain(ETH_ID, options, { value: 0n }),
-          ).to.revertedWithCustomError(omniVault, "FreeBalanceIsZero");
+          ).to.revertedWithCustomError(omniVault, "FreeBalanceTooLow");
         });
 
         it("Reverts when called by not an operator", async function () {
