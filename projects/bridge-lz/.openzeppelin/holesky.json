@@ -22,7 +22,7 @@
             "label": "endpoint",
             "offset": 0,
             "slot": "0",
-            "type": "t_contract(ILayerZeroEndpointV2)2638",
+            "type": "t_contract(ILayerZeroEndpointV2)202",
             "contract": "OAppCoreUpgradeable",
             "src": "contracts/OAppCoreUpgradeable.sol:14"
           },
@@ -64,11 +64,61 @@
             "label": "address",
             "numberOfBytes": "20"
           },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)996_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Ownable2StepStorage)881_storage": {
+            "label": "struct Ownable2StepUpgradeable.Ownable2StepStorage",
+            "members": [
+              {
+                "label": "_pendingOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)936_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
           "t_bytes32": {
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(ILayerZeroEndpointV2)2638": {
+          "t_contract(ILayerZeroEndpointV2)202": {
             "label": "contract ILayerZeroEndpointV2",
             "numberOfBytes": "20"
           },
@@ -91,12 +141,6 @@
           "t_uint32": {
             "label": "uint32",
             "numberOfBytes": "4"
-          },
-          "t_uint64": {
-            "label": "uint64"
-          },
-          "t_bool": {
-            "label": "bool"
           }
         },
         "namespaces": {
@@ -105,7 +149,9 @@
               "contract": "Ownable2StepUpgradeable",
               "label": "_pendingOwner",
               "type": "t_address",
-              "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29"
+              "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29",
+              "offset": 0,
+              "slot": "0"
             }
           ],
           "erc7201:openzeppelin.storage.Ownable": [
@@ -113,7 +159,9 @@
               "contract": "OwnableUpgradeable",
               "label": "_owner",
               "type": "t_address",
-              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24"
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
             }
           ],
           "erc7201:openzeppelin.storage.Initializable": [
@@ -121,13 +169,190 @@
               "contract": "Initializable",
               "label": "_initialized",
               "type": "t_uint64",
-              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69"
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
             },
             {
               "contract": "Initializable",
               "label": "_initializing",
               "type": "t_bool",
-              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73"
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "43858bff44ccd2170c2f07190e00237613dc62510cb12a0769e4ae4ef63c7361": {
+      "address": "0x103461B0C5E9ac506FAbCD3ef981F76bc305171c",
+      "txHash": "0xcb23423f4812d4af4d53963952c7d6b38aac09cafb9c2fa5cf26e7e4fdff27b6",
+      "layout": {
+        "solcVersion": "0.8.27",
+        "storage": [
+          {
+            "label": "endpoint",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(ILayerZeroEndpointV2)677",
+            "contract": "OAppCoreUpgradeable",
+            "src": "contracts/OAppCoreUpgradeable.sol:14"
+          },
+          {
+            "label": "peers",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_uint32,t_bytes32)",
+            "contract": "OAppCoreUpgradeable",
+            "src": "contracts/OAppCoreUpgradeable.sol:17"
+          },
+          {
+            "label": "eidToChainId",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_uint32,t_uint256)",
+            "contract": "AbstractLZCrossChainAdapter",
+            "src": "contracts/abstract/AbstractLZCrossChainAdapter.sol:31"
+          },
+          {
+            "label": "chainIdToEid",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_uint256,t_uint32)",
+            "contract": "AbstractLZCrossChainAdapter",
+            "src": "contracts/abstract/AbstractLZCrossChainAdapter.sol:32"
+          },
+          {
+            "label": "targetReceiver",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_address",
+            "contract": "AbstractCrossChainAdapter",
+            "src": "contracts/abstract/AbstractCrossChainAdapter.sol:21"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)1421_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(Ownable2StepStorage)1306_storage": {
+            "label": "struct Ownable2StepUpgradeable.Ownable2StepStorage",
+            "members": [
+              {
+                "label": "_pendingOwner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)1361_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(ILayerZeroEndpointV2)677": {
+            "label": "contract ILayerZeroEndpointV2",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_uint256,t_uint32)": {
+            "label": "mapping(uint256 => uint32)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint32,t_bytes32)": {
+            "label": "mapping(uint32 => bytes32)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint32,t_uint256)": {
+            "label": "mapping(uint32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable2Step": [
+            {
+              "contract": "Ownable2StepUpgradeable",
+              "label": "_pendingOwner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:29",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
             }
           ]
         }
