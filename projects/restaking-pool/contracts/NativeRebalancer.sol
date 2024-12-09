@@ -197,9 +197,9 @@ contract NativeRebalancer is
         // );
         (bool success, ) = liqPool.call{value: _amount}("");
 
-        require(success, TransferToLockboxFailed());
+        require(success, TransferToRestakingPoolFailed());
 
-        emit TransferToLockbox(_amount);
+        emit TransferToRestakingPool(_amount);
     }
 
     /**

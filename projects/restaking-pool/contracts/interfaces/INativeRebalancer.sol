@@ -39,7 +39,7 @@ interface INativeRebalancer {
     event UpdateableChanged(bool prevUpdateable, bool nextUpdateable);
     event ChainIdAdded(uint256 chainId);
     event ChainIdDeleted(uint256 chainId, uint256 index);
-    event TransferToLockbox(uint256 amount);
+    event TransferToRestakingPool(uint256 amount);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
@@ -49,6 +49,7 @@ interface INativeRebalancer {
     error TimeCannotBeInFuture(uint256 timestamp);
     error TimeBeforePrevRecord(uint256 timestamp);
     error SettingZeroAddress();
+    error TransferToRestakingPoolFailed();
     error TransferToLockboxFailed();
     error InceptionTokenAddressNotSet();
     error LiquidityPoolNotSet();
