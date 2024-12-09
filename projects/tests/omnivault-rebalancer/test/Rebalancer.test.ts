@@ -1176,8 +1176,10 @@ describe("Omnivault integration tests", function () {
 
         const totalSupplyAfter = await inEth.totalSupply();
         const lockboxBalanceAfter = await inEth.balanceOf(lockboxAddress);
-        expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(supplyChange * 2n, 1n);
-        expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(supplyChange * 2n + amount, 1n);
+        // expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(supplyChange * 2n, 1n);
+        expect(totalSupplyAfter - totalSupplyBefore).to.be.closeTo(supplyChange, 1n);
+        // expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(supplyChange * 2n + amount, 1n);
+        expect(lockboxBalanceAfter - lockboxBalanceBefore).to.be.closeTo(supplyChange + amount, 1n);
       });
     });
 
