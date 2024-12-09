@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../interfaces/IInceptionToken.sol";
-import "../interfaces/IInceptionVault.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IInceptionToken} from "../interfaces/common/IInceptionToken.sol";
+import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
 
 import "../lib/Convert.sol";
 
@@ -16,7 +16,7 @@ contract InceptionToken is
     ERC20Upgradeable,
     IInceptionToken
 {
-    IInceptionVault public vault;
+    IInceptionVault_EL public vault;
 
     bool private _paused;
 
@@ -72,7 +72,7 @@ contract InceptionToken is
     //// Set functions ////
     ////////////////////*/
 
-    function setVault(IInceptionVault newValue) external onlyOwner {
+    function setVault(IInceptionVault_EL newValue) external onlyOwner {
         emit VaultChanged(address(vault), address(newValue));
         vault = newValue;
     }
