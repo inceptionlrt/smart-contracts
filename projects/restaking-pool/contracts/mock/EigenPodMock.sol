@@ -45,28 +45,7 @@ contract EigenPodMock is Initializable, IEigenPod {
         podOwner = _podOwner;
     }
 
-    function MAX_RESTAKED_BALANCE_GWEI_PER_VALIDATOR()
-        external
-        view
-        override
-        returns (uint64)
-    {}
-
     function withdrawableRestakedExecutionLayerGwei()
-        external
-        view
-        override
-        returns (uint64)
-    {}
-
-    function nonBeaconChainETHBalanceWei()
-        external
-        view
-        override
-        returns (uint256)
-    {}
-
-    function mostRecentWithdrawalTimestamp()
         external
         view
         override
@@ -76,11 +55,6 @@ contract EigenPodMock is Initializable, IEigenPod {
     function validatorPubkeyHashToInfo(
         bytes32 validatorPubkeyHash
     ) external view override returns (ValidatorInfo memory) {}
-
-    function provenWithdrawal(
-        bytes32 validatorPubkeyHash,
-        uint64 slot
-    ) external view override returns (bool) {}
 
     function validatorStatus(
         bytes32 pubkeyHash
@@ -92,24 +66,6 @@ contract EigenPodMock is Initializable, IEigenPod {
         uint40[] calldata validatorIndices,
         bytes[] calldata withdrawalCredentialProofs,
         bytes32[][] calldata validatorFields
-    ) external override {}
-
-    function verifyAndProcessWithdrawals(
-        uint64 oracleTimestamp,
-        BeaconChainProofs.StateRootProof calldata stateRootProof,
-        BeaconChainProofs.WithdrawalProof[] calldata withdrawalProofs,
-        bytes[] calldata validatorFieldsProofs,
-        bytes32[][] calldata validatorFields,
-        bytes32[][] calldata withdrawalFields
-    ) external override {}
-
-    function activateRestaking() external override {}
-
-    function withdrawBeforeRestaking() external override {}
-
-    function withdrawNonBeaconChainETHBalanceWei(
-        address recipient,
-        uint256 amountToWithdraw
     ) external override {}
 
     function recoverTokens(
@@ -137,11 +93,51 @@ contract EigenPodMock is Initializable, IEigenPod {
         bytes calldata validatorPubkey
     ) external view override returns (VALIDATOR_STATUS) {}
 
-    function verifyBalanceUpdates(
-        uint64 oracleTimestamp,
-        uint40[] calldata validatorIndices,
-        BeaconChainProofs.StateRootProof calldata stateRootProof,
-        bytes[] calldata validatorFieldsProofs,
-        bytes32[][] calldata validatorFields
+    function startCheckpoint(bool revertIfNoBalance) external override {}
+
+    function verifyCheckpointProofs(
+        BeaconChainProofs.BalanceContainerProof calldata balanceContainerProof,
+        BeaconChainProofs.BalanceProof[] calldata proofs
     ) external override {}
+
+    function verifyStaleBalance(
+        uint64 beaconTimestamp,
+        BeaconChainProofs.StateRootProof calldata stateRootProof,
+        BeaconChainProofs.ValidatorProof calldata proof
+    ) external override {}
+
+    function setProofSubmitter(address newProofSubmitter) external override {}
+
+    function proofSubmitter() external view override returns (address) {}
+
+    function activeValidatorCount() external view override returns (uint256) {}
+
+    function lastCheckpointTimestamp()
+        external
+        view
+        override
+        returns (uint64)
+    {}
+
+    function currentCheckpointTimestamp()
+        external
+        view
+        override
+        returns (uint64)
+    {}
+
+    function currentCheckpoint()
+        external
+        view
+        override
+        returns (Checkpoint memory)
+    {}
+
+    function checkpointBalanceExitedGwei(
+        uint64
+    ) external view override returns (uint64) {}
+
+    function getParentBlockRoot(
+        uint64 timestamp
+    ) external view override returns (bytes32) {}
 }
