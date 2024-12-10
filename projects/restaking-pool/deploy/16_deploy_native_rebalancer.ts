@@ -33,7 +33,7 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments, ne
   let crossChainBridge = "";
   if (network.name === "mainnet") {
     //TODO fill this for mainnet
-    crossChainBridge = "";
+    crossChainBridge = "0x1E0Bd0291165F789b794e9513Eb07a76849c1448";
   } else if (network.name === "holesky") {
     crossChainBridge = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
   }
