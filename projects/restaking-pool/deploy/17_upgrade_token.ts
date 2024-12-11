@@ -20,16 +20,12 @@ const func: DeployFunction = async function ({ deployments, network }) {
   }
 
   if (network.name === "mainnet") {
-    const upgradeTx = await proxyAdmin.getFunction("upgradeAndCall").populateTransaction(
-      CToken.address,
-      newImpl,
-      "0x"
-    );
+    const upgradeTx = await proxyAdmin.getFunction("upgradeAndCall").populateTransaction(CToken.address, newImpl, "0x");
     console.log("Upgrade tx", upgradeTx);
 
-    await schedule({
-      transaction: upgradeTx,
-    });
+    // await schedule({
+    //   transaction: upgradeTx,
+    // });
   } else {
     const upgradeTx = await proxyAdmin.upgradeAndCall(CToken.address, newImpl, "0x");
     console.log("Upgrade tx hash:", upgradeTx.hash);
@@ -52,3 +48,4 @@ module.exports.tags = ["17_upgrade_token"];
 module.exports.dependencies = [];
 module.exports.skip = false;
 module.exports.id = "17";
+
