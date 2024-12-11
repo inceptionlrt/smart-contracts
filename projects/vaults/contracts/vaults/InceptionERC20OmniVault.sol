@@ -8,7 +8,7 @@ import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20O
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainBridgeL2} from "../interfaces/ICrossChainAdapterL2.sol";
+import {ICrossChainBridgeERC20L2} from "../interfaces/ICrossChainAdapterERC20L2.sol";
 
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
@@ -31,7 +31,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
     IInceptionRatioFeed public ratioFeed;
 
-    ICrossChainBridgeL2 public crossChainAdapter;
+    ICrossChainBridgeERC20L2 public crossChainAdapterERC20;
 
     /**
      *  @dev Flash withdrawal params
@@ -57,18 +57,32 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
+
+    /// @dev Modifier to restrict functions to owner or operator.
+    modifier onlyOwnerOrOperator() {
+        if (msg.sender != owner() && msg.sender != operator)
+            revert OnlyOwnerOrOperator();
+
+        _;
+    }
+
     function __InceptionERC20OmniVault_init(
         string memory vaultName,
+        address _operator,
         IInceptionToken _inceptionToken,
-        IERC20 wrappedAsset
+        IERC20 _wrappedAsset,
+        ICrossChainBridgeERC20L2 _crossChainAdapter
     ) internal {
         __Ownable_init(msg.sender);
-        __InceptionERC20OmniAssetsHandler_init(wrappedAsset);
+        __InceptionERC20OmniAssetsHandler_init(_wrappedAsset);
 
         name = vaultName;
-        inceptionToken = _inceptionToken;
-        /// TODO
+        operator = _operator;
         treasuryAddress = msg.sender;
+        inceptionToken = _inceptionToken;       
+        crossChainAdapterERC20 = _crossChainAdapter;
+        
+        
         minAmount = 1e8;
 
         targetCapacity = 1;
@@ -89,11 +103,20 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     ////// Deposit functions //////
     ////////////////////////////*/
 
+    /**
+     * @dev Ensures deposit parameters are valid.
+     * @param receiver Address receiving the deposit.
+     * @param amount Amount of assets to be deposited.
+     */
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < minAmount) revert LowerMinAmount(minAmount);
     }
 
+    /**
+     * @dev Ensures the calculated iShares is valid post-deposit.
+     * @param iShares Number of shares issued after the deposit.
+     */
     function __afterDeposit(uint256 iShares) internal pure {
         if (iShares == 0) revert DepositInconsistentResultedState();
     }
@@ -104,7 +127,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     function deposit(
         uint256 amount,
         address receiver
-    ) public nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -142,7 +165,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             emit DepositBonus(depositBonus);
         }
 
-        // get the amount from the sender
+        // pull the amount from the sender
         _transferAssetFrom(sender, amount);
         amount = totalAssets() - depositedBefore;
 
@@ -163,6 +186,11 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
 
+    /**
+     * @dev Ensures withdrawal parameters are valid.
+     * @param receiver Address receiving the withdrawal.
+     * @param iShares Number of shares to be withdrawn.
+     */
     function __beforeWithdraw(address receiver, uint256 iShares) internal pure {
         if (iShares == 0) {
             revert NullParams();
@@ -213,7 +241,144 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
 
-    /// @notice Function to calculate deposit bonus based on the utilization rate
+     /*//////////////////////////////
+    ////// Cross-chain functions ///
+    //////////////////////////////*/
+
+    /**
+     * @notice Sends asset information (total Inception and underlying token balances) to Layer 1.
+     */
+    function sendAssetsInfoToL1(
+        bytes memory _options
+    ) external payable onlyOwnerOrOperator {
+        require(
+            address(crossChainAdapterERC20) != address(0),
+            CrossChainAdapterNotSet()
+        );
+
+        uint256 msgValue = msg.value; // fees are still paid in ETH
+
+        uint256 tokensAmount = _inceptionTokenSupply();
+        uint256 erc20Amount = getFlashCapacity() - msg.value;
+        bytes memory payload = abi.encode(
+            block.timestamp,
+            tokensAmount,
+            erc20Amount
+        );
+
+        require(
+            msgValue >= quoteSendAssetsInfoToL1(_options),
+            FeesAboveMsgValue(msgValue)
+        );
+
+        uint256 fees = crossChainAdapterERC20.sendDataL1{value: msgValue}(
+            payload,
+            _options
+        );
+
+        uint256 unusedFees = msgValue - fees;
+
+        if (unusedFees > 0) {
+            (bool success, ) = msg.sender.call{value: unusedFees}("");
+            if (success) {
+                emit UnusedFeesSentBackToOperator(unusedFees);
+            }
+        }
+
+        emit MessageToL1Sent(tokensAmount, erc20Amount);
+    }
+
+    /**
+     * @notice Calculates price to send data message to Layer 1.
+     */
+    function quoteSendAssetsInfoToL1(
+        bytes memory _options
+    ) public view returns (uint256 fees) {
+        require(
+            address(crossChainAdapterERC20) != address(0),
+            CrossChainAdapterNotSet()
+        );
+        uint256 tokensAmount = _inceptionTokenSupply();
+        uint256 erc20Amount = getFlashCapacity();
+        bytes memory payload = abi.encode(
+            block.timestamp,
+            tokensAmount,
+            erc20Amount
+        );
+
+        fees = crossChainAdapterERC20.quote(payload, _options);
+    }
+
+
+    /**
+     * @notice Sends available ERC20 to another chain via cross-chain adapter.
+     * @dev msg.value is used to pay for the cross-chain fees
+     */
+    function sendERC20ToL1(
+        uint256 _chainId,
+        bytes memory _options
+    ) external payable onlyOwnerOrOperator {
+        uint256 freeBalance = getFreeBalance();
+        // TODO needs to be changed (or removed?) for erc20 handling
+        /*
+        require( 
+            freeBalance > msg.value,
+            FreeBalanceTooLow(freeBalance, msg.value)
+        );
+        */
+        uint256 msgValue = msg.value;
+        require(
+            msg.value >= this.quoteSendERC20CrossChain(_chainId, _options),
+            FeesAboveMsgValue(msgValue)
+        ); // we're still using ETH to pay LayerZero fees
+
+        uint256 fees = crossChainAdapterERC20.sendERC20CrossChain{value: freeBalance}(
+            _chainId,
+            _options
+        );
+
+        uint256 unusedFees = msg.value - fees;
+
+        if (unusedFees > 0) {
+            (bool success, ) = msg.sender.call{value: unusedFees}("");
+            if (success) {
+                emit UnusedFeesSentBackToOperator(unusedFees);
+            }
+        }
+
+        uint256 callValue = crossChainAdapterERC20.getValueFromOpts(_options);
+
+        emit ERC20CrossChainSent(callValue, _chainId);
+        
+    }
+
+    /**
+     * @notice Calculates fees to send ERC20 to other chain. The `SEND_VALUE` encoded in options is not included in the return
+     * @param _chainId chain ID of the network to simulate sending ERC20 to
+     * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+     */
+    function quoteSendERC20CrossChain(
+        uint256 _chainId,
+        bytes calldata _options
+    ) public view returns (uint256) {
+        require(
+            address(crossChainAdapterERC20) != address(0),
+            CrossChainAdapterNotSet()
+        );
+        return
+            crossChainAdapterERC20.quoteSendERC20(_chainId, _options) -
+            crossChainAdapterERC20.getValueFromOpts(_options);
+    }
+
+    /*//////////////////////////////
+    ////// Utility functions ///////
+    //////////////////////////////*/
+
+    /**
+     * @notice Calculates the bonus for a deposit based on the current utilization rate.
+     * @param amount Amount of the deposit.
+     * @return bonus Calculated bonus.
+     */
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
@@ -226,6 +391,10 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
                 maxBonusRate,
                 targetCapacity
             );
+    }
+
+    function _inceptionTokenSupply() internal view returns (uint256) {
+        return IERC20(address(inceptionToken)).totalSupply();
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
@@ -246,6 +415,13 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             );
     }
 
+    function getFreeBalance() public view returns (uint256) {
+        return
+            getFlashCapacity() < targetCapacity
+                ? 0
+                : getFlashCapacity() - targetCapacity;
+    }
+
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
@@ -255,7 +431,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     }
 
     function getTotalDeposited() public view returns (uint256) {
-        return totalAssets() - depositBonusAmount;
+        return totalAssets() - depositBonusAmount; 
     }
 
     function getFlashCapacity() public view returns (uint256 total) {

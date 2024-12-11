@@ -6,7 +6,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IInceptionOmniVault} from "../interfaces/IInceptionOmniVault.sol";
+import {IInceptionERC20OmniVault} from "../interfaces/IInceptionERC20OmniVault.sol";
 import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
 
 /// @author The InceptionLRT team
@@ -16,7 +16,7 @@ contract InceptionERC20OmniAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
-    IInceptionOmniVault,
+    IInceptionERC20OmniVault,
     IInceptionAssetHandler
 {
     using SafeERC20 for IERC20;
@@ -39,7 +39,7 @@ contract InceptionERC20OmniAssetsHandler is
         return address(_asset);
     }
 
-    /// @dev returns the balance of iVault in ETH
+    /// @dev returns the balance of iVault in underlying ERC20 token
     function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
     }

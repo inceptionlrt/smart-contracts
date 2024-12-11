@@ -17,9 +17,12 @@ contract InOmniVault_E2 is InceptionERC20OmniVault {
 
     function initialize(
         string memory vaultName,
-        IInceptionToken _inceptionToken,
-        IERC20 baseAsset
+        address _operator,
+        address _inceptionToken,
+        address _wrappedAsset,
+        ICrossChainBridgeERC20L2 _crossChainAdapter
+
     ) external initializer {
-        __InceptionERC20OmniVault_init(vaultName, _inceptionToken, baseAsset);
+        __InceptionERC20OmniVault_init(vaultName, _operator, IInceptionToken(_inceptionToken), IERC20(_wrappedAsset), _crossChainAdapter);
     }
 }
