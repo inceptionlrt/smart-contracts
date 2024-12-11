@@ -48,8 +48,8 @@ const func: DeployFunction = async function ({ getNamedAccounts, deployments, ne
 
   console.log("NativeRebalancer deployed at:", nativeRebalancer.address);
 
-  const executeCfg = { from: deployer, log: true };
-  await execute("ProtocolConfig", executeCfg, "setRebalancer", nativeRebalancer.address);
+  // const executeCfg = { from: deployer, log: true };
+  // await execute("ProtocolConfig", executeCfg, "setRebalancer", nativeRebalancer.address);
 
   return true;
 };

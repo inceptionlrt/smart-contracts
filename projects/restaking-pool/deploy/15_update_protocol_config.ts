@@ -30,9 +30,9 @@ const func: DeployFunction = async function ({ deployments, network }) {
     const upgradeTx = await proxyAdmin.upgradeAndCall.populateTransaction(ProtocolConfig.address, newImpl, "0x");
     console.log("Mainnet upgrade transaction populated:", upgradeTx);
 
-    await schedule({
-      transaction: upgradeTx,
-    });
+    // await schedule({
+    //   transaction: upgradeTx,
+    // });
   } else {
     const upgradeTx = await proxyAdmin.upgradeAndCall(ProtocolConfig.address, newImpl, "0x");
     console.log("Upgrade transaction executed:", upgradeTx);
@@ -55,3 +55,4 @@ module.exports.tags = ["15_update_protocol_config"];
 module.exports.dependencies = [];
 module.exports.skip = false;
 module.exports.id = "15";
+
