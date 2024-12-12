@@ -69,27 +69,18 @@ async function main() {
 
         const receipt = await provider.getTransactionReceipt(txHash);
         if (receipt && receipt.logs) {
-            const transferEvents = receipt.logs
+            receipt.logs
                 .filter(log => log.address.toLowerCase() === LOCKBOX_ADDRESS.toLowerCase()
-                ).filter(log => {
+                ).forEach(log => {
                     try {
                         const decodedEvent = lockboxContract.interface.decodeEventLog("Withdraw", log.data, log.topics);
-
                         console.log(`_amount: ${BigInt(decodedEvent._amount).toString()}`);
-
-
-
                         withdrawnAmount += BigInt(decodedEvent._amount);
-
-                        return true;
                     } catch (error) {
                         console.warn(`Error decoding Transfer event: ${error}`);
                         return false;
                     }
                 });
-
-
-
         } else {
             console.warn(`No logs found for tx ${txHash}`);
         }
@@ -100,7 +91,7 @@ async function main() {
     console.log(`Total Amount from Matching Lockbox.Withdraw events: ${withdrawnAmount}`);
 
     console.log(`Result: ${totalAmount - withdrawnAmount}`);
-    
+
 }
 
 main().catch((error) => {
