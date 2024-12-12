@@ -78,7 +78,6 @@ async function main() {
                         withdrawnAmount += BigInt(decodedEvent._amount);
                     } catch (error) {
                         console.warn(`Error decoding Transfer event: ${error}`);
-                        return false;
                     }
                 });
         } else {
