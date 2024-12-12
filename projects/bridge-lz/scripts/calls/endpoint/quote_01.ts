@@ -5,7 +5,7 @@ async function main() {
     const contractAddress = "0x1a44076050125825900e736c501f859c50fE728c";
 
     const abi = [
-        "function quote((bool payInLzToken, uint32 dstEid, bytes32 receiver, bytes message, bytes options) _params, address _sender) view returns ((uint256 nativeFee, uint256 lzTokenFee))",
+        "function quote((uint32 dstEid, bytes32 receiver, bytes message, bytes options, bool payInLzToken) _params, address _sender) view returns ((uint256 nativeFee, uint256 lzTokenFee))",
         "function lzToken() view returns (address)"
     ];
 
@@ -23,11 +23,11 @@ async function main() {
     console.log(`Receiver: ${receiver}`);
 
     const params = {
-        payInLzToken: false,
         dstEid: 30101,
-        receiver: receiver,
+        receiver: "0x1E0Bd0291165F789b794e9513Eb07a76849c1448",
         message: ethers.toUtf8Bytes("Hello World"),
-        options: options
+        options: options,
+        payInLzToken: false,
     };
 
     const sender = deployer.address;
