@@ -1,63 +1,75 @@
 import { ethers, network } from "hardhat";
+import { Options } from "@layerzerolabs/lz-v2-utilities";
 
 async function main() {
-    const lzCrossChainBridgeL2Address = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17";
-    const implementationAddress = "0x5A32B995BBea02339eD022a895fCC22b1d291A8E";
+    let endpointAddress: string;
 
-    const [signer] = await ethers.getSigners();
-
-    const gas = 300_000;
-    const value = 0;
-
-    console.log("Compiling LZCrossChainAdapterL2 contract...");
-    const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
-
-    console.log("Deploying new implementation contract...");
-    const newContract = await LZCrossChainAdapterL2.deploy();
-    const deployTx = newContract.deploymentTransaction();
-    if (!deployTx) {
-        throw new Error("Failed to get deployment transaction.");
-    }
-
-    console.log("Waiting for deployment transaction to be mined...");
-    await deployTx.wait();
-    console.log(`New contract deployed at: ${newContract.target}`);
-
-    console.log("Fetching deployed bytecode...");
-    const newBytecode = await ethers.provider.getCode(newContract.target);
-
-    console.log("Replacing bytecode of the proxy implementation...");
-    await network.provider.send("hardhat_setCode", [implementationAddress, newBytecode]);
-    console.log(`Bytecode at ${implementationAddress} replaced successfully.`);
-
-    const updatedBytecode = await ethers.provider.getCode(implementationAddress);
-    if (updatedBytecode === newBytecode) {
-        console.log("Verification successful: Bytecode updated.");
+    if (network.config.chainId === 42161) { //Arbitrum
+        endpointAddress = "0x1a44076050125825900e736c501f859c50fE728c";
+    } else if (network.config.chainId === 10) { //Optimism
+        endpointAddress = "0x1a44076050125825900e736c501f859c50fE728c";
+    } else if (network.config.chainId === 8453) { //Base
+        endpointAddress = "0x1a44076050125825900e736c501f859c50fE728c";
+    } else if (network.config.chainId === 81457) { //Blast
+        endpointAddress = "0x1a44076050125825900e736c501f859c50fE728c";
+    } else if (network.config.chainId === 56) { //BSC
+        endpointAddress = "0x1a44076050125825900e736c501f859c50fE728c";
+    } else if (network.config.chainId === 11155420) { //Optimism Sepolia
+        endpointAddress = "0x6EDCE65403992e310A62460808c4b910D972f10f";
+    } else if (network.config.chainId === 421614 || network.config.chainId === 31337) { //Arbitrum Sepolia
+        endpointAddress = "0x6EDCE65403992e310A62460808c4b910D972f10f";
     } else {
-        console.error("Verification failed: Bytecode mismatch.");
-        return;
+        throw Error(`Unrecognized network: ${network.config.chainId}`);
     }
 
-    const updatedLZCrossChainAdapterL2 = new ethers.Contract(
-        lzCrossChainBridgeL2Address,
-        LZCrossChainAdapterL2.interface,
-        signer
-    );
+    console.log(`You are running using ${network.name} network`);
 
 
-    //------------- CALLING THE SMART CONTRACT --------------------------------//
+    const abi = [
+        "function quote((uint32 dstEid, bytes32 receiver, bytes message, bytes options, bool payInLzToken) _params, address _sender) view returns ((uint256 nativeFee, uint256 lzTokenFee))",
+        "function lzToken() view returns (address)"
+    ];
 
-    console.log("Calling createLzReceiveOption...");
-    const bytes = await updatedLZCrossChainAdapterL2.createLzReceiveOption(gas, value);
-    console.log(`Bytes returned by createLzReceiveOption: ${bytes}`);
+    const provider = ethers.provider;
+    const [deployer] = await ethers.getSigners();
 
-    console.log("Calling quoteSendEth...");
-    const fees = await updatedLZCrossChainAdapterL2.quoteSendEth(17000n, bytes);
-    console.log(`fees returned by quoteSendEth: ${ethers.formatUnits(fees, "ether")} ETH`);
+    const contract = new ethers.Contract(endpointAddress, abi, provider);
 
+    const options = Options.newOptions()
+        .addExecutorLzReceiveOption(200_000n, 0n)
+        .toHex();
+    console.log(`Options: ${options}`);
+
+    const receiver = ethers.zeroPadValue(deployer.address, 32);
+    console.log(`Receiver: ${receiver}`);
+
+    const rawMessage = "0x0000000000000000000000000000000000000000000000000000000067594772000000000000000000000000000000000000000000000000002E966F2E694D310000000000000000000000000000000000000000000000000000000001FC5262";
+    const message = ethers.hexlify(ethers.getBytes(rawMessage));
+    console.log(`Message: ${message}`);
+
+    const params = {
+        dstEid: 30101,
+        receiver: receiver,
+        message: message,
+        options: options,
+        payInLzToken: false,
+    };
+
+    const sender = deployer.address;
+    console.log(`Sender: ${sender}`);
+
+    try {
+        console.log("Simulating quote call...");
+        const result = await contract.quote(params, sender);
+
+        console.log("Quote result:");
+        console.log(`Native Fee: ${ethers.formatEther(result.nativeFee)} ETH`);
+    } catch (error) {
+        console.error("Error during simulation:", error);
+    }
 }
 
 main().catch((error) => {
-    console.error("Error:", error);
-    process.exitCode = 1;
+    console.error("Script failed:", error);
+    process.exit(1);
 });
