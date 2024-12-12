@@ -1,66 +1,40 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, network } from "hardhat";
+import { impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
 
 const SWELL_VAULT_ADDRESS = "0xc4181dC7BB31453C4A48689ce0CBe975e495321c",
-  AIRDROP_CONTRACT_ADDRESS = "",
-  SWELL_ASSET = "",
+  AIRDROP_CONTRACT_ADDRESS = "0x342f0d375ba986a65204750a4aece3b39f739d75",
+  OWNER_ADDRESS = "0x8e6C8799B542E507bfDDCA1a424867e885D96e79",
+  SWELL_ASSET = "0x0a6e7ba5042b38349e437ec6db6214aec7b35676",
+  INCEPTION_AIRDROP_CONTRACT = "0x81cDDe43155DB595DBa2Cefd50d8e7714aff34f4",
   INCEPTION_LIBRARY = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
 
 async function main() {
+  await impersonateAccount(OWNER_ADDRESS);
+  const owner = await ethers.getSigner(OWNER_ADDRESS);
+
+  const [treasury] = await ethers.getSigners();
+  await treasury.sendTransaction({ to: OWNER_ADDRESS, value: "1000000000000000000000" });
+
   /*********************************************************
    ****** Upgrade the contract with the diamond proxy ******
    *********************************************************/
 
-  const iVault = await upgradeDiamond();
+  const upgradedVault = await replaceImplementation(owner);
 
-  /*********************************************************
-   ****************** Verify a claim data ******************
-   *********************************************************/
+  // /*********************************************************
+  //  ****************** Verify a claim data ******************
+  //  *********************************************************/
 
   const airDropContract = await ethers.getContractAt("ICumulativeMerkleDrop", AIRDROP_CONTRACT_ADDRESS);
 
   const [amount, data] = (await verifyClaimData(airDropContract)) as [string, string[]];
 
-  /*********************************************************
-   *************** Claim with the claim data ***************
-   *********************************************************/
+  // /*********************************************************
+  //  *************** Claim with the claim data ***************
+  //  *********************************************************/
 
-  await claimAirDrop(iVault, amount, data);
+  await claimAirDrop(owner, amount, data);
 }
-
-/// TODO
-const upgradeDiamond = async () => {
-  /// TODO
-
-  /// 0. upgrade the vault
-
-  const IVAULT_EL = await ethers.getContractFactory("InceptionVault_EL");
-  const newVault = await upgrades.upgradeProxy(SWELL_VAULT_ADDRESS, IVAULT_EL);
-
-  //   const iVaultFactory = await ethers.getContractFactory(vaultImplContract, {
-  //     libraries: {
-  //       InceptionLibrary: libAddress,
-  //     },
-  //   });
-  //   const impl = await upgrades.prepareUpgrade(address, iVaultFactory, {
-  //     kind: "transparent",
-  //     unsafeAllowLinkedLibraries: true,
-  //     unsafeAllowRenames: true,
-  //   });
-
-  /// 1. deploy facets
-  const EigenLayerFacet_Factory = await ethers.getContractFactory("SwellEigenLayerFacet", {
-    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
-  });
-
-  const eigenLayerFacet = await deployFacet(EigenLayerFacet_Factory);
-  await newVault.setEigenLayerFacet(eigenLayerFacet);
-
-  /// 2. set the signature for the claimAidrop with the access
-  const sig = EigenLayerFacet_Factory.interface.getFunction("claimSwellAidrop")?.selector;
-  await newVault.setSignature(sig, "0", "0");
-
-  return newVault;
-};
 
 const deployFacet = async (EigenLayerFacet_Factory: any) => {
   const eigenFacet = await EigenLayerFacet_Factory.deploy();
@@ -74,26 +48,27 @@ const verifyClaimData = async (contract: any) => {
   const amount = "234543928852265939865280";
   const data = [
     "0x47e3a910471f747800ac4e25be98396dd592e21f0346fbd9714a57e78dd4a4fa",
-    "0x3b2ddc112883a40423e66c8674d28a09d24d667e99b7651acd52d3928814fedc",
-    "0xcb08b350cac59b5f5a6272ebc30c096f2e308f68392355cf8542f9957ed33375",
-    "0xb696dbe8a838abcf393924c568a8ce2e5c202bc2081376eb487b9371f1353bb1",
-    "0x5e6936f09ba9c3d651fc57c0b62c3098fbe94662f1fcaf08062ef24f6f3b05c1",
-    "0x98388ec1e875dbd15c808f500a0996f24bdee5425a6d1ca25db5c5b15a594ad1",
-    "0x5deb7fa95c1192eb9a87eed22a2bb26c5be54c20a14cf6b5fa1214fd60554216",
-    "0xc27a6e57fe3e82b45c972c1fcf48e88b8f66e845d1ae0adfcdf5381e0d013efa",
-    "0xd0e0189a131608df9570bbbdd1812f70aa0f2d64345f8ace872f31b6012667db",
-    "0xf94bad8322c06b3050d9f4bf856b82c532555be72aacec0a5eb0a7d55d9aab88",
-    "0x9ea643611927cc5b7a0b5a6eef1388f26ee82edc93823f19dfff051a677c0cc8",
-    "0x3467dd11129fb4ba2c4edffffd9c9a50b779d5f198107802968d3338b73a70e2",
-    "0x354c2bea1d007835ee7ac1ea6c1cc206e21945bf944bd61f2ea6f1336f1d31d3",
-    "0x77e8ae4b2fa86453b857c5ccededaf99cb5b49a6c2c19b07bfda905f62f60cf4",
-    "0x7f83609678df0d66c28c8f04b5cddfafee17c4d7721111a2358bce2896bfc808",
-    "0x7481a1a73e22cfb4dade75561e90b1b344d702263a6912bffe19841ced6cc709",
-    "0x3803c8c5174f72f50edbd4234d1184e96e4c0b9bf03138744bfe6f39bfe17ca0",
-    "0x1a9d7766f730995db87ea5873804ea7ee125c701f1640b9080415a39f8796c4b",
+    "0x7dfec54d26f1611107310787360caae029544fbe8a110b9606d5583a0813206d",
+    "0xe587b571a597f39b3e8c79f769e46fd657081d3457cb6fbdcf1e270bf19996e5",
+    "0x7555947130f605f3c5d10d18e28e9dd92348401bfb7dfdac084f38aa9a53d3dd",
+    "0x05c8c2332f8c2e69571243e38fcf7074bc4118f65205c1c65a02d59b374dcfe6",
+    "0x52e976e7f5de45d8c2a2d81ee009a275667f49227e7aba9ac067ad174354cab8",
+    "0xa7bbaa09f0fab0e9af16dd3860126fd60e7d6f05ea2263828fcf8328f55f48d1",
+    "0x5d6d143b9f5947eaf14eae48abac0a6d42ea97f2c9d2f824f564f6532a283aa7",
+    "0xb5c9dd84c3f46c7046d6fb4d893d5a7bd8a6f015e723789c233a804765245945",
+    "0x2a4bd8f1e012351a9d56a467af45ed87ca1b75081bd5a461a4d0c9b4131676c8",
+    "0x920eebe7f3ccc079fe340190a23486621792d65f2cee9e8b42d0137bd85147d3",
+    "0xd7f679532add0bde916d762cee59165490620851c517ff24088f65b2510dab69",
+    "0x8cc104748f3d2360c50f64b2b5517dd04e86e219168feef90769feae15e1ad72",
+    "0x4fe83f73a9ece83e7b276731b5522e6c1c6f4a16e72768e928d4a34ebebd205b",
+    "0x5a0f21edbe9146973e80be643b94bbc164fea0420fe9c51d55e3488d05321a44",
+    "0x4881a17e038a06336526189822eb41b295d2ccae2252263d58cdd5b16c7169d8",
+    "0x662c490e29d8df27ca411ff86108659fb469edc622747e1624d7b772cbfe9c6b",
+    "0x0f37421fa9f11e2d801a715034ac814a1446888d97cb2dfce8d069503bffb618",
   ];
 
-  const result = await contract.verifyClaim(data, amount, SWELL_VAULT_ADDRESS);
+  const result = await contract.verifyProof(data, amount, SWELL_VAULT_ADDRESS);
+  console.log(`result: ${result}`);
   if (result != true) {
     console.error("wrong the claim data");
     return;
@@ -102,53 +77,39 @@ const verifyClaimData = async (contract: any) => {
   return [amount, data];
 };
 
-const claimAirDrop = async (iVault: any, amount: String, data: any) => {
-  const [receiver] = await ethers.getSigners();
+const claimAirDrop = async (owner: any, amount: any, data: any) => {
+  const swellAsset = await ethers.getContractAt("ERC20", SWELL_ASSET);
 
-  const swellAsset = await ethers.getContractAt("XERC20", SWELL_ASSET);
-  const initBalance = await swellAsset.balanceOf(await receiver.getAddress());
+  const iVault = await ethers.getContractAt("SwellEigenLayerFacet", SWELL_VAULT_ADDRESS);
+  await iVault.connect(owner).claimSwellAidrop(amount, data);
 
-  await iVault.claimSwellAidrop(amount, data, await receiver.getAddress());
-
-  console.log(`final balance: ${await swellAsset.balanceOf(await receiver.getAddress())}`);
+  console.log(`balance of Inception AirDrop contract: ${await swellAsset.balanceOf(INCEPTION_AIRDROP_CONTRACT)}`);
 };
 
-const replaceImplementation = async (contract: any) => {
-  const inceptionOmniVaultAddress = "0x55ec970B8629E01d26BAA7b5d092DD26784136bb";
-  const implementationAddress = "0x9F91f163A819A85923e9AA339afc8417a2960a85";
-  const optionsCreatorAddress = "0x8149Df043F5376aa0E5e34A18171Da7Cc0212cF4";
+const replaceImplementation = async (owner: any) => {
+  const implementationAddress = "0x6bb087367a5d2f5ac35a25ad69d97a3fbf663495";
 
   const [signer] = await ethers.getSigners();
 
-  const gas = 300_000;
-  const value = 0;
-
   console.log("Compiling InceptionOmniVault contract...");
-  const InceptionOmniVault = await ethers.getContractFactory("InceptionOmniVault");
 
-  const optionsCreator = new ethers.Contract(
-    optionsCreatorAddress,
-    ["function createLzReceiveOption(uint256 _gas, uint256 _value) public pure returns (bytes memory)"],
-    signer,
-  );
+  const NewImplementation = await ethers.getContractFactory("InceptionVault_EL", {
+    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
+  });
 
-  console.log(`Creating LZ receive options with gas: ${gas}, value: ${value}`);
-  const options = await optionsCreator.createLzReceiveOption(gas, value);
-  console.log(`Generated options: ${options}`);
-
-  console.log("Deploying new implementation contract...");
-  const newContract = await InceptionOmniVault.deploy();
-  const deployTx = newContract.deploymentTransaction();
+  console.log("Deploying a new implementation contract...");
+  const newImpl = await NewImplementation.deploy();
+  const deployTx = newImpl.deploymentTransaction();
   if (!deployTx) {
     throw new Error("Failed to get deployment transaction.");
   }
 
   console.log("Waiting for deployment transaction to be mined...");
   await deployTx.wait();
-  console.log(`New contract deployed at: ${newContract.target}`);
+  console.log(`New contract deployed at: ${newImpl.target}`);
 
   console.log("Fetching deployed bytecode...");
-  const newBytecode = await ethers.provider.getCode(newContract.target);
+  const newBytecode = await ethers.provider.getCode(newImpl.target);
 
   console.log("Replacing bytecode of the proxy implementation...");
   await network.provider.send("hardhat_setCode", [implementationAddress, newBytecode]);
@@ -162,21 +123,25 @@ const replaceImplementation = async (contract: any) => {
     return;
   }
 
-  const updatedInceptionOmniVault = new ethers.Contract(
-    inceptionOmniVaultAddress,
-    InceptionOmniVault.interface,
-    signer,
-  );
+  const upgradedVault = new ethers.Contract(SWELL_VAULT_ADDRESS, NewImplementation.interface, signer);
 
   //------------- CALLING THE SMART CONTRACT --------------------------------//
 
-  console.log("Calling quoteSendEthCrossChain...");
-  const fees = await updatedInceptionOmniVault.quoteSendAssetsInfoToL1(options);
-  console.log(`Fee returned by quoteSendEthCrossChain: ${ethers.formatUnits(fees, "ether")} ETH`);
+  // set a facet
 
-  console.log("Calling sendAssetsInfoToL1...");
-  const tx = await updatedInceptionOmniVault.sendAssetsInfoToL1(options, { value: fees });
-  console.log(`Transaction sent: ${tx.hash}`);
+  const EigenLayerFacet_Factory = await ethers.getContractFactory("SwellEigenLayerFacet", {
+    libraries: { InceptionLibrary: INCEPTION_LIBRARY },
+  });
+
+  const eigenLayerFacet = await deployFacet(EigenLayerFacet_Factory);
+  console.log("eigenLayerFacet: ", eigenLayerFacet);
+  await (upgradedVault as any).connect(owner).setEigenLayerFacet(eigenLayerFacet);
+
+  /// 2. set the signature for the claimAidrop with the access
+  const sig = EigenLayerFacet_Factory.interface.getFunction("claimSwellAidrop")?.selector;
+  await (upgradedVault as any).connect(owner).setSignature(sig, "1", "2");
+
+  return upgradedVault;
 };
 
 main()

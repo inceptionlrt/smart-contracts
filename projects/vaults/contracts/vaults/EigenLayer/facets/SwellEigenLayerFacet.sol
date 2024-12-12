@@ -16,6 +16,12 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
     address immutable SWELL_AIDROP_CONTRACT =
         address(0x342F0D375Ba986A65204750A4AECE3b39f739d75);
 
+    address immutable INCEPTION_AIDROP_CONTRACT =
+        address(0x81cDDe43155DB595DBa2Cefd50d8e7714aff34f4);
+
+    IERC20 immutable SWELL_ASSET =
+        IERC20(0x0a6E7Ba5042B38349e437ec6Db6214AEC7B35676);
+
     constructor() payable {}
 
     /**
@@ -332,21 +338,19 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
 
     function claimSwellAidrop(
         uint256 cumulativeAmount,
-        bytes32[] calldata merkleProof,
-        address receiver
+        bytes32[] calldata merkleProof
     ) external {
-        uint256 initBalance = _asset.balanceOf(address(this));
+        uint256 initBalance = SWELL_ASSET.balanceOf(INCEPTION_AIDROP_CONTRACT);
         ICumulativeMerkleDrop(SWELL_AIDROP_CONTRACT).claimAndLock(
             cumulativeAmount,
             0,
             merkleProof
         );
 
-        if (initBalance + cumulativeAmount != _asset.balanceOf(address(this)))
+        SWELL_ASSET.transfer(INCEPTION_AIDROP_CONTRACT, cumulativeAmount);
+        if (initBalance + cumulativeAmount != SWELL_ASSET.balanceOf(INCEPTION_AIDROP_CONTRACT))
             revert InconsistentData();
 
-        _transferAssetTo(receiver, cumulativeAmount);
-
-        emit AirDropClaimed(_msgSender(), receiver, cumulativeAmount);
+        emit AirDropClaimed(_msgSender(), INCEPTION_AIDROP_CONTRACT, cumulativeAmount);
     }
 }
