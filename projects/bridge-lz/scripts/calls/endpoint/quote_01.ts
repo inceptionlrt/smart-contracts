@@ -24,7 +24,7 @@ async function main() {
 
     const params = {
         dstEid: 30101,
-        receiver: "0x1E0Bd0291165F789b794e9513Eb07a76849c1448",
+        receiver: "0x292fC68C55572cf8bb680e6eED639899e83D2e06",
         message: ethers.toUtf8Bytes("Hello World"),
         options: options,
         payInLzToken: false,
