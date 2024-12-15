@@ -7,11 +7,11 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {IFraxFerry} from "../interfaces/FraxFerry/IFraxFerry.sol";
 
 /**
- * @title FerryAdapterL1
+ * @title FerryAdapter
  * @author The InceptionLRT team
  * @dev TODO
  */
-contract FerryAdapterL1 is Initializable, Ownable2StepUpgradeable {
+contract FerryAdapter is Initializable, Ownable2StepUpgradeable {
     IFraxFerry public bridge;
 
     // modifier onlyOwnerRestricted()

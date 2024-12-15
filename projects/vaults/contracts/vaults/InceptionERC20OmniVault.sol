@@ -66,6 +66,23 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         _;
     }
 
+
+    function initialize(
+        string memory vaultName,
+        address _operator,
+        IInceptionToken _inceptionToken,
+        IERC20 _wrappedAsset,
+        ICrossChainBridgeERC20L2 _crossChainAdapter
+    ) public initializer {
+        __InceptionERC20OmniVault_init(
+          vaultName,
+         _operator,
+         _inceptionToken,
+         _wrappedAsset,
+         _crossChainAdapter
+        );
+    }
+
     function __InceptionERC20OmniVault_init(
         string memory vaultName,
         address _operator,
@@ -79,10 +96,10 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         name = vaultName;
         operator = _operator;
         treasuryAddress = msg.sender;
-        inceptionToken = _inceptionToken;       
+        inceptionToken = _inceptionToken;
         crossChainAdapterERC20 = _crossChainAdapter;
-        
-        
+
+
         minAmount = 1e8;
 
         targetCapacity = 1;
@@ -321,7 +338,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         uint256 freeBalance = getFreeBalance();
         // TODO needs to be changed (or removed?) for erc20 handling
         /*
-        require( 
+        require(
             freeBalance > msg.value,
             FreeBalanceTooLow(freeBalance, msg.value)
         );
@@ -349,7 +366,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         uint256 callValue = crossChainAdapterERC20.getValueFromOpts(_options);
 
         emit ERC20CrossChainSent(callValue, _chainId);
-        
+
     }
 
     /**
@@ -431,7 +448,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     }
 
     function getTotalDeposited() public view returns (uint256) {
-        return totalAssets() - depositBonusAmount; 
+        return totalAssets() - depositBonusAmount;
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
