@@ -5,9 +5,9 @@ import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {AbstractCrossChainAdapter} from "./abstract/AbstractCrossChainAdapter.sol";
-import {AbstractLZCrossChainAdapter} from "./abstract/AbstractLZCrossChainAdapter.sol";
-import {AbstractCrossChainAdapterL1} from "./abstract/AbstractCrossChainAdapterL1.sol";
+import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.sol";
+import {AbstractLZCrossChainAdapter} from "../abstract/AbstractLZCrossChainAdapter.sol";
+import {AbstractCrossChainAdapterL1} from "../abstract/AbstractCrossChainAdapterL1.sol";
 import {OAppReceiverUpgradeable} from "./OAppReceiverUpgradeable.sol";
 
 /**
@@ -56,9 +56,9 @@ contract LZCrossChainAdapterL1 is
 
     function _lzReceive(
         Origin calldata origin,
-        bytes32 /*_guid*/,
+        bytes32, /*_guid*/
         bytes calldata payload,
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) internal virtual override(OAppReceiverUpgradeable) {
         uint256 chainId = getChainIdFromEid(origin.srcEid);

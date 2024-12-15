@@ -7,9 +7,9 @@ import {Origin, MessagingReceipt, MessagingFee} from "@layerzerolabs/oapp-evm/co
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 
-import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.sol";
-import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
-import {OAppUpgradeable} from "../OAppUpgradeable.sol";
+import {AbstractCrossChainAdapter} from "./AbstractCrossChainAdapter.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
+import {OAppUpgradeable} from "../LayerZero/OAppUpgradeable.sol";
 
 /**
  * @title AbstractLZCrossChainAdapter
@@ -18,10 +18,7 @@ import {OAppUpgradeable} from "../OAppUpgradeable.sol";
  * to chain IDs, and configure peer contracts for cross-chain interaction. It is intended to be inherited by specific
  * cross-chain adapter implementations.
  */
-abstract contract AbstractLZCrossChainAdapter is
-    ICrossChainBridge,
-    OAppUpgradeable
-{
+abstract contract AbstractLZCrossChainAdapter is IAdapter, OAppUpgradeable {
     using OptionsBuilder for bytes;
 
     error NoDestEidFoundForChainId(uint256 chainId);
@@ -34,10 +31,13 @@ abstract contract AbstractLZCrossChainAdapter is
     modifier onlyOwnerRestricted() virtual;
     modifier onlyTargetReceiverRestricted() virtual;
 
-    function sendEthCrossChain(
-        uint256 _chainId,
-        bytes memory _options
-    ) external payable override onlyTargetReceiverRestricted returns (uint256) {
+    function sendEthCrossChain(uint256 _chainId, bytes memory _options)
+        external
+        payable
+        override
+        onlyTargetReceiverRestricted
+        returns (uint256)
+    {
         return _sendCrosschain(_chainId, new bytes(0), _options);
     }
 
@@ -52,10 +52,12 @@ abstract contract AbstractLZCrossChainAdapter is
         return fee.nativeFee;
     }
 
-    function quoteSendEth(
-        uint256 _chainId,
-        bytes memory _options
-    ) external view override returns (uint256) {
+    function quoteSendEth(uint256 _chainId, bytes memory _options)
+        external
+        view
+        override
+        returns (uint256)
+    {
         uint32 dstEid = getEidFromChainId(_chainId);
         if (dstEid == 0) revert NoDestEidFoundForChainId(_chainId);
 
@@ -64,10 +66,10 @@ abstract contract AbstractLZCrossChainAdapter is
         return fee.nativeFee;
     }
 
-    function setChainIdFromEid(
-        uint32 _eid,
-        uint256 _chainId
-    ) public onlyOwnerRestricted {
+    function setChainIdFromEid(uint32 _eid, uint256 _chainId)
+        public
+        onlyOwnerRestricted
+    {
         eidToChainId[_eid] = _chainId;
         chainIdToEid[_chainId] = _eid;
         emit ChainIdAdded(_chainId);
@@ -81,10 +83,11 @@ abstract contract AbstractLZCrossChainAdapter is
         return chainIdToEid[_chainId];
     }
 
-    function setPeer(
-        uint32 _eid,
-        bytes32 _peer
-    ) public override onlyOwnerRestricted {
+    function setPeer(uint32 _eid, bytes32 _peer)
+        public
+        override
+        onlyOwnerRestricted
+    {
         _setPeer(_eid, _peer);
     }
 
@@ -113,9 +116,12 @@ abstract contract AbstractLZCrossChainAdapter is
         return fee;
     }
 
-    function getValueFromOpts(
-        bytes calldata _options
-    ) public pure override returns (uint256) {
+    function getValueFromOpts(bytes calldata _options)
+        public
+        pure
+        override
+        returns (uint256)
+    {
         require(_options.length >= 16, OptionsTooShort());
         if (_options.length <= 32) {
             return 0;
@@ -129,10 +135,11 @@ abstract contract AbstractLZCrossChainAdapter is
     /// @param _gas The gas amount for the `lzReceive` execution.
     /// @param _value The msg.value for the `lzReceive` execution.
     /// @return bytes-encoded option set for `lzReceive` executor.
-    function createLzReceiveOption(
-        uint256 _gas,
-        uint256 _value
-    ) public pure returns (bytes memory) {
+    function createLzReceiveOption(uint256 _gas, uint256 _value)
+        public
+        pure
+        returns (bytes memory)
+    {
         return
             OptionsBuilder.newOptions().addExecutorLzReceiveOption(
                 uint128(_gas),

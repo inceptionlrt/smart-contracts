@@ -50,11 +50,12 @@ describe("Omnivault integration tests", function () {
   let ratioFeedL1: RatioFeed;
   let inEth: CToken;
   let rebalancer: NativeRebalancer;
-  let restakingPool: RestakingPool;
+  let inceptionVault: RestakingPool;
   let restakingPoolConfig: ProtocolConfig;
+
   //L2
   let iToken: InceptionToken;
-  let omniVault: InceptionOmniVault; //Arbitrum
+  let omniVault: InceptionOmniVault; // Frax chain
   let ratioFeedL2: InceptionRatioFeed;
 
   let owner: Signer;
@@ -89,7 +90,7 @@ describe("Omnivault integration tests", function () {
     const adapterEth = await upgrades.deployProxy(LZCrossChainAdapterL1, [ethEndpoint.address, owner.address, eIds, chainIds]);
     adapterEth.address = await adapterEth.getAddress();
 
-    console.log("=== Arbitrum LZCrossChainAdapterL2");
+    console.log("=== Frax LZCrossChainAdapterL2");
     const arbEndpoint = await ethers.deployContract("EndpointMock", [ARB_EID]);
     arbEndpoint.address = await arbEndpoint.getAddress();
     const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
@@ -137,34 +138,37 @@ describe("Omnivault integration tests", function () {
     //  |  _ <  __/\__ \ || (_| |   <| | | | | (_| | | |_) | (_) | (_) | | | |___| |
     //  |_| \_\___||___/\__\__,_|_|\_\_|_| |_|\__, | | .__/ \___/ \___/|_| |_____|_|
     //                                        |___/  |_|
-    console.log("============ Restaking Pool Layer1 ============");
-    console.log("=== ProtocolConfig");
-    const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
-    let slot = "0x" + (0).toString(16);
-    let value = ethers.zeroPadValue(owner.address, 32);
-    await network.provider.send("hardhat_setStorageAt", [protocolConfigAdminAddress, slot, value]);
 
-    const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig", owner);
-    const restakingPoolConfig = await upgrades.upgradeProxy(network.config.addresses.restakingPoolConfig, ProtocolConfig);
-    //Updating governance address
-    slot = "0x" + getSlotByName("genesis.config.Governance");
-    value = ethers.zeroPadValue(owner.address, 32);
-    await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, value]);
+    console.log("============ InceptionVault Layer1 ============");
+    // console.log("=== ProtocolConfig");
+    // const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
+    // let slot = "0x" + (0).toString(16);
+    // let value = ethers.zeroPadValue(owner.address, 32);
+    // await network.provider.send("hardhat_setStorageAt", [protocolConfigAdminAddress, slot, value]);
 
-    console.log("=== RestakingPool");
-    const restakingPoolAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPool);
+    // const ProtocolConfig = await ethers.getContractFactory("ProtocolConfig", owner);
+    // const restakingPoolConfig = await upgrades.upgradeProxy(network.config.addresses.restakingPoolConfig, ProtocolConfig);
+    // //Updating governance address
+    // slot = "0x" + getSlotByName("genesis.config.Governance");
+    // value = ethers.zeroPadValue(owner.address, 32);
+    // await network.provider.send("hardhat_setStorageAt", [network.config.addresses.restakingPoolConfig, slot, value]);
+
+    console.log("=== InceptionVault");
+
+    const restakingPoolAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.inceptionVault);
     slot = "0x" + (0).toString(16);
     value = ethers.zeroPadValue(owner.address, 32);
     await network.provider.send("hardhat_setStorageAt", [restakingPoolAdminAddress, slot, value]);
-    const RestakingPool = await ethers.getContractFactory("RestakingPool", {
+
+    const RestakingPool = await ethers.getContractFactory("InceptionVault", {
       signer: owner,
       libraries: { InceptionLibrary: network.config.addresses.lib },
     });
-    await upgrades.forceImport(network.config.addresses.restakingPool, RestakingPool);
-    const restakingPool = await upgrades.upgradeProxy(network.config.addresses.restakingPool, RestakingPool, {
+    await upgrades.forceImport(network.config.addresses.inceptionVault, RestakingPool);
+    const inceptionVault = await upgrades.upgradeProxy(network.config.addresses.inceptionVault, RestakingPool, {
       unsafeAllowLinkedLibraries: true,
     });
-    restakingPool.address = await restakingPool.getAddress();
+    inceptionVault.address = await inceptionVault.getAddress();
 
     console.log("=== cToken");
     const cTokenAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.cToken);
@@ -184,12 +188,12 @@ describe("Omnivault integration tests", function () {
     const ratioFeedL1 = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
     ratioFeedL1.address = await ratioFeedL1.getAddress();
 
-    console.log("=== NativeRebalancer");
-    const Rebalancer = await ethers.getContractFactory("NativeRebalancer");
+    console.log("=== ERC20Rebalancer");
+    const Rebalancer = await ethers.getContractFactory("ERC20Rebalancer");
     const rebalancer = await upgrades.deployProxy(Rebalancer, [
-      cToken.address,
+      inceptionToken.address,
       lockboxAddress,
-      restakingPool.address,
+      inceptionVault.address,
       adapterEth.address,
       ratioFeedL1.address,
       operator.address,
@@ -250,7 +254,7 @@ describe("Omnivault integration tests", function () {
       cToken,
       rebalancer,
       ratioFeedL1,
-      restakingPool,
+      inceptionVault,
       restakingPoolConfig,
       iToken,
       ratioFeedL2,
@@ -287,7 +291,7 @@ describe("Omnivault integration tests", function () {
       inEth,
       rebalancer,
       ratioFeedL1,
-      restakingPool,
+      inceptionVault,
       restakingPoolConfig,
       iToken,
       ratioFeedL2,
@@ -306,11 +310,11 @@ describe("Omnivault integration tests", function () {
       });
 
       it("Signer can stake", async function () {
-        await restakingPool.connect(signer1)["stake()"]({ value: 2n * e18 });
+        await inceptionVault.connect(signer1)["stake()"]({ value: 2n * e18 });
       });
 
       it("Get min stake amount", async function () {
-        console.log("Min stake amount: ", await restakingPool.getMinStake());
+        console.log("Min stake amount: ", await inceptionVault.getMinStake());
       });
     });
   });
@@ -362,7 +366,7 @@ describe("Omnivault integration tests", function () {
       await ratioFeedL2Opt.updateRatioBatch([iTokenOpt.address], [l1Ratio]);
       console.log("ARB ratio:", (await omniVault.ratio()).format());
       console.log("OPT ratio:", (await omniVaultOpt.ratio()).format());
-      console.log("Available to stake:", (await restakingPool.availableToStake()).format());
+      console.log("Available to stake:", (await inceptionVault.availableToStake()).format());
     });
 
     it("Stake on ARB", async function () {
@@ -457,19 +461,19 @@ describe("Omnivault integration tests", function () {
     });
 
     /**
-     * Stake() only transfers Eth to restakingPool without minting new shares,
+     * Stake() only transfers Eth to inceptionVault without minting new shares,
      * as the number of shares managed separately by updateTreasuryData()
      */
     it("Stake eth by rebalancer", async function () {
       const inEthSupplyBefore = await inEth.totalSupply();
-      const pendingBefore = await restakingPool.getPending();
+      const pendingBefore = await inceptionVault.getPending();
 
       const amount = await ethers.provider.getBalance(rebalancer.address);
       const tx = await rebalancer.connect(operator).stake(amount);
 
-      const pendingAfter = await restakingPool.getPending();
+      const pendingAfter = await inceptionVault.getPending();
 
-      await expect(tx).changeEtherBalance(restakingPool, amount);
+      await expect(tx).changeEtherBalance(inceptionVault, amount);
       const inEthSupplyAfter = await inEth.totalSupply();
       expect(inEthSupplyAfter).to.be.eq(inEthSupplyBefore);
       expect(pendingAfter - pendingBefore).to.be.eq(amount);
@@ -551,7 +555,7 @@ describe("Omnivault integration tests", function () {
       const amount = await ethers.provider.getBalance(rebalancer.address);
       tx = await rebalancer.connect(operator).stake(amount);
 
-      await expect(tx).changeEtherBalance(restakingPool, amount);
+      await expect(tx).changeEtherBalance(inceptionVault, amount);
       const inEthSupplyAfter = await inEth.totalSupply();
       expect(inEthSupplyAfter).to.be.eq(inEthSupplyBefore);
     });
@@ -587,17 +591,17 @@ describe("Omnivault integration tests", function () {
     });
 
     it("Stake to restaking pool", async function () {
-      const amount = await restakingPool.availableToStake();
+      const amount = await inceptionVault.availableToStake();
       const expectedShares = await inEth.convertToShares(amount);
       const totalSupplyBefore = await inEth.totalSupply();
-      const pendingBefore = await restakingPool.getPending();
+      const pendingBefore = await inceptionVault.getPending();
 
-      let tx = await restakingPool.connect(signer1)["stake()"]({ value: amount });
+      let tx = await inceptionVault.connect(signer1)["stake()"]({ value: amount });
 
       const totalSupplyAfter = await inEth.totalSupply();
-      const pendingAfter = await restakingPool.getPending();
+      const pendingAfter = await inceptionVault.getPending();
 
-      await expect(tx).changeEtherBalance(restakingPool, amount);
+      await expect(tx).changeEtherBalance(inceptionVault, amount);
       await expect(tx).changeTokenBalance(inEth, signer1, expectedShares);
       expect(totalSupplyAfter - totalSupplyBefore).to.be.eq(expectedShares);
       expect(pendingAfter - pendingBefore).to.be.eq(amount);
@@ -625,7 +629,7 @@ describe("Omnivault integration tests", function () {
       });
 
       it("Restaking pool address", async function () {
-        expect(await rebalancer.liqPool()).to.be.eq(restakingPool.address);
+        expect(await rebalancer.liqPool()).to.be.eq(inceptionVault.address);
       });
 
       it("Default adapter", async function () {
@@ -650,7 +654,7 @@ describe("Omnivault integration tests", function () {
           args: () => [
             ethers.ZeroAddress,
             lockboxAddress,
-            restakingPool.address,
+            inceptionVault.address,
             adapterEth.address,
             ratioFeedL1.address,
             operator.address,
@@ -661,7 +665,7 @@ describe("Omnivault integration tests", function () {
           args: () => [
             iToken.address,
             ethers.ZeroAddress,
-            restakingPool.address,
+            inceptionVault.address,
             adapterEth.address,
             ratioFeedL1.address,
             operator.address,
@@ -673,15 +677,15 @@ describe("Omnivault integration tests", function () {
         },
         {
           name: "invalid adapter address",
-          args: () => [iToken.address, lockboxAddress, restakingPool.address, ethers.ZeroAddress, ratioFeedL1.address, operator.address],
+          args: () => [iToken.address, lockboxAddress, inceptionVault.address, ethers.ZeroAddress, ratioFeedL1.address, operator.address],
         },
         {
           name: "invalid ratio feed address",
-          args: () => [iToken.address, lockboxAddress, restakingPool.address, adapterEth.address, ethers.ZeroAddress, operator.address],
+          args: () => [iToken.address, lockboxAddress, inceptionVault.address, adapterEth.address, ethers.ZeroAddress, operator.address],
         },
         {
           name: "invalid operator address",
-          args: () => [iToken.address, lockboxAddress, restakingPool.address, adapterEth.address, ratioFeedL1.address, ethers.ZeroAddress],
+          args: () => [iToken.address, lockboxAddress, inceptionVault.address, adapterEth.address, ratioFeedL1.address, ethers.ZeroAddress],
         },
       ];
 
@@ -1076,7 +1080,7 @@ describe("Omnivault integration tests", function () {
         await rebalancer.setUpdateable(true);
         const block = await ethers.provider.getBlock("latest");
         const timestamp = block.timestamp;
-        await restakingPool.connect(signer1)["stake()"]({ value: 2n * e18 });
+        await inceptionVault.connect(signer1)["stake()"]({ value: 2n * e18 });
 
         const totalSupplyBefore = await inEth.totalSupply();
         const lockboxBalanceBefore = await inEth.balanceOf(lockboxAddress);
@@ -1110,23 +1114,23 @@ describe("Omnivault integration tests", function () {
       const args = [
         {
           name: "Part of the balance",
-          balance: async () => await restakingPool.availableToStake(),
+          balance: async () => await inceptionVault.availableToStake(),
           amount: async (amount) => amount / 2n,
         },
         {
           name: "All balance",
-          balance: async () => await restakingPool.availableToStake(),
+          balance: async () => await inceptionVault.availableToStake(),
           amount: async (amount) => amount,
         },
         {
           name: "Restaking pool min amount",
-          balance: async () => await restakingPool.availableToStake(),
-          amount: async () => await restakingPool.getMinStake(),
+          balance: async () => await inceptionVault.availableToStake(),
+          amount: async () => await inceptionVault.getMinStake(),
         },
         {
           name: "Less than restaking pool min amount",
-          balance: async () => await restakingPool.availableToStake(),
-          amount: async () => (await restakingPool.getMinStake()) - 1n,
+          balance: async () => await inceptionVault.availableToStake(),
+          amount: async () => (await inceptionVault.getMinStake()) - 1n,
         },
       ];
 
@@ -1140,11 +1144,11 @@ describe("Omnivault integration tests", function () {
           const lockboxInEthBalanceBefore = await inEth.balanceOf(lockboxAddress);
 
           const tx = await rebalancer.connect(operator).stake(amount);
-          await expect(tx).emit(restakingPool, "Received").withArgs(rebalancer.address, amount);
+          await expect(tx).emit(inceptionVault, "Received").withArgs(rebalancer.address, amount);
 
           const lockboxInEthBalanceAfter = await inEth.balanceOf(lockboxAddress);
           console.log("Signer eth balance after: ", await ethers.provider.getBalance(signer1.address));
-          console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(restakingPool.address));
+          console.log("Restaking pool eth balance: ", await ethers.provider.getBalance(inceptionVault.address));
           console.log("lockbox inEth balance: ", await inEth.balanceOf(lockboxAddress));
 
           //No new shares minted
@@ -1154,13 +1158,13 @@ describe("Omnivault integration tests", function () {
       });
 
       it("Reverts when amount > available to stake from restaking pool", async function () {
-        const amount = (await restakingPool.availableToStake()) + 1n;
+        const amount = (await inceptionVault.availableToStake()) + 1n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
         await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(rebalancer, "StakeAmountExceedsMaxTVL");
       });
 
       it("Reverts when amount > eth balance", async function () {
-        const amount = (await restakingPool.availableToStake()) / 2n;
+        const amount = (await inceptionVault.availableToStake()) / 2n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
         await expect(rebalancer.connect(operator).stake(amount + 1n)).to.revertedWithCustomError(
           rebalancer,
@@ -1169,13 +1173,13 @@ describe("Omnivault integration tests", function () {
       });
 
       it.skip("Reverts when amount < restaking pool min stake", async function () {
-        const amount = (await restakingPool.getMinStake()) - 1n;
+        const amount = (await inceptionVault.getMinStake()) - 1n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
-        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(restakingPool, "PoolStakeAmLessThanMin");
+        await expect(rebalancer.connect(operator).stake(amount)).to.revertedWithCustomError(inceptionVault, "PoolStakeAmLessThanMin");
       });
 
       it("Reverts when called by not an operator", async function () {
-        const amount = (await restakingPool.availableToStake()) / 2n;
+        const amount = (await inceptionVault.availableToStake()) / 2n;
         await signer1.sendTransaction({ value: amount, to: rebalancer.address });
         await expect(rebalancer.connect(signer1).stake(amount)).to.revertedWithCustomError(rebalancer, "OnlyOperator");
       });
@@ -1184,7 +1188,7 @@ describe("Omnivault integration tests", function () {
     describe("sendEthToL2", function () {
       beforeEach(async function () {
         await snapshot.restore();
-        const balance = await restakingPool.availableToStake();
+        const balance = await inceptionVault.availableToStake();
         await signer1.sendTransaction({ value: balance, to: rebalancer.address });
       });
 
@@ -1532,11 +1536,11 @@ describe("Omnivault integration tests", function () {
           },
           {
             name: "Restaking pool min amount",
-            amount: async () => await restakingPool.getMinStake(),
+            amount: async () => await inceptionVault.getMinStake(),
           },
           {
             name: "Greater than available to stake",
-            amount: async () => (await restakingPool.availableToStake()) + 1n,
+            amount: async () => (await inceptionVault.availableToStake()) + 1n,
           },
         ];
 
