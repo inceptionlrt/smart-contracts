@@ -44,6 +44,7 @@ const config: HardhatUserConfig = {
         lib: "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66",
         cToken: "0xf073bAC22DAb7FaF4a3Dd6c6189a70D54110525C",
         inceptionToken: "0x668308d77be3533c909a692302Cb4D135Bf8041C",
+        sfrxETH: "0xac3e018457b222d93114458476f3e3416abbe38f",
         ratioFeed: "0x122ee24Cb3Cc1b6B987800D3B54A68FC16910Dbf",
         lockbox: "0xb86d7BfB30E4e9552Ba1Dd6208284667DF2E8c0E",
       },

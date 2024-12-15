@@ -1,12 +1,13 @@
 import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
 import { takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
-import { e18, getSlotByName, randomBI, randomBIMax, toWei } from "./helpers/utils.js";
+import { e18, getSlotByName, impersonateWithEth, randomBI, randomBIMax, toWei } from "./helpers/utils.js";
 import { SnapshotRestorer } from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import { AbiCoder, Signer } from "ethers";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
 import {
   EndpointMock,
+  ERC20,
   InceptionERC20OmniVault,
   InceptionRatioFeed,
   InceptionToken,
@@ -54,6 +55,7 @@ describe("Omnivault integration tests", function () {
 
   // ============ L2 ============
   let iToken: InceptionToken;
+  let fraxToken: ERC20;
   let omniVault: InceptionERC20OmniVault; // Frax chain
   let ratioFeedL2: InceptionRatioFeed;
 
@@ -143,6 +145,20 @@ describe("Omnivault integration tests", function () {
     //   | |___| |
     //   |_____| |
 
+    console.log("============ FraxETH ============");
+
+    const sfrxETH = await ethers.getContractAt("ERC20", network.config.addresses.sfrxETH);
+
+    //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
+    //     const donor = await impersonateWithEth("0xe7d40d9a77caddd8e8b4b484ed14c42f3b8d763a", toWei(1));
+    //     console.log(`balance of the donor: ${(await asset.balanceOf(donor.address)).toString()}`);
+    //     await asset.connect(donor).transfer(staker.address, toWei(1000));
+    //     const balanceAfter = await asset.balanceOf(staker.address);
+    //     await asset.connect(staker).approve(await iVault.getAddress(), balanceAfter);
+    //     return staker;
+    //   },
+    // },
+
     console.log("============ InceptionVault Layer1 ============");
     // console.log("=== ProtocolConfig");
     // const protocolConfigAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.restakingPoolConfig);
@@ -230,14 +246,14 @@ describe("Omnivault integration tests", function () {
     await (await ratioFeedL2.updateRatioBatch([iToken.address], [e18])).wait();
 
     console.log("=== OmniVault");
-    const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault", owner);
-    const omniVault = await upgrades.deployProxy(
-      omniVaultFactory,
-      ["OmniVault", operator.address, iToken.address, adapterFrax.address],
-      {
-        initializer: "initialize",
-      },
-    );
+    const omniVaultFactory = await ethers.getContractFactory("InceptionERC20OmniVault", owner);
+    // const omniVault = await upgrades.deployProxy(
+    //   omniVaultFactory,
+    //   ["OmniVault", operator.address, iToken.address, await sfrxETH.getAddress(), adapterFrax.address],
+    //   {
+    //     initializer: "init",
+    //   },
+    // );
     omniVault.address = await omniVault.getAddress();
     await omniVault.setRatioFeed(ratioFeedL2.address);
     await omniVault.setTreasuryAddress(treasury.address);
@@ -347,7 +363,7 @@ describe("Omnivault integration tests", function () {
       const omniVaultFactory = await ethers.getContractFactory("InceptionERC20OmniVault", owner);
       omniVaultOpt = await upgrades.deployProxy(
         omniVaultFactory,
-        ["omniVaultFrax", operator.address, iTokenOpt.address, adapterFrax.address],
+        ["omniVault", operator.address, iTokenOpt.address, adapterFrax.address],
         { initializer: "initialize" },
       );
       omniVaultOpt.address = await omniVaultOpt.getAddress();
@@ -2870,7 +2886,7 @@ describe("Omnivault integration tests", function () {
       });
 
       it("ratio() reverts when ratioFeed is 0 address", async function () {
-        const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+        const omniVaultFactory = await ethers.getContractFactory("InceptionERC20OmniVault");
         const omniVault = await upgrades.deployProxy(
           omniVaultFactory,
           ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],
@@ -3266,7 +3282,7 @@ describe("Omnivault integration tests", function () {
         });
 
         it("Reverts when crosschain adapter is 0 address", async function () {
-          const omniVaultFactory = await ethers.getContractFactory("InceptionOmniVault");
+          const omniVaultFactory = await ethers.getContractFactory("InceptionERC20OmniVault");
           const newOmniVault = await upgrades.deployProxy(
             omniVaultFactory,
             ["Omnivault", operator.address, iToken.address, ethers.ZeroAddress],

@@ -67,15 +67,15 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     }
 
 
-    function initialize(
-        string memory vaultName,
+    function init(
+        string memory _vaultName,
         address _operator,
         IInceptionToken _inceptionToken,
         IERC20 _wrappedAsset,
         ICrossChainBridgeERC20L2 _crossChainAdapter
-    ) public initializer {
+    ) external {
         __InceptionERC20OmniVault_init(
-          vaultName,
+          _vaultName,
          _operator,
          _inceptionToken,
          _wrappedAsset,
