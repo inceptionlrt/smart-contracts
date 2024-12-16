@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../InceptionERC20OmniVault.sol";
 import "../../interfaces/IStEth.sol";
-import "../../interfaces/ICrossChainAdapterL2.sol";
+import "../../interfaces/IFraxFerryERC20Bridge.sol";
 
 /// @author The InceptionLRT team
 /// @title The InOmniVault_E2, specifically designed for the Lido Ethereum LST
@@ -20,7 +20,7 @@ contract InOmniVault_E2 is InceptionERC20OmniVault {
         address _operator,
         address _inceptionToken,
         address _wrappedAsset,
-        ICrossChainBridgeERC20L2 _crossChainAdapter
+        IFraxFerryERC20Bridge _crossChainAdapter
 
     ) external initializer {
         __InceptionERC20OmniVault_init(vaultName, _operator, IInceptionToken(_inceptionToken), IERC20(_wrappedAsset), _crossChainAdapter);

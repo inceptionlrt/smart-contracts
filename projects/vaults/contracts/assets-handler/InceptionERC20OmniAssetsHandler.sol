@@ -49,6 +49,10 @@ contract InceptionERC20OmniAssetsHandler is
             revert TransferAssetFromFailed();
     }
 
+    function _approve(address spender, uint256 amount) internal {
+        require(_asset.approve(spender, amount)); // todo proper error
+    }
+
     function _transferAssetTo(address receiver, uint256 amount) internal {
         if (!_asset.transfer(receiver, amount)) revert TransferAssetFailed();
     }

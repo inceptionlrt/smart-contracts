@@ -8,7 +8,7 @@ import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20O
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainBridgeERC20L2} from "../interfaces/ICrossChainAdapterERC20L2.sol";
+import {IFraxFerryERC20Bridge} from "../interfaces/IFraxFerryERC20Bridge.sol";
 
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
@@ -31,7 +31,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
     IInceptionRatioFeed public ratioFeed;
 
-    ICrossChainBridgeERC20L2 public crossChainAdapterERC20;
+    IFraxFerryERC20Bridge public crossChainAdapterERC20;
 
     /**
      *  @dev Flash withdrawal params
@@ -71,7 +71,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         address _operator,
         IInceptionToken _inceptionToken,
         IERC20 _wrappedAsset,
-        ICrossChainBridgeERC20L2 _crossChainAdapter
+        IFraxFerryERC20Bridge _crossChainAdapter
     ) internal {
         __Ownable_init(msg.sender);
         __InceptionERC20OmniAssetsHandler_init(_wrappedAsset);
@@ -79,10 +79,9 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         name = vaultName;
         operator = _operator;
         treasuryAddress = msg.sender;
-        inceptionToken = _inceptionToken;       
+        inceptionToken = _inceptionToken;
         crossChainAdapterERC20 = _crossChainAdapter;
-        
-        
+
         minAmount = 1e8;
 
         targetCapacity = 1;
@@ -326,12 +325,15 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             FreeBalanceTooLow(freeBalance, msg.value)
         );
         */
-        uint256 msgValue = msg.value;
+        //uint256 msgValue = msg.value;
         require(
-            msg.value >= this.quoteSendERC20CrossChain(_chainId, _options),
-            FeesAboveMsgValue(msgValue)
-        ); // we're still using ETH to pay LayerZero fees
+            freeBalance >= quoteSendERC20CrossChain(freeBalance),//(_chainId, _options),
+            FeesAboveMsgValue(freeBalance) // TODO change event
+        );
 
+        _approve(address(crossChainAdapterERC20), freeBalance);
+        crossChainAdapterERC20.sendTokensViaFerry(freeBalance);
+/*
         uint256 fees = crossChainAdapterERC20.sendERC20CrossChain{value: freeBalance}(
             _chainId,
             _options
@@ -347,27 +349,31 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         }
 
         uint256 callValue = crossChainAdapterERC20.getValueFromOpts(_options);
-
-        emit ERC20CrossChainSent(callValue, _chainId);
-        
+*/
+        emit ERC20CrossChainSent(freeBalance, _chainId);
     }
 
     /**
      * @notice Calculates fees to send ERC20 to other chain. The `SEND_VALUE` encoded in options is not included in the return
-     * @param _chainId chain ID of the network to simulate sending ERC20 to
-     * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+     * @param _amount amount of token to be sent
+     * param _chainId chain ID of the network to simulate sending ERC20 to
+     * param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
      */
     function quoteSendERC20CrossChain(
+        /*
         uint256 _chainId,
         bytes calldata _options
+        */
+       uint256 _amount
     ) public view returns (uint256) {
         require(
             address(crossChainAdapterERC20) != address(0),
             CrossChainAdapterNotSet()
         );
         return
-            crossChainAdapterERC20.quoteSendERC20(_chainId, _options) -
-            crossChainAdapterERC20.getValueFromOpts(_options);
+            crossChainAdapterERC20.quoteSendTokens(_amount); // TODO this is just the ferry fee
+            /*quoteSendERC20(_chainId, _options) -
+            crossChainAdapterERC20.getValueFromOpts(_options);*/
     }
 
     /*//////////////////////////////
