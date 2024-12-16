@@ -70,11 +70,11 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         string memory vaultName,
         address _operator,
         IInceptionToken _inceptionToken,
-        IERC20 _wrappedAsset,
+        IERC20 _underlyingAsset,
         IFraxFerryERC20Bridge _crossChainAdapter
     ) internal {
         __Ownable_init(msg.sender);
-        __InceptionERC20OmniAssetsHandler_init(_wrappedAsset);
+        __InceptionERC20OmniAssetsHandler_init(_underlyingAsset);
 
         name = vaultName;
         operator = _operator;
@@ -258,7 +258,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         uint256 msgValue = msg.value; // fees are still paid in ETH
 
         uint256 tokensAmount = _inceptionTokenSupply();
-        uint256 erc20Amount = getFlashCapacity() - msg.value;
+        uint256 erc20Amount = getFlashCapacity();
         bytes memory payload = abi.encode(
             block.timestamp,
             tokensAmount,
