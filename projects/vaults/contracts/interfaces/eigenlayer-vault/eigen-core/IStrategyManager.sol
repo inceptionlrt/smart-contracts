@@ -26,18 +26,26 @@ interface IStrategyManager {
         uint256 amount
     ) external returns (uint256 shares);
 
-    function stakerStrategyShares(
-        address user,
-        IStrategy strategy
-    ) external view returns (uint256 shares);
+    function stakerStrategyShares(address user, IStrategy strategy)
+        external
+        view
+        returns (uint256 shares);
 
-    function getDeposits(
-        address depositor
-    ) external view returns (IStrategy[] memory, uint256[] memory);
+    /// @dev the same as stakerStrategyShares, but it's coming with Slashing Update For Node Operators/LRTs
+    function stakerDepositShares(address user, IStrategy strategy)
+        external
+        view
+        returns (uint256 depositShares);
 
-    function stakerStrategyListLength(
-        address staker
-    ) external view returns (uint256);
+    function getDeposits(address depositor)
+        external
+        view
+        returns (IStrategy[] memory, uint256[] memory);
+
+    function stakerStrategyListLength(address staker)
+        external
+        view
+        returns (uint256);
 
     function queueWithdrawal(
         uint256[] calldata strategyIndexes,
@@ -77,9 +85,10 @@ interface IStrategyManager {
         uint256[] calldata indicesToSkip
     ) external;
 
-    function calculateWithdrawalRoot(
-        QueuedWithdrawal memory queuedWithdrawal
-    ) external pure returns (bytes32);
+    function calculateWithdrawalRoot(QueuedWithdrawal memory queuedWithdrawal)
+        external
+        pure
+        returns (bytes32);
 
     function addStrategiesToDepositWhitelist(
         IStrategy[] calldata strategiesToWhitelist
@@ -91,9 +100,10 @@ interface IStrategyManager {
 
     function withdrawalDelayBlocks() external view returns (uint256);
 
-    function numWithdrawalsQueued(
-        address account
-    ) external view returns (uint256);
+    function numWithdrawalsQueued(address account)
+        external
+        view
+        returns (uint256);
 
     function delegation() external view returns (address);
 }

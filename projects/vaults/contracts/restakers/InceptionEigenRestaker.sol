@@ -8,7 +8,7 @@ import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/intro
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
-import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IDelegationManager, IDelegationManagerTypes} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
@@ -119,9 +119,8 @@ contract InceptionEigenRestaker is
     }
 
     function claimWithdrawals(
-        IDelegationManager.Withdrawal[] calldata withdrawals,
+        IDelegationManagerTypes.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -129,7 +128,6 @@ contract InceptionEigenRestaker is
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
@@ -150,9 +148,10 @@ contract InceptionEigenRestaker is
         return 2;
     }
 
-    function setRewardsCoordinator(
-        address newRewardsCoordinator
-    ) external onlyOwner {
+    function setRewardsCoordinator(address newRewardsCoordinator)
+        external
+        onlyOwner
+    {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 
