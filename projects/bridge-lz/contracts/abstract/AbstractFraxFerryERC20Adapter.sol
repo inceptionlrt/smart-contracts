@@ -3,7 +3,7 @@ pragma solidity 0.8.27;
 
 import {IFraxFerry} from "../interfaces/IFraxFerry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IFraxFerryERC20Bridge} from "../interfaces/IFraxFerryERC20Bridge.sol";
+import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  * by the means of FraxFerry.
  * This contract is intended to be inherited by contracts implementing specific cross-chain bridge logic.
  */
-abstract contract AbstractFraxFerryERC20Adapter is IFraxFerryERC20Bridge {
+abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     IFraxFerry ferry;
     IERC20 token;
     address erc20OtherChainDestination;
@@ -23,7 +23,7 @@ abstract contract AbstractFraxFerryERC20Adapter is IFraxFerryERC20Bridge {
         return token.approve(address(ferry), approvalAmount);
     }
 */
-    function sendTokensViaFerry(uint256 amount) external {
+    function sendTokens(uint256 amount) external {
         ferry.embarkWithRecipient(amount, erc20OtherChainDestination);
     }
 
