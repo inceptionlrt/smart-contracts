@@ -6,8 +6,8 @@ pragma solidity ^0.8.23;
 import {OAppSenderUpgradeable, MessagingFee, MessagingReceipt} from "./OAppSenderUpgradeable.sol";
 // @dev Import the 'Origin' so it's exposed to OApp implementers
 // solhint-disable-next-line no-unused-import
-import {OAppReceiverUpgradeable, Origin} from "./OAppReceiverUpgradeable.sol";
-import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
+import {OAppReceiverUpgradeable, Origin} from "./../LayerZero/OAppReceiverUpgradeable.sol";
+import {OAppCoreUpgradeable} from "../LayerZero/OAppCoreUpgradeable.sol";
 
 /**
  * @title OAppUpgradeable
@@ -23,10 +23,9 @@ abstract contract OAppUpgradeable is
      * @param _endpoint The address of the LOCAL LayerZero endpoint.
      * @param _delegate The delegate capable of making OApp configurations inside of the endpoint.
      */
-    function __OAppUpgradeable_init(
-        address _endpoint,
-        address _delegate
-    ) internal {
+    function __OAppUpgradeable_init(address _endpoint, address _delegate)
+        internal
+    {
         __OAppCoreUpgradeable_init(_endpoint, _delegate);
     }
 

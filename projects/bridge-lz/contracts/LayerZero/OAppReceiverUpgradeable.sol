@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IOAppReceiverUpgradeable, Origin} from "./interfaces/IOAppReceiverUpgradeable.sol";
+import {IOAppReceiverUpgradeable, Origin} from "../interfaces/LayerZero/IOAppReceiverUpgradeable.sol";
 import {OAppCoreUpgradeable} from "./OAppCoreUpgradeable.sol";
 
 /**
@@ -52,8 +52,8 @@ abstract contract OAppReceiverUpgradeable is
      * @dev The default sender IS the OAppReceiver implementer.
      */
     function isComposeMsgSender(
-        Origin calldata /*_origin*/,
-        bytes calldata /*_message*/,
+        Origin calldata, /*_origin*/
+        bytes calldata, /*_message*/
         address _sender
     ) public view virtual returns (bool) {
         return _sender == address(this);
@@ -68,9 +68,12 @@ abstract contract OAppReceiverUpgradeable is
      * @dev This defaults to assuming if a peer has been set, its initialized.
      * Can be overridden by the OApp if there is other logic to determine this.
      */
-    function allowInitializePath(
-        Origin calldata origin
-    ) public view virtual returns (bool) {
+    function allowInitializePath(Origin calldata origin)
+        public
+        view
+        virtual
+        returns (bool)
+    {
         return peers[origin.srcEid] == origin.sender;
     }
 
@@ -86,7 +89,7 @@ abstract contract OAppReceiverUpgradeable is
      * @dev By default this is NOT enabled. ie. nextNonce is hardcoded to return 0.
      */
     function nextNonce(
-        uint32 /*_srcEid*/,
+        uint32, /*_srcEid*/
         bytes32 /*_sender*/
     ) public view virtual returns (uint64 nonce) {
         return 0;

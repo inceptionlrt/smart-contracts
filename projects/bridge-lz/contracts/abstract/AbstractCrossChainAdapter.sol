@@ -4,9 +4,9 @@ pragma solidity 0.8.27;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {OAppUpgradeable} from "../OAppUpgradeable.sol";
+import {OAppUpgradeable} from "../LayerZero/OAppUpgradeable.sol";
 
-import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
 
 /**
  * @title AbstractCrossChainAdapter
@@ -16,15 +16,17 @@ import {ICrossChainBridge} from "../interfaces/ICrossChainBridge.sol";
  * and provides recovery of contract-held ETH to a specified receiver.
  * This contract is intended to be inherited by contracts implementing specific cross-chain bridge logic.
  */
-abstract contract AbstractCrossChainAdapter is ICrossChainBridge {
+abstract contract AbstractCrossChainAdapter is IAdapter {
     /// NOTE: targetReceiver is a term encompassing both Rebalancer on L1 or InceptionOmniTargetReceiver on L2
     address public targetReceiver;
 
     modifier onlyOwnerRestricted() virtual;
 
-    function setTargetReceiver(
-        address _newTargetReceiver
-    ) external override onlyOwnerRestricted {
+    function setTargetReceiver(address _newTargetReceiver)
+        external
+        override
+        onlyOwnerRestricted
+    {
         require(_newTargetReceiver != address(0), SettingZeroAddress());
         emit TargetReceiverChanged(targetReceiver, _newTargetReceiver);
         targetReceiver = _newTargetReceiver;

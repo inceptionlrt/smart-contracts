@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.23;
 
-import {IOAppCoreUpgradeable, ILayerZeroEndpointV2} from "./interfaces/IOAppCoreUpgradeable.sol";
+import {IOAppCoreUpgradeable, ILayerZeroEndpointV2} from "../interfaces/LayerZero/IOAppCoreUpgradeable.sol";
 
 /**
  * @title OAppCoreUpgradeable
