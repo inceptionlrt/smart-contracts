@@ -10,6 +10,8 @@ interface IInceptionERC20OmniVault {
 
     error TransferAssetFailed();
 
+    error AssetApprovalFailed();
+
     error InsufficientCapacity(uint256 capacity);
 
     error MessageToL1Failed(uint256 tokenAmount, uint256 ethAmount);

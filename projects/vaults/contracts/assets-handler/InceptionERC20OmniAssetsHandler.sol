@@ -50,7 +50,7 @@ contract InceptionERC20OmniAssetsHandler is
     }
 
     function _approve(address spender, uint256 amount) internal {
-        require(_asset.approve(spender, amount)); // todo proper error
+        if(!_asset.approve(spender, amount)) revert AssetApprovalFailed();
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
