@@ -40,11 +40,21 @@ interface ICrossChainBridge {
     function sendEthCrossChain(
         uint256 _chainId,
         bytes memory _options
-    ) external payable;
+    ) external payable returns (uint256);
 
     function getValueFromOpts(
         bytes calldata _options
     ) external view returns (uint256);
+
+    function quote(
+        bytes calldata _payload,
+        bytes memory _options
+    ) external view returns (uint256);
+
+    function sendDataL1(
+        bytes calldata _payload,
+        bytes memory _options
+    ) external payable returns (uint256);
 
     receive() external payable;
 }

@@ -46,5 +46,15 @@ interface ICrossChainBridge {
         bytes calldata _options
     ) external view returns (uint256);
 
+    function quote(
+        bytes calldata _payload,
+        bytes memory _options
+    ) external view returns (uint256);
+
+    function sendDataL1(
+        bytes calldata _payload,
+        bytes memory _options
+    ) external payable returns (uint256);
+
     receive() external payable;
 }

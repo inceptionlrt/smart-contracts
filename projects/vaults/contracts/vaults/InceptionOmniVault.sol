@@ -57,6 +57,24 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     uint64 public maxFlashFeeRate;
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
+    uint256[] public chainIds;
+
+    struct L2State {
+        uint256 tokenBalance;
+        uint256 ethBalance;
+    }
+
+    mapping(uint256 => L2State) public l2States; // Stores data from other L2 vaults by chainId.
+
+    event L2StateAggregated(
+        uint256 chainId,
+        uint256 tokenBalance,
+        uint256 ethBalance
+    );
+    event ConsolidatedStateSent(
+        uint256 totalTokenBalance,
+        uint256 totalEthBalance
+    );
 
     /// @dev Modifier to restrict functions to owner or operator.
     modifier onlyOwnerOrOperator() {
@@ -576,6 +594,51 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         require(_newOperator != address(0), NullParams());
         emit OperatorChanged(operator, _newOperator);
         operator = _newOperator;
+    }
+
+    /**
+     * @notice Handles incoming state updates from other L2s.
+     * @param chainId The chain ID of the L2 sending the state.
+     * @param tokenBalance The total token balance on the other L2.
+     * @param ethBalance The total ETH balance on the other L2.
+     */
+    function aggregateL2State(
+        uint256 chainId,
+        uint256 tokenBalance,
+        uint256 ethBalance
+    ) external {
+        l2States[chainId] = L2State(tokenBalance, ethBalance);
+
+        emit L2StateAggregated(chainId, tokenBalance, ethBalance);
+    }
+
+    /**
+     * @notice Consolidates all L2 states and sends them to L1.
+     */
+    function sendConsolidatedStateToL1(
+        bytes memory options
+    ) external payable onlyOwner {
+        uint256 totalTokenBalance = 0;
+        uint256 totalEthBalance = 0;
+
+        // Consolidate L2 states using the `chainIds` array
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            uint256 chainId = chainIds[i];
+            totalTokenBalance += l2States[chainId].tokenBalance;
+            totalEthBalance += l2States[chainId].ethBalance;
+        }
+
+        bytes memory payload = abi.encode(totalTokenBalance, totalEthBalance);
+
+        // Quote fees using the cross-chain adapter
+        uint256 fees = crossChainAdapter.quote(payload, options);
+
+        require(msg.value >= fees, "Insufficient fees");
+
+        // Send consolidated data to L1
+        crossChainAdapter.sendDataL1{value: fees}(payload, options);
+
+        emit ConsolidatedStateSent(totalTokenBalance, totalEthBalance);
     }
 
     /*///////////////////////////////
