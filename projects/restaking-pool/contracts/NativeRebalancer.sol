@@ -278,10 +278,11 @@ contract NativeRebalancer is
      * @param _tokenBalance The total token balance on the L2 network.
      * @param _ethBalance The total ETH balance on the L2 network.
      */
-    function handleL2State(
+    function handleL2Info(
+        uint256, //TODO: temporary silenced to avoid breaking LZCrossChainAdapterSignature, to be removed later
+        uint256 _timestamp,
         uint256 _tokenBalance,
-        uint256 _ethBalance,
-        uint256 _timestamp
+        uint256 _ethBalance
     ) external onlyOwner {
         require(
             _timestamp > consolidatedl2State.timestamp,
@@ -381,7 +382,6 @@ contract NativeRebalancer is
 
         require(adapter != address(0), NoAdapterAvailable(_chainId));
     }
-
 
     /**
      * @notice Receives ETH sent to this contract, just in case.
