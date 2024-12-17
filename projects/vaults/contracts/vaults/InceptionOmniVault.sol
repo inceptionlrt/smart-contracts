@@ -18,9 +18,14 @@ import {Convert} from "../lib/Convert.sol";
 /// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
 /// @notice Allows users to deposit ETH, receive inception tokens, and handle asset transfers between L1 and L2.
 contract InceptionOmniVault is InceptionOmniAssetsHandler {
+    //TD: event and errors temporary here for quick changes convinience
     error FeesOverMsgValue(uint256 _fees, uint256 _msgValue);
 
     error InvalidTimestamp(uint256 currentTimestamp, uint256 proposedTimestamp);
+    error ChainIdNotFound(uint256 chainId);
+
+    event ChainIdAdded(uint256 chainId);
+    event ChainIdDeleted(uint256 chainId, uint256 index);
 
     /// @dev Inception token used for staking and rewards.
     IInceptionToken public inceptionToken;
@@ -667,6 +672,46 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
         }
 
         emit ConsolidatedStateSent(totalTokenBalance, totalEthBalance);
+    }
+
+    /**
+     * @notice Adds a new Chain ID to the storage.
+     * @dev Ensures that the Chain ID does not already exist in the list.
+     * @param _newChainId The Chain ID to add.
+     */
+    function addChainId(uint256 _newChainId) public onlyOwner {
+        for (uint i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == _newChainId) {
+                return;
+            }
+        }
+        chainIds.push(_newChainId);
+        emit ChainIdAdded(_newChainId);
+    }
+
+    /**
+     * @notice Removes a specific `chainId` from the `chainIds` array.
+     * @param _chainId The Chain ID to delete.
+     */
+    function deleteChainId(uint256 _chainId) public onlyOwner {
+        uint256 index;
+        bool found = false;
+
+        // Find the _chainId in the array
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            if (chainIds[i] == _chainId) {
+                index = i;
+                found = true;
+                break;
+            }
+        }
+
+        require(found, ChainIdNotFound(_chainId));
+
+        // Move the last element into the place of the one to delete
+        chainIds[index] = chainIds[chainIds.length - 1];
+        chainIds.pop();
+        emit ChainIdDeleted(_chainId, index);
     }
 
     /*///////////////////////////////

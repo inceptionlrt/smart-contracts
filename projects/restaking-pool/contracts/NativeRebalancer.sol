@@ -320,7 +320,6 @@ contract NativeRebalancer is
     ) external onlyOwner {
         require(_newAdapter != address(0), SettingZeroAddress());
         adapters[_chainId] = _newAdapter;
-        _addChainId(_chainId);
 
         emit AdapterAdded(_chainId, _newAdapter);
     }
@@ -337,35 +336,6 @@ contract NativeRebalancer is
 
         emit DefaultBridgeChanged(defaultAdapter, _newDefaultAdapter);
         defaultAdapter = _newDefaultAdapter;
-    }
-
-    function addChainId(uint256 _newChainId) external onlyOwner {
-        _addChainId(_newChainId);
-    }
-
-    /**
-     * @notice Removes a specific `chainId` from the `chainIds` array.
-     * @param _chainId The Chain ID to delete.
-     */
-    function deleteChainId(uint256 _chainId) public onlyOwner {
-        uint256 index;
-        bool found = false;
-
-        // Find the _chainId in the array
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == _chainId) {
-                index = i;
-                found = true;
-                break;
-            }
-        }
-
-        require(found, ChainIdNotFound(_chainId));
-
-        // Move the last element into the place of the one to delete
-        chainIds[index] = chainIds[chainIds.length - 1];
-        chainIds.pop();
-        emit ChainIdDeleted(_chainId, index);
     }
 
     /**
@@ -412,20 +382,6 @@ contract NativeRebalancer is
         require(adapter != address(0), NoAdapterAvailable(_chainId));
     }
 
-    /**
-     * @notice Adds a new Chain ID to the storage.
-     * @dev Ensures that the Chain ID does not already exist in the list.
-     * @param _newChainId The Chain ID to add.
-     */
-    function _addChainId(uint256 _newChainId) internal {
-        for (uint i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == _newChainId) {
-                return;
-            }
-        }
-        chainIds.push(_newChainId);
-        emit ChainIdAdded(_newChainId);
-    }
 
     /**
      * @notice Receives ETH sent to this contract, just in case.
