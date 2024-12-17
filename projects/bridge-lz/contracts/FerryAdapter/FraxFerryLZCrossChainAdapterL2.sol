@@ -2,13 +2,13 @@
 pragma solidity 0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {AbstractLZCrossChainAdapter} from "./abstract/AbstractLZCrossChainAdapter.sol";
-import {AbstractCrossChainAdapterL2} from "./abstract/AbstractCrossChainAdapterL2.sol";
-import {AbstractCrossChainAdapter} from "./abstract/AbstractCrossChainAdapter.sol";
+import {AbstractLZCrossChainAdapter} from "../abstract/AbstractLZCrossChainAdapter.sol";
+import {AbstractCrossChainAdapterL2} from "../abstract/AbstractCrossChainAdapterL2.sol";
+import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {AbstractFraxFerryERC20Adapter} from "./abstract/AbstractFraxFerryERC20Adapter.sol";
-import {IFraxFerry} from "./interfaces/IFraxFerry.sol";
+import {AbstractFraxFerryERC20Adapter} from "../abstract/AbstractFraxFerryERC20Adapter.sol";
+import {IFraxFerry} from "../interfaces/IFraxFerry.sol";
 //import {IFraxFerryERC20Bridge} from "./interfaces/IFraxFerryERC20Bridge.sol";
 
 import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
