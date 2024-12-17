@@ -156,10 +156,12 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     }
 
     function getFreeBalance() public view returns (uint256 total) {
+        uint256 flashCapacity = getFlashCapacity();
+        uint256 targetFlash = _getTargetCapacity();
         return
-            getFlashCapacity() < _getTargetCapacity()
+            flashCapacity < targetFlash
                 ? 0
-                : getFlashCapacity() - _getTargetCapacity();
+                : flashCapacity - targetFlash;
     }
 
     /// @dev returns the total amount of pending withdrawals from Mellow LRT
