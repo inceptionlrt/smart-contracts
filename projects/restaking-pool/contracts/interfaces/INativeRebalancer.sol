@@ -66,13 +66,6 @@ interface INativeRebalancer {
     error TreasuryUpdatesPaused();
     error NoChainIdsConfigured();
 
-    function handleL2Info(
-        uint256 _chainId,
-        uint256 _timestamp,
-        uint256 _balance,
-        uint256 _totalSupply
-    ) external;
-
     function getTransactionData(
         uint256 _chainId
     ) external view returns (Transaction memory);

@@ -18,6 +18,10 @@ import {Convert} from "../lib/Convert.sol";
 /// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
 /// @notice Allows users to deposit ETH, receive inception tokens, and handle asset transfers between L1 and L2.
 contract InceptionOmniVault is InceptionOmniAssetsHandler {
+    error FeesOverMsgValue(uint256 _fees, uint256 _msgValue);
+
+    error InvalidTimestamp(uint256 currentTimestamp, uint256 proposedTimestamp);
+
     /// @dev Inception token used for staking and rewards.
     IInceptionToken public inceptionToken;
 
@@ -62,6 +66,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     struct L2State {
         uint256 tokenBalance;
         uint256 ethBalance;
+        uint256 timestamp;
     }
 
     mapping(uint256 => L2State) public l2States; // Stores data from other L2 vaults by chainId.
@@ -69,7 +74,8 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     event L2StateAggregated(
         uint256 chainId,
         uint256 tokenBalance,
-        uint256 ethBalance
+        uint256 ethBalance,
+        uint256 timestamp
     );
     event ConsolidatedStateSent(
         uint256 totalTokenBalance,
@@ -280,7 +286,7 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
     //////////////////////////////*/
 
     /**
-     * @notice Sends asset information (total token and ETH balances) to Layer 1.
+     * @notice Sends asset information (total token and ETH balances) to Layer 2 Agreggator.
      */
     function sendAssetsInfoToL1(
         bytes memory _options
@@ -598,18 +604,28 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
 
     /**
      * @notice Handles incoming state updates from other L2s.
-     * @param chainId The chain ID of the L2 sending the state.
-     * @param tokenBalance The total token balance on the other L2.
-     * @param ethBalance The total ETH balance on the other L2.
+     * @param _chainId The chain ID of the L2 sending the state.
+     * @param _tokenBalance The total token balance on the other L2.
+     * @param _ethBalance The total ETH balance on the other L2.
      */
     function aggregateL2State(
-        uint256 chainId,
-        uint256 tokenBalance,
-        uint256 ethBalance
+        uint256 _chainId,
+        uint256 _tokenBalance,
+        uint256 _ethBalance,
+        uint256 _timestamp
     ) external {
-        l2States[chainId] = L2State(tokenBalance, ethBalance);
+        require(
+            _timestamp > l2States[_chainId].timestamp,
+            InvalidTimestamp(l2States[_chainId].timestamp, _timestamp)
+        );
+        l2States[_chainId] = L2State(_tokenBalance, _ethBalance, _timestamp);
 
-        emit L2StateAggregated(chainId, tokenBalance, ethBalance);
+        emit L2StateAggregated(
+            _chainId,
+            _tokenBalance,
+            _ethBalance,
+            _timestamp
+        );
     }
 
     /**
@@ -628,15 +644,27 @@ contract InceptionOmniVault is InceptionOmniAssetsHandler {
             totalEthBalance += l2States[chainId].ethBalance;
         }
 
+        totalTokenBalance += _inceptionTokenSupply();
+        totalEthBalance += getFlashCapacity() - msg.value;
+
         bytes memory payload = abi.encode(totalTokenBalance, totalEthBalance);
 
         // Quote fees using the cross-chain adapter
         uint256 fees = crossChainAdapter.quote(payload, options);
 
-        require(msg.value >= fees, "Insufficient fees");
+        require(fees >= msg.value, FeesOverMsgValue(fees, msg.value));
 
         // Send consolidated data to L1
         crossChainAdapter.sendDataL1{value: fees}(payload, options);
+
+        uint256 unusedFees = msg.value - fees;
+
+        if (unusedFees > 0) {
+            (bool success, ) = msg.sender.call{value: unusedFees}("");
+            if (success) {
+                emit UnusedFeesSentBackToOperator(unusedFees);
+            }
+        }
 
         emit ConsolidatedStateSent(totalTokenBalance, totalEthBalance);
     }
