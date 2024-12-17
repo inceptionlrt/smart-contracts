@@ -8,7 +8,7 @@ import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20O
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {IFraxFerryERC20Bridge} from "../interfaces/IFraxFerryERC20Bridge.sol";
+import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
 
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
@@ -31,7 +31,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
     IInceptionRatioFeed public ratioFeed;
 
-    IFraxFerryERC20Bridge public crossChainAdapterERC20;
+    IERC20CrossChainBridge public crossChainAdapterERC20;
 
     /**
      *  @dev Flash withdrawal params
@@ -71,7 +71,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         address _operator,
         IInceptionToken _inceptionToken,
         IERC20 _underlyingAsset,
-        IFraxFerryERC20Bridge _crossChainAdapter
+        IERC20CrossChainBridge _crossChainAdapter
     ) internal {
         __Ownable_init(msg.sender);
         __InceptionERC20OmniAssetsHandler_init(_underlyingAsset);
@@ -332,7 +332,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         );
 
         _approve(address(crossChainAdapterERC20), freeBalance);
-        crossChainAdapterERC20.sendTokensViaFerry(freeBalance);
+        crossChainAdapterERC20.sendTokens(freeBalance);
 /*
         uint256 fees = crossChainAdapterERC20.sendERC20CrossChain{value: freeBalance}(
             _chainId,
