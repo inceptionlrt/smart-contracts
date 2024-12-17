@@ -18,12 +18,15 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     IERC20 token;
     address erc20OtherChainDestination;
 
+    error errDestinationNotSet();
+    event DestinationChanged(address destination);
 /*
     function _approveFerry(uint256 approvalAmount) internal returns (bool) {
         return token.approve(address(ferry), approvalAmount);
     }
 */
     function sendTokens(uint256 amount) external {
+        if(erc20OtherChainDestination == address(0)) revert errDestinationNotSet();
         ferry.embarkWithRecipient(amount, erc20OtherChainDestination);
     }
 

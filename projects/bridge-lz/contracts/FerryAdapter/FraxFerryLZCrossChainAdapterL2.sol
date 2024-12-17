@@ -65,6 +65,11 @@ contract FraxFerryLZCrossChainAdapterL2 is
         }
     }
 
+    function setDestination(address _dest) external onlyOwnerRestricted {
+        erc20OtherChainDestination = _dest;
+        emit DestinationChanged(_dest);
+    }
+
     function quote(
         bytes calldata _payload,
         bytes memory _options
