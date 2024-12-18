@@ -5,6 +5,7 @@ import {IFraxFerry} from "../interfaces/IFraxFerry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title AbstractFraxFerryERC20Adapter
@@ -14,6 +15,8 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  * This contract is intended to be inherited by contracts implementing specific cross-chain bridge logic.
  */
 abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
+    using SafeERC20 for IERC20;
+
     IFraxFerry ferry;
     IERC20 token;
     address erc20OtherChainDestination;
@@ -27,6 +30,11 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
 */
     function sendTokens(uint256 amount) external {
         if(erc20OtherChainDestination == address(0)) revert errDestinationNotSet();
+        // pull tokens from msg.sender (we already have approval from the vault)
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        // approve the ferry to draw tokens
+        token.approve(address(ferry), amount);
+        // embark
         ferry.embarkWithRecipient(amount, erc20OtherChainDestination);
     }
 
