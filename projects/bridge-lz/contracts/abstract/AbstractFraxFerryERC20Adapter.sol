@@ -23,11 +23,6 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
 
     error errDestinationNotSet();
     event DestinationChanged(address destination);
-/*
-    function _approveFerry(uint256 approvalAmount) internal returns (bool) {
-        return token.approve(address(ferry), approvalAmount);
-    }
-*/
     function sendTokens(uint256 amount) external {
         if(erc20OtherChainDestination == address(0)) revert errDestinationNotSet();
         // pull tokens from msg.sender (we already have approval from the vault)
@@ -41,4 +36,5 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     function quoteSendTokens(uint256 amount) external view returns (uint256) {
         return Math.min(Math.max(ferry.FEE_MIN(),amount*ferry.FEE_RATE()/10000),ferry.FEE_MAX());
     }
+
 }

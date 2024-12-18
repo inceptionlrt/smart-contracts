@@ -315,55 +315,25 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      */
     function sendERC20ToL1(
         uint256 _chainId,
-        bytes memory _options
+        bytes memory _options // kept for compatibility, may delete
     ) external payable onlyOwnerOrOperator {
         uint256 freeBalance = getFreeBalance();
-        // TODO needs to be changed (or removed?) for erc20 handling
-        /*
+
         require(
-            freeBalance > msg.value,
-            FreeBalanceTooLow(freeBalance, msg.value)
-        );
-        */
-        //uint256 msgValue = msg.value;
-        require(
-            freeBalance >= quoteSendERC20CrossChain(freeBalance),//(_chainId, _options),
+            freeBalance >= quoteSendERC20CrossChain(freeBalance),
             FeesAboveMsgValue(freeBalance) // TODO change event
         );
 
         _approve(address(crossChainAdapterERC20), freeBalance);
         crossChainAdapterERC20.sendTokens(freeBalance);
-/*
-        uint256 fees = crossChainAdapterERC20.sendERC20CrossChain{value: freeBalance}(
-            _chainId,
-            _options
-        );
-
-        uint256 unusedFees = msg.value - fees;
-
-        if (unusedFees > 0) {
-            (bool success, ) = msg.sender.call{value: unusedFees}("");
-            if (success) {
-                emit UnusedFeesSentBackToOperator(unusedFees);
-            }
-        }
-
-        uint256 callValue = crossChainAdapterERC20.getValueFromOpts(_options);
-*/
         emit ERC20CrossChainSent(freeBalance, _chainId);
     }
 
     /**
      * @notice Calculates fees to send ERC20 to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _amount amount of token to be sent
-     * param _chainId chain ID of the network to simulate sending ERC20 to
-     * param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
      */
     function quoteSendERC20CrossChain(
-        /*
-        uint256 _chainId,
-        bytes calldata _options
-        */
        uint256 _amount
     ) public view returns (uint256) {
         require(
@@ -371,9 +341,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             CrossChainAdapterNotSet()
         );
         return
-            crossChainAdapterERC20.quoteSendTokens(_amount); // TODO this is just the ferry fee
-            /*quoteSendERC20(_chainId, _options) -
-            crossChainAdapterERC20.getValueFromOpts(_options);*/
+            crossChainAdapterERC20.quoteSendTokens(_amount); // this is just the ferry fee
     }
 
     /*//////////////////////////////
