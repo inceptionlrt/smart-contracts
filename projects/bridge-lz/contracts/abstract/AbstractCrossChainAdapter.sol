@@ -32,7 +32,7 @@ abstract contract AbstractCrossChainAdapter is IAdapter {
         targetReceiver = _newTargetReceiver;
     }
 
-    function recoverFunds() external override onlyOwnerRestricted {
+    function recoverFunds() external override virtual onlyOwnerRestricted {
         require(targetReceiver != address(0), TargetReceiverNotSet());
         uint256 amount = address(this).balance;
         (bool success, ) = targetReceiver.call{value: amount}("");

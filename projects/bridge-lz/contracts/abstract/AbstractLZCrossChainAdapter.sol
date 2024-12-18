@@ -35,6 +35,7 @@ abstract contract AbstractLZCrossChainAdapter is IAdapter, OAppUpgradeable {
         external
         payable
         override
+        virtual
         onlyTargetReceiverRestricted
         returns (uint256)
     {
@@ -55,6 +56,7 @@ abstract contract AbstractLZCrossChainAdapter is IAdapter, OAppUpgradeable {
     function quoteSendEth(uint256 _chainId, bytes memory _options)
         external
         view
+        virtual
         override
         returns (uint256)
     {

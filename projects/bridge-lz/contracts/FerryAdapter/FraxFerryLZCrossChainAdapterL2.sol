@@ -8,6 +8,7 @@ import {AbstractCrossChainAdapter} from "../abstract/AbstractCrossChainAdapter.s
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {AbstractFraxFerryERC20Adapter} from "../abstract/AbstractFraxFerryERC20Adapter.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IFraxFerry} from "../interfaces/IFraxFerry.sol";
 //import {IFraxFerryERC20Bridge} from "./interfaces/IFraxFerryERC20Bridge.sol";
 
@@ -96,5 +97,27 @@ contract FraxFerryLZCrossChainAdapterL2 is
         if (msg.value > 0) {
             _handleCrossChainEth(chainId);
         }
+    }
+
+    // This will allow TargetReceiver to recover ERC20 accidentally sent to the contract itself.
+    // TargetReceiver should, in turn, be able to use transferFrom() on the token contract.
+    function recoverFunds() external override(AbstractCrossChainAdapter, IAdapter) onlyOwnerRestricted {
+        require(targetReceiver != address(0), TargetReceiverNotSet());
+        token.approve(targetReceiver, token.balanceOf(address(this)));
+    }
+
+    // stubs for eth methods
+    function sendEthCrossChain(
+        uint256 _chainId,
+        bytes memory _options
+    ) external payable override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
+        revert("Not implemented in this adapter type");
+    }
+
+    function quoteSendEth(
+        uint256 _chainId,
+        bytes memory _options
+    ) external view override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
+        revert("Not implemented in this adapter type");
     }
 }
