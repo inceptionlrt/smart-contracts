@@ -122,7 +122,7 @@ contract IMellowRestaker is
                 if ((bal * allocationsTotal) / totalBalance < allocation) {
                     bal = ((totalBalance * allocation) / allocationsTotal) - bal;
                     if (
-                        IMellowHandler(_vault).getFreeBalance() >= bal &&
+                        totalBalance >= bal &&
                         bal > 0
                     ) {
                         _asset.safeTransferFrom(_vault, address(this), bal);

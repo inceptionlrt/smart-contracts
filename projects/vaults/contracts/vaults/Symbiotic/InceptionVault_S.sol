@@ -356,15 +356,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
-
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
