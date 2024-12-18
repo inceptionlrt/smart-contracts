@@ -338,14 +338,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
