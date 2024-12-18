@@ -47,6 +47,7 @@ const config: HardhatUserConfig = {
         sfrxETH: "0xac3e018457b222d93114458476f3e3416abbe38f",
         ratioFeed: "0x122ee24Cb3Cc1b6B987800D3B54A68FC16910Dbf",
         lockbox: "0xb86d7BfB30E4e9552Ba1Dd6208284667DF2E8c0E",
+        fraxFerry: "0xC05DE1CB258bAdc152d8EAd3F573CA9A2E812B2a"
       },
     },
   },

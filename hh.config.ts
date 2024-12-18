@@ -81,6 +81,20 @@ export const CONFIG = {
       accounts,
       eid: 40232,
     },
+    fraxHolesky: {
+      url: process.env.RPC_URL_FRAX_HOLESKY || "https://rpc.testnet.frax.com",
+      chainId: 2522,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      eid: 40255,
+      verify: {
+        etherscan: {
+          apiKey: process.env.FRAXSCAN_API_KEY,
+          apiUrl: "https://api-holesky.fraxscan.com/api",
+        },
+      },
+    },
     local: {
       url: process.env.LOCAL_RPC || "http://127.0.0.1:8545",
       chainId: 1337,
@@ -158,6 +172,7 @@ export const CONFIG = {
       optimism: process.env.OPTIMISM_API_KEY,
       optimisticEthereum: process.env.OPTIMISM_API_KEY,
       optimismSepolia: process.env.OPTIMISM_API_KEY,
+      fraxHolesky: process.env.FRAXSCAN_API_KEY,
     },
     customChains: [
       {
@@ -183,6 +198,14 @@ export const CONFIG = {
         urls: {
           apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
           browserURL: "https://sepolia-optimism.etherscan.io/",
+        },
+      },
+      {
+        network: "fraxHolesky",
+        chainId: 2522,
+        urls: {
+          apiURL: "https://api-holesky.fraxscan.com/api",
+          browserURL: "https://holesky.fraxscan.com",
         },
       },
     ],
