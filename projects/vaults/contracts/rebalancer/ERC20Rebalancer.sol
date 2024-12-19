@@ -26,6 +26,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
      */
     function initialize(
         address _inceptionToken,
+        address _underlyingAsset,
         address _lockbox,
         address _inceptionVault,
         address payable _defaultAdapter,
@@ -36,6 +37,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
 
         __RebalancerStorage_init(
             _inceptionToken,
+            _underlyingAsset,
             _lockbox,
             _inceptionVault,
             _defaultAdapter,
@@ -86,11 +88,11 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
             revert NoRebalancingRequired();
         }
 
-        uint256 bal = IERC20(address(inceptionToken)).balanceOf(address(this));
+        uint256 bal = IERC20(address(underlyingAsset)).balanceOf(address(this));
         if (bal == 0) return;
 
         require(
-            IERC20(address(inceptionToken)).transfer(lockBox, bal),
+            IERC20(address(underlyingAsset)).transfer(lockBox, bal),
             TransferToLockboxFailed()
         );
 
@@ -111,14 +113,14 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         // TODO
         require(address(inceptionVault) != address(0), LiquidityPoolNotSet());
         require(
-            _amount <= IERC20(address(inceptionToken)).balanceOf(address(this)),
+            _amount <= IERC20(address(underlyingAsset)).balanceOf(address(this)), // todo change to underlying asset
             StakeAmountExceedsEthBalance(
                 _amount,
-                IERC20(address(inceptionToken)).balanceOf(address(this))
+                IERC20(address(underlyingAsset)).balanceOf(address(this))
             )
         );
 
-        IERC20(address(inceptionToken)).safeTransfer(
+        IERC20(address(underlyingAsset)).safeTransfer( // todo change to underlying asset
             address(inceptionVault),
             _amount
         );

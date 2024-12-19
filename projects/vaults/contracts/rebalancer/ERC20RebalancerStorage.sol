@@ -5,7 +5,8 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 
 import "../interfaces/IRebalancer.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
@@ -23,6 +24,9 @@ contract ERC20RebalancerStorage is
     Ownable2StepUpgradeable,
     IRebalancer
 {
+    using SafeERC20 for IERC20;
+
+    IERC20 public underlyingAsset;
     IInceptionToken public inceptionToken;
     address public lockBox;
     IInceptionVault public inceptionVault;
@@ -57,6 +61,7 @@ contract ERC20RebalancerStorage is
 
     function __RebalancerStorage_init(
         address _inceptionToken,
+        address _underlyingAsset,
         address _lockbox,
         address _inceptionVault,
         address payable _defaultAdapter,
@@ -64,6 +69,7 @@ contract ERC20RebalancerStorage is
         address _operator
     ) internal {
         require(_inceptionToken != address(0), SettingZeroAddress());
+        require(_underlyingAsset != address(0), SettingZeroAddress());
         require(_lockbox != address(0), SettingZeroAddress());
         require(_inceptionVault != address(0), SettingZeroAddress());
         require(_defaultAdapter != address(0), SettingZeroAddress());
@@ -72,6 +78,9 @@ contract ERC20RebalancerStorage is
 
         inceptionToken = IInceptionToken(_inceptionToken);
         emit InceptionTokenChanged(address(0), _inceptionToken);
+
+        underlyingAsset = IERC20(_underlyingAsset);
+        emit UnderlyingAssetChanged(address(0), _underlyingAsset);
 
         lockBox = _lockbox;
         emit LockboxChanged(address(0), _lockbox);
@@ -235,6 +244,19 @@ contract ERC20RebalancerStorage is
         require(address(_inceptionToken) != address(0), SettingZeroAddress());
         // emit InceptionTokenChanged(inceptionToken, _inceptionToken);
         inceptionToken = _inceptionToken;
+    }
+
+    /**
+     * @notice Updates the underlying asset address.
+     * @param _underlyingAsset The new InceptionToken address.
+     */
+    function setUnderlyingAsset(IERC20 _underlyingAsset)
+        external
+        onlyOwner
+    {
+        require(address(_underlyingAsset) != address(0), SettingZeroAddress());
+        // emit InceptionTokenChanged(inceptionToken, _inceptionToken);
+        underlyingAsset = _underlyingAsset;
     }
 
     /**

@@ -28,6 +28,7 @@ interface IRebalancer {
         address prevInceptionToken,
         address newInceptionToken
     );
+    event UnderlyingAssetChanged(address prevUnderlyingAsset, address newUnderlyingAsset);
     event LiqPoolChanged(address prevLiqPool, address newLiqPool);
     event RatioFeedChanged(address prevValue, address newValue);
     event OperatorChanged(address prevOperator, address newOperator);
