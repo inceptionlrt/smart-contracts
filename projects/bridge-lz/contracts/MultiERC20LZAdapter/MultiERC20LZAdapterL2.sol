@@ -28,6 +28,12 @@ contract MultiERC20LZAdapterL2 {
         _;
     }
 
+    function setAuthVault(address _iov, bool _access) external /* onlyOwner */ {
+        require(_iov != address(0), "Zero iov addr");
+        authorizedVaults[_iov] = _access;
+        emit VaultAuthorizationChanged(_iov, _access);
+    }
+
     function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance) external onlyAuthVaults {
         ReportEntry storage entry = pendingReports.push();
         iovAddrToReportIdx[msg.sender] = pendingRepCount;
