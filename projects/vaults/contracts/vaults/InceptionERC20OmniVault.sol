@@ -8,7 +8,8 @@ import {InceptionERC20OmniAssetsHandler} from "../assets-handler/InceptionERC20O
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
+//import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
+import {IMultiERC20LZAdapterL2} from "../interfaces/IMultiERC20LZAdapterL2.sol";
 
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
@@ -31,7 +32,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
     IInceptionRatioFeed public ratioFeed;
 
-    IERC20CrossChainBridge public crossChainAdapterERC20;
+    IMultiERC20LZAdapterL2 public crossChainAdapterERC20;
 
     /**
      *  @dev Flash withdrawal params
@@ -71,7 +72,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         address _operator,
         IInceptionToken _inceptionToken,
         IERC20 _underlyingAsset,
-        IERC20CrossChainBridge _crossChainAdapter
+        IMultiERC20LZAdapterL2 _crossChainAdapter
     ) internal {
         __Ownable_init(msg.sender);
         __InceptionERC20OmniAssetsHandler_init(_underlyingAsset);
@@ -247,6 +248,21 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /**
      * @notice Sends asset information (total Inception and underlying token balances) to Layer 1.
      */
+    function reportAssetsInfoToL1() external onlyOwnerOrOperator {
+        require(
+            address(crossChainAdapterERC20) != address(0),
+            CrossChainAdapterNotSet()
+        );
+
+        uint256 tokensAmount = _inceptionTokenSupply();
+        uint256 erc20Amount = getFlashCapacity();
+
+        crossChainAdapterERC20.reportHoldings(address(_asset), tokensAmount, erc20Amount);
+        emit MessageToL1Sent(tokensAmount, erc20Amount);
+    }
+
+// LZ stuff is now handled by the adapter
+/*
     function sendAssetsInfoToL1(
         bytes memory _options
     ) external payable onlyOwnerOrOperator {
@@ -286,10 +302,11 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         emit MessageToL1Sent(tokensAmount, erc20Amount);
     }
-
+*/
     /**
      * @notice Calculates price to send data message to Layer 1.
      */
+    /*
     function quoteSendAssetsInfoToL1(
         bytes memory _options
     ) public view returns (uint256 fees) {
@@ -307,12 +324,19 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         fees = crossChainAdapterERC20.quote(payload, _options);
     }
-
+*/
 
     /**
      * @notice Sends available ERC20 to another chain via cross-chain adapter.
      * @dev msg.value is used to pay for the cross-chain fees
      */
+    function sendAssetsToL1() external onlyOwnerOrOperator {
+        uint256 amount = getFreeBalance();
+        _approve(address(crossChainAdapterERC20), amount);
+        crossChainAdapterERC20.prepareBridging(address(_asset), amount);
+    }
+
+/*
     function sendERC20ToL1(
         uint256 _chainId,
         bytes memory _options // kept for compatibility, may delete
@@ -328,11 +352,12 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         crossChainAdapterERC20.sendTokens(freeBalance);
         emit ERC20CrossChainSent(freeBalance, _chainId);
     }
-
+*/
     /**
      * @notice Calculates fees to send ERC20 to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _amount amount of token to be sent
      */
+/*
     function quoteSendERC20CrossChain(
        uint256 _amount
     ) public view returns (uint256) {
@@ -343,7 +368,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         return
             crossChainAdapterERC20.quoteSendTokens(_amount); // this is just the ferry fee
     }
-
+*/
     /*//////////////////////////////
     ////// Utility functions ///////
     //////////////////////////////*/

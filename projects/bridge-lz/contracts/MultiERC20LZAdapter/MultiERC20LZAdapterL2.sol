@@ -134,9 +134,11 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         pendingAssetsToBridge.push() = _asset;
         pendingAssetAmounts[_asset] = _amount;
         pendingBridgeCount++;
+
+        emit BridgingRequestSubmitted(_asset, _amount);
     }
 
-    function executeBridging() external /* onlyOwner */ {
+    function executeBridging() external onlyOwner {
         for(uint256 i=0; i != pendingBridgeCount; ) {
             address asset = pendingAssetsToBridge[i];
             bool success = bridges[asset].bridge(pendingAssetAmounts[asset]);
