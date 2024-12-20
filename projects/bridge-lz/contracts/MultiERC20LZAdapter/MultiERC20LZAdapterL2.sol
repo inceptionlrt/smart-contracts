@@ -3,8 +3,10 @@ pragma solidity 0.8.27;
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IGenericERC20Bridge} from "../interfaces/IGenericERC20Bridge.sol";
+import {OAppSenderUpgradeable} from "../LayerZero/OAppSenderUpgradeable.sol";
+import {Origin, MessagingReceipt, MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
-contract MultiERC20LZAdapterL2 {
+contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     struct ReportEntry {
         uint256 timestamp;
         address iovAddr;
@@ -37,6 +39,8 @@ contract MultiERC20LZAdapterL2 {
     mapping(address=>uint256) public pendingAssetAmounts;
 
     mapping(address=>IGenericERC20Bridge) public bridges;
+
+    uint32 receiverEid;
 
     modifier onlyAuthVaults() {
         require(authorizedVaults[msg.sender], "Not an authorized vault");
@@ -73,9 +77,27 @@ contract MultiERC20LZAdapterL2 {
         // Maybe we can compare the data with the previous report, so in case nothing has changed we don't send anything later
     }
 
-    function sendToL1() external /* onlyOwner */ {
+    function quoteSendToL1(bytes calldata _options) external view returns (uint256) {
+        MessagingFee memory fee = _quote(
+            receiverEid,
+            abi.encode(pendingReports),
+            _options,
+            false);
+            return fee.nativeFee;
+    }
+
+    function sendToL1(bytes calldata _options) external payable /* onlyOwner */ {
         require(pendingRepCount != 0, "Nothing to report");
-        // do_lz_magic(pendingReports);
+
+        /*MessagingReceipt memory receipt = */
+        _lzSend(
+            receiverEid,
+            abi.encode(pendingReports),
+            _options,
+            MessagingFee(msg.value, 0),
+            payable(msg.sender)
+        );
+        
         pendingRepCount = 0;
 
         emit ReportsSentToL1();
@@ -108,4 +130,20 @@ contract MultiERC20LZAdapterL2 {
         IERC20(_asset).approve(msg.sender, _amount);
         emit EmergencyRecoveryAuthorized(msg.sender, _asset, _amount);
     }
+
+    // --------------------------
+    // LZ stuff
+
+    function setPeer(uint32 _eid, bytes32 _peer)
+        public
+        override
+        /* onlyOwner */
+    {
+        _setPeer(_eid, _peer);
+    }
+
+    function setReceiverEid(uint32 _eid) external /* onlyOwner */ {
+        receiverEid = _eid;
+    }
+
 }
