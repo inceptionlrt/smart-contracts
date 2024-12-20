@@ -94,15 +94,15 @@ const deploy: DeployFunction = async (hre) => {
   // Deploy the Proxy
   console.log("Deploying Multiadapter...");
   const contractFactory = await ethers.getContractFactory(contractName);
-  const adapter = await contractFactory.deploy(args_x);
+  const adapter = await contractFactory.deploy(endpointAddress);
   await adapter.waitForDeployment();
-  console.log("Multiadapter deployed at:", adapter.target);
+  console.log("Multiadapter deployed at:", await adapter.getAddress());
 
   console.log("Deploying ferry adapter and setting it up");
   const ferryAdFactory = await ethers.getContractFactory("FerryMultibridgeAdapter");
-  const fmba = await ferryAdFactory.deploy([dummyTokenAddress, ferryAddress]);
+  const fmba = await ferryAdFactory.deploy(dummyTokenAddress, ferryAddress);
   await fmba.waitForDeployment();
-  await adapter.setBridgeForAsset(dummyTokenAddress, fmba.target);
+  await adapter.setBridgeForAsset(dummyTokenAddress, await fmba.getAddress());
 
     // Verification
     console.log("Verifying contracts...");
@@ -110,7 +110,7 @@ const deploy: DeployFunction = async (hre) => {
     // Verify Implementation
     try {
       await run("verify:verify", {
-        address: adapter.target,
+        address: await adapter.getAddress(),
         constructorArguments: [args_x],
       });
       console.log("Multiadapter contract verified!");
@@ -120,7 +120,7 @@ const deploy: DeployFunction = async (hre) => {
 
     try {
         await run("verify:verify", {
-          address: fmba.target,
+          address: await fmba.getAddress(),
           constructorArguments: [dummyTokenAddress, ferryAddress],
         });
         console.log("Ferry adapter contract verified!");
