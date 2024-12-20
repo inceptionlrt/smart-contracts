@@ -59,6 +59,9 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     uint64 public withdrawUtilizationKink;
 
 
+    uint256 public reportingNonce = 1;
+
+
     /// @dev Modifier to restrict functions to owner or operator.
     modifier onlyOwnerOrOperator() {
         if (msg.sender != owner() && msg.sender != operator)
@@ -257,7 +260,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         uint256 tokensAmount = _inceptionTokenSupply();
         uint256 erc20Amount = getFlashCapacity();
 
-        crossChainAdapterERC20.reportHoldings(address(_asset), tokensAmount, erc20Amount);
+        crossChainAdapterERC20.reportHoldings(address(_asset), tokensAmount, erc20Amount, reportingNonce++);
         emit MessageToL1Sent(tokensAmount, erc20Amount);
     }
 

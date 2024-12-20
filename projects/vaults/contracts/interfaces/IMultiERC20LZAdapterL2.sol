@@ -7,7 +7,7 @@ import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 interface IMultiERC20LZAdapterL2 {
 //    function setAuthVault(address _iov, bool _access) external;
 //    function setBridgeForAsset(address _asset, address _bridge) external;
-    function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance) external;
+    function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance, uint256 _nonce) external;
 //    function sendToL1(bytes calldata _options) external payable;
     function prepareBridging(address _asset, uint256 _amount) external;
 //    function executeBridging() external;

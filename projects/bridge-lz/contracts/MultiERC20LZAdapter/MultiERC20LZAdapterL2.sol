@@ -9,11 +9,12 @@ import {Origin, MessagingReceipt, MessagingFee} from "@layerzerolabs/oapp-evm/co
 contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     struct ReportEntry {
         uint256 timestamp;
-        address iovAddr;
-        address underlyingAssetAddr;
         uint256 inceptionTokenSupply;
         uint256 underlyingAssetBalance;
         uint256 chainId;
+        uint256 nonce;
+        address iovAddr;
+        address underlyingAssetAddr;
     }
 
     event ReportSubmitted(address indexed iovAddr, address indexed underlyingAssetAddr, uint256 incTokenSupply, uint256 uAssetBalance);
@@ -30,6 +31,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     address public owner;
 
     mapping(address=>bool) public authorizedVaults;
+    mapping(address=>uint256) public vaultReportNonces;
 
     ReportEntry[] public pendingReports;
     uint256 public pendingRepCount;
@@ -72,8 +74,9 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         emit BridgeAdded(_asset, _bridge);
     }
 
-    function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance) external onlyAuthVaults {
+    function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance, uint256 _nonce) external onlyAuthVaults {
         require(address(bridges[_asset]) != address(0), "Unknown asset type");
+        require(_nonce > vaultReportNonces[msg.sender], "Bad nonce");
 
         ReportEntry storage entry = pendingReports.push();
         iovAddrToReportIdx[msg.sender] = pendingRepCount;
@@ -86,6 +89,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         entry.inceptionTokenSupply = _incSupply;
         entry.underlyingAssetBalance = _assetBalance;
         entry.chainId = block.chainid;
+        entry.nonce = _nonce;
 
         emit ReportSubmitted(msg.sender, _asset, _incSupply, _assetBalance);
         // Maybe we can compare the data with the previous report, so in case nothing has changed we don't send anything later
