@@ -59,7 +59,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     uint64 public withdrawUtilizationKink;
 
 
-    uint256 public reportingNonce = 1;
+    uint256 public reportingNonce;
 
 
     /// @dev Modifier to restrict functions to owner or operator.
@@ -85,6 +85,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         treasuryAddress = msg.sender;
         inceptionToken = _inceptionToken;
         crossChainAdapterERC20 = _crossChainAdapter;
+        reportingNonce = 1;
 
         minAmount = 1e8;
 
