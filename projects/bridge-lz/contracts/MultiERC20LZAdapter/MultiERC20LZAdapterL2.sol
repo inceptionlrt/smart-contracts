@@ -92,9 +92,14 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     }
 
     function quoteSendToL1(bytes calldata _options) external view returns (uint256) {
+        ReportEntry[] memory package = new ReportEntry[](pendingRepCount);
+        for(uint256 i=0; i!=pendingRepCount; ) {
+            package[i] = pendingReports[i];
+        }
+
         MessagingFee memory fee = _quote(
             receiverEid,
-            abi.encode(pendingReports),
+            abi.encode(package),
             _options,
             false);
             return fee.nativeFee;
