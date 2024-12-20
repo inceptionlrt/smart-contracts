@@ -103,10 +103,15 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     function sendToL1(bytes calldata _options) external payable onlyOwner {
         require(pendingRepCount != 0, "Nothing to report");
 
+        ReportEntry[] memory package = new ReportEntry[](pendingRepCount);
+        for(uint256 i=0; i!=pendingRepCount; ) {
+            package[i] = pendingReports[i];
+        }
+
         /*MessagingReceipt memory receipt = */
         _lzSend(
             receiverEid,
-            abi.encode(pendingReports), // TODO limit length being sent
+            abi.encode(package),
             _options,
             MessagingFee(msg.value, 0),
             payable(msg.sender)
