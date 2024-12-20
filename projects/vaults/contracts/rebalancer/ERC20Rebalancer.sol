@@ -49,7 +49,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
     /**
      * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
      */
-    function updateTreasuryData() public {
+    function updateTreasuryDataFor(address token) public {
         uint256 totalL2UnderlyingBalance = 0;
 
         uint256[] memory allChainIds = chainIds;

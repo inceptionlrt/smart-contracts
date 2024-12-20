@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-
 contract MultiERC20LZAdapterL2 {
     struct ReportEntry {
         uint256 timestamp;
@@ -11,16 +10,21 @@ contract MultiERC20LZAdapterL2 {
         uint256 underlyingAssetBalance;
     }
 
-    event ReportSubmitted(address indexed iovAddr, address indexed underlyingAssetAddr, uint256 incTokenSupply, uint256 uAssetBalance);
+    event ReportSubmitted(
+        address indexed iovAddr,
+        address indexed underlyingAssetAddr,
+        uint256 incTokenSupply,
+        uint256 uAssetBalance
+    );
     event SentToL1(); // todo
     event VaultAuthorizationChanged(address indexed vault, bool newStatus);
 
-    mapping(address=>bool) public authorizedVaults;
+    mapping(address => bool) public authorizedVaults;
 
     ReportEntry[] public pendingReports;
     uint256 public pendingRepCount;
-    mapping(address=>uint256) public iovAddrToReportIdx;
-    mapping(address=>uint256) public assetAddrToReportIdx;
+    mapping(address => uint256) public iovAddrToReportIdx;
+    mapping(address => uint256) public assetAddrToReportIdx;
     // if the value returned by these mappings is bigger than pendingRepCount, then it means this iov/asset hasn't submitted anything new
 
     modifier onlyAuthVaults() {
@@ -28,13 +32,18 @@ contract MultiERC20LZAdapterL2 {
         _;
     }
 
-    function setAuthVault(address _iov, bool _access) external /* onlyOwner */ {
+    function setAuthVault(address _iov, bool _access) external /* onlyOwner */
+    {
         require(_iov != address(0), "Zero iov addr");
         authorizedVaults[_iov] = _access;
         emit VaultAuthorizationChanged(_iov, _access);
     }
 
-    function reportHoldings(address _asset, uint256 _incSupply, uint256 _assetBalance) external onlyAuthVaults {
+    function reportHoldings(
+        address _asset,
+        uint256 _incSupply,
+        uint256 _assetBalance
+    ) external onlyAuthVaults {
         ReportEntry storage entry = pendingReports.push();
         iovAddrToReportIdx[msg.sender] = pendingRepCount;
         assetAddrToReportIdx[_asset] = pendingRepCount;
@@ -50,10 +59,11 @@ contract MultiERC20LZAdapterL2 {
         // Maybe we can compare the data with the previous report, so in case nothing has changed we don't send anything later
     }
 
-    function sendToL1() external /* onlyOwner */ {
+    function sendToL1() external /* onlyOwner */
+    {
         require(pendingRepCount != 0, "Nothing to report");
         // do_lz_magic(pendingReports);
-        pendingRepCount = 0;
+        pendingRepCount--;
 
         emit SentToL1();
     }
