@@ -141,7 +141,9 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     function executeBridging() external onlyOwner {
         for(uint256 i=0; i != pendingBridgeCount; ) {
             address asset = pendingAssetsToBridge[i];
-            bool success = bridges[asset].bridge(pendingAssetAmounts[asset]);
+            uint256 amount = pendingAssetAmounts[asset];
+            IERC20(asset).approve(address(bridges[asset]), amount);
+            bool success = bridges[asset].bridge(amount);
             if(!success) {
                 emit BridgingFailed(asset, pendingAssetAmounts[asset]);
             } // soft fail in order to not stop the rest of the batch
