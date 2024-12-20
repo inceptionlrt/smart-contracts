@@ -13,6 +13,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         address underlyingAssetAddr;
         uint256 inceptionTokenSupply;
         uint256 underlyingAssetBalance;
+        uint256 chainId;
     }
 
     event ReportSubmitted(address indexed iovAddr, address indexed underlyingAssetAddr, uint256 incTokenSupply, uint256 uAssetBalance);
@@ -25,6 +26,8 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     event EmergencyRecoveryAuthorized(address indexed authedAddr, address indexed asset, uint256 amount);
 
     using SafeERC20 for IERC20;
+
+    address public owner;
 
     mapping(address=>bool) public authorizedVaults;
 
@@ -47,13 +50,23 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         _;
     }
 
-    function setAuthVault(address _iov, bool _access) external /* onlyOwner */ {
+    modifier onlyOwner {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+
+    constructor(address _endpoint) {
+        owner = msg.sender;
+        __OAppCoreUpgradeable_init(_endpoint, msg.sender);
+    }
+
+    function setAuthVault(address _iov, bool _access) external onlyOwner {
         require(_iov != address(0), "Zero iov addr");
         authorizedVaults[_iov] = _access;
         emit VaultAuthorizationChanged(_iov, _access);
     }
 
-    function setBridgeForAsset(address _asset, address _bridge) external /* onlyOwner */ {
+    function setBridgeForAsset(address _asset, address _bridge) external onlyOwner {
         require(_asset != address(0) && _bridge != address(0), "Zero addr");
         bridges[_asset] = IGenericERC20Bridge(_bridge);
         emit BridgeAdded(_asset, _bridge);
@@ -72,6 +85,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         entry.underlyingAssetAddr = _asset;
         entry.inceptionTokenSupply = _incSupply;
         entry.underlyingAssetBalance = _assetBalance;
+        entry.chainId = block.chainid;
 
         emit ReportSubmitted(msg.sender, _asset, _incSupply, _assetBalance);
         // Maybe we can compare the data with the previous report, so in case nothing has changed we don't send anything later
@@ -86,18 +100,18 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
             return fee.nativeFee;
     }
 
-    function sendToL1(bytes calldata _options) external payable /* onlyOwner */ {
+    function sendToL1(bytes calldata _options) external payable onlyOwner {
         require(pendingRepCount != 0, "Nothing to report");
 
         /*MessagingReceipt memory receipt = */
         _lzSend(
             receiverEid,
-            abi.encode(pendingReports),
+            abi.encode(pendingReports), // TODO limit length being sent
             _options,
             MessagingFee(msg.value, 0),
             payable(msg.sender)
         );
-        
+
         pendingRepCount = 0;
 
         emit ReportsSentToL1();
@@ -126,7 +140,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     }
 
     // Emergency recovery function. Authorizes owner to spend contract's tokens
-    function authorizeAssetRecovery(address _asset, uint256 _amount) external /* onlyOwner */ {
+    function authorizeAssetRecovery(address _asset, uint256 _amount) external  onlyOwner  {
         IERC20(_asset).approve(msg.sender, _amount);
         emit EmergencyRecoveryAuthorized(msg.sender, _asset, _amount);
     }
@@ -137,12 +151,12 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     function setPeer(uint32 _eid, bytes32 _peer)
         public
         override
-        /* onlyOwner */
+         onlyOwner
     {
         _setPeer(_eid, _peer);
     }
 
-    function setReceiverEid(uint32 _eid) external /* onlyOwner */ {
+    function setReceiverEid(uint32 _eid) external  onlyOwner {
         receiverEid = _eid;
     }
 
