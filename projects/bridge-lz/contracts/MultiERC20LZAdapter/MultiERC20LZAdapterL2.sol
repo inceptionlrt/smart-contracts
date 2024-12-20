@@ -29,6 +29,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     using SafeERC20 for IERC20;
 
     address public owner;
+    address public targetReceiver;
 
     mapping(address=>bool) public authorizedVaults;
     mapping(address=>uint256) public vaultReportNonces;
@@ -146,11 +147,14 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         for(uint256 i=0; i != pendingBridgeCount; ) {
             address asset = pendingAssetsToBridge[i];
             uint256 amount = pendingAssetAmounts[asset];
-            IERC20(asset).approve(address(bridges[asset]), amount);
-            bool success = bridges[asset].bridge(amount);
-            if(!success) {
+            IERC20(asset).forceApprove(address(bridges[asset]), amount);
+            try bridges[asset].bridge(targetReceiver, amount) {} catch
+            {
                 emit BridgingFailed(asset, pendingAssetAmounts[asset]);
-            } // soft fail in order to not stop the rest of the batch
+            }
+            // Soft fail in order to not stop the rest of the batch:
+            // If bridge() fails, the transfer to the bridge itself will be reverted
+            // so the tokens stay in this contract and can be recovered manually
             pendingAssetAmounts[pendingAssetsToBridge[i]] = 0;
             unchecked { ++i; }
         }
@@ -178,5 +182,10 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
     function setReceiverEid(uint32 _eid) external  onlyOwner {
         receiverEid = _eid;
     }
+
+    function setTargetReceiver(address _receiver) external  onlyOwner {
+        targetReceiver = _receiver;
+    }
+
 
 }
