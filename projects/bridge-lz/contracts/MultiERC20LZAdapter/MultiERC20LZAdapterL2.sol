@@ -93,7 +93,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
 
     function quoteSendToL1(bytes calldata _options) external view returns (uint256) {
         ReportEntry[] memory package = new ReportEntry[](pendingRepCount);
-        for(uint256 i=0; i!=pendingRepCount; ) {
+        for(uint256 i=0; i!=pendingRepCount; ++i) {
             package[i] = pendingReports[i];
         }
 
@@ -111,6 +111,7 @@ contract MultiERC20LZAdapterL2 is OAppSenderUpgradeable {
         ReportEntry[] memory package = new ReportEntry[](pendingRepCount);
         for(uint256 i=0; i!=pendingRepCount; ) {
             package[i] = pendingReports[i];
+            unchecked {++i;}
         }
 
         /*MessagingReceipt memory receipt = */
