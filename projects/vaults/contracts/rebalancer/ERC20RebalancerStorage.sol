@@ -7,12 +7,9 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
-import "../interfaces/IRebalancer.sol";
+import {IRebalancer} from "../interfaces/IRebalancer.sol";
 import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
-import {IInceptionRatioFeed} from "../interfaces/IInceptionRatioFeed.sol";
-import {ICrossChainBridgeL1} from "../interfaces/ICrossChainBridgeL1.sol";
 
 /**
  * @author The InceptionLRT team
@@ -24,8 +21,6 @@ contract ERC20RebalancerStorage is
     Ownable2StepUpgradeable,
     IRebalancer
 {
-    using SafeERC20 for IERC20;
-
     IERC20 public underlyingAsset;
     IInceptionToken public inceptionToken;
     address public lockBox;
@@ -33,43 +28,44 @@ contract ERC20RebalancerStorage is
 
     address public operator;
 
-    mapping(uint256 => Transaction) public txs;
+    Transaction public lastTx;
 
     address payable public defaultAdapter;
-    uint256[] public chainIds;
+    uint256 public defaultChainId;
+    uint256 public assetInfoTxMaxDelay;
 
     /// @dev TODO
-    uint256[50 - 11] private __gap;
+    uint256[50 - 9] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == operator, OnlyOperator());
         _;
     }
 
-    modifier onlyAdapter(uint256 _chainId) {
-        require(
-            msg.sender == _getAdapter(_chainId),
-            OnlyAdapter()
-        );
+    modifier onlyAdapter() {
+        require(msg.sender == defaultAdapter, OnlyAdapter());
         _;
     }
 
     function __RebalancerStorage_init(
+        uint256 _defaultChainId,
         address _inceptionToken,
         address _underlyingAsset,
         address _lockbox,
         address _inceptionVault,
         address payable _defaultAdapter,
-        address _ratioFeed,
         address _operator
     ) internal {
+        require(_defaultChainId != 0, SettingZeroAddress());
         require(_inceptionToken != address(0), SettingZeroAddress());
         require(_underlyingAsset != address(0), SettingZeroAddress());
         require(_lockbox != address(0), SettingZeroAddress());
         require(_inceptionVault != address(0), SettingZeroAddress());
         require(_defaultAdapter != address(0), SettingZeroAddress());
-        require(_ratioFeed != address(0), SettingZeroAddress());
         require(_operator != address(0), SettingZeroAddress());
+
+        defaultChainId = _defaultChainId;
+        emit DefaultChainIdChanged(0, _defaultChainId);
 
         inceptionToken = IInceptionToken(_inceptionToken);
         emit InceptionTokenChanged(address(0), _inceptionToken);
@@ -84,7 +80,7 @@ contract ERC20RebalancerStorage is
         emit LiqPoolChanged(address(0), _inceptionVault);
 
         defaultAdapter = _defaultAdapter;
-        emit DefaultBridgeChanged(address(0), _defaultAdapter);
+        emit DefaultAdapterChanged(address(0), _defaultAdapter);
 
         operator = _operator;
         emit OperatorChanged(address(0), _operator);
@@ -95,107 +91,12 @@ contract ERC20RebalancerStorage is
         return IERC20(address(inceptionToken)).balanceOf(lockBox);
     }
 
-    /**
-     * @notice Retrieves the transaction for a specific Chain ID. NB! Only one (last) transaction is stored.
-     * @param _chainId The Chain ID for which to retrieve the last transaction data.
-     * @return The transaction data (timestamp, ETH balance, inETH balance).
-     */
-    function getTransactionData(uint256 _chainId)
+    function getTransactionData()
         public
         view
         returns (Transaction memory)
     {
-        return txs[_chainId];
-    }
-
-    /****************************************************
-     ********************* Adapters *********************
-     ****************************************************/
-
-    // /**
-    //  * @dev Replaces the crosschain bridges
-    //  * @param _newAdapter The address of the defaultAdapter.
-    //  */
-    // function addAdapter(uint256 _chainId, address payable _newAdapter)
-    //     external
-    //     onlyOwner
-    // {
-    //     require(_newAdapter != address(0), SettingZeroAddress());
-    //     adapters[_chainId] = _newAdapter;
-    //     _addChainId(_chainId);
-
-    //     emit AdapterAdded(_chainId, _newAdapter);
-    // }
-
-    /**
-     * @notice Fetches the adapter assigned to a specific chain ID
-     * @param _chainId The Chain ID
-     * @return adapter address of the adapter for the specified chainId. Returns 0 if non set
-     * @return isDefault whether the returned adapter is default or not (from the mapping)
-     */
-    function getAdapter(uint256 _chainId)
-        external
-        view
-        returns (address payable adapter, bool isDefault)
-    {
-        adapter = _getAdapter(_chainId);
-        if (adapter == defaultAdapter) isDefault = true;
-    }
-
-    function _getAdapter(uint256 _chainId)
-        internal
-        view
-        returns (address payable adapter)
-    {
-        adapter = defaultAdapter;
-        require(adapter != address(0), NoAdapterAvailable(_chainId));
-    }
-
-    /****************************************************
-     ********************* ChainIds *********************
-     ****************************************************/
-
-    function addChainId(uint256 _newChainId) external onlyOwner {
-        _addChainId(_newChainId);
-    }
-
-    /**
-     * @notice Adds a new Chain ID to the storage.
-     * @dev Ensures that the Chain ID does not already exist in the list.
-     * @param _newChainId The Chain ID to add.
-     */
-    function _addChainId(uint256 _newChainId) internal {
-        for (uint i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == _newChainId) return;
-        }
-        chainIds.push(_newChainId);
-        emit ChainIdAdded(_newChainId);
-    }
-
-    /**
-     * @notice Removes a specific `chainId` from the `chainIds` array.
-     * @param _chainId The Chain ID to delete.
-     */
-    function deleteChainId(uint256 _chainId) public onlyOwner {
-        uint256 index;
-        bool found = false;
-
-        // Find the _chainId in the array
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            if (chainIds[i] == _chainId) {
-                index = i;
-                found = true;
-                break;
-            }
-        }
-
-        require(found, ChainIdNotFound(_chainId));
-
-        // Move the last element into the place of the one to delete
-        chainIds[index] = chainIds[chainIds.length - 1];
-        chainIds.pop();
-
-        emit ChainIdDeleted(_chainId, index);
+        return lastTx;
     }
 
     /****************************************************
@@ -212,7 +113,7 @@ contract ERC20RebalancerStorage is
         onlyOwner
     {
         require(_newDefaultAdapter != address(0), SettingZeroAddress());
-        emit DefaultBridgeChanged(defaultAdapter, _newDefaultAdapter);
+        emit DefaultAdapterChanged(defaultAdapter, _newDefaultAdapter);
         defaultAdapter = _newDefaultAdapter;
     }
 
@@ -273,5 +174,15 @@ contract ERC20RebalancerStorage is
         require(_operator != address(0), SettingZeroAddress());
         emit OperatorChanged(operator, _operator);
         operator = _operator;
+    }
+
+    /**
+     * @notice Updates the default chainId.
+     * @param _defaultChainId The new default chain Id.
+     */
+    function setDefaultChainId(uint256 _defaultChainId) external onlyOwner {
+        require(_defaultChainId != 0, SettingZeroAddress());
+        emit DefaultChainIdChanged(defaultChainId, _defaultChainId);
+        defaultChainId = _defaultChainId;
     }
 }

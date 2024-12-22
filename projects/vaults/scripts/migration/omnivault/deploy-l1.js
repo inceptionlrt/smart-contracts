@@ -1,5 +1,4 @@
 const { ethers, upgrades } = require("hardhat");
-const fs = require("fs");
 
 const UNDERLYING_ASSET = "0xDc638d549a01284e5E2409C26369dB46dC45f44a";
 

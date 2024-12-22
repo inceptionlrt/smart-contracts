@@ -19,7 +19,6 @@ interface IRebalancer {
         uint256 inceptionTokenSupply
     );
     event ETHReceived(address sender, uint256 amount);
-    event ETHDepositedToLiquidPool(address liquidPool, uint256 amountETH);
     event InceptionTokenDepositedToLockbox(uint256 mintAmount);
     event TreasuryUpdateMint(uint256 mintAmount);
     event TreasuryUpdateBurn(uint256 mintAmount);
@@ -33,9 +32,13 @@ interface IRebalancer {
     event RatioFeedChanged(address prevValue, address newValue);
     event OperatorChanged(address prevOperator, address newOperator);
     event AdapterAdded(uint256 indexed chainId, address newAdapter);
-    event DefaultBridgeChanged(
+    event DefaultAdapterChanged(
         address indexed prevDefaultAdapter,
         address indexed newDefaultAdapter
+    );
+    event DefaultChainIdChanged(
+        uint256 indexed prevValue,
+        uint256 indexed newValue
     );
     event SyncedSupplyChanged(
         uint256 prevSyncedSupply,
@@ -73,35 +76,4 @@ interface IRebalancer {
     error NoAdapterAvailable(uint256 _chainId);
     error TreasuryUpdatesPaused();
     error NoChainIdsConfigured();
-
-    // function handleL2Info(
-    //     uint256 _chainId,
-    //     uint256 _timestamp,
-    //     uint256 _balance,
-    //     uint256 _totalSupply
-    // ) external;
-
-    // function getTransactionData(
-    //     uint256 _chainId
-    // ) external view returns (Transaction memory);
-
-    // function setDefaultAdapter(address payable _newDefaultAdapter) external;
-
-    // //function setInceptionToken(address _inceptionTokenAddress) external;
-
-    // //function setLockboxAddress(address _lockboxAddress) external;
-
-    // function updateTreasuryData() external;
-
-    // function inceptionToken() external view returns (address);
-
-    // function lockboxAddress() external view returns (address);
-
-    // function liqPool() external view returns (address payable);
-
-    // function ratioFeed() external view returns (address);
-
-    // function operator() external view returns (address);
-
-    // function defaultAdapter() external view returns (address payable);
 }
