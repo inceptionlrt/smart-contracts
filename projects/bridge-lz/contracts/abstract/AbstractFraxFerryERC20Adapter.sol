@@ -28,7 +28,7 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
         // pull tokens from msg.sender (we already have approval from the vault)
         token.safeTransferFrom(msg.sender, address(this), amount);
         // approve the ferry to draw tokens
-        token.approve(address(ferry), amount);
+        token.forceApprove(address(ferry), amount);
         // embark
         ferry.embarkWithRecipient(amount, erc20OtherChainDestination);
     }
