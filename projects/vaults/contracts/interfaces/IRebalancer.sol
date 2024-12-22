@@ -45,6 +45,7 @@ interface IRebalancer {
     event ChainIdAdded(uint256 chainId);
     event ChainIdDeleted(uint256 chainId, uint256 index);
     event TransferToRestakingPool(uint256 amount);
+    event TransferToInceptionVault(uint256 amount);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);
@@ -58,9 +59,11 @@ interface IRebalancer {
     error TransferToLockboxFailed();
     error InceptionTokenAddressNotSet();
     error LiquidityPoolNotSet();
+    error InceptionVaultNotSet();
     error CrosschainBridgeNotSet();
     error MissingOneOrMoreL2Transactions(uint256 chainId);
     error StakeAmountExceedsEthBalance(uint256 staked, uint256 availableEth);
+    error StakeAmountExceedsBalance(uint256 stakedAmount, uint256 availableAmount);
     error SendAmountExceedsEthBalance(uint256 amountToSend);
     error StakeAmountExceedsMaxTVL();
     error OnlyOperator();

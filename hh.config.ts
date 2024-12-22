@@ -1,7 +1,7 @@
 require("dotenv").config();
 
-const accounts = process.env.DEPLOYER_PRIVATE_KEY
-  ? [process.env.DEPLOYER_PRIVATE_KEY]
+const accounts = process.env.TESTNET_OPERATOR_PRIVATE_KEY
+  ? [process.env.TESTNET_OPERATOR_PRIVATE_KEY]
   : ["1495992B2A5CC4DD53E231157BBF401329BD1B7EE355CEAB55A791398921CA17"];
 const gasPrice = process.env.GAS_PRICE ? parseInt(process.env.GAS_PRICE) : "auto";
 
@@ -13,7 +13,7 @@ export const CONFIG = {
       gas: 8000000,
       gasPrice,
       accounts,
-      eid: 30101
+      eid: 30101,
     },
     holesky: {
       url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
@@ -107,7 +107,7 @@ export const CONFIG = {
       },
       accounts: process.env.DEPLOYER_PRIVATE_KEY
         ? [{ privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance: "10000000000000000000" }]
-        : []
+        : [],
     },
   },
   solidity: {
@@ -214,3 +214,4 @@ export const CONFIG = {
     enabled: false,
   },
 };
+

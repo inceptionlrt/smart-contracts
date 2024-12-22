@@ -1,50 +1,53 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../interfaces/IInceptionToken.sol";
-import "../interfaces/IInceptionVault.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IInceptionToken, IInceptionErrors} from "../interfaces/IInceptionToken.sol";
+import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 
-import "../lib/Convert.sol";
-
-/// @author The InceptionLRT team
-/// @title The InceptionToken contract
-/// @dev Specifically, this includes pausable functions and minting from the vault
+/**
+ * @title The InceptionToken contract
+ * @author The InceptionLRT team
+ * @dev Specifically, this includes pausable functions and minting from the vault
+ */
 contract InceptionToken is
     OwnableUpgradeable,
     ERC20Upgradeable,
-    IInceptionToken
+    IInceptionToken,
+    IInceptionErrors
 {
     IInceptionVault public vault;
 
     bool private _paused;
 
-    modifier onlyVault() {
+    address public rebalancer;
+
+    modifier onlyMinter() {
         require(
-            msg.sender == address(vault),
-            "InceptionToken: only vault allowed"
+            msg.sender == address(vault) ||  msg.sender == rebalancer,
+            OnlyMinterAllowed()
         );
         _;
     }
 
     modifier whenNotPaused() {
-        require(!paused(), "InceptionToken: paused");
+        require(!paused(), IsPaused());
         _;
     }
 
     modifier whenPaused() {
-        require(paused(), "InceptionToken: not paused");
+        require(paused(), NotPaused());
         _;
     }
 
     modifier whenNotPausedTransfers() {
-        require(!paused(), "InceptionToken: token transfer while paused");
+        require(!paused(), TransferIsPaused());
         _;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable{
         _disableInitializers();
     }
 
@@ -64,11 +67,11 @@ contract InceptionToken is
         super._update(from, to, value);
     }
 
-    function burn(address account, uint256 amount) external override onlyVault {
+    function burn(address account, uint256 amount) external override onlyMinter {
         _burn(account, amount);
     }
 
-    function mint(address account, uint256 amount) external override onlyVault {
+    function mint(address account, uint256 amount) external override onlyMinter {
         _mint(account, amount);
     }
 
@@ -79,6 +82,12 @@ contract InceptionToken is
     function setVault(IInceptionVault newValue) external onlyOwner {
         emit VaultChanged(address(vault), address(newValue));
         vault = newValue;
+    }
+
+
+    function setRebalancer(address newRebalancer) external onlyOwner {
+        emit RebalancerChanged(rebalancer, newRebalancer);
+        rebalancer = newRebalancer;
     }
 
     /*///////////////////////////

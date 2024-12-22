@@ -25,6 +25,10 @@ contract MockRatioFeed {
         emit MockRatioUpdated(token, oldRatio, newRatio);
     }
 
+    function updateRatioBatch(address[] memory tokens, uint256[] memory newRatios) external {
+
+    }
+
     /**
      * @notice Directly set the ratio threshold for testing.
      * @param newThreshold The new threshold value to set.

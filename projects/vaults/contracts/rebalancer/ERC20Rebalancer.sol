@@ -100,10 +100,6 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         //emit InceptionTokenDepositedToLockbox(balance);
     }
 
-    function _lastUpdateTotalL2InEth() internal view returns (uint256) {
-        return IERC20(address(inceptionToken)).balanceOf(lockBox);
-    }
-
     /**
      * @dev Triggered by a cron job.
      * @notice Stakes a specified amount of ETH into the Liquidity Pool.
@@ -111,42 +107,41 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
      */
     function stake(uint256 _amount) external onlyOperator {
         // TODO
-        require(address(inceptionVault) != address(0), LiquidityPoolNotSet());
+        require(address(inceptionVault) != address(0), InceptionVaultNotSet());
         require(
-            _amount <= IERC20(address(underlyingAsset)).balanceOf(address(this)), // todo change to underlying asset
-            StakeAmountExceedsEthBalance(
+            _amount <= IERC20(address(underlyingAsset)).balanceOf(address(this)),
+            StakeAmountExceedsBalance(
                 _amount,
                 IERC20(address(underlyingAsset)).balanceOf(address(this))
             )
         );
 
-        IERC20(address(underlyingAsset)).safeTransfer( // todo change to underlying asset
+        IERC20(address(underlyingAsset)).safeTransfer(
             address(inceptionVault),
             _amount
         );
 
-        // TODO
-        emit TransferToRestakingPool(_amount);
+        emit TransferToInceptionVault(_amount);
     }
 
-    /**
-     * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
-     * @param _chainId chain ID of the network to simulate sending ETH to
-     * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
-     * @return fee required to pay for cross-chain transaction, without the value to be sent itself
-     */
-    function quoteSendEthToL2(uint256 _chainId, bytes calldata _options)
-        external
-        view
-        returns (uint256 fee)
-    {
-        // address payable adapter = payable(_getAdapter(_chainId));
-        // require(adapter != address(0), CrosschainBridgeNotSet());
-        // return
-        //     ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
-        //     ICrossChainBridgeL1(adapter).getValueFromOpts(_options);
-        return 0;
-    }
+    // /**
+    //  * @notice Calculates fees to send ETH to other chain. The `SEND_VALUE` encoded in options is not included in the return
+    //  * @param _chainId chain ID of the network to simulate sending ETH to
+    //  * @param _options encoded params for cross-chain message. Includes `SEND_VALUE` which is substracted from the end result
+    //  * @return fee required to pay for cross-chain transaction, without the value to be sent itself
+    //  */
+    // function quoteSendEthToL2(uint256 _chainId, bytes calldata _options)
+    //     external
+    //     view
+    //     returns (uint256 fee)
+    // {
+    //     // address payable adapter = payable(_getAdapter(_chainId));
+    //     // require(adapter != address(0), CrosschainBridgeNotSet());
+    //     // return
+    //     //     ICrossChainBridgeL1(adapter).quoteSendEth(_chainId, _options) -
+    //     //     ICrossChainBridgeL1(adapter).getValueFromOpts(_options);
+    //     return 0;
+    // }
 
     /**
      * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
