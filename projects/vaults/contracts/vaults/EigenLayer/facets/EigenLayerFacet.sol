@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.27;
 
+import "hardhat/console.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../InceptionVaultStorage_EL.sol";
@@ -87,6 +88,8 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         internal
     {
         _asset.approve(restaker, amount);
+        console.logString("restaker addr->>");
+        console.logAddress(address(restaker));
         IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
         emit DepositedToEL(restaker, amount);

@@ -468,7 +468,13 @@ assets.forEach(function (a) {
       });
 
       it("Delegate partially", async function () {
+        deposited = toWei(20);
+        await iVault4626.connect(staker).deposit(deposited, staker.address);
         const amount = (await iVault.totalAssets()) / 2n;
+
+        console.log('amount->> ', amount);
+        console.log('node operator->> ', nodeOperators[0]);
+
         await iVaultEL
           .connect(iVaultOperator)
           .delegateToOperator(amount, nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);

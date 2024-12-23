@@ -1,3 +1,5 @@
+require("hardhat-tracer");
+
 import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
@@ -13,7 +15,7 @@ import "./tasks/deposit-extra";
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   solidity: {
-    version: "0.8.24",
+    version: "0.8.27",
     settings: {
       optimizer: {
         enabled: true,
