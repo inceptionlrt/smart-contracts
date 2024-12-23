@@ -44,6 +44,10 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         );
     }
 
+    function setInfoMaxDelay(uint256 _delay) external onlyOperator {
+        assetInfoTxMaxDelay = _delay;
+    }
+
     /**
      * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
      */

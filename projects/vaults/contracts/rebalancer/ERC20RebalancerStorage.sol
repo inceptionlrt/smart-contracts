@@ -31,6 +31,7 @@ contract ERC20RebalancerStorage is
     Transaction public lastTx;
 
     address payable public defaultAdapter;
+    ///@custom:oz-renamed-from chainId
     uint256 public defaultChainId;
     uint256 public assetInfoTxMaxDelay;
 
