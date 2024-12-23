@@ -314,8 +314,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      * @dev msg.value is used to pay for the cross-chain fees
      */
     function sendERC20ToL1(
-        uint256 _chainId,
-        bytes memory _options // kept for compatibility, may delete
+        uint256 _chainId
     ) external payable onlyOwnerOrOperator {
         uint256 freeBalance = getFreeBalance();
 
