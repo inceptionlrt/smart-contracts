@@ -79,7 +79,7 @@ const nodeOperators = [
   "0x5B9A8c72B29Ee17e72ba8B9626Bf43a75B15FB3d",
   "0x139A091BcAad0ee1DAabe93cbBd194736B197FB6",
 ];
-const minWithdrawalDelayBlocks = 10;
+const minWithdrawalDelayBlocks = 50;
 const nodeOperatorToRestaker = new Map();
 const forcedWithdrawals = [];
 let MAX_TARGET_PERCENT;
