@@ -2456,7 +2456,9 @@ assets.forEach(function(a) {
           amount: async () => 1n,
           stakerOperator: async () => nodeOperators[0],
           operator: () => iVaultOperator,
-          error: "StrategyBase.deposit: newShares cannot be zero",
+          isCustom: true,
+          error: "NewSharesZero",
+          errorContract: () => strategy,
         },
         {
           name: "amount is greater than free balance",
@@ -2514,7 +2516,7 @@ assets.forEach(function(a) {
               iVaultEL
                 .connect(operator)
                 .delegateToOperator(delegateAmount, stakerOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
-            ).to.be.revertedWithCustomError(iVault, arg.error);
+            ).to.be.revertedWithCustomError(arg.errorContract ? arg.errorContract() : iVault, arg.error);
           } else if (arg.error) {
             await expect(
               iVaultEL
