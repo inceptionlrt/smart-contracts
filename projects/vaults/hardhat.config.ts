@@ -1,4 +1,4 @@
-require("hardhat-tracer");
+//require("hardhat-tracer");
 
 import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
