@@ -1,7 +1,6 @@
 const { upgrades, ethers } = require("hardhat");
 
-const InVault_S = "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97",
-  IMellowRestaker_Address = "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378";
+const InVault_S = "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97";
 
 async function main() {
   /****************************************
@@ -18,14 +17,6 @@ async function main() {
     unsafeAllowLinkedLibraries: true,
   });
   console.log(`New Impl of InceptionVault(${vaultImpl}) was deployed`);
-
-  /****************************************
-   ************ IMellowRestaker ************
-   ****************************************/
-
-  const IMellowRestakerFactory = await ethers.getContractFactory("IMellowRestaker");
-  const restakerImpl = await upgrades.prepareUpgrade(IMellowRestaker_Address, IMellowRestakerFactory);
-  console.log(`New Impl of MellowRestaker(${restakerImpl}) was deployed`);
 }
 
 main()
