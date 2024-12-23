@@ -19,10 +19,12 @@ import {FullMath} from "../lib/FullMath.sol";
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
-/// @author The InceptionLRT team
-/// @title The MellowRestaker Contract
-/// @dev Handles delegation and withdrawal requests within the Mellow protocol.
-/// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+/**
+ * @title The MellowRestaker Contract
+ * @author The InceptionLRT team
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ */
 contract IMellowRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -240,7 +242,7 @@ contract IMellowRestaker is
     function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
 
         if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
-        
+
         address oldWrapper = address(mellowDepositWrappers[mellowVault]);
         if (oldWrapper == address(0)) revert NoWrapperExists();
 
