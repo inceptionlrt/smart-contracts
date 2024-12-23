@@ -39,8 +39,8 @@ const deploy: DeployFunction = async (hre) => {
   };
 
   const ferryAddresses:Record<string, string> = {
-    fraxHolesky: "0x8C6b60c1799d08bFe6224DBb2F57Be953ab076A8", // WARNING: debug version
-    holesky: "0xD2FC90C8CaCbE3CE090D9DB95b69a7beE03914cb", // WARNING: debug version
+    fraxHolesky: "0x21b6d843604b6941DE7b1cf3D6c9f28631FF587f", // WARNING: debug version
+    holesky: "0x18Efbe3dE9A87e7F910FB83D586A4b033FD9e35e", // WARNING: debug version
   }
 
   const dummyTokenAddresses:Record<string, string> = {
@@ -69,14 +69,14 @@ const deploy: DeployFunction = async (hre) => {
     );
   }
 
-  const rebalancerAddress = "0x7f29ACa32A77b5aa23a44eAD12665Ce98A1D3F6f";
+  const rebalancerAddress = "0xb64183373e60Dd42015d8fC637Fa7514A3E5CD10";
 
   console.log(`Using EndpointV2 Address: ${endpointAddress}`);
   console.log(`Using Fraxferry Address: ${ferryAddress}`);
   console.log(`Using dummy token Address: ${dummyTokenAddress}`);
   console.log(`Using Rebalancer Address: ${rebalancerAddress}`);
 
-  const testEids = [40225, 40161, 40231, 40232, 40217];
+  const testEids = [40255, 40161, 40231, 40232, 40217];
   const testChainIds = [2522, 11155111, 421614, 11155420, 17000];
 
   const mainnetEids = [30110, 30111, 30101];
