@@ -10,7 +10,6 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {AbstractFraxFerryERC20Adapter} from "../abstract/AbstractFraxFerryERC20Adapter.sol";
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IFraxFerry} from "../interfaces/IFraxFerry.sol";
-//import {IFraxFerryERC20Bridge} from "./interfaces/IFraxFerryERC20Bridge.sol";
 
 import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
@@ -111,13 +110,13 @@ contract FraxFerryLZCrossChainAdapterL2 is
         uint256 _chainId,
         bytes memory _options
     ) external payable override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
-        revert("Not implemented in this adapter type");
+        revert NotAllowedInThisAdapterType();
     }
 
     function quoteSendEth(
         uint256 _chainId,
         bytes memory _options
     ) external view override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
-        revert("Not implemented in this adapter type");
+        revert NotAllowedInThisAdapterType();
     }
 }

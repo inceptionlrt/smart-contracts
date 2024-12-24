@@ -27,6 +27,7 @@ interface IAdapter {
     error SettingZeroAddress();
     error NotTargetReceiver(address caller);
     error ChainIdNotFound(uint256 chainId);
+    error NotAllowedInThisAdapterType();
 
     function setTargetReceiver(address _newTargetReceiver) external;
 
