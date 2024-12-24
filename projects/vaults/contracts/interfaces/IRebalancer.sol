@@ -49,6 +49,7 @@ interface IRebalancer {
     event ChainIdDeleted(uint256 chainId, uint256 index);
     event TransferToRestakingPool(uint256 amount);
     event TransferToInceptionVault(uint256 amount);
+    event AssetInfoTxMaxDelayChanged(uint256 delay);
 
     error MsgNotFromBridge(address caller);
     error ChainIdAlreadyExists(uint256 chainId);

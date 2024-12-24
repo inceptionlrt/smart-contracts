@@ -186,4 +186,12 @@ contract ERC20RebalancerStorage is
         emit DefaultChainIdChanged(defaultChainId, _defaultChainId);
         defaultChainId = _defaultChainId;
     }
+
+    /**
+     * @notice Updates the expiry time of L2 info.
+     * @param _delay The new TTL for L2 info packet.
+     */
+    function setInfoMaxDelay(uint256 _delay) external onlyOwner {
+        assetInfoTxMaxDelay = _delay;
+    }
 }
