@@ -24,6 +24,7 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     error errDestinationNotSet();
     event DestinationChanged(address destination);
     event FerryChanged(address ferry);
+    event DustReturnedToVault(uint256 amount);
     function sendTokens(uint256 amount) external {
         if(erc20OtherChainDestination == address(0)) revert errDestinationNotSet();
         // pull tokens from msg.sender (we already have approval from the vault)
@@ -35,7 +36,8 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
         // send back whatever wasn't taken by ferry
         uint256 bal = token.balanceOf(address(this));
         if (bal != 0) {
-        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+            token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+        emit DustReturnedToVault(bal);
         }
     }
 
