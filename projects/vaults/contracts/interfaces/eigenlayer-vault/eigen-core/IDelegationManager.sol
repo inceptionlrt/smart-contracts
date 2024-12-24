@@ -148,7 +148,13 @@ interface IDelegationManager is IDelegationManagerErrors {
 
     function undelegate(address staker) external;
 
-    event WithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal);
+    /**
+     * @notice Emitted when a new withdrawal is queued.
+     * @param withdrawalRoot Is the hash of the `withdrawal`.
+     * @param withdrawal Is the withdrawal itself.
+     * @param sharesToWithdraw Is an array of the expected shares that were queued for withdrawal corresponding to the strategies in the `withdrawal`.
+     */
+    event SlashingWithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal, uint256[] sharesToWithdraw);
 
     function completeQueuedWithdrawal(
         Withdrawal calldata withdrawal,

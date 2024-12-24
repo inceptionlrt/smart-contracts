@@ -110,7 +110,7 @@ const initVault = async a => {
   // 4. Delegation manager
   console.log("- Delegation manager");
   const delegationManager = await ethers.getContractAt("IDelegationManager", a.delegationManager);
-  await delegationManager.on("WithdrawalQueued", (newRoot, migratedWithdrawal) => {
+  await delegationManager.on("SlashingWithdrawalQueued", (newRoot, migratedWithdrawal) => {
     console.log(`===Withdrawal queued: ${migratedWithdrawal.shares[0]}`);
   });
   // 5. Ratio feed
@@ -3640,7 +3640,7 @@ assets.forEach(function(a) {
         console.log(`Total delegated ${await iVault.getTotalDelegated()}`);
         console.log(`Shares after ${await delegationManager.operatorShares(nodeOperators[0], a.assetStrategy)}`);
 
-        const withdrawalQueued = receipt.logs?.filter(e => e.eventName === "WithdrawalQueued");
+        const withdrawalQueued = receipt.logs?.filter(e => e.eventName === "SlashingWithdrawalQueued");
         expect(withdrawalQueued.length).to.be.eq(1);
         const WithdrawalQueuedEvent = withdrawalQueued[0].args.toObject();
         withdrawalData1 = [
