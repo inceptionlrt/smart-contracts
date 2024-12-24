@@ -70,6 +70,11 @@ contract FraxFerryLZCrossChainAdapterL2 is
         emit DestinationChanged(_dest);
     }
 
+    function setFerry(address _ferry) external onlyOwnerRestricted {
+        ferry = IFraxFerry(payable(_ferry));
+        emit FerryChanged(_ferry);
+    }
+
     function quote(
         bytes calldata _payload,
         bytes memory _options

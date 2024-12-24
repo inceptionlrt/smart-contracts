@@ -1,9 +1,9 @@
 const { ethers, upgrades } = require("hardhat");
 
-const INCEPTION_TOKEN = "0x34f90E4Ca80906B5770863aD1D9E661B4dB65da9",
-  UNDERLYING_ASSET = "0xDc638d549a01284e5E2409C26369dB46dC45f44a",
-  LOCKBOX = "0x1CdD819e2d1C82A6E51FDF7b05F8436e5CD89259",
-  INCEPTION_VAULT = "0xDc4c9339247cb3f64cdd46e80a0b89bD08c0C734",
+const INCEPTION_TOKEN = "0xA5528beA2bE2467629E6c3b017198d971590a48a",
+  UNDERLYING_ASSET = "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59",
+  LOCKBOX = "0xEb0b9578CDA5bcD08307744258B7D8aFAaF402c8",
+  INCEPTION_VAULT = "0x049DCdA2079d915C079BeEDFa7414551730546d6",
   DEFAULT_ADAPTER = "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E";
 
 const deployERC20Rebalancer = async (
@@ -17,7 +17,7 @@ const deployERC20Rebalancer = async (
   const ERC20RebalancerFactory = await hre.ethers.getContractFactory("ERC20Rebalancer");
   const rebalancer = await upgrades.deployProxy(
     ERC20RebalancerFactory,
-    [inceptionToken, underlyingAsset, lockbox, inceptionVault, defaultAdapter, operator],
+    [2522n, inceptionToken, underlyingAsset, lockbox, inceptionVault, defaultAdapter, operator],
     { kind: "transparent" },
   );
   await rebalancer.waitForDeployment();

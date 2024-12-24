@@ -39,13 +39,13 @@ const deploy: DeployFunction = async (hre) => {
   };
 
   const ferryAddresses:Record<string, string> = {
-    fraxHolesky: "0x21b6d843604b6941DE7b1cf3D6c9f28631FF587f", // WARNING: debug version
+    fraxHolesky: "0xf30f852d24c9c9e85DE578A6bB397bF1A21ED97b", // WARNING: debug version
     holesky: "0x18Efbe3dE9A87e7F910FB83D586A4b033FD9e35e", // WARNING: debug version
   }
 
   const dummyTokenAddresses:Record<string, string> = {
-    fraxHolesky: "0xDc638d549a01284e5E2409C26369dB46dC45f44a", // WARNING: debug version
-    holesky: "0xDc638d549a01284e5E2409C26369dB46dC45f44a", // WARNING: debug version
+    fraxHolesky: "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59", // WARNING: debug version
+    holesky: "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59", // WARNING: debug version
   }
 
   const endpointAddress = endpointAddresses[targetNetwork];
@@ -69,7 +69,7 @@ const deploy: DeployFunction = async (hre) => {
     );
   }
 
-  const rebalancerAddress = "0xb64183373e60Dd42015d8fC637Fa7514A3E5CD10";
+  const rebalancerAddress = "0xEB217cc1ea41006780cCD464763366A360F03cc2";
 
   console.log(`Using EndpointV2 Address: ${endpointAddress}`);
   console.log(`Using Fraxferry Address: ${ferryAddress}`);

@@ -62,7 +62,8 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         totalL2UnderlyingBalance += txData.underlyingBalance;
 
 
-        uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
+        // underlying balance == one we get from the vault (aka current totalAssets() aka current IOV DUM balance)
+        uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth(); // lockbox balance == how much DUM was staked since the last update
         if (totalL2UnderlyingBalance > lastUpdateTotalL2InEth ) {
             uint256 amountToMint =  totalL2UnderlyingBalance - lastUpdateTotalL2InEth;
             _mintInceptionToken(amountToMint);

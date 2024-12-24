@@ -1,6 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 
-const UNDERLYING_ASSET = "0xDc638d549a01284e5E2409C26369dB46dC45f44a";
+const UNDERLYING_ASSET = "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59";
 
 const deployMockBox = async tokenAddress => {
   const boxFactory = await ethers.getContractFactory("MockBox");
