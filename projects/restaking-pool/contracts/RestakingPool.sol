@@ -350,7 +350,7 @@ contract RestakingPool is
         uint256 amount,
         bool limit
     ) internal returns (bool success) {
-        if (address(this).balance < amount) revert PoolInsufficientBalance();
+        if (totalAssets() < amount) revert PoolInsufficientBalance();
 
         address payable wallet = payable(recipient);
         if (limit) {
@@ -379,7 +379,7 @@ contract RestakingPool is
         uint256 amount = claimableOf(claimer);
         if (amount == 0) revert PoolZeroAmount();
 
-        if (address(this).balance < getTotalClaimable())
+        if (totalAssets() < getTotalClaimable())
             revert PoolInsufficientBalance();
 
         _totalClaimable -= amount;
@@ -507,7 +507,7 @@ contract RestakingPool is
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
-        uint256 balance = address(this).balance;
+        uint256 balance = totalAssets();
         uint256 claimable = getTotalClaimable();
         uint256 stakeBonus = stakeBonusAmount;
 
