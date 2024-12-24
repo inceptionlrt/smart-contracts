@@ -63,8 +63,8 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
 
 
         uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth();
-        if (lastUpdateTotalL2InEth < totalL2UnderlyingBalance) {
-            uint256 amountToMint = totalL2UnderlyingBalance;
+        if (totalL2UnderlyingBalance > lastUpdateTotalL2InEth ) {
+            uint256 amountToMint =  totalL2UnderlyingBalance - lastUpdateTotalL2InEth;
             _mintInceptionToken(amountToMint);
 
             emit SyncedSupplyChanged(
