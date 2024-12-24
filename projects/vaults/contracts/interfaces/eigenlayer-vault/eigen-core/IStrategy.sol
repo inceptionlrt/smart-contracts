@@ -3,7 +3,27 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IStrategy {
+interface IStrategyErrors {
+    /// @dev Thrown when called by an account that is not strategy manager.
+    error OnlyStrategyManager();
+    /// @dev Thrown when new shares value is zero.
+    error NewSharesZero();
+    /// @dev Thrown when total shares exceeds max.
+    error TotalSharesExceedsMax();
+    /// @dev Thrown when amount shares is greater than total shares.
+    error WithdrawalAmountExceedsTotalDeposits();
+    /// @dev Thrown when attempting an action with a token that is not accepted.
+    error OnlyUnderlyingToken();
+
+    /// StrategyBaseWithTVLLimits
+
+    /// @dev Thrown when `maxPerDeposit` exceeds max.
+    error MaxPerDepositExceedsMax();
+    /// @dev Thrown when balance exceeds max total deposits.
+    error BalanceExceedsMaxTotalDeposits();
+}
+
+interface IStrategy is IStrategyErrors {
     function deposit(IERC20 token, uint256 amount) external returns (uint256);
 
     function withdraw(

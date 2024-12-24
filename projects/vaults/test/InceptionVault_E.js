@@ -4016,7 +4016,7 @@ assets.forEach(function(a) {
         await expect(
           iVaultEL.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]),
         ).to.be.revertedWithCustomError(
-          iVaultEL, "WithdrawalDelayNotElapsed",
+          delegationManager, "WithdrawalDelayNotElapsed",
         );
       });
 
@@ -4044,7 +4044,7 @@ assets.forEach(function(a) {
       it("Reverts: when claim the 2nd time", async function() {
         await expect(
           iVaultEL.connect(staker).claimCompletedWithdrawals(withdrawalData[2], [withdrawalData]),
-        ).to.be.revertedWithCustomError(iVault, "WithdrawalNotQueued");
+        ).to.be.revertedWithCustomError(delegationManager, "WithdrawalNotQueued");
       });
     });
 

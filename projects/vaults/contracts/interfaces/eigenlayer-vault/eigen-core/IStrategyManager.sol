@@ -3,7 +3,26 @@ pragma solidity ^0.8.20;
 
 import "./IStrategy.sol";
 
-interface IStrategyManager {
+interface IStrategyManagerErrors {
+    /// @dev Thrown when total strategies deployed exceeds max.
+    error MaxStrategiesExceeded();
+    /// @dev Thrown when call attempted from address that's not delegation manager.
+    error OnlyDelegationManager();
+    /// @dev Thrown when call attempted from address that's not strategy whitelister.
+    error OnlyStrategyWhitelister();
+    /// @dev Thrown when provided `shares` amount is too high.
+    error SharesAmountTooHigh();
+    /// @dev Thrown when provided `shares` amount is zero.
+    error SharesAmountZero();
+    /// @dev Thrown when provided `staker` address is null.
+    error StakerAddressZero();
+    /// @dev Thrown when provided `strategy` not found.
+    error StrategyNotFound();
+    /// @dev Thrown when attempting to deposit to a non-whitelisted strategy.
+    error StrategyNotWhitelisted();
+}
+
+interface IStrategyManager is IStrategyManagerErrors {
     struct WithdrawerAndNonce {
         address withdrawer;
         uint96 nonce;

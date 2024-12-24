@@ -3,6 +3,59 @@ pragma solidity ^0.8.20;
 
 import "./IStrategy.sol";
 
+interface IDelegationManagerErrors {
+    /// @dev Thrown when caller is neither the StrategyManager or EigenPodManager contract.
+    error OnlyStrategyManagerOrEigenPodManager();
+    /// @dev Thrown when msg.sender is not the EigenPodManager
+    error OnlyEigenPodManager();
+    /// @dev Throw when msg.sender is not the AllocationManager
+    error OnlyAllocationManager();
+
+    /// Delegation Status
+
+    /// @dev Thrown when an operator attempts to undelegate.
+    error OperatorsCannotUndelegate();
+    /// @dev Thrown when an account is actively delegated.
+    error ActivelyDelegated();
+    /// @dev Thrown when an account is not actively delegated.
+    error NotActivelyDelegated();
+    /// @dev Thrown when `operator` is not a registered operator.
+    error OperatorNotRegistered();
+
+    /// Invalid Inputs
+
+    /// @dev Thrown when attempting to execute an action that was not queued.
+    error WithdrawalNotQueued();
+    /// @dev Thrown when caller cannot undelegate on behalf of a staker.
+    error CallerCannotUndelegate();
+    /// @dev Thrown when two array parameters have mismatching lengths.
+    error InputArrayLengthMismatch();
+    /// @dev Thrown when input arrays length is zero.
+    error InputArrayLengthZero();
+
+    /// Slashing
+
+    /// @dev Thrown when an operator has been fully slashed(maxMagnitude is 0) for a strategy.
+    /// or if the staker has had been natively slashed to the point of their beaconChainScalingFactor equalling 0.
+    error FullySlashed();
+
+    /// Signatures
+
+    /// @dev Thrown when attempting to spend a spent eip-712 salt.
+    error SaltSpent();
+
+    /// Withdrawal Processing
+
+    /// @dev Thrown when attempting to withdraw before delay has elapsed.
+    error WithdrawalDelayNotElapsed();
+    /// @dev Thrown when a withdraw amount larger than max is attempted.
+    error WithdrawalExceedsMax();
+    /// @dev Thrown when withdrawer is not the current caller.
+    error WithdrawerNotCaller();
+    /// @dev Thrown when `withdrawer` is not staker.
+    error WithdrawerNotStaker();
+}
+
 interface IDelegationManagerTypes {
     /**
      * Struct type used to specify an existing queued withdrawal. Rather than storing the entire struct, only a hash is stored.
@@ -42,7 +95,7 @@ interface IDelegationManagerTypes {
     }
 }
 
-interface IDelegationManager {
+interface IDelegationManager is IDelegationManagerErrors {
     // @notice Struct that bundles together a signature and an expiration time for the signature. Used primarily for stack management.
     struct SignatureWithExpiry {
         // the signature itself, formatted as a single bytes object
