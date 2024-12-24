@@ -193,5 +193,6 @@ contract ERC20RebalancerStorage is
      */
     function setInfoMaxDelay(uint256 _delay) external onlyOwner {
         assetInfoTxMaxDelay = _delay;
+        emit AssetInfoTxMaxDelayChanged(_delay);
     }
 }
