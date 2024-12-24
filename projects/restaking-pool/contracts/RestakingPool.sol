@@ -350,7 +350,7 @@ contract RestakingPool is
         uint256 amount,
         bool limit
     ) internal returns (bool success) {
-        if (address(this).balance < amount) revert PoolInsufficientBalance();
+        if (totalAssets() < amount) revert PoolInsufficientBalance();
 
         address payable wallet = payable(recipient);
         if (limit) {
@@ -379,7 +379,7 @@ contract RestakingPool is
         uint256 amount = claimableOf(claimer);
         if (amount == 0) revert PoolZeroAmount();
 
-        if (address(this).balance < getTotalClaimable())
+        if (totalAssets() < getTotalClaimable())
             revert PoolInsufficientBalance();
 
         _totalClaimable -= amount;
@@ -507,15 +507,7 @@ contract RestakingPool is
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
-        uint256 balance = address(this).balance;
-        uint256 claimable = getTotalClaimable();
-        uint256 stakeBonus = stakeBonusAmount;
-
-        if (claimable + stakeBonus > balance) {
-            return 0;
-        } else {
-            return balance - claimable - stakeBonus;
-        }
+        return _pureBalance();
     }
 
     function _getTargetCapacity() internal view returns (uint256) {
@@ -527,11 +519,11 @@ contract RestakingPool is
      * @notice Get ETH amount available to stake before protocol reach max TVL.
      */
     function availableToStake() public view virtual returns (uint256) {
-        uint256 totalAssets = config().getCToken().totalAssets();
-        if (totalAssets > _maxTVL) {
+        uint256 _totalAssets = config().getCToken().totalAssets();
+        if (_totalAssets > _maxTVL) {
             return 0;
         }
-        return _maxTVL - totalAssets;
+        return _maxTVL - _totalAssets;
     }
 
     /**
@@ -571,6 +563,13 @@ contract RestakingPool is
      * @notice Get pending to calculate ratio.
      */
     function getPending() public view returns (uint256) {
+       return _pureBalance();
+    }
+
+    /**
+     * @dev Returns pure balance excluding bonuses and claimables.
+     */
+    function _pureBalance() internal view returns (uint256) {
         uint256 balance = totalAssets();
         uint256 claimable = getTotalClaimable();
         uint256 stakeBonus = stakeBonusAmount;
