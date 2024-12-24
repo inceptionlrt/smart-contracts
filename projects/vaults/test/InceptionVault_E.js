@@ -139,6 +139,8 @@ const initVault = async a => {
     nodeOperatorToRestaker.set(elOperator, restaker);
   });
 
+  const strategyManager = await ethers.getContractAt("IStrategyManager", a.strategyManager);
+
   /// =========================== FACETS ===========================
 
   const setterFacetFactory = await ethers.getContractFactory("EigenSetterFacet", {
@@ -349,6 +351,7 @@ const initVault = async a => {
     iVaultSetters,
     iVaultEL,
     iVault4626,
+    strategyManager
   ];
 };
 
@@ -366,7 +369,8 @@ assets.forEach(function(a) {
       iLibrary,
       iVaultSetters,
       iVaultEL,
-      iVault4626;
+      iVault4626,
+      strategyManager;
     let iVaultOperator, deployer, staker, staker2, staker3, treasury;
     let ratioErr, transactErr;
     let snapshot;
@@ -403,6 +407,7 @@ assets.forEach(function(a) {
         iVaultSetters,
         iVaultEL,
         iVault4626,
+        strategyManager
       ] = await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
@@ -3716,7 +3721,9 @@ assets.forEach(function(a) {
           amount: async () => 0n,
           nodeOperator: async () => nodeOperators[0],
           operator: () => iVaultOperator,
-          error: "StrategyManager._removeShares: shareAmount should not be zero!",
+          isCustom: true,
+          error: "SharesAmountZero",
+          errorContract: () => strategyManager,
         },
         {
           name: "from unknown operator",
@@ -3763,7 +3770,7 @@ assets.forEach(function(a) {
           if (arg.isCustom) {
             await expect(
               iVaultEL.connect(arg.operator()).undelegateFrom(nodeOperator, amount),
-            ).to.be.revertedWithCustomError(iVault, arg.error);
+            ).to.be.revertedWithCustomError(arg.errorContract ? arg.errorContract() : iVault, arg.error);
           } else {
             await expect(iVaultEL.connect(arg.operator()).undelegateFrom(nodeOperator, amount)).to.be.revertedWith(
               arg.error,
