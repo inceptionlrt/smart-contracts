@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
-import {IInceptionVaultErrors} from "../interfaces/IInceptionVaultErrors.sol";
-
-import {InceptionLibrary} from "../lib/InceptionLibrary.sol";
-import {Convert} from "../lib/Convert.sol";
+import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
@@ -18,15 +14,14 @@ import {Convert} from "../lib/Convert.sol";
 contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
-    IInceptionVaultErrors,
-    IInceptionAssetHandler
+    Ownable2StepUpgradeable,
+    IInceptionVaultErrors
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
 
-    uint256[49] private __reserver;
+    uint256[50 - 1] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
@@ -43,18 +38,16 @@ contract InceptionAssetsHandler is
     }
 
     /// @dev returns the balance of iVault in the asset
-    function totalAssets() public view override returns (uint256) {
+    function totalAssets() public view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
-        if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed(address(_asset));
+        _asset.safeTransferFrom(staker, address(this), amount);
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount))
-            revert TransferAssetFailed(address(_asset));
+        _asset.safeTransfer(receiver, amount);
     }
 
     /// @dev The functions below serve the proper withdrawal and claiming operations

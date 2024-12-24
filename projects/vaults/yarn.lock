@@ -3634,14 +3634,15 @@ hardhat-storage-layout@^0.1.7:
   dependencies:
     console-table-printer "^2.9.0"
 
-hardhat-tracer@^2.6.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/hardhat-tracer/-/hardhat-tracer-2.6.0.tgz#ca19ddb8c0447150b242aadc20dd9674206139e5"
-  integrity sha512-omsGd9NN5i0WmIFuEVZIxULfu5v6zU4/Vx+6oIVmziIJdQgZacmP5VmtVhnJEQd7IPDZNQAa+iBbW827g/ErFQ==
+hardhat-tracer@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/hardhat-tracer/-/hardhat-tracer-3.1.0.tgz#460ced6bd6919928fc679a8d5764f2b861283b3b"
+  integrity sha512-Ip16HQAuzbqbNJUIEVfqmbPmOY90bxZSpwu5Q73cwloy+LUYA04BATUM9Gui5H7zcgsgZ1IVy7pSYn6ZMjLmag==
   dependencies:
     chalk "^4.1.2"
     debug "^4.3.4"
     ethers "^5.6.1"
+    semver "^7.6.2"
 
 hardhat@^2.14.0:
   version "2.22.6"
@@ -5522,6 +5523,11 @@ semver@^7.3.4:
   integrity sha512-Wvss5ivl8TMRZXXESstBA4uR5iXgEN/VC5/sOcuXdVLzcdkz4HWetIoRfG5gb5X+ij/G9rw9YoGn3QoQ8OCSpw==
   dependencies:
     lru-cache "^6.0.0"
+
+semver@^7.6.2:
+  version "7.6.3"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.3.tgz#980f7b5550bc175fb4dc09403085627f9eb33143"
+  integrity sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A==
 
 semver@~5.4.1:
   version "5.4.1"
