@@ -135,10 +135,6 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         );
     }
 
-    /**
-     * @dev TODO: add the check for `withdrawableShares`
-     * @notice DelegationManager.getWithdrawableShares()
-     */
     function _undelegate(uint256 amount, address staker)
         internal
         returns (uint256)
@@ -153,6 +149,11 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
 
         // we need to withdraw the remaining dust from EigenLayer
         if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
+
+        IStrategy[] memory strategies = new IStrategy[](1);
+        strategies[0] = strategy;
+        (uint256[] memory withdrawableShares, ) = delegationManager.getWithdrawableShares(staker, strategies);
+        if (shares > withdrawableShares[0]) revert WithdrawableSharesExceeded();
 
         _pendingWithdrawalAmount += amount;
         emit StartWithdrawal(

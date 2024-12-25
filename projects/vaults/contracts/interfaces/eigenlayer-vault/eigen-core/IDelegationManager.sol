@@ -197,4 +197,9 @@ interface IDelegationManager is IDelegationManagerErrors {
     function isOperator(address operator) external view returns (bool);
 
     function isDelegated(address staker) external view returns (bool);
+
+    function getWithdrawableShares(
+        address staker,
+        IStrategy[] memory strategies
+    ) external view returns (uint256[] memory withdrawableShares, uint256[] memory depositShares);
 }

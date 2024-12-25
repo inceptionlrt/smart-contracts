@@ -48,6 +48,8 @@ interface IInceptionVaultErrors {
 
     error ZeroFlashWithdrawFee();
 
+    error WithdrawableSharesExceeded();
+
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
