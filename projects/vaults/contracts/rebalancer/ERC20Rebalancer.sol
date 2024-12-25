@@ -48,8 +48,6 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
      * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
      */
     function updateTreasuryData() public {
-        uint256 totalL2UnderlyingBalance = 0;
-
         Transaction memory txData = getTransactionData();
         require(
             txData.timestamp != 0,
@@ -59,25 +57,24 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
             block.timestamp - txData.timestamp <= assetInfoTxMaxDelay,
             MissingOneOrMoreL2Transactions(defaultChainId)
         );
-        totalL2UnderlyingBalance += txData.underlyingBalance;
 
-
+        uint256 totalL2Supply = txData.inceptionTokenSupply;
         // underlying balance == one we get from the vault (aka current totalAssets() aka current IOV DUM balance)
-        uint256 lastUpdateTotalL2InEth = _lastUpdateTotalL2InEth(); // lockbox balance == how much DUM was staked since the last update
-        if (totalL2UnderlyingBalance > lastUpdateTotalL2InEth ) {
-            uint256 amountToMint =  totalL2UnderlyingBalance - lastUpdateTotalL2InEth;
+        uint256 lockBoxSupply = _lockboxSupply(); // lockbox balance == how much DUM was staked since the last update
+        if (totalL2Supply > lockBoxSupply ) {
+            uint256 amountToMint = totalL2Supply - lockBoxSupply;
             _mintInceptionToken(amountToMint);
 
             emit SyncedSupplyChanged(
-                lastUpdateTotalL2InEth,
-                lastUpdateTotalL2InEth + amountToMint
+                lockBoxSupply,
+                lockBoxSupply + amountToMint
             );
-        } else if (lastUpdateTotalL2InEth > totalL2UnderlyingBalance) {
-            uint256 amountToBurn = lastUpdateTotalL2InEth -
-                totalL2UnderlyingBalance;
+        } else if (lockBoxSupply > totalL2Supply) {
+            uint256 amountToBurn = lockBoxSupply -
+                totalL2Supply;
             _burnInceptionToken(amountToBurn);
 
-            emit SyncedSupplyChanged(lastUpdateTotalL2InEth, amountToBurn);
+            emit SyncedSupplyChanged(lockBoxSupply, lockBoxSupply - amountToBurn);
         } else {
             revert NoRebalancingRequired();
         }

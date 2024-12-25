@@ -88,7 +88,7 @@ contract ERC20RebalancerStorage is
     }
 
 
-    function _lastUpdateTotalL2InEth() internal view returns (uint256) {
+    function _lockboxSupply() internal view returns (uint256) {
         return IERC20(address(inceptionToken)).balanceOf(lockBox);
     }
 

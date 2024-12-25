@@ -12,9 +12,9 @@ async function main() {
 
   switch (networkName) {
     case "fraxHolesky":
-  //    INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-      UNDERLYING_ASSET_ADDRESS = "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59";
-      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x3712e359d87ACd6D4dE6E22607303256D2fa631f";
+      //    INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
+      UNDERLYING_ASSET_ADDRESS = "0x078f5B7D650457eBc3430F2e49B3B5319b94fafF";
+      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x3b0154Bb623A04f991294333bF07037bc2EBd054";
       break;
     case "arbitrum":
       INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
@@ -40,7 +40,7 @@ async function main() {
     throw new Error("Please set the CROSS_CHAIN_BRIDGE_ADDRESS_L2 for the current network");
   }
 
-  const operatorAddress = process.env.OPERATOR_ADDRESS;
+  const operatorAddress = "0x292fC68C55572cf8bb680e6eED639899e83D2e06";
   if (!operatorAddress) {
     throw new Error("Please set the OPERATOR_ADDRESS environment variable");
   }
@@ -61,15 +61,20 @@ async function main() {
   const inETHAddress = await inETH.getAddress();
   console.log(`InceptionToken deployed at: ${inETHAddress}`);
 
-
   const InceptionOmniVaultFactory = await ethers.getContractFactory("InOmniVault_E2");
   console.log("Deploying Transparent Proxy...");
 
-  const args = [vaultName, operatorAddress, await inETH.getAddress(), UNDERLYING_ASSET_ADDRESS, CROSS_CHAIN_BRIDGE_ADDRESS_L2];
+  const args = [
+    vaultName,
+    operatorAddress,
+    await inETH.getAddress(),
+    UNDERLYING_ASSET_ADDRESS,
+    CROSS_CHAIN_BRIDGE_ADDRESS_L2,
+  ];
   const inceptionOmniVault = await upgrades.deployProxy(
     InceptionOmniVaultFactory,
     args,
-   /* {
+    /* {
       initializer: "initialize",
     }, */
   );
@@ -86,7 +91,6 @@ async function main() {
   const adminAddress_it = await upgrades.erc1967.getAdminAddress(deployedAddress_it);
   console.log("InceptionToken Proxy Admin Address:", adminAddress_it);
 
-
   const deployedAddress = await inceptionOmniVault.getAddress();
   console.log("InceptionOmniVault deployed to (proxy):", deployedAddress);
 
@@ -101,7 +105,7 @@ async function main() {
   console.log(`Token vault address set: ${deployedAddress}`);
 
   console.log("Deployment complete.");
-/*
+  /*
   // Verification
   console.log("Verifying contracts...");
 

@@ -1,6 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 
-const UNDERLYING_ASSET = "0xffA312b35306f7076C0093DdeE93cdC07F3f9C59";
+const UNDERLYING_ASSET = "0x078f5B7D650457eBc3430F2e49B3B5319b94fafF";
 
 const deployMockBox = async tokenAddress => {
   const boxFactory = await ethers.getContractFactory("MockBox");
@@ -41,6 +41,9 @@ const deployVault = async (operatorAddress, strategyAddress) => {
   tx = await iVault.setRatioFeed("0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
   await tx.wait();
 
+  const feed = ethers.getContractAt("IInceptionRatioFeed", "0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  await feed.updateRatioBatch([iTokenAddress], ["1000000000000000000"]);
+
   return iVaultAddress;
 };
 
@@ -50,15 +53,14 @@ async function main() {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log(`Account(${await deployer.getAddress()}) balance: ${initBalance.toString()}`);
   /// deploy mock LockBox
-  //   const lockBoxAddress = await deployMockBox(UNDERLYING_ASSET);
-  //   console.log("lockBoxAddress: ", lockBoxAddress);
-  //   /// deploy mock Strategy
-  //   const strategyAddress = await deployMockBox(UNDERLYING_ASSET);
-  //   console.log("strategyAddress : ", strategyAddress);
-  //   return;
+  const lockBoxAddress = await deployMockBox(UNDERLYING_ASSET);
+  console.log("lockBoxAddress: ", lockBoxAddress);
+  /// deploy mock Strategy
+  const strategyAddress = await deployMockBox(UNDERLYING_ASSET);
+  console.log("strategyAddress: ", strategyAddress);
 
   /// deploy mock InceptionVault
-  const vaultAddress = await deployVault(await deployer.getAddress(), "0xEb0b9578CDA5bcD08307744258B7D8aFAaF402c8");
+  const vaultAddress = await deployVault(await deployer.getAddress(), strategyAddress);
   console.log(vaultAddress);
 }
 
