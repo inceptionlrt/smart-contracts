@@ -103,11 +103,11 @@ contract FraxFerryLZCrossChainAdapterL2 is
         }
     }
 
-    // This will allow TargetReceiver to recover ERC20 accidentally sent to the contract itself.
-    // TargetReceiver should, in turn, be able to use transferFrom() on the token contract.
+    // This will allow TargetReceiver to recover ERC20 accidentally sent to the adapter itself.
+    // Tokens will be sent back to TargetReceiver (aka vault).
     function recoverFunds() external override(AbstractCrossChainAdapter, IAdapter) onlyOwnerRestricted {
         require(targetReceiver != address(0), TargetReceiverNotSet());
-        token.approve(targetReceiver, token.balanceOf(address(this)));
+        token.transfer(targetReceiver, token.balanceOf(address(this)));
     }
 
     // stubs for eth methods

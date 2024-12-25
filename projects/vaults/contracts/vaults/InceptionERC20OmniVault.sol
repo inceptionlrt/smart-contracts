@@ -320,12 +320,12 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         require(
             freeBalance >= quoteSendERC20CrossChain(freeBalance),
-            FeesAboveMsgValue(freeBalance) // TODO change event
+            FeesAboveMsgValue(freeBalance)
         );
 
         _approve(address(crossChainAdapterERC20), freeBalance);
-        crossChainAdapterERC20.sendTokens(freeBalance);
-        emit ERC20CrossChainSent(freeBalance, _chainId);
+        uint256 returnedDust = crossChainAdapterERC20.sendTokens(freeBalance);
+        emit ERC20CrossChainSent(freeBalance - returnedDust, _chainId);
     }
 
     /**
