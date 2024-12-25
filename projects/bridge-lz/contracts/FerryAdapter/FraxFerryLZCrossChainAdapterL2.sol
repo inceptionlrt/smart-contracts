@@ -15,11 +15,11 @@ import {Origin} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 
 /**
  * @title FraxFerryLZCrossChainAdapterL2
+ * @author InceptionLRT
  * @dev Layer 2 adapter for LayerZero cross-chain communication, supporting ERC20 transfers and data messaging with Layer 1.
  * This contract manages endpoint and chain ID mappings, enables quoting for cross-chain transactions, and provides functions for
  * data transfer to L1.
  */
-
 contract FraxFerryLZCrossChainAdapterL2 is
     AbstractLZCrossChainAdapter,
     AbstractCrossChainAdapterL2,
@@ -27,6 +27,8 @@ contract FraxFerryLZCrossChainAdapterL2 is
     Initializable,
     Ownable2StepUpgradeable
 {
+    uint32 private _l1ChainId;
+
     modifier onlyOwnerRestricted()
         override(AbstractCrossChainAdapter, AbstractLZCrossChainAdapter) {
         _checkOwner();
@@ -41,87 +43,103 @@ contract FraxFerryLZCrossChainAdapterL2 is
         _;
     }
 
-    uint32 private l1ChainId;
-
     function initialize(
         address _token,
         address _ferry,
         address _rebalancer,
         address _endpoint,
         address _delegate,
-        uint32 _l1ChainId,
+        uint32 l1ChainId,
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
         __Ownable_init(msg.sender);
         __OAppUpgradeable_init(_endpoint, _delegate);
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
-        l1ChainId = _l1ChainId;
+        _l1ChainId = l1ChainId;
         token = IERC20(_token);
         ferry = IFraxFerry(payable(_ferry));
-        erc20OtherChainDestination = _rebalancer;
+        erc20DestinationChain = _rebalancer;
         for (uint256 i = 0; i < _eIds.length; i++) {
             setChainIdFromEid(_eIds[i], _chainIds[i]);
         }
     }
 
     function setDestination(address _dest) external onlyOwnerRestricted {
-        erc20OtherChainDestination = _dest;
+        /// TODO: require ?
+        erc20DestinationChain = _dest;
         emit DestinationChanged(_dest);
     }
 
     function setFerry(address _ferry) external onlyOwnerRestricted {
+        /// TODO: require ?
         ferry = IFraxFerry(payable(_ferry));
         emit FerryChanged(_ferry);
     }
 
-    function quote(
-        bytes calldata _payload,
-        bytes memory _options
-    ) external view override returns (uint256) {
-        return _quote(l1ChainId, _payload, _options);
+    function quote(bytes calldata _payload, bytes memory _options)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return _quote(_l1ChainId, _payload, _options);
     }
 
-    function sendDataL1(
-        bytes calldata _payload,
-        bytes memory _options
-    ) external payable override onlyTargetReceiverRestricted returns (uint256) {
-        return _sendCrosschain(l1ChainId, _payload, _options);
+    function sendDataL1(bytes calldata _payload, bytes memory _options)
+        external
+        payable
+        override
+        onlyTargetReceiverRestricted
+        returns (uint256)
+    {
+        return _sendCrosschain(_l1ChainId, _payload, _options);
     }
 
     function _lzReceive(
         Origin calldata origin,
-        bytes32 /*_guid*/,
+        bytes32, /*_guid*/
         bytes calldata,
-        address /*_executor*/,
+        address, /*_executor*/
         bytes calldata /*_extraData*/
     ) internal virtual override {
         uint256 chainId = getChainIdFromEid(origin.srcEid);
-
-        if (msg.value > 0) {
-            _handleCrossChainEth(chainId);
-        }
+        if (msg.value > 0) _handleCrossChainEth(chainId);
     }
 
     // This will allow TargetReceiver to recover ERC20 accidentally sent to the adapter itself.
     // Tokens will be sent back to TargetReceiver (aka vault).
-    function recoverFunds() external override(AbstractCrossChainAdapter, IAdapter) onlyOwnerRestricted {
+    function recoverFunds()
+        external
+        override(AbstractCrossChainAdapter, IAdapter)
+        onlyOwnerRestricted
+    {
         require(targetReceiver != address(0), TargetReceiverNotSet());
         token.transfer(targetReceiver, token.balanceOf(address(this)));
     }
 
     // stubs for eth methods
     function sendEthCrossChain(
-        uint256 _chainId,
-        bytes memory _options
-    ) external payable override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
+        uint256, /*_chainId */
+        bytes memory /* _options */
+    )
+        external
+        payable
+        override(AbstractLZCrossChainAdapter, IAdapter)
+        returns (uint256)
+    {
         revert NotAllowedInThisAdapterType();
     }
 
     function quoteSendEth(
-        uint256 _chainId,
-        bytes memory _options
-    ) external view override(AbstractLZCrossChainAdapter, IAdapter) returns (uint256) {
+        uint256, /* _chainId */
+        bytes memory /* _options */
+    )
+        external
+        pure
+        override(AbstractLZCrossChainAdapter, IAdapter)
+        returns (uint256)
+    {
         revert NotAllowedInThisAdapterType();
     }
 }
