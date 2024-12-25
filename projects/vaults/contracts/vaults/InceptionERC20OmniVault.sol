@@ -13,10 +13,12 @@ import {IERC20CrossChainBridge} from "../interfaces/IERC20CrossChainBridge.sol";
 import {InternalInceptionLibrary} from "../lib/InternalInceptionLibrary.sol";
 import {Convert} from "../lib/Convert.sol";
 
-/// @author The InceptionLRT team
-/// @title InceptionERC20OmniVault
-/// @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
-/// @notice Allows users to deposit an asset(e.g. stETH), receive inception tokens, and handle asset transfers between L1 and L2.
+/**
+ * @title InceptionERC20OmniVault
+ * @author The InceptionLRT team
+ * @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
+ * @notice Allows users to deposit an asset(e.g. stETH), receive inception tokens, and handle asset transfers between L1 and L2.
+ */
 contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -37,12 +39,12 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      *  @dev Flash withdrawal params
      */
 
-    uint256 public depositBonusAmount;
-
-    uint256 public targetCapacity;
-
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
     uint256 public constant MAX_PERCENT = 100 * 1e8;
+
+    uint256 public depositBonusAmount;
+    uint256 public targetCapacity;
+
 
     address public treasuryAddress;
     uint64 public protocolFee;
@@ -84,6 +86,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         minAmount = 1e8;
 
+        /// TODO !!!
         targetCapacity = 1;
         protocolFee = 50 * 1e8;
 
@@ -181,9 +184,9 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         return iShares;
     }
 
-    /*///////////////////////////////////////
-    ///////// Withdrawal functions /////////
-    /////////////////////////////////////*/
+    /*/////////////////////////////////////////////
+    ///////// Flash Withdrawal functions /////////
+    ///////////////////////////////////////////*/
 
     /**
      * @dev Ensures withdrawal parameters are valid.
@@ -191,17 +194,10 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      * @param iShares Number of shares to be withdrawn.
      */
     function __beforeWithdraw(address receiver, uint256 iShares) internal pure {
-        if (iShares == 0) {
-            revert NullParams();
-        }
-        if (receiver == address(0)) {
-            revert NullParams();
-        }
+        if (iShares == 0) revert NullParams();
+        if (receiver == address(0)) revert NullParams();
     }
 
-    /*/////////////////////////////////////////////
-    ///////// Flash Withdrawal functions /////////
-    ///////////////////////////////////////////*/
 
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
@@ -255,8 +251,8 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             CrossChainAdapterNotSet()
         );
 
-        uint256 msgValue = msg.value; // fees are still paid in ETH
-
+        /// @dev fees are still paid in ETH
+        uint256 msgValue = msg.value;
         uint256 tokensAmount = _inceptionTokenSupply();
         uint256 erc20Amount = getFlashCapacity();
         bytes memory payload = abi.encode(
@@ -276,7 +272,6 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         );
 
         uint256 unusedFees = msgValue - fees;
-
         if (unusedFees > 0) {
             (bool success, ) = msg.sender.call{value: unusedFees}("");
             if (success) {
@@ -292,7 +287,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      */
     function quoteSendAssetsInfoToL1(
         bytes memory _options
-    ) public view returns (uint256 fees) {
+    ) public view returns (uint256) {
         require(
             address(crossChainAdapterERC20) != address(0),
             CrossChainAdapterNotSet()
@@ -305,7 +300,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             erc20Amount
         );
 
-        fees = crossChainAdapterERC20.quote(payload, _options);
+        return crossChainAdapterERC20.quote(payload, _options);
     }
 
 
@@ -366,10 +361,6 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             );
     }
 
-    function _inceptionTokenSupply() internal view returns (uint256) {
-        return IERC20(address(inceptionToken)).totalSupply();
-    }
-
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashWithdrawFee(
         uint256 amount
@@ -395,9 +386,9 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
                 : getFlashCapacity() - targetCapacity;
     }
 
-    /*//////////////////////////////
-    ////// Factory functions //////
-    ////////////////////////////*/
+    function _inceptionTokenSupply() internal view returns (uint256) {
+        return IERC20(address(inceptionToken)).totalSupply();
+    }
 
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
