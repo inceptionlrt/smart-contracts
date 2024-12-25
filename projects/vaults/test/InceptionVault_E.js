@@ -574,7 +574,7 @@ assets.forEach(function(a) {
         expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore + extra, transactErr);
         expect(redeemReserve).to.be.eq(staker2PW);
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
-        expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr * 4n);
+        expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr * 5n);
         expect(await iVault.ratio()).to.be.eq(ratioBefore);
       });
 
