@@ -58,6 +58,12 @@ interface IInceptionVault_EL {
         uint256 amount
     );
 
+    event RedelegatedTo(
+        address indexed stakerAddress,
+        address indexed fromOperatorAddress,
+        address indexed newOperatorAddress
+    );
+
     event WithdrawalClaimed(uint256 totalAmount);
 
     event DelegationManagerChanged(address prevValue, address newValue);

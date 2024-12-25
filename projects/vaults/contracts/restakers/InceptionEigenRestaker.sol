@@ -20,12 +20,12 @@ import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRe
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract InceptionEigenRestaker is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IInceptionEigenRestaker,
-    IInceptionEigenRestakerErrors
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+ERC165Upgradeable,
+OwnableUpgradeable,
+IInceptionEigenRestaker,
+IInceptionEigenRestakerErrors
 {
     using SafeERC20 for IERC20;
 
@@ -98,6 +98,20 @@ contract InceptionEigenRestaker is
         );
     }
 
+    function redelegateToOperator(
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee {
+        if (newOperator == address(0)) revert NullParams();
+
+        _delegationManager.redelegate(
+            newOperator,
+            newOperatorApproverSig,
+            approverSalt
+        );
+    }
+
     function withdrawFromEL(uint256 shares) external onlyTrustee {
         uint256[] memory sharesToWithdraw = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
@@ -106,9 +120,9 @@ contract InceptionEigenRestaker is
         sharesToWithdraw[0] = shares;
 
         IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
+        memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+            1
+        );
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
@@ -133,7 +147,7 @@ contract InceptionEigenRestaker is
 
         // send tokens to the vault
         uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
-            balanceBefore;
+                    balanceBefore;
 
         _asset.safeTransfer(_vault, withdrawnAmount);
 
@@ -149,8 +163,8 @@ contract InceptionEigenRestaker is
     }
 
     function setRewardsCoordinator(address newRewardsCoordinator)
-        external
-        onlyOwner
+    external
+    onlyOwner
     {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }

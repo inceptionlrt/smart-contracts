@@ -202,4 +202,10 @@ interface IDelegationManager is IDelegationManagerErrors {
         address staker,
         IStrategy[] memory strategies
     ) external view returns (uint256[] memory withdrawableShares, uint256[] memory depositShares);
+
+    function redelegate(
+        address newOperator,
+        SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external returns (bytes32[] memory withdrawalRoots);
 }
