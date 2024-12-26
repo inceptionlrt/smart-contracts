@@ -50,6 +50,8 @@ interface IInceptionVaultErrors {
 
     error WithdrawableSharesExceeded();
 
+    error OperatorHasRestaker();
+
     /// TVL errors
 
     error ExceedsMaxPerDeposit(uint256 max, uint256 amount);

@@ -35,12 +35,20 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         address newOperator,
         IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
         bytes32 approverSalt
-    ) external {
+    ) external nonReentrant {
         if (elOperator == address(0) || newOperator == address(0)) revert NullParams();
 
         // try to find a restaker for the specific EL operator
         address restaker = _operatorRestakers[elOperator];
         if (restaker == address(0)) revert OperatorNotRegistered();
+
+        // try to find a restaker for the specific new operator
+        address newOperatorRestaker = _operatorRestakers[newOperator];
+        if (newOperatorRestaker == address(0)) revert OperatorNotRegistered();
+        if (newOperatorRestaker != _MOCK_ADDRESS) revert OperatorHasRestaker(); // todo: fix err name?
+
+        _operatorRestakers[newOperator] = restaker;
+        _operatorRestakers[elOperator] = _MOCK_ADDRESS;
 
         _redelegateToOperator(
             restaker,
@@ -202,6 +210,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             delegationManager.delegatedTo(staker),
             nonce
         );
+
         return shares;
     }
 
