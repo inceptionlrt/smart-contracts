@@ -31,11 +31,9 @@ contract ERC20RebalancerStorage is
     Transaction public lastTx;
 
     address payable public defaultAdapter;
-    ///@custom:oz-renamed-from chainId
     uint256 public defaultChainId;
     uint256 public assetInfoTxMaxDelay;
 
-    /// @dev TODO
     uint256[50 - 9] private __gap;
 
     modifier onlyOperator() {
@@ -182,7 +180,7 @@ contract ERC20RebalancerStorage is
      * @param _defaultChainId The new default chain Id.
      */
     function setDefaultChainId(uint256 _defaultChainId) external onlyOwner {
-        require(_defaultChainId != 0, SettingZeroAddress());
+        require(_defaultChainId != 0, SettingZeroChainId());
         emit DefaultChainIdChanged(defaultChainId, _defaultChainId);
         defaultChainId = _defaultChainId;
     }
@@ -192,6 +190,7 @@ contract ERC20RebalancerStorage is
      * @param _delay The new TTL for L2 info packet.
      */
     function setInfoMaxDelay(uint256 _delay) external onlyOwner {
+        require(_delay != 0, SettingZeroDelay());
         assetInfoTxMaxDelay = _delay;
         emit AssetInfoTxMaxDelayChanged(_delay);
     }

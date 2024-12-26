@@ -45,30 +45,15 @@ contract InceptionERC20OmniAssetsHandler is
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
-        if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed();
+        _asset.safeTransferFrom(staker, address(this), amount);
     }
+
 
     function _approve(address spender, uint256 amount) internal {
         if(!_asset.approve(spender, amount)) revert AssetApprovalFailed();
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount)) revert TransferAssetFailed();
-    }
-
-    /// @dev The functions below serve the proper withdrawal and claiming operations
-    /// @notice Since ETH transfers do not lose wei on each transfer, these functions
-    /// simply return the provided amount
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
+        _asset.safeTransfer(receiver, amount);
     }
 }

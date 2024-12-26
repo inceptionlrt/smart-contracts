@@ -17,33 +17,37 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     using SafeERC20 for IERC20;
 
-    IFraxFerry ferry;
-    IERC20 token;
-    address erc20OtherChainDestination;
+    IFraxFerry public ferry;
+    IERC20 public token;
+    address public erc20DestinationChain;
 
-    error errDestinationNotSet();
-    event DestinationChanged(address destination);
-    event FerryChanged(address ferry);
-    event DustReturnedToVault(uint256 amount);
+    /// @dev Start the bridging process
     function sendTokens(uint256 amount) external returns (uint256) {
-        if(erc20OtherChainDestination == address(0)) revert errDestinationNotSet();
+        require(erc20DestinationChain != address(0), errDestinationNotSet());
+
+        address vault = msg.sender;
         // pull tokens from msg.sender (we already have approval from the vault)
-        token.safeTransferFrom(msg.sender, address(this), amount);
+        token.safeTransferFrom(vault, address(this), amount);
         // approve the ferry to draw tokens
+        /// TODO: forceApprove ?
         token.forceApprove(address(ferry), amount);
-        // embark
-        ferry.embarkWithRecipient(amount, erc20OtherChainDestination);
+        ferry.embarkWithRecipient(amount, erc20DestinationChain);
         // send back whatever wasn't taken by ferry
         uint256 bal = token.balanceOf(address(this));
-        if (bal != 0) {
-            token.safeTransfer(msg.sender, token.balanceOf(address(this)));
-            emit DustReturnedToVault(bal);
-        }
+        if (bal == 0) return 0;
+
+        token.safeTransfer(vault, bal);
+        emit DustReturnedToVault(bal);
+
         return bal;
     }
 
+    /// @dev Get the fee for using the ferry
     function quoteSendTokens(uint256 amount) external view returns (uint256) {
-        return Math.min(Math.max(ferry.FEE_MIN(),amount*ferry.FEE_RATE()/10000),ferry.FEE_MAX());
+        return
+            Math.min(
+                Math.max(ferry.FEE_MIN(), (amount * ferry.FEE_RATE()) / 10000),
+                ferry.FEE_MAX()
+            );
     }
-
 }

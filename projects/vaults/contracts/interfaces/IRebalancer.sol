@@ -59,6 +59,8 @@ interface IRebalancer {
     error TimeCannotBeInFuture(uint256 timestamp);
     error TimeBeforePrevRecord(uint256 timestamp);
     error SettingZeroAddress();
+    error SettingZeroChainId();
+    error SettingZeroDelay();
     error TransferToRestakingPoolFailed();
     error TransferToLockboxFailed();
     error InceptionTokenAddressNotSet();
