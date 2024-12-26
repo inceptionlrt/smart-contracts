@@ -44,18 +44,16 @@ contract InceptionERC20OmniAssetsHandler is
         return _asset.balanceOf(address(this));
     }
 
-    /// TODO: safe ???
     function _transferAssetFrom(address staker, uint256 amount) internal {
-        if (!_asset.transferFrom(staker, address(this), amount))
-            revert TransferAssetFromFailed();
+        _asset.safeTransferFrom(staker, address(this), amount);
     }
 
-    /// TODO: safe ???
+
     function _approve(address spender, uint256 amount) internal {
         if(!_asset.approve(spender, amount)) revert AssetApprovalFailed();
     }
 
     function _transferAssetTo(address receiver, uint256 amount) internal {
-        if (!_asset.transfer(receiver, amount)) revert TransferAssetFailed();
+        _asset.safeTransfer(receiver, amount);
     }
 }

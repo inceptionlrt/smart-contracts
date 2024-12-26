@@ -199,7 +199,7 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     }
 
 
-    /// @dev Performs burning iToken from mgs.sender
+    /// @dev Performs burning iToken from msg.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
     function flashWithdraw(

@@ -21,12 +21,7 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
     IERC20 public token;
     address public erc20DestinationChain;
 
-    /// TODO: Why are they here?
-    error errDestinationNotSet();
-    event DestinationChanged(address destination);
-    event FerryChanged(address ferry);
-    event DustReturnedToVault(uint256 amount);
-
+    /// @dev Start the bridging process
     function sendTokens(uint256 amount) external returns (uint256) {
         require(erc20DestinationChain != address(0), errDestinationNotSet());
 
@@ -47,6 +42,7 @@ abstract contract AbstractFraxFerryERC20Adapter is IERC20CrossChainBridge {
         return bal;
     }
 
+    /// @dev Get the fee for using the ferry
     function quoteSendTokens(uint256 amount) external view returns (uint256) {
         return
             Math.min(

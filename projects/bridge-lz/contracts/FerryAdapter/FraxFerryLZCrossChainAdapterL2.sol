@@ -66,15 +66,15 @@ contract FraxFerryLZCrossChainAdapterL2 is
     }
 
     function setDestination(address _dest) external onlyOwnerRestricted {
-        /// TODO: require ?
+        require(_dest != address(0), errNullDestination());
         erc20DestinationChain = _dest;
         emit DestinationChanged(_dest);
     }
 
     function setFerry(address _ferry) external onlyOwnerRestricted {
-        /// TODO: require ?
+        require(_ferry != address(0), IFraxFerry.errNullFerry());
         ferry = IFraxFerry(payable(_ferry));
-        emit FerryChanged(_ferry);
+        emit IFraxFerry.FerryChanged(_ferry);
     }
 
     function quote(bytes calldata _payload, bytes memory _options)
@@ -107,7 +107,7 @@ contract FraxFerryLZCrossChainAdapterL2 is
         if (msg.value > 0) _handleCrossChainEth(chainId);
     }
 
-    // This will allow TargetReceiver to recover ERC20 accidentally sent to the adapter itself.
+    /// @dev This will allow TargetReceiver to recover ERC20 accidentally sent to the adapter itself.
     // Tokens will be sent back to TargetReceiver (aka vault).
     function recoverFunds()
         external

@@ -2,6 +2,9 @@
 pragma solidity 0.8.27;
 
 interface IFraxFerry {
+    event FerryChanged(address ferry);
+    error errNullFerry();
+
     function FEE_RATE() external view returns (uint256);
 
     function FEE_MIN() external view returns (uint256);
