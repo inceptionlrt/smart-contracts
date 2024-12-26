@@ -180,8 +180,7 @@ contract ERC20RebalancerStorage is
      * @param _defaultChainId The new default chain Id.
      */
     function setDefaultChainId(uint256 _defaultChainId) external onlyOwner {
-        /// TODO: incorrect the error naming
-        require(_defaultChainId != 0, SettingZeroAddress());
+        require(_defaultChainId != 0, SettingZeroChainId());
         emit DefaultChainIdChanged(defaultChainId, _defaultChainId);
         defaultChainId = _defaultChainId;
     }
@@ -191,7 +190,7 @@ contract ERC20RebalancerStorage is
      * @param _delay The new TTL for L2 info packet.
      */
     function setInfoMaxDelay(uint256 _delay) external onlyOwner {
-        /// TODO: require ?
+        require(_delay != 0, SettingZeroDelay());
         assetInfoTxMaxDelay = _delay;
         emit AssetInfoTxMaxDelayChanged(_delay);
     }
