@@ -50,7 +50,9 @@ interface IInceptionVaultErrors {
 
     error WithdrawableSharesExceeded();
 
-    error OperatorHasRestaker();
+    error OperatorAlreadyDelegated();
+
+    error OperatorNotDelegated();
 
     /// TVL errors
 

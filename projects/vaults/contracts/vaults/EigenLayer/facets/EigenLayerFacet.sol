@@ -41,11 +41,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         // try to find a restaker for the specific EL operator
         address restaker = _operatorRestakers[elOperator];
         if (restaker == address(0)) revert OperatorNotRegistered();
+        if (restaker == _MOCK_ADDRESS) revert OperatorNotDelegated();
 
         // try to find a restaker for the specific new operator
         address newOperatorRestaker = _operatorRestakers[newOperator];
         if (newOperatorRestaker == address(0)) revert OperatorNotRegistered();
-        if (newOperatorRestaker != _MOCK_ADDRESS) revert OperatorHasRestaker(); // todo: fix err name?
+        if (newOperatorRestaker != _MOCK_ADDRESS) revert OperatorAlreadyDelegated();
 
         _operatorRestakers[newOperator] = restaker;
         _operatorRestakers[elOperator] = _MOCK_ADDRESS;
