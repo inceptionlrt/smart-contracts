@@ -43,6 +43,10 @@ contract FraxFerryLZCrossChainAdapterL2 is
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _token,
         address _ferry,

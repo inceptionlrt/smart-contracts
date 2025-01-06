@@ -14,6 +14,10 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 contract ERC20Rebalancer is ERC20RebalancerStorage {
     using SafeERC20 for IERC20;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes the contract with essential addresses and parameters.
      * @param _inceptionToken The address of the InceptionToken token.
