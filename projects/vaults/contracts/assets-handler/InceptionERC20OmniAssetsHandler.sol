@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,7 +15,7 @@ import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
 contract InceptionERC20OmniAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     IInceptionERC20OmniVault,
     IInceptionAssetHandler
 {
