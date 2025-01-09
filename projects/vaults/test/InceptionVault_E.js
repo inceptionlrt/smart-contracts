@@ -4695,31 +4695,63 @@ assets.forEach(function(a) {
 
     describe("Redelegate to new operator", function() {
       it("Redelegate to new operator", async function() {
-        let amount = toWei(10);
-        let oldOperator = nodeOperators[0];
-        let newOperator = nodeOperators[1];
+        const amount = toWei(10);
+        const oldOperator = nodeOperators[0];
+        const newOperator = nodeOperators[1];
 
         await iVault4626.connect(staker).deposit(amount, staker.address);
         await iVaultEL.connect(iVaultOperator)
           .delegateToOperator(amount, oldOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
-        const restaker = nodeOperatorToRestaker.get(oldOperator);
+        const ratio = await iVault.ratio();
+        const operatorRestaker = nodeOperatorToRestaker.get(oldOperator);
 
         await iVaultSetters.addELOperator(newOperator);
         const tx = await iVaultEL.connect(iVaultOperator)
           .redelegateToOperator(oldOperator, newOperator, [ethers.ZeroHash, 0], ethers.ZeroHash);
 
+        await mineBlocks(minWithdrawalDelayBlocks);
+
         const delegatedTotal = await iVault.getTotalDelegated();
         const delegatedToOld = await iVault.getDelegatedTo(oldOperator);
+        const newRatio = await iVault.ratio();
         expect(delegatedToOld).to.be.eq(0);
         expect(delegatedTotal).to.be.eq(0);
+        expect(ratio).to.be.eq(newRatio);
 
         const receipt = await tx.wait();
         const events = receipt.logs?.filter(e => e.eventName === "RedelegatedTo");
         expect(events.length).to.be.eq(1);
-        expect(events[0].args["stakerAddress"], "stakerAddress").to.be.eq(restaker);
+        expect(events[0].args["stakerAddress"], "stakerAddress").to.be.eq(operatorRestaker);
         expect(events[0].args["fromOperatorAddress"], "from").to.be.eq(oldOperator);
         expect(events[0].args["newOperatorAddress"], "to").to.be.eq(newOperator);
+
+        let WithdrawalQueuedEvent;
+        for (const log of receipt.logs) {
+          try {
+            const event = delegationManager.interface.parseLog(log);
+            if (event != null) {
+              WithdrawalQueuedEvent = event.args.toObject();
+            }
+          } catch (error) {
+            console.error("Error parsing event log:", error);
+          }
+        }
+
+        let withdrawalData = [
+          WithdrawalQueuedEvent.withdrawal.staker,
+          oldOperator,
+          operatorRestaker,
+          WithdrawalQueuedEvent.withdrawal.nonce,
+          WithdrawalQueuedEvent.withdrawal.startBlock,
+          [...WithdrawalQueuedEvent.withdrawal.strategies],
+          [...WithdrawalQueuedEvent.withdrawal.shares],
+        ];
+
+        await iVaultEL.connect(iVaultOperator).claimCompletedWithdrawals(operatorRestaker, [withdrawalData]);
+
+        const totalAssetsAfter = await iVault.totalAssets();
+        expect(totalAssetsAfter, "totalAssetsAfter").to.be.eq(amount);
       });
     });
   });
