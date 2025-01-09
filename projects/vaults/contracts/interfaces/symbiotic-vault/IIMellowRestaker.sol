@@ -69,8 +69,9 @@ interface IIMellowRestaker {
     ) external returns (uint256 lpAmount);
 
     function delegate(
+        uint256 amount,
         uint256 deadline
-    ) external returns (uint256 amount, uint256 lpAmount);
+    ) external returns (uint256 tokenAmount, uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,

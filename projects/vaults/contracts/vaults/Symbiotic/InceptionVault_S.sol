@@ -183,8 +183,10 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
     function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
-        _asset.safeApprove(address(mellowRestaker), getFreeBalance());
+        uint256 balance = getFreeBalance();
+        _asset.safeApprove(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
+            balance,
             block.timestamp
         );
 

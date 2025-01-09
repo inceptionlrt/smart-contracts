@@ -993,7 +993,7 @@ assets.forEach(function (a) {
         await mellowRestaker.changeAllocation(mellowVaults[0].vaultAddress, 1n);
 
         let time = await helpers.time.latest();
-        await expect(mellowRestaker.connect(staker).delegate(time + 1000)).to.revertedWithCustomError(
+        await expect(mellowRestaker.connect(staker).delegate(await iVault.getFreeBalance(), time + 1000)).to.revertedWithCustomError(
           mellowRestaker,
           "NotVaultOrTrusteeManager",
         );

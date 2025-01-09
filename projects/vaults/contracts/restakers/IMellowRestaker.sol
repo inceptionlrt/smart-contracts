@@ -113,39 +113,33 @@ contract IMellowRestaker is
     }
 
     function delegate(
+        uint256 amount,
         uint256 deadline
-    ) external onlyTrustee whenNotPaused returns (uint256 amount, uint256 lpAmount) {
-        uint256 totalBalance = IMellowHandler(_vault).getFreeBalance();
+    ) external onlyTrustee whenNotPaused returns (uint256 tokenAmount, uint256 lpAmount) {
         uint256 allocationsTotal = totalAllocations;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
-                uint256 bal = getDeposited(address(mellowVaults[i]));
-                if ((bal * allocationsTotal) / totalBalance < allocation) {
-                    bal = ((totalBalance * allocation) / allocationsTotal) - bal;
-                    if (
-                        IMellowHandler(_vault).getFreeBalance() >= bal &&
-                        bal > 0
-                    ) {
-                        _asset.safeTransferFrom(_vault, address(this), bal);
-                        IMellowDepositWrapper wrapper = mellowDepositWrappers[
-                            address(mellowVaults[i])
-                        ];
-                        IERC20(_asset).safeIncreaseAllowance(
-                            address(wrapper),
-                            bal
-                        );
-                        uint256 minAmount = (bal * (10000 - depositSlippage)) /
-                            10000;
-                        lpAmount += wrapper.deposit(
-                            address(this),
-                            address(_asset),
-                            bal,
-                            minAmount,
-                            deadline
-                        );
-                        amount += bal;
-                    }
+                uint256 localBalance = (amount * allocation) / allocationsTotal;
+                if (localBalance > 0) {
+                    _asset.safeTransferFrom(_vault, address(this), localBalance);
+                    IMellowDepositWrapper wrapper = mellowDepositWrappers[
+                        address(mellowVaults[i])
+                    ];
+                    IERC20(_asset).safeIncreaseAllowance(
+                        address(wrapper),
+                        localBalance
+                    );
+                    uint256 minAmount = (localBalance * (10000 - depositSlippage)) /
+                        10000;
+                    lpAmount += wrapper.deposit(
+                        address(this),
+                        address(_asset),
+                        localBalance,
+                        minAmount,
+                        deadline
+                    );
+                    tokenAmount += localBalance;
                 }
             }
         }
