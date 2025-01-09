@@ -4714,7 +4714,7 @@ assets.forEach(function(a) {
 
         const delegatedTotal = await iVault.getTotalDelegated();
         const delegatedToOld = await iVault.getDelegatedTo(oldOperator);
-        const newRatio = await iVault.ratio();
+        let newRatio = await iVault.ratio();
         expect(delegatedToOld).to.be.eq(0);
         expect(delegatedTotal).to.be.eq(0);
         expect(ratio).to.be.eq(newRatio);
@@ -4749,9 +4749,10 @@ assets.forEach(function(a) {
         ];
 
         await iVaultEL.connect(iVaultOperator).claimCompletedWithdrawals(operatorRestaker, [withdrawalData]);
-
+        newRatio = await iVault.ratio();
         const totalAssetsAfter = await iVault.totalAssets();
         expect(totalAssetsAfter, "totalAssetsAfter").to.be.eq(amount);
+        expect(newRatio).to.be.eq(ratio);
       });
     });
   });
