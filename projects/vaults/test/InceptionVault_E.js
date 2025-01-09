@@ -245,6 +245,9 @@ const initVault = async a => {
   funcSig = eigenLayerFacet.interface.getFunction("forceUndelegateRecovery").selector;
   await iVault.setSignature(funcSig, facetId, accessId);
 
+  funcSig = eigenLayerFacet.interface.getFunction("redelegateToOperator").selector;
+  await iVault.setSignature(funcSig, facetId, accessId);
+
   /// ================================= ####### =================================
   /// ================================= ERC4626 =================================
   /// ================================= ####### =================================
@@ -351,7 +354,7 @@ const initVault = async a => {
     iVaultSetters,
     iVaultEL,
     iVault4626,
-    strategyManager
+    strategyManager,
   ];
 };
 
@@ -407,7 +410,7 @@ assets.forEach(function(a) {
         iVaultSetters,
         iVaultEL,
         iVault4626,
-        strategyManager
+        strategyManager,
       ] = await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
@@ -4687,6 +4690,36 @@ assets.forEach(function(a) {
 
           expect(ratioAfter).to.be.lt(ratioBefore);
         });
+      });
+    });
+
+    describe("Redelegate to new operator", function() {
+      it("Redelegate to new operator", async function() {
+        let amount = toWei(10);
+        let oldOperator = nodeOperators[0];
+        let newOperator = nodeOperators[1];
+
+        await iVault4626.connect(staker).deposit(amount, staker.address);
+        await iVaultEL.connect(iVaultOperator)
+          .delegateToOperator(amount, oldOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]);
+
+        const restaker = nodeOperatorToRestaker.get(oldOperator);
+
+        await iVaultSetters.addELOperator(newOperator);
+        const tx = await iVaultEL.connect(iVaultOperator)
+          .redelegateToOperator(oldOperator, newOperator, [ethers.ZeroHash, 0], ethers.ZeroHash);
+
+        const delegatedTotal = await iVault.getTotalDelegated();
+        const delegatedToOld = await iVault.getDelegatedTo(oldOperator);
+        expect(delegatedToOld).to.be.eq(0);
+        expect(delegatedTotal).to.be.eq(0);
+
+        const receipt = await tx.wait();
+        const events = receipt.logs?.filter(e => e.eventName === "RedelegatedTo");
+        expect(events.length).to.be.eq(1);
+        expect(events[0].args["stakerAddress"], "stakerAddress").to.be.eq(restaker);
+        expect(events[0].args["fromOperatorAddress"], "from").to.be.eq(oldOperator);
+        expect(events[0].args["newOperatorAddress"], "to").to.be.eq(newOperator);
       });
     });
   });
