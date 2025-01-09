@@ -68,6 +68,7 @@ interface IRebalancer {
     error InceptionVaultNotSet();
     error CrosschainBridgeNotSet();
     error MissingOneOrMoreL2Transactions(uint256 chainId);
+    error OutdatedAssetInfo(uint256 chainId);
     error StakeAmountExceedsEthBalance(uint256 staked, uint256 availableEth);
     error StakeAmountExceedsBalance(uint256 stakedAmount, uint256 availableAmount);
     error SendAmountExceedsEthBalance(uint256 amountToSend);

@@ -59,7 +59,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         );
         require(
             block.timestamp - txData.timestamp <= assetInfoTxMaxDelay,
-            MissingOneOrMoreL2Transactions(defaultChainId)
+            OutdatedAssetInfo(defaultChainId)
         );
 
         uint256 totalL2Supply = txData.inceptionTokenSupply;
