@@ -63,7 +63,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        minAmount = 10000000000000;
+        minAmount = 1e16;
 
         protocolFee = 50 * 1e8;
 
@@ -127,7 +127,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        uint256 availableBonusAmount = depositBonusAmount;
+        // uint256 availableBonusAmount = depositBonusAmount;
+        uint256 availableBonusAmount = 0;
         if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
@@ -182,12 +183,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
+    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
         uint256 balance = getFreeBalance();
-        _asset.safeApprove(address(mellowRestaker), balance);
+        _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
             balance,
-            block.timestamp
+            deadline
         );
 
         emit Delegated(address(mellowRestaker), amount, lpAmount);
