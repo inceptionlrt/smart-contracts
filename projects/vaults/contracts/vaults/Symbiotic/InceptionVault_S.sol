@@ -127,7 +127,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        uint256 availableBonusAmount = depositBonusAmount;
+        // uint256 availableBonusAmount = depositBonusAmount;
+        uint256 availableBonusAmount = 0;
         if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
