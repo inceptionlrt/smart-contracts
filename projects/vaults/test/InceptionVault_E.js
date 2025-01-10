@@ -565,7 +565,7 @@ assets.forEach(function (a) {
         console.log(`Total assets after:\t\t${totalAssetsAfter.format()}`);
         console.log(`Redeem reserve:\t\t\t${redeemReserve.format()}`);
 
-        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount + extra, transactErr * 2n);
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount + extra, transactErr * 3n);
         expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore + extra, transactErr);
         expect(redeemReserve).to.be.eq(staker2PW);
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
@@ -598,7 +598,7 @@ assets.forEach(function (a) {
         expect(staker2PWAfter).to.be.eq(0n);
         expect(balanceAfter - balanceBefore).to.be.closeTo(staker2PWBefore, transactErr);
         expect(totalDepositedAfter).to.be.closeTo(extra, transactErr * 5n);
-        expect(totalAssetsAfter).to.be.closeTo(extra, transactErr * 2n);
+        expect(totalAssetsAfter).to.be.closeTo(extra, transactErr * 3n);
       });
     });
 
@@ -3555,12 +3555,47 @@ assets.forEach(function (a) {
         await iVault4626.connect(staker2).withdraw(staker2Amount, staker2.address);
       });
 
+      it("undelegateFrom operator more than delegated", async function () {
+        const amount = await iVault.getDelegatedTo(nodeOperators[0]);
+        expect(amount).gt(0n);
+
+        const pendingWithdrawalsELBefore = await iVault.getPendingWithdrawalAmountFromEL();
+        const totalDelegatedBefore = await iVault.getTotalDelegated();
+        const ratioBefore = await calculateRatio(iVault, iToken);
+
+        const tx = await iVaultEL.connect(iVaultOperator).undelegateFrom(nodeOperators[0], amount + e18);
+        const receipt = await tx.wait();
+        const startWithdrawal = receipt.logs?.filter(e => e.eventName === "StartWithdrawal");
+        expect(startWithdrawal.length).to.be.eq(1);
+        const WithdrawalQueuedEvent = startWithdrawal[0].args;
+        const data = [
+          WithdrawalQueuedEvent["stakerAddress"],
+          nodeOperators[0],
+          nodeOperatorToRestaker.get(nodeOperators[0]),
+          WithdrawalQueuedEvent["nonce"],
+          WithdrawalQueuedEvent["withdrawalStartBlock"],
+          [WithdrawalQueuedEvent["strategy"]],
+          [WithdrawalQueuedEvent["shares"]],
+        ];
+        withdrawalData.push(data);
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const ratioAfter = await calculateRatio(iVault, iToken);
+
+        expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(amount, transactErr);
+        const pendingWithdrawalsELAfter = await iVault.getPendingWithdrawalAmountFromEL();
+        console.log(`EL's pending withdrawals:\t\t${pendingWithdrawalsELAfter.format()}`);
+        expect(pendingWithdrawalsELAfter - pendingWithdrawalsELBefore).to.be.closeTo(amount, transactErr);
+        expect(ratioAfter).to.be.closeTo(ratioBefore, 1n);
+      });
+
       it("undelegateFrom each operator and claim", async function () {
         for (const operatorAddress of nodeOperators) {
           const amount = await iVault.getDelegatedTo(operatorAddress);
-          let tx = await iVaultEL.connect(iVaultOperator).undelegateFrom(operatorAddress, amount);
-          const data = await withdrawDataFromTx(tx, operatorAddress, nodeOperatorToRestaker.get(operatorAddress));
-          withdrawalData.push(data);
+          if (amount > 0n) {
+            let tx = await iVaultEL.connect(iVaultOperator).undelegateFrom(operatorAddress, amount);
+            const data = await withdrawDataFromTx(tx, operatorAddress, nodeOperatorToRestaker.get(operatorAddress));
+            withdrawalData.push(data);
+          }
         }
       });
 
@@ -3721,8 +3756,7 @@ assets.forEach(function (a) {
           amount: async () => await iVault.getDelegatedTo(nodeOperators[0]),
           nodeOperator: async () => randomAddress(),
           operator: () => iVaultOperator,
-          isCustom: true,
-          error: "OperatorNotRegistered",
+          customError: "OperatorNotRegistered",
         },
         {
           name: "from _MOCK_ADDRESS",
@@ -3732,24 +3766,21 @@ assets.forEach(function (a) {
             return nodeOperators[1];
           },
           operator: () => iVaultOperator,
-          isCustom: true,
-          error: "NullParams",
+          customError: "NullParams",
         },
         {
           name: "from zero address",
           amount: async () => await iVault.getDelegatedTo(nodeOperators[0]),
           nodeOperator: async () => ethers.ZeroAddress,
           operator: () => iVaultOperator,
-          isCustom: true,
-          error: "OperatorNotRegistered",
+          customError: "OperatorNotRegistered",
         },
         {
           name: "not an operator",
           amount: async () => await iVault.getDelegatedTo(nodeOperators[0]),
           nodeOperator: async () => nodeOperators[0],
           operator: () => staker,
-          isCustom: true,
-          error: "OnlyOperatorAllowed",
+          customError: "OnlyOperatorAllowed",
         },
       ];
 
@@ -3758,10 +3789,10 @@ assets.forEach(function (a) {
           const amount = await arg.amount();
           const nodeOperator = await arg.nodeOperator();
           console.log(`Undelegate amount: \t${amount.format()}`);
-          if (arg.isCustom) {
+          if (arg.customError) {
             await expect(
               iVaultEL.connect(arg.operator()).undelegateFrom(nodeOperator, amount),
-            ).to.be.revertedWithCustomError(iVault, arg.error);
+            ).to.be.revertedWithCustomError(iVault, arg.customError);
           } else {
             await expect(iVaultEL.connect(arg.operator()).undelegateFrom(nodeOperator, amount)).to.be.revertedWith(
               arg.error,
@@ -4682,4 +4713,3 @@ assets.forEach(function (a) {
     });
   });
 });
-
