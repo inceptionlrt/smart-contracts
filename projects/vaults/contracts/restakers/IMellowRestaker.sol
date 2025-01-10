@@ -201,9 +201,7 @@ contract IMellowRestaker is
             IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this))); 
         }
 
-        uint256 actualAmount = _asset.balanceOf(address(this));
-        _asset.safeTransfer(_msgSender(), actualAmount);
-        return actualAmount;
+        return _asset.balanceOf(address(this));
     }
 
     function claimableAmount() external view returns (uint256) {
