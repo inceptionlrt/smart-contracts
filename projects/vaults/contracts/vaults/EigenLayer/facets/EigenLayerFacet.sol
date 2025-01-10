@@ -146,12 +146,13 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             strategy
         );
         uint256 shares = strategy.underlyingToSharesView(amount);
-        amount = strategy.sharesToUnderlyingView(shares);
 
         // we need to withdraw the remaining dust from EigenLayer
         if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
 
+        amount = strategy.sharesToUnderlyingView(shares);
         _pendingWithdrawalAmount += amount;
+
         emit StartWithdrawal(
             staker,
             strategy,
@@ -322,5 +323,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         startTimeline = block.timestamp;
 
         emit RewardsAdded(amount, startTimeline);
+    }
+
+    function setPendingWithdrawalAmount(uint256 newPendingWithdrawalAmount) external {
+        _pendingWithdrawalAmount = newPendingWithdrawalAmount;
     }
 }
