@@ -241,7 +241,6 @@ contract IMellowRestaker is
     function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
 
         if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
-        if (address(IMellowDepositWrapper(newDepositWrapper).vault()) != mellowVault) revert InvalidWrapperForVault();
 
         address oldWrapper = address(mellowDepositWrappers[mellowVault]);
         if (oldWrapper == address(0)) revert NoWrapperExists();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -10,7 +10,7 @@ import {IInceptionAirdrop} from "./interface/IInceptionAirdrop.sol";
 /**
  * @author InceptionLRT V2
  * @title InceptionAirdrop
- * @notice Serves the Eigen Token Airdrop within InceptionLRT's users.
+ * @notice Serves a specific token Airdrop within InceptionLRT's users.
  */
 contract InceptionAirdrop is
     OwnableUpgradeable,

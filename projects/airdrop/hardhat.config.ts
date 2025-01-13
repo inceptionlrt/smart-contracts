@@ -9,22 +9,23 @@ const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   networks: {
     localhost: {
-      url: "http://127.0.0.1:8545/"
+      url: "http://127.0.0.1:8545/",
     },
     ethereum: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_ETHEREUM}`,
       chainId: 1,
       gas: 8000000,
-    }, holesky: {
+    },
+    holesky: {
       accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
       url: `${process.env.RPC_URL_HOLESKY}`,
       chainId: 17000,
       gas: 80000000,
-    }
+    },
   },
   solidity: {
-    version: "0.8.26",
+    version: "0.8.27",
     settings: {
       viaIR: true,
       optimizer: {
@@ -32,13 +33,13 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
     },
-  }, etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   sourcify: {
-    enabled: true
-  }
-
+    enabled: true,
+  },
 };
 
 export default config;
