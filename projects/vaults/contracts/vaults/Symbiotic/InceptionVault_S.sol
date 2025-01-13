@@ -63,7 +63,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        minAmount = 10000000000000;
+        minAmount = 1e16;
 
         protocolFee = 50 * 1e8;
 
@@ -170,22 +170,25 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
-        uint256 amount
+        uint256 amount,
+        uint256 deadline
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault);
+        _depositAssetIntoMellow(amount, mellowVault, deadline);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
-        _asset.safeApprove(address(mellowRestaker), getFreeBalance());
+    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+        uint256 balance = getFreeBalance();
+        _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
-            block.timestamp
+            balance,
+            deadline
         );
 
         emit Delegated(address(mellowRestaker), amount, lpAmount);
@@ -338,14 +341,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
@@ -355,15 +359,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
-
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
