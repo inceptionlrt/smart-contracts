@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./eigen-core/IStrategyManager.sol";
-import "../common/IInceptionToken.sol";
+import {IStrategyManager, IStrategy} from "./eigen-core/IStrategyManager.sol";
+import {IInceptionToken} from "../common/IInceptionToken.sol";
 
 interface IInceptionVault_EL {
+    /*/////////////////////////////////////////////////////////////////////
+    ///////////////////////////// Structures /////////////////////////////
+    ///////////////////////////////////////////////////////////////////*/
+
     enum FuncTarget {
         SETTER_FACET,
         EIGEN_LAYER_FACET,
@@ -22,10 +26,6 @@ interface IInceptionVault_EL {
         FuncAccess access;
     }
 
-    /*/////////////////////////////////////////////////////////////////////
-    /////////////////////////////// Events ///////////////////////////////
-    ///////////////////////////////////////////////////////////////////*/
-
     /**
      * @dev Epoch represents the period of the rebalancing process
      * @dev Receiver is a receiver of assets in claim()
@@ -36,6 +36,10 @@ interface IInceptionVault_EL {
         address receiver;
         uint256 amount;
     }
+
+    /*/////////////////////////////////////////////////////////////////////
+    /////////////////////////////// Events ///////////////////////////////
+    ///////////////////////////////////////////////////////////////////*/
 
     event StartWithdrawal(
         address indexed stakerAddress,
@@ -90,6 +94,8 @@ interface IInceptionVault_EL {
         uint256 amount
     );
 
+    event WithdrawalFee(uint256 fee);
+
     event RedeemedRequests(uint256[] withdrawals);
 
     event OperatorChanged(address prevValue, address newValue);
@@ -135,4 +141,14 @@ interface IInceptionVault_EL {
     event SetterFacetChanged(address prevValue, address newValue);
 
     event ERC4626FacetChanged(address prevValue, address newValue);
+
+    event SignatureAdded(
+        bytes4 indexed sig,
+        FuncTarget target,
+        FuncAccess access
+    );
+
+    event RewardsCoordinatorChanged(address prevValue, address newValue);
+
+    event AirDropClaimed(address sender, address receiver, uint256 amount);
 }

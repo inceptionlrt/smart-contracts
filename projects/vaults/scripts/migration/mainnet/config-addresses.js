@@ -1,6 +1,5 @@
 const addresses = {
-  /// AVS Operators
-  P2POperator: "0xdbed88d83176316fc46797b43adee927dc2ff2f5",
+  RewardsCoordinator: "0x7750d328b314EfFa365A0402CcfD489B80B0adda",
   Operator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
   TreasuryAddress: "0x8e6C8799B542E507bfDDCA1a424867e885D96e79",
   InceptionLibrary: "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66",
@@ -33,3 +32,4 @@ const addresses = {
 module.exports = {
   addresses,
 };
+

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./eigen-core/IDelegationManager.sol";
+import {IDelegationManager, IStrategy, IERC20} from "./eigen-core/IDelegationManager.sol";
 
-interface IIEigenRestakerErrors {
+interface IInceptionEigenRestakerErrors {
+    error OnlyTrusteeAllowed();
+
     error InconsistentData();
 
     error WrongClaimWithdrawalParams();
@@ -11,7 +13,7 @@ interface IIEigenRestakerErrors {
     error NullParams();
 }
 
-interface IIEigenRestaker {
+interface IInceptionEigenRestaker {
     event StartWithdrawal(
         address indexed stakerAddress,
         bytes32 withdrawalRoot,
@@ -50,4 +52,6 @@ interface IIEigenRestaker {
         uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external returns (uint256);
+
+    function setRewardsCoordinator(address newRewardCoordinator) external;
 }
