@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -13,7 +14,7 @@ import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/I
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-import {IIEigenRestaker, IIEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 import {Convert} from "../../lib/Convert.sol";
@@ -21,14 +22,14 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 
 /**
  * @title InceptionVaultStorage_EL
+ * @author The InceptionLRT team
  * @notice Manages the storage variables and getter functions for the Inception Vault, which interacts with EigenLayer and manages delegation, withdrawals, and rewards.
  * @dev This contract extends the Pausable, Ownable, and ReentrancyGuard patterns.
- * @author The InceptionLRT team
  */
 contract InceptionVaultStorage_EL is
     PausableUpgradeable,
-    OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
     IInceptionVault_EL,
     IInceptionVaultErrors
 {
@@ -74,12 +75,8 @@ contract InceptionVaultStorage_EL is
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    address public eigenLayerFacet;
-    address public erc4626Facet;
-    address public setterFacet;
-
     /// @dev constants are not stored in the storage
-    uint256[50 - 16] private __reserver;
+    uint256[50 - 13] private __reserver;
 
     IInceptionToken public inceptionToken;
 
@@ -108,6 +105,12 @@ contract InceptionVaultStorage_EL is
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
+    address public rewardsCoordinator;
+
+    address public eigenLayerFacet;
+    address public erc4626Facet;
+    address public setterFacet;
+
     uint256 public currentRewards;
     uint256 public startTimeline;
     uint256 public rewardsTimeline;
@@ -124,6 +127,8 @@ contract InceptionVaultStorage_EL is
     ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
+        __Ownable_init();
+
         _asset = assetAddress;
     }
 
@@ -259,7 +264,9 @@ contract InceptionVaultStorage_EL is
         return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
-    // @dev See {IERC4626-convertToShares}.
+    /**
+     * @dev See {IERC4626-convertToShares}.
+     */
     function convertToShares(uint256 assets) public view returns (uint256) {
         return _convertToShares(assets);
     }
@@ -270,90 +277,99 @@ contract InceptionVaultStorage_EL is
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    // @dev See {IERC4626-convertToAssets}.
+    /**
+     * @dev See {IERC4626-convertToAssets}.
+     */
     function convertToAssets(uint256 shares) public view returns (uint256) {
         return _convertToAssets(shares);
     }
 
     function _convertToAssets(
         uint256 iShares
-    ) public view returns (uint256 assets) {
+    ) internal view returns (uint256 assets) {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
-    /*
+    /**
+     * @dev See {IERC4626-maxDeposit}.
      * @dev The `maxDeposit` function is used to calculate the maximum deposit.
-     * @notice If the vault is locked or paused, users are not allowed to
-     * deposit,
-     * the maxDeposit is 0.
+     * @notice If the vault is locked or paused, users are not allowed to deposit, the maxDeposit is 0.
      * @return Amount of the maximum underlying assets deposit amount.
      */
-    function maxDeposit(address) public view returns (uint256) {
-        return !paused() ? type(uint256).max : 0;
+    function maxDeposit(address receiver) public view returns (uint256) {
+        return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
     /**
-     * @dev The `maxMint` function is used to calculate the maximum amount of
-     * shares you can mint.
+     * @dev See {IERC4626-maxMint}
+     * @dev The `maxMint` function is used to calculate the maximum amount of shares you can mint.
      * @notice If the vault is locked or paused, the maxMint is 0.
      * @return Amount of the maximum shares mintable for the specified address.
      */
-    function maxMint(address) public view returns (uint256) {
-        return !paused() ? type(uint256).max : 0;
-    }
-
-    /**
-     * @dev See {IERC4626-maxWithdraw}.
-     * @notice If the function is called during the lock period the maxWithdraw
-     * is `0`.
-     * @return Amount of the maximum number of withdrawable underlying assets.
-     */
-    function maxWithdraw(address owner) public view returns (uint256) {
-        return
-            !paused()
-                ? _convertToAssets(
-                    IERC20(address(inceptionToken)).balanceOf(owner)
-                )
-                : 0;
+    function maxMint(address receiver) public view returns (uint256) {
+        return !paused() ? previewDeposit(_asset.balanceOf(receiver)) : 0;
     }
 
     /**
      * @dev See {IERC4626-maxRedeem}.
-     * @notice If the function is called during the lock period the maxRedeem is
-     * `0`;
+     * @notice If the function is called during the lock period the maxRedeem is `0`;
      * @param owner The address of the owner.
      * @return Amount of the maximum number of redeemable shares.
      */
     function maxRedeem(address owner) public view returns (uint256) {
-        return !paused() ? IERC20(address(inceptionToken)).balanceOf(owner) : 0;
+        if (paused()) {
+            return 0;
+        } else {
+            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
+                owner
+            );
+            uint256 flashShares = convertToShares(getFlashCapacity());
+            return flashShares > ownerShares ? ownerShares : flashShares;
+        }
     }
 
     /**
      * @dev See {IERC4626-previewDeposit}.
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets);
+        uint256 depositBonus;
+        if (depositBonusAmount > 0) {
+            depositBonus = calculateDepositBonus(assets);
+            if (depositBonus > depositBonusAmount)
+                depositBonus = depositBonusAmount;
+        }
+
+        return _convertToShares(assets + depositBonus);
     }
 
     /**
-     * @dev See {IERC4626-previewMint}.
+     * @notice Utilizes `inceptionToken.balanceOf()`.
+     * @dev Returns the total amount of vault shares the owner currently has.
+     * @dev See {IERC4626-balanceOf}
      */
-    function previewMint(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares);
+    function balanceOf(address owner) public view returns (uint256) {
+        return IERC20(address(inceptionToken)).balanceOf(owner);
     }
 
     /**
-     * @dev See {IERC4626-previewWithdraw}
+     * @notice Utilizes `inceptionToken.totalSupply()`.
+     * @dev Returns the total number of unredeemed vault shares in circulation.
+     * @dev See {IERC4626-totalSupply}
      */
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return _convertToShares(assets);
+    function totalSupply() public view returns (uint256) {
+        return IERC20(address(inceptionToken)).totalSupply();
     }
 
     /**
+     * @dev This function allows users to simulate the effects of their redemption at the current block.
      * @dev See {IERC4626-previewRedeem}
      */
-    function previewRedeem(uint256 shares) public view returns (uint256) {
-        return _convertToAssets(shares);
+    function previewRedeem(
+        uint256 shares
+    ) public view returns (uint256 assets) {
+        return
+            _convertToAssets(shares) -
+            calculateFlashWithdrawFee(convertToAssets(shares));
     }
 
     /***********************************************************************
@@ -400,14 +416,69 @@ contract InceptionVaultStorage_EL is
             );
     }
 
-    /// TODO
+
+    /**
+     * @notice Sets the target and access level for a given function signature
+     * @dev Updates the `_selectorToTarget` mapping with the provided function signature, target, and access level
+     * @param sigs The function signature to configure
+     * @param targets The target facet (contract) associated with the function signature
+     * @param accesses The access level for the function signature
+     */
+    function setSignaturesBatch(
+        bytes4[] calldata sigs,
+        FuncTarget[] calldata targets,
+        FuncAccess[] calldata accesses
+    ) external onlyOwner {
+        uint256 num = sigs.length;
+        if (num != targets.length || num != accesses.length)
+            revert InconsistentData();
+
+        for (uint256 i = 0; i < num; ) {
+            _selectorToTarget[sigs[i]] = FuncData({
+                facet: targets[i],
+                access: accesses[i]
+            });
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @notice Sets the target and access level for a given function signature
+     * @dev Updates the `_selectorToTarget` mapping with the provided function signature, target, and access level
+     * @param sig The function signature to configure
+     * @param _target The target facet (contract) associated with the function signature
+     * @param _access The access level for the function signature
+     */
     function setSignature(
         bytes4 sig,
         FuncTarget _target,
         FuncAccess _access
     ) external onlyOwner {
         _selectorToTarget[sig] = FuncData({facet: _target, access: _access});
-        //  emit SignatureSet(target, sig);
+        emit SignatureAdded(sig, _target, _access);
+    }
+
+    function setEigenLayerFacet(address newEigenLayerFacet) external onlyOwner {
+        if (!Address.isContract(newEigenLayerFacet)) revert NotContract();
+
+        emit EigenLayerFacetChanged(eigenLayerFacet, newEigenLayerFacet);
+        eigenLayerFacet = newEigenLayerFacet;
+    }
+
+    function setERC4626Facet(address newERC4626Facet) external onlyOwner {
+        if (!Address.isContract(newERC4626Facet)) revert NotContract();
+
+        emit ERC4626FacetChanged(erc4626Facet, newERC4626Facet);
+        erc4626Facet = newERC4626Facet;
+    }
+
+    function setSetterFacet(address newSetterFacet) external onlyOwner {
+        if (!Address.isContract(newSetterFacet)) revert NotContract();
+
+        emit SetterFacetChanged(setterFacet, newSetterFacet);
+        setterFacet = newSetterFacet;
     }
 
     /*********************************************************************
@@ -428,15 +499,20 @@ contract InceptionVaultStorage_EL is
     ) internal view returns (address, FuncAccess) {
         _requireNotPaused();
         FuncData memory target = _selectorToTarget[sig];
-        if (target.facet == FuncTarget.ERC4626_FACET) {
+        if (
+            target.facet == FuncTarget.SETTER_FACET &&
+            target.access == FuncAccess.EVERYONE
+        ) return (address(0), FuncAccess.EVERYONE);
+
+        if (target.facet == FuncTarget.ERC4626_FACET)
             return (erc4626Facet, target.access);
-        }
-        if (target.facet == FuncTarget.EIGEN_LAYER_FACET) {
+
+        if (target.facet == FuncTarget.EIGEN_LAYER_FACET)
             return (eigenLayerFacet, target.access);
-        }
-        if (target.facet == FuncTarget.SETTER_FACET) {
+
+        if (target.facet == FuncTarget.SETTER_FACET)
             return (setterFacet, target.access);
-        }
+
         return (address(0), FuncAccess.EVERYONE);
     }
 
