@@ -28,9 +28,13 @@ interface IIEigenRestakerErrors {
 
     error ZeroAddress();
 
+    error NoWrapperExists();
+
     error InvalidAllocation();
 
     error TooMuchSlippage();
+
+    error AlreadyAdded();
 }
 
 interface IIMellowRestaker {
@@ -75,8 +79,7 @@ interface IIMellowRestaker {
     ) external returns (uint256);
 
     function withdrawEmergencyMellow(
-        address _mellowVault,
-        uint256 amount
+        address _mellowVault
     ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);

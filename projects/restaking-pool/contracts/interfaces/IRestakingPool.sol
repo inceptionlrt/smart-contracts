@@ -20,6 +20,8 @@ interface IRestakingPool {
     error AmbiguousFee(uint256 claimed, uint256 fee);
     error InsufficientCapacity(uint256 capacity);
     error TargetCapacityNotSet();
+    error TimelineNotOver();
+    error InconsistentData();
 
     /**
      * @dev A call to an address target failed. The target may have reverted.
@@ -53,7 +55,7 @@ interface IRestakingPool {
 
     event MinStakeChanged(uint256 prevValue, uint256 newValue);
 
-    event MinUntakeChanged(uint256 prevValue, uint256 newValue);
+    event MinUnstakeChanged(uint256 prevValue, uint256 newValue);
 
     event MaxTVLChanged(uint256 prevValue, uint256 newValue);
 
@@ -116,9 +118,21 @@ interface IRestakingPool {
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 
+    event RewardsAdded(uint256 amount, uint256 startTimeline);
+
+    event RewardsTimelineChanged(
+        uint256 rewardsTimeline,
+        uint256 newTimelineInSeconds
+    );
+
     /* functions */
 
     function getMinStake() external view returns (uint256);
 
     function getMinUnstake() external view returns (uint256);
+
+    function startWithdrawalCheckpoint(
+        string memory provider,
+        bool revertIfNoBalance
+    ) external;
 }

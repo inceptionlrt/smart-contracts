@@ -23,6 +23,7 @@ const func: DeployFunction = async function ({ deployments, network }) {
   }
   console.log("InceptionLibrary address:", libAddress);
 
+  /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
     libraries: {
       InceptionLibrary: libAddress,

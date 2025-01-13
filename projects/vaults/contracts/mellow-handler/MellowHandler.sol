@@ -79,6 +79,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         address mellowVault,
         uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
+        if (mellowVault == address(0)) revert InvalidAddress();
         amount = mellowRestaker.withdrawMellow(mellowVault, amount, true);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
@@ -89,23 +90,16 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
      * @dev requires a specific amount to withdraw
      */
     function undelegateForceFrom(
-        address mellowVault,
-        uint256 amount
+        address mellowVault
     ) external whenNotPaused nonReentrant onlyOperator {
-        amount = mellowRestaker.withdrawEmergencyMellow(mellowVault, amount);
-        emit StartMellowWithdrawal(address(mellowRestaker), amount);
+        if (mellowVault == address(0)) revert InvalidAddress();
+        uint256 amount = mellowRestaker.withdrawEmergencyMellow(mellowVault);
+        emit StartEmergencyMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }
 
-    /**
-     * @dev claims completed withdrawals from Mellow Protocol, if they exist
-     */
-    function claimCompletedWithdrawals()
-        public
-        // address mellowVault
-        whenNotPaused
-        nonReentrant
-    {
+    /// @dev claims completed withdrawals from Mellow Protocol, if they exist
+    function claimCompletedWithdrawals() public whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount = mellowRestaker
@@ -160,7 +154,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
             getTotalDelegated() +
             totalAssets() +
             getPendingWithdrawalAmountFromMellow() -
-            redeemReservedAmount -
+            // redeemReservedAmount - subtracted offchain
             depositBonusAmount;
     }
 
