@@ -127,8 +127,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        // uint256 availableBonusAmount = depositBonusAmount;
-        uint256 availableBonusAmount = 0;
+        uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
@@ -171,12 +170,13 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
-        uint256 amount
+        uint256 amount,
+        uint256 deadline
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault);
+        _depositAssetIntoMellow(amount, mellowVault, deadline);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;

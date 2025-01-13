@@ -110,7 +110,7 @@ contract IMellowRestaker is
                 address(_asset),
                 amount,
                 minAmount,
-                deadline
+                block.timestamp + deadline
             );
     }
 
@@ -133,7 +133,7 @@ contract IMellowRestaker is
                     address(_asset),
                     localBalance,
                     minAmount,
-                    deadline
+                    block.timestamp + deadline
                 );
             }
         }

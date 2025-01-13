@@ -63,10 +63,11 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
 
     function _depositAssetIntoMellow(
         uint256 amount,
-        address mellowVault
+        address mellowVault,
+        uint256 deadline
     ) internal {
         _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, block.timestamp, mellowVault);
+        mellowRestaker.delegateMellow(amount, deadline, mellowVault);
     }
 
     /*/////////////////////////////////
