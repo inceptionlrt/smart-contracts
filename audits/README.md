@@ -11,3 +11,19 @@ This folder consists of the audit reports performed on Inception Vaults smart co
 | LST Vaults Release of V2, M2 EigenLayer contracts  | All contracts are located in the `projects/vaults/contracts/Inception/` | Halborn  | 01.05.2024 |
 | LST Vaults Release of the Flash withdrawal feature | All contracts are located in the `projects/vaults/contracts/Inception/` | Halborn  | 28.06.2024 |
 | SymbioticVault, DiamondProxy for InceptionVaults   | All contracts are located in the `projects/vaults/contracts/`           | Halborn  | 25.10.2024 |
+| Omnistaking                                        | `projects/bridge-lz/contracts/abstract/AbstractCrossChainAdapter.sol`           | Salus    | 08.11.2024 |
+|                                                    | `projects/bridge-lz/contracts/abstract/AbstractCrossChainAdapterL1.sol`         |          |            |
+|                                                    | `projects/bridge-lz/contracts/abstract/AbstractCrossChainAdapterL2.sol`         |          |            |
+|                                                    | `projects/bridge-lz/contracts/abstract/AbstractLZCrossChainAdapter.sol`         |          |            |
+|                                                    | `projects/bridge-lz/contracts/LZCrossChainAdapterL1.sol`                        |          |            |
+|                                                    | `projects/bridge-lz/contracts/LZCrossChainAdapterL2.sol`                        |          |            |
+|                                                    | `projects/vaults/contracts/vaults/InceptionOmniVault.sol`                       |          |            |
+|                                                    | `projects/vaults/contracts/assets-handler/InceptionAssetsHandler.sol`           |          |            |
+|                                                    | `projects/restaking-pool/contracts/NativeRebalancer.sol`                        |          |            |
+|                                                    | `projects/restaking-pool/contracts/cToken.sol`                                  |          |            |
+| Fraxtal ERC20 Omnistaking                          | `projects/bridge-lz/contracts/abstract/AbstractFraxFerryERC20Adapter.sol`       | Salus    | 14.01.2025 |
+|                                                    | `projects/bridge-lz/contracts/FerryAdapter/FraxFerryLZCrossChainAdapterL2.sol`  |          |            |
+|                                                    | `projects/vaults/contracts/rebalancer/ERC20Rebalancer.sol`                      |          |            |
+|                                                    | `projects/vaults/contracts/rebalancer/ERC20RebalancerStorage.sol`               |          |            |
+|                                                    | `projects/vaults/contracts/vaults/InceptionERC20OmniVault.sol`                  |          |            |
+
