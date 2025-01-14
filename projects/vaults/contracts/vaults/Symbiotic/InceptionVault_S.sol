@@ -84,9 +84,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////// Deposit functions //////
     ////////////////////////////*/
 
+    function depositMinAmount() public pure returns (uint256) {
+        return 100;
+    }
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
-        if (amount < 100) revert LowerMinAmount(100);
+        if (amount < depositMinAmount()) revert LowerMinAmount(depositMinAmount());
 
         if (targetCapacity == 0) revert InceptionOnPause();
     }
@@ -293,6 +296,10 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ///////// Flash Withdrawal functions /////////
     ///////////////////////////////////////////*/
 
+    function flashMinAmount() public pure returns (uint256) {
+        return 100;
+    }
+
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
@@ -317,7 +324,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
-        if (amount < 100) revert LowerMinAmount(100);
+        if (amount < flashMinAmount()) revert LowerMinAmount(flashMinAmount());
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
