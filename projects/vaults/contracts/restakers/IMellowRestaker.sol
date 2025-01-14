@@ -178,31 +178,31 @@ contract IMellowRestaker is
         return expectedAmounts[0];
     }
 
-    function withdrawEmergencyMellow(
-        address _mellowVault,
-        uint256 _deadline
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
-        IMellowVault mellowVault = IMellowVault(_mellowVault);
-        address[] memory tokens;
-        uint256[] memory baseTvlAmounts;
-        (tokens, baseTvlAmounts) = mellowVault.baseTvl();
-        uint256 totalSupply = IERC20(_mellowVault).totalSupply();
+    // function withdrawEmergencyMellow(
+    //     address _mellowVault,
+    //     uint256 _deadline
+    // ) external override onlyTrustee whenNotPaused returns (uint256) {
+    //     IMellowVault mellowVault = IMellowVault(_mellowVault);
+    //     address[] memory tokens;
+    //     uint256[] memory baseTvlAmounts;
+    //     (tokens, baseTvlAmounts) = mellowVault.baseTvl();
+    //     uint256 totalSupply = IERC20(_mellowVault).totalSupply();
 
-        uint256[] memory minAmounts = new uint256[](baseTvlAmounts.length);
-        for (uint256 i = 0; i < baseTvlAmounts.length; i++) {
-            minAmounts[i] = (baseTvlAmounts[i] * pendingMellowRequest(IMellowVault(_mellowVault)).lpAmount / totalSupply) - 1 gwei;
-        }
+    //     uint256[] memory minAmounts = new uint256[](baseTvlAmounts.length);
+    //     for (uint256 i = 0; i < baseTvlAmounts.length; i++) {
+    //         minAmounts[i] = (baseTvlAmounts[i] * pendingMellowRequest(IMellowVault(_mellowVault)).lpAmount / totalSupply) - 1 gwei;
+    //     }
 
-        if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
+    //     if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
 
-        uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(minAmounts, block.timestamp + _deadline);
+    //     uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(minAmounts, block.timestamp + _deadline);
 
-        if (actualAmounts[1] > 0) {
-            IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this))); 
-        }
+    //     if (actualAmounts[1] > 0) {
+    //         IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this))); 
+    //     }
 
-        return _asset.balanceOf(address(this));
-    }
+    //     return _asset.balanceOf(address(this));
+    // }
 
     function claimableAmount() external view returns (uint256) {
         return _asset.balanceOf(address(this));

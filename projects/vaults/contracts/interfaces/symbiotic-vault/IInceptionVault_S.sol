@@ -42,7 +42,12 @@ interface IInceptionVault_S {
 
     event OperatorChanged(address prevValue, address newValue);
 
-    event MinAmountChanged(uint256 prevValue, uint256 newValue);
+    event WithdrawMinAmountChanged(uint256 prevValue, uint256 newValue);
+
+    event DepositMinAmountChanged(uint256 prevValue, uint256 newValue);
+
+    event FlashMinAmountChanged(uint256 prevValue, uint256 newValue);
+
 
     event RatioFeedChanged(address prevValue, address newValue);
 
