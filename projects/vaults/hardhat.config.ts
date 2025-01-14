@@ -24,8 +24,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: `${process.env.MAINNET_RPC}`,
-        blockNumber: 20462310,
+        url: `${process.env.HOLESKY_RPC}`,
+        blockNumber: 2680454,
       },
     },
   },

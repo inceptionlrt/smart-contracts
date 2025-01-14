@@ -459,7 +459,7 @@ assets.forEach(function (a) {
         expect(await iVault.totalAssets()).to.be.closeTo(deposited, transactErr);
         expect(await iVault.getTotalDeposited()).to.be.closeTo(deposited, transactErr);
         expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-        expect(await iVault.ratio()).to.be.eq(e18);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Balance and total supply", async function () {
@@ -477,7 +477,7 @@ assets.forEach(function (a) {
         const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
         expect(delegatedTotal).to.be.closeTo(amount, transactErr);
         expect(delegatedTo).to.be.closeTo(amount, transactErr);
-        expect(await iVault.ratio()).closeTo(e18, 1n);
+        expect(await calculateRatio(iVault, iToken)).closeTo(e18, 1n);
       });
 
       it("Delegate all", async function () {
@@ -491,7 +491,7 @@ assets.forEach(function (a) {
         const delegatedTo = await iVault.getDelegatedTo(nodeOperators[0]);
         expect(delegatedTotal).to.be.closeTo(deposited, transactErr);
         expect(delegatedTo).to.be.closeTo(deposited, transactErr);
-        expect(await iVault.ratio()).lte(e18);
+        expect(await calculateRatio(iVault, iToken)).lte(e18);
       });
 
       it("Update asset ratio", async function () {
@@ -500,11 +500,12 @@ assets.forEach(function (a) {
         console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
         await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
         console.log(`New ratio is:\t\t\t\t\t${(await iVault.ratio()).format()}`);
-        expect(await iVault.ratio()).lt(e18);
+        expect(await calculateRatio(iVault, iToken)).lt(e18);
       });
 
       it("Withdraw all", async function () {
         const ratioBefore = await iVault.ratio();
+        console.log(`ratioBefore: ${ratioBefore.toString()}`);
         const shares = await iToken.balanceOf(staker.address);
         const assetValue = await iVault.convertToAssets(shares);
         console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -528,7 +529,7 @@ assets.forEach(function (a) {
         expect(totalPW).to.be.closeTo(assetValue, transactErr);
 
         console.log(`Total delegated:\t\t\t\t${(await iVault.getTotalDelegated()).format()}`);
-        expect(await iVault.ratio()).to.be.eq(ratioBefore);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Withdraw from EigenLayer and claim", async function () {
@@ -570,7 +571,7 @@ assets.forEach(function (a) {
         expect(redeemReserve).to.be.eq(staker2PW);
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
         expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr * 4n);
-        expect(await iVault.ratio()).to.be.eq(ratioBefore);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Redeem withdraw", async function () {
@@ -641,7 +642,7 @@ assets.forEach(function (a) {
         expect(await iVault.getFreeBalance()).to.be.closeTo(freeBalance, transactErr);
         expect(await iVault.getTotalDeposited()).to.be.closeTo(deposited, transactErr);
         expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-        expect(await iVault.ratio()).to.be.eq(e18);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Delegate freeBalance", async function () {
@@ -673,7 +674,7 @@ assets.forEach(function (a) {
         expect(delegatedTo).to.be.closeTo(amount, transactErr);
         expect(await iVault.getFreeBalance()).to.be.closeTo(0n, 1n);
         expect(await iVault.getFlashCapacity()).to.be.closeTo(expectedFlashCapacity, 1n);
-        expect(await iVault.ratio()).closeTo(e18, 1n);
+        expect(await calculateRatio(iVault, iToken)).closeTo(e18, 1n);
       });
 
       it("Update asset ratio", async function () {
@@ -681,7 +682,7 @@ assets.forEach(function (a) {
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         console.log(`New ratio is:\t\t\t\t\t${(await iVault.ratio()).format()}`);
-        expect(await iVault.ratio()).lt(e18);
+        expect(await calculateRatio(iVault, iToken)).lt(e18);
       });
 
       it("Flash withdraw all capacity", async function () {
@@ -762,7 +763,7 @@ assets.forEach(function (a) {
 
         console.log(`Total delegated:\t\t\t\t${(await iVault.getTotalDelegated()).format()}`);
         console.log(`Total deposited:\t\t\t\t${(await iVault.getTotalDeposited()).format()}`);
-        expect(await iVault.ratio()).to.be.eq(ratioBefore);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Withdraw from EigenLayer and claim", async function () {
@@ -795,7 +796,7 @@ assets.forEach(function (a) {
         expect(redeemReserve).to.be.eq(staker2PW);
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
         expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr * 4n);
-        expect(await iVault.ratio()).to.be.eq(ratioBefore);
+        expect(await calculateRatio(iVault, iToken)).to.be.eq(e18);
       });
 
       it("Redeem withdraw", async function () {
@@ -2301,7 +2302,7 @@ assets.forEach(function (a) {
           expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
           expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
           expect(totalAssetsAfter).to.be.lte(transactErr);
-          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
+          expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, BigInt(count) * ratioErr);
         });
       });
 
@@ -2353,7 +2354,7 @@ assets.forEach(function (a) {
           expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
           expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0n, err);
           expect(totalAssetsAfter).to.be.lte(transactErr);
-          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
+          expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, BigInt(count) * ratioErr);
         });
       });
 
@@ -2437,7 +2438,7 @@ assets.forEach(function (a) {
           expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
           expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
           expect(totalAssetsAfter).to.be.lte(transactErr);
-          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
+          expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
         });
       });
 
@@ -2566,7 +2567,7 @@ assets.forEach(function (a) {
 
         expect(totalDepositedAfter - totalDepositedBefore).to.be.closeTo(amount, transactErr);
         expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount, transactErr); //Everything stays on iVault after deposit
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr); //Ratio stays the same
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr); //Ratio stays the same
       });
 
       it("Reverts: delegate when iVault is paused", async function () {
@@ -2761,7 +2762,11 @@ assets.forEach(function (a) {
           );
           expect((await iVault.totalAmountToWithdraw()) - totalPWBefore).to.be.closeTo(assetValue, transactErr);
           expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
-          expect(await iVault.ratio()).to.be.closeTo(ratioBefore, ratioErr);
+          if ((await iToken.totalSupply()) == 0n) {
+            expect(await calculateRatio(iVault, iToken)).to.be.equal(e18);
+          } else {
+            expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratioBefore, ratioErr);
+          }
         });
       });
     });
@@ -2841,7 +2846,7 @@ assets.forEach(function (a) {
 
         await iVault4626.connect(staker).withdraw(e18, staker.address);
         console.log(`Ratio after withdraw 1eth:\t${await iVault.ratio()}`);
-        expect(await iVault.ratio()).to.be.closeTo(ratioAfter, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratioAfter, ratioErr);
       });
 
       it("Reverts: withdraw when iVault is paused", async function () {
@@ -3274,7 +3279,7 @@ assets.forEach(function (a) {
 
         expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets2, transactErr);
         expect(await iVault.totalAssets()).to.be.lte(transactErr);
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr);
         const totalPWAfter = await iVault.getPendingWithdrawalAmountFromEL();
         expect(totalPWAfter - totalPWBefore).to.be.closeTo(shares2, transactErr);
         expect(ratioAfter).to.be.closeTo(ratioBeforeUndelegate, ratioErr);
@@ -3473,7 +3478,7 @@ assets.forEach(function (a) {
 
         expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets2, transactErr);
         expect(await iVault.totalAssets()).to.be.closeTo(0, transactErr);
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr);
         const totalPWAfter = await iVault.getPendingWithdrawalAmountFromEL();
         expect(totalPWAfter - totalPWBefore).to.be.closeTo(shares2, transactErr);
         expect(ratioAfter).to.be.closeTo(ratioBeforeUndelegate, ratioErr);
@@ -4054,7 +4059,7 @@ assets.forEach(function (a) {
 
         expect(await iVault.totalAssets()).to.be.closeTo(withdrawalAmount, transactErr);
         expect(await iVault.epoch()).to.be.eq(epochBefore + BigInt(withdrawalCount));
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr);
       });
 
       it("getTotalDeposited() = iVault + EL", async function () {
@@ -4120,7 +4125,7 @@ assets.forEach(function (a) {
         );
         expect(await iVault.totalAssets()).to.be.closeTo(withdrawalAmount, transactErr * BigInt(withdrawalCount));
         expect(await iVault.epoch()).to.be.eq(epochBefore + BigInt(withdrawalCount));
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr);
       });
     });
 
@@ -4321,7 +4326,7 @@ assets.forEach(function (a) {
       });
 
       it("Ratio is ok after all", async function () {
-        expect(await iVault.ratio()).to.be.closeTo(ratio, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(ratio, ratioErr);
       });
     });
 
@@ -4380,7 +4385,7 @@ assets.forEach(function (a) {
             expect(rBalanceAfter - rPendingWithdrawalsBefore).to.be.closeTo(0, transactErr);
             expect(rBalanceBefore - rPendingWithdrawalsAfter).to.be.closeTo(0, transactErr);
           }
-          expect(await iVault.ratio()).to.be.lte(ratio);
+          expect(await calculateRatio(iVault, iToken)).to.be.lte(ratio);
           console.log(`Total assets: ${await iVault.totalAssets()}`);
           console.log(`Ratio: ${await iVault.ratio()}`);
         });
@@ -4399,7 +4404,7 @@ assets.forEach(function (a) {
 
           expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
           expect(await iVault.totalAssets()).to.be.lte(100);
-          expect(await iVault.ratio()).to.be.lte(ratio);
+          expect(await calculateRatio(iVault, iToken)).to.be.lte(ratio);
         });
       }
 
@@ -4713,3 +4718,4 @@ assets.forEach(function (a) {
     });
   });
 });
+
