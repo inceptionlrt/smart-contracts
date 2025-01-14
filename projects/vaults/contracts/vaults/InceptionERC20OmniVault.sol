@@ -438,6 +438,13 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         if (newDepositUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newDepositUtilizationKink);
 
+        if (newMaxBonusRate > maxFlashFeeRate)
+            revert BonusHigherThanFWFee(newMaxBonusRate);
+        if (newOptimalBonusRate > optimalWithdrawalRate)
+            revert BonusHigherThanFWFee(newOptimalBonusRate);
+        if (newDepositUtilizationKink > withdrawUtilizationKink)
+            revert BonusHigherThanFWFee(newDepositUtilizationKink);
+
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
         depositUtilizationKink = newDepositUtilizationKink;
@@ -460,6 +467,13 @@ contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
             revert ParameterExceedsLimits(newOptimalWithdrawalRate);
         if (newWithdrawUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+
+        if (newMaxFlashFeeRate < maxBonusRate)
+            revert BonusHigherThanFWFee(newMaxFlashFeeRate);
+        if (newOptimalWithdrawalRate < optimalBonusRate)
+            revert BonusHigherThanFWFee(newOptimalWithdrawalRate);
+        if (newWithdrawUtilizationKink < depositUtilizationKink)
+            revert BonusHigherThanFWFee(newWithdrawUtilizationKink);
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;

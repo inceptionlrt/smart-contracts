@@ -27,6 +27,7 @@ interface IInceptionERC20OmniVault {
     error NullParams();
 
     error ParameterExceedsLimits(uint256 param);
+    error BonusHigherThanFWFee(uint256 param);
 
     error NotContract();
 
