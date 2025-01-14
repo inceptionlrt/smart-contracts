@@ -86,7 +86,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount < 100) revert LowerMinAmount(100);
 
         if (targetCapacity == 0) revert InceptionOnPause();
     }
@@ -317,7 +317,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount < 100) revert LowerMinAmount(100);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
