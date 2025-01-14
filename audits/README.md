@@ -20,3 +20,8 @@ This folder consists of the audit reports performed on Inception Vaults smart co
 |                                                    | `projects/vaults/contracts/assets-handler/InceptionAssetsHandler.sol`           |          |            |
 |                                                    | `projects/restaking-pool/contracts/NativeRebalancer.sol`                        |          |            |
 |                                                    | `projects/restaking-pool/contracts/cToken.sol`                                  |          |            |
+| Fraxtal ERC20 Omnistaking                          | `projects/bridge-lz/contracts/abstract/AbstractFraxFerryERC20Adapter.sol`       | Salus    | 14.01.2025 |
+|                                                    | `projects/bridge-lz/contracts/FerryAdapter/FraxFerryLZCrossChainAdapterL2.sol`  |          |            |
+|                                                    | `projects/vaults/contracts/rebalancer/ERC20Rebalancer.sol`                      |          |            |
+|                                                    | `projects/vaults/contracts/rebalancer/ERC20RebalancerStorage.sol`               |          |            |
+|                                                    | `projects/vaults/contracts/vaults/InceptionERC20OmniVault.sol`                  |          |            |
