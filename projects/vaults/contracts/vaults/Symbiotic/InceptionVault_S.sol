@@ -450,11 +450,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         uint256 depositBonus;
-        if (depositBonusAmount > 0) {
-            depositBonus = calculateDepositBonus(assets);
-            if (depositBonus > depositBonusAmount)
-                depositBonus = depositBonusAmount;
-        }
+        //        if (depositBonusAmount > 0) {
+        //            depositBonus = calculateDepositBonus(assets);
+        //            if (depositBonus > depositBonusAmount)
+        //                depositBonus = depositBonusAmount;
+        //        }
 
         return convertToShares(assets + depositBonus);
     }

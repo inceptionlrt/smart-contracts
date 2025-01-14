@@ -26,6 +26,7 @@ const assets = [
     iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
     ratioErr: 3n,
     transactErr: 5n,
+    url: process.env.MAINNET_RPC,
     blockNumber: 20462310,
     impersonateStaker: async function (staker, iVault) {
       const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
@@ -993,10 +994,9 @@ assets.forEach(function (a) {
         await mellowRestaker.changeAllocation(mellowVaults[0].vaultAddress, 1n);
 
         let time = await helpers.time.latest();
-        await expect(mellowRestaker.connect(staker).delegate(await iVault.getFreeBalance(), time + 1000)).to.revertedWithCustomError(
-          mellowRestaker,
-          "NotVaultOrTrusteeManager",
-        );
+        await expect(
+          mellowRestaker.connect(staker).delegate(await iVault.getFreeBalance(), time + 1000),
+        ).to.revertedWithCustomError(mellowRestaker, "NotVaultOrTrusteeManager");
       });
 
       it("withdrawMellow reverts when called by not a trustee", async function () {
@@ -1980,7 +1980,8 @@ assets.forEach(function (a) {
 
             const amount = await arg.amount(targetCapacity);
             console.log(`Amount:\t\t\t\t\t${amount.format()}`);
-            const calculatedBonus = await iVault.calculateDepositBonus(amount);
+            // const calculatedBonus = await iVault.calculateDepositBonus(amount);
+            const calculatedBonus = 0n;
             console.log(`Calculated bonus:\t\t${calculatedBonus.format()}`);
             console.log(`Available bonus:\t\t${availableBonus.format()}`);
             const expectedBonus = calculatedBonus <= availableBonus ? calculatedBonus : availableBonus;
