@@ -108,6 +108,11 @@ async function generateTransactionData(InceptionLibraryAddress) {
   accesses.push(accessId);
   facetIds.push(facetId);
 
+  funcSig = eigenLayerFacetFactory.interface.getSighash("redelegateToOperator");
+  sigs.push(funcSig);
+  accesses.push(accessId);
+  facetIds.push(facetId);
+
   funcSig = eigenLayerFacetFactory.interface.getSighash("undelegateFrom");
   sigs.push(funcSig);
   accesses.push(accessId);
