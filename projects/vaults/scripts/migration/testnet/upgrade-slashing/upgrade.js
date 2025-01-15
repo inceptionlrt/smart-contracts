@@ -40,7 +40,7 @@ async function main() {
 
   // update InceptionEigenRestaker implementation at InceptionVault_EL
 
-  const tx = await setterFacet.upgradeTo(newRestakerImpl);
+  let tx = await setterFacet.upgradeTo(newRestakerImpl);
   await tx.wait();
 
   console.log(`Inception Restaker Impl has been upgraded for the vault: ${IVAULT_ADDRESS}`);
@@ -63,6 +63,13 @@ async function main() {
   await tx.wait();
 
   console.log(`eigenFacetAddress has been upgraded for the vault: ${IVAULT_ADDRESS}`);
+
+  // set redelegateToOperator signature
+
+  let funcSig = EigenLayerFacet_Factory.interface.getFunction("redelegateToOperator").selector;
+  await iVault.setSignature(funcSig, "1", "1");
+
+  console.log(`set redelegateToOperator signature`);
 
   console.log("InceptionVault upgraded");
 }
