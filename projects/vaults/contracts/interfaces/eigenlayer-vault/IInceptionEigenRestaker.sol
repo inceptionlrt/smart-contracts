@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IDelegationManager, IDelegationManagerTypes, IStrategy, IERC20} from "./eigen-core/IDelegationManager.sol";
+import {IDelegationManager, IStrategy, IERC20} from "./eigen-core/IDelegationManager.sol";
 
 interface IInceptionEigenRestakerErrors {
     error OnlyTrusteeAllowed();
@@ -53,7 +53,7 @@ interface IInceptionEigenRestaker {
     function withdrawFromEL(uint256 shares) external;
 
     function claimWithdrawals(
-        IDelegationManagerTypes.Withdrawal[] calldata withdrawals,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
         bool[] calldata receiveAsTokens
     ) external returns (uint256);

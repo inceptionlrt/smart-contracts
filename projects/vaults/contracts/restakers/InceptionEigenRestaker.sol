@@ -8,7 +8,7 @@ import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/intro
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
-import {IDelegationManager, IDelegationManagerTypes} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
@@ -133,7 +133,7 @@ contract InceptionEigenRestaker is
     }
 
     function claimWithdrawals(
-        IDelegationManagerTypes.Withdrawal[] calldata withdrawals,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {

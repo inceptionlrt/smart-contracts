@@ -10,7 +10,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IOwnable} from "../../interfaces/common/IOwnable.sol";
 import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
-import {IDelegationManager, IDelegationManagerTypes} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";

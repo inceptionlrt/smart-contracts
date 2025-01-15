@@ -221,7 +221,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
      */
     function claimCompletedWithdrawals(
         address restaker,
-        IDelegationManagerTypes.Withdrawal[] calldata withdrawals
+        IDelegationManager.Withdrawal[] calldata withdrawals
     ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
@@ -266,7 +266,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     }
 
     function _claimCompletedWithdrawalsForVault(
-        IDelegationManagerTypes.Withdrawal[] memory withdrawals,
+        IDelegationManager.Withdrawal[] memory withdrawals,
         IERC20[][] memory tokens,
         bool[] memory receiveAsTokens
     ) internal returns (uint256) {

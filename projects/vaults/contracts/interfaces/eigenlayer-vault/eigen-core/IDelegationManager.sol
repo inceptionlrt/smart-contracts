@@ -56,45 +56,6 @@ interface IDelegationManagerErrors {
     error WithdrawerNotStaker();
 }
 
-interface IDelegationManagerTypes {
-    /**
-     * Struct type used to specify an existing queued withdrawal. Rather than storing the entire struct, only a hash is stored.
-     * In functions that operate on existing queued withdrawals -- e.g. completeQueuedWithdrawal`, the data is resubmitted and the hash of the submitted
-     * data is computed by `calculateWithdrawalRoot` and checked against the stored hash in order to confirm the integrity of the submitted data.
-     */
-    struct Withdrawal {
-        // The address that originated the Withdrawal
-        address staker;
-        // The address that the staker was delegated to at the time that the Withdrawal was created
-        address delegatedTo;
-        // The address that can complete the Withdrawal + will receive funds when completing the withdrawal
-        address withdrawer;
-        // Nonce used to guarantee that otherwise identical withdrawals have unique hashes
-        uint256 nonce;
-        // Blocknumber when the Withdrawal was created.
-        uint32 startBlock;
-        // Array of strategies that the Withdrawal contains
-        IStrategy[] strategies;
-        // Array containing the amount of staker's scaledShares for withdrawal in each Strategy in the `strategies` array
-        // Note that these scaledShares need to be multiplied by the operator's maxMagnitude and beaconChainScalingFactor at completion to include
-        // slashing occurring during the queue withdrawal delay. This is because scaledShares = sharesToWithdraw / (maxMagnitude * beaconChainScalingFactor)
-        // at queue time. beaconChainScalingFactor is simply equal to 1 if the strategy is not the beaconChainStrategy.
-        // To account for slashing, we later multiply scaledShares * maxMagnitude * beaconChainScalingFactor at the earliest possible completion time
-        // to get the withdrawn shares after applying slashing during the delay period.
-        uint256[] scaledShares;
-    }
-
-    struct QueuedWithdrawalParams {
-        // Array of strategies that the QueuedWithdrawal contains
-        IStrategy[] strategies;
-        // Array containing the amount of depositShares for withdrawal in each Strategy in the `strategies` array
-        // Note that the actual shares received on completing withdrawal may be less than the depositShares if slashing occurred
-        uint256[] depositShares;
-        // The address of the withdrawer
-        address withdrawer;
-    }
-}
-
 interface IDelegationManager is IDelegationManagerErrors {
     // @notice Struct that bundles together a signature and an expiration time for the signature. Used primarily for stack management.
     struct SignatureWithExpiry {
@@ -163,7 +124,7 @@ interface IDelegationManager is IDelegationManagerErrors {
     ) external;
 
     function completeQueuedWithdrawals(
-        IDelegationManagerTypes.Withdrawal[] calldata withdrawals,
+        IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
         bool[] calldata receiveAsTokens
     ) external;
