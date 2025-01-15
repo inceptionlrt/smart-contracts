@@ -1,5 +1,3 @@
-require("hardhat-tracer");
-
 import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
