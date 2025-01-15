@@ -1,3 +1,5 @@
+require("hardhat-tracer");
+
 import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
@@ -24,8 +26,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: `${process.env.HOLESKY_RPC}`,
-        blockNumber: 2680454,
+        url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
+        blockNumber: 2994508,
       },
     },
   },

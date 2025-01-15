@@ -188,7 +188,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         address staker
     ) internal returns (uint256) {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
+        uint256 totalAssetSharesInEL = strategyManager.stakerDepositShares(
             staker,
             strategy
         );
