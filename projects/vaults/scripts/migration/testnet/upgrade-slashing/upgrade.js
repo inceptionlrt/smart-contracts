@@ -16,18 +16,19 @@ async function main() {
 
   // update InceptionVault_EL implementation
 
+  const setterFacetFactory = await ethers.getContractFactory("EigenSetterFacet", {
+    libraries: {
+      InceptionLibrary: INCEPTION_LIBRARY
+    },
+  });
+
+  const setterFacet = await setterFacetFactory.attach(IVAULT_ADDRESS);
+
   const InceptionVaultFactory = await ethers.getContractFactory("InceptionVault_EL", {
     libraries: {
       InceptionLibrary: INCEPTION_LIBRARY,
     },
   });
-
-  let tx = await upgrades.upgradeProxy(IVAULT_ADDRESS, InceptionVaultFactory, {
-    kind: "transparent",
-    unsafeAllowLinkedLibraries: true,
-  });
-
-  await tx.waitForDeployment();
 
   const iVault = await InceptionVaultFactory.attach(IVAULT_ADDRESS);
 
@@ -44,7 +45,7 @@ async function main() {
 
   // update InceptionEigenRestaker implementation at InceptionVault_EL
 
-  tx = await iVault.upgradeTo(newRestakerImpl);
+  tx = await setterFacet.upgradeTo(newRestakerImpl);
   await tx.wait();
 
   console.log(`Inception Restaker Impl has been upgraded for the vault: ${IVAULT_ADDRESS}`);
