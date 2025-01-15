@@ -14,15 +14,11 @@ async function main() {
    *********** DEPLOYMENT ***********
    **********************************/
 
-  // update InceptionVault_EL implementation
-
   const setterFacetFactory = await ethers.getContractFactory("EigenSetterFacet", {
     libraries: {
       InceptionLibrary: INCEPTION_LIBRARY
     },
   });
-
-  const setterFacet = await setterFacetFactory.attach(IVAULT_ADDRESS);
 
   const InceptionVaultFactory = await ethers.getContractFactory("InceptionVault_EL", {
     libraries: {
@@ -31,8 +27,7 @@ async function main() {
   });
 
   const iVault = await InceptionVaultFactory.attach(IVAULT_ADDRESS);
-
-  console.log("InceptionVault_EL upgraded");
+  const setterFacet = await setterFacetFactory.attach(IVAULT_ADDRESS);
 
   // deploy new InceptionEigenRestaker
 
