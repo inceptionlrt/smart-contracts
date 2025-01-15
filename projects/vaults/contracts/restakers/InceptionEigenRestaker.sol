@@ -20,12 +20,12 @@ import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRe
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract InceptionEigenRestaker is
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-ERC165Upgradeable,
-OwnableUpgradeable,
-IInceptionEigenRestaker,
-IInceptionEigenRestakerErrors
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC165Upgradeable,
+    OwnableUpgradeable,
+    IInceptionEigenRestaker,
+    IInceptionEigenRestakerErrors
 {
     using SafeERC20 for IERC20;
 
@@ -120,9 +120,9 @@ IInceptionEigenRestakerErrors
         sharesToWithdraw[0] = shares;
 
         IDelegationManager.QueuedWithdrawalParams[]
-        memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-            1
-        );
+            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+                1
+            );
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
@@ -147,7 +147,7 @@ IInceptionEigenRestakerErrors
 
         // send tokens to the vault
         uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
-                    balanceBefore;
+            balanceBefore;
 
         _asset.safeTransfer(_vault, withdrawnAmount);
 
@@ -163,8 +163,8 @@ IInceptionEigenRestakerErrors
     }
 
     function setRewardsCoordinator(address newRewardsCoordinator)
-    external
-    onlyOwner
+        external
+        onlyOwner
     {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }

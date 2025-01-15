@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 
-const IVAULT_ADDRESS = "0x4267Cf4df74C5cBDC2E97F0633f2caBFe9F999F2";
-const INCEPTION_LIBRARY = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
+const IVAULT_ADDRESS = "0x838a7fe80f1AF808Bc5ad0f9B1AC6e26B2475E17",
+  INCEPTION_LIBRARY = "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -14,21 +14,21 @@ async function main() {
    *********** DEPLOYMENT ***********
    **********************************/
 
-    // update InceptionVault_EL implementation
+  // update InceptionVault_EL implementation
 
   const InceptionVaultFactory = await ethers.getContractFactory("InceptionVault_EL", {
-      libraries: {
-        InceptionLibrary: INCEPTION_LIBRARY,
-      },
-    });
+    libraries: {
+      InceptionLibrary: INCEPTION_LIBRARY,
+    },
+  });
 
   let tx = await upgrades.upgradeProxy(IVAULT_ADDRESS, InceptionVaultFactory, {
     kind: "transparent",
     unsafeAllowLinkedLibraries: true,
-    unsafeAllowRenames: true,
   });
 
   await tx.waitForDeployment();
+
   const iVault = await InceptionVaultFactory.attach(IVAULT_ADDRESS);
 
   console.log("InceptionVault_EL upgraded");
@@ -44,7 +44,7 @@ async function main() {
 
   // update InceptionEigenRestaker implementation at InceptionVault_EL
 
-  tx = await iVault.upgradeTo(newRestakeImp);
+  tx = await iVault.upgradeTo(newRestakerImpl);
   await tx.wait();
 
   console.log(`Inception Restaker Impl has been upgraded for the vault: ${IVAULT_ADDRESS}`);
@@ -73,8 +73,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch((error) => {
     console.error(error);
     process.exit(1);
   });
-
