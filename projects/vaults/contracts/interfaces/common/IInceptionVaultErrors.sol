@@ -67,4 +67,6 @@ interface IInceptionVaultErrors {
     error EigenLayerOperatorAlreadyExists();
 
     error TimelineNotOver();
+
+    error InvalidAddress();
 }

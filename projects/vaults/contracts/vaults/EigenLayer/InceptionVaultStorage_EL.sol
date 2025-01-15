@@ -56,6 +56,8 @@ contract InceptionVaultStorage_EL is
 
     Withdrawal[] public claimerWithdrawalsQueue;
 
+    mapping(address => Withdrawal) internal _claimerWithdrawals;
+
     address internal constant _MOCK_ADDRESS =
         0x0000000000000000000000000012345000000000;
 
@@ -80,8 +82,6 @@ contract InceptionVaultStorage_EL is
 
     /// @dev Reduces rounding issues
     uint256 public minAmount;
-
-    mapping(address => Withdrawal) internal _claimerWithdrawals;
 
     /// @dev Unique name of the InceptionVault.
     string public name;

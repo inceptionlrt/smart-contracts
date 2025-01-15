@@ -23,7 +23,7 @@ interface IStrategyErrors {
     error BalanceExceedsMaxTotalDeposits();
 }
 
-interface IStrategy is IStrategyErrors {
+interface IStrategyBase is IStrategyErrors {
     function deposit(IERC20 token, uint256 amount) external returns (uint256);
 
     function withdraw(
@@ -64,7 +64,9 @@ interface IStrategy is IStrategyErrors {
 
     /// @notice Returns either a brief string explaining the strategy's goal & purpose, or a link to metadata that explains in more detail.
     function explanation() external view returns (string memory);
+}
 
+interface IStrategy is IStrategyBase {
     /// @notice Simple getter function that returns the current values of `maxPerDeposit` and `maxTotalDeposits`.
     function getTVLLimits() external view returns (uint256, uint256);
 }

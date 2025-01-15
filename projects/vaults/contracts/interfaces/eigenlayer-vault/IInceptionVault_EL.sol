@@ -155,4 +155,6 @@ interface IInceptionVault_EL {
     );
 
     event RewardsCoordinatorChanged(address prevValue, address newValue);
+
+    event AirDropClaimed(address sender, address receiver, uint256 amount);
 }

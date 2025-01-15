@@ -20,6 +20,8 @@ interface IIEigenRestakerErrors {
 
     error NotVaultOrTrusteeManager();
 
+    error InvalidWrapperForVault();
+
     error LengthMismatch();
 
     error InactiveWrapper();
@@ -28,9 +30,13 @@ interface IIEigenRestakerErrors {
 
     error ZeroAddress();
 
+    error NoWrapperExists();
+
     error InvalidAllocation();
 
     error TooMuchSlippage();
+
+    error AlreadyAdded();
 }
 
 interface IIMellowRestaker {
@@ -42,17 +48,17 @@ interface IIMellowRestaker {
 
     event VaultSet(address indexed oldVault, address indexed newVault);
 
-    event RequestDealineSet(
-        uint256 indexed oldDeadline,
-        uint256 indexed newDealine
-    );
+    event RequestDealineSet(uint256 indexed oldDeadline, uint256 indexed newDealine);
 
     event NewSlippages(uint256 _deposit, uint256 _withdraw);
 
-    event TrusteeManagerSet(
-        address indexed _trusteeManager,
-        address indexed _newTrusteeManager
-    );
+    event TrusteeManagerSet(address indexed _trusteeManager, address indexed _newTrusteeManager);
+
+    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
+
+    event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
+
+    event WrapperChanged(address indexed _mellowVault, address indexed _oldWrapper, address indexed _newWrapper);
 
     function getDeposited(address _mellowVault) external view returns (uint256);
 
@@ -65,18 +71,21 @@ interface IIMellowRestaker {
     ) external returns (uint256 lpAmount);
 
     function delegate(
+        uint256 amount,
         uint256 deadline
-    ) external returns (uint256 amount, uint256 lpAmount);
+    ) external returns (uint256 tokenAmount, uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
         uint256 minLpAmount,
+        uint256 deadline,
         bool closePrevious
     ) external returns (uint256);
 
+
     function withdrawEmergencyMellow(
         address _mellowVault,
-        uint256 amount
+        uint256 _deadline
     ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);

@@ -17,7 +17,15 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 100,
+      },
+    },
+  },
+  networks: {
+    hardhat: {
+      forking: {
+        url: `${process.env.HOLESKY_RPC}`,
+        blockNumber: 2680454,
       },
     },
   },
