@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-
 import "./InceptionVaultStorage_EL.sol";
 
 /**
  * @title The InceptionVault_EL contract
- * @notice Aims to maximize the profit of EigenLayer for a certain asset.
  * @author The InceptionLRT team
+ * @notice Aims to maximize the profit of EigenLayer for a certain asset.
  */
 contract InceptionVault_EL is InceptionVaultStorage_EL {
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -39,7 +37,6 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
         IInceptionToken _inceptionToken,
         IStrategy _assetStrategy
     ) internal {
-        __Ownable_init();
         __EigenLayerHandler_init(_strategyManager, _assetStrategy);
 
         name = vaultName;
@@ -83,30 +80,9 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setEigenLayerFacet(address newEigenLayerFacet) external onlyOwner {
-        if (!Address.isContract(newEigenLayerFacet)) revert NotContract();
-
-        emit EigenLayerFacetChanged(eigenLayerFacet, newEigenLayerFacet);
-        eigenLayerFacet = newEigenLayerFacet;
-    }
-
-    function setERC4626Facet(address newERC4626Facet) external onlyOwner {
-        if (!Address.isContract(newERC4626Facet)) revert NotContract();
-
-        emit ERC4626FacetChanged(erc4626Facet, newERC4626Facet);
-        erc4626Facet = newERC4626Facet;
-    }
-
-    function setSetterFacet(address newSetterFacet) external onlyOwner {
-        if (!Address.isContract(newSetterFacet)) revert NotContract();
-
-        emit SetterFacetChanged(setterFacet, newSetterFacet);
-        setterFacet = newSetterFacet;
-    }
-
     fallback() external {
         (address target, FuncAccess access) = _getSelectorToTarget(msg.sig);
-        require(target != address(0));
+        if (target == address(0)) revert FunctionNotSupported();
         _verifyAccess(access);
         assembly {
             // copy function selector and any arguments
@@ -121,7 +97,8 @@ contract InceptionVault_EL is InceptionVaultStorage_EL {
                 revert(0, returndatasize())
             }
             default {
-                //    resultData := mload(0)
+                // If the call succeeded, return the data to the caller
+                return(0, returndatasize())
             }
         }
     }

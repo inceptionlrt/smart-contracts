@@ -7,23 +7,25 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIEigenRestaker, IIEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IIEigenRestaker.sol";
+import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
-/// @author The InceptionLRT team
-/// @title The IEigenRestaker Contract
-/// @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
-/// @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
-contract IEigenRestaker is
+/**
+ * @title The InceptionEigenRestaker Contract
+ * @author The InceptionLRT team
+ * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ */
+contract InceptionEigenRestaker is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIEigenRestaker,
-    IIEigenRestakerErrors
+    IInceptionEigenRestaker,
+    IInceptionEigenRestakerErrors
 {
     using SafeERC20 for IERC20;
 
@@ -34,25 +36,27 @@ contract IEigenRestaker is
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
-    IRewardsCoordinator internal _rewardCoordinator;
+    IRewardsCoordinator public rewardsCoordinator;
 
     modifier onlyTrustee() {
-        require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
-            "InceptionRestaker: only vault or trustee manager"
-        );
+        if (msg.sender != _vault && msg.sender != _trusteeManager)
+            revert OnlyTrusteeAllowed();
+
         _;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 
     function initialize(
+        address ownerAddress,
+        address rewardCoordinator,
         address delegationManager,
         address strategyManager,
         address strategy,
+        address asset,
         address trusteeManager
     ) public initializer {
         __Pausable_init();
@@ -64,9 +68,10 @@ contract IEigenRestaker is
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _asset = _strategy.underlyingToken();
+        _asset = IERC20(asset);
         _trusteeManager = trusteeManager;
         _vault = msg.sender;
+        _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
@@ -119,8 +124,7 @@ contract IEigenRestaker is
         uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
-        IERC20 asset = _strategy.underlyingToken();
-        uint256 balanceBefore = asset.balanceOf(address(this));
+        uint256 balanceBefore = _asset.balanceOf(address(this));
 
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
@@ -130,10 +134,10 @@ contract IEigenRestaker is
         );
 
         // send tokens to the vault
-        uint256 withdrawnAmount = asset.balanceOf(address(this)) -
+        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
             balanceBefore;
 
-        asset.safeTransfer(_vault, withdrawnAmount);
+        _asset.safeTransfer(_vault, withdrawnAmount);
 
         return withdrawnAmount;
     }
@@ -146,17 +150,24 @@ contract IEigenRestaker is
         return 2;
     }
 
-    function setRewardCoordinator(
-        IRewardsCoordinator newRewardCoordinator
+    function setRewardsCoordinator(
+        address newRewardsCoordinator
     ) external onlyOwner {
-        newRewardCoordinator.setClaimerFor(owner());
+        _setRewardsCoordinator(newRewardsCoordinator, owner());
+    }
+
+    function _setRewardsCoordinator(
+        address newRewardsCoordinator,
+        address ownerAddress
+    ) internal {
+        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(ownerAddress);
 
         emit RewardCoordinatorChanged(
-            address(_rewardCoordinator),
-            address(newRewardCoordinator)
+            address(rewardsCoordinator),
+            newRewardsCoordinator
         );
 
-        _rewardCoordinator = newRewardCoordinator;
+        rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
     }
 
     function pause() external onlyOwner {

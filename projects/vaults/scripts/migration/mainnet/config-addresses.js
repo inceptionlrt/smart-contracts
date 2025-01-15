@@ -1,5 +1,11 @@
 const addresses = {
+  /// AVS Operators
+  P2POperator: "0xdbed88d83176316fc46797b43adee927dc2ff2f5",
   Operator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
+  TreasuryAddress: "0x8e6C8799B542E507bfDDCA1a424867e885D96e79",
+  InceptionLibrary: "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66",
+  RatioFeedAddress: "0xfd73be536503b5aa80bf99d1fd65b1306c69b191",
+  DelegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
   StrategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
   AnkrStrategy: "0x13760f50a9d7377e4f20cb8cf9e4c26586c658ff",
   CoinbaseStrategy: "0x54945180db7943c0ed0fee7edab2bd24620256bc",
@@ -13,8 +19,18 @@ const addresses = {
   MantleStrategy: "0x298aFB19A105D59E74658C4C334Ff360BadE6dd2",
   FraxStrategy: "0x8CA7A5d6f3acd3A7A8bC468a8CD0FB14B6BD28b6",
   LiquidStrategy: "0xAe60d8180437b5C34bB956822ac2710972584473",
+  sFraxStrategy: "0xca18116F8Ed9081501B14C6aF3a7748E52b0E99E",
+  EigenStrategy: "0xaCB55C530Acdb2849e6d4f36992Cd8c9D50ED8F7",
+  ListaStrategy: "0x0650435080A9C606F92b2996c5D5e9554A713898",
+  tBTCStrategy: "0x1Fc0DB099E3452b6c20027578CA57722815df98f",
+  /// Assets
+  sFraxAddress: "0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32",
+  EigenAddress: "0xec53bf9167f50cdeb3ae105f56099aaab9061f83",
+  ListaAddress: "0xf9B24C9364457Ea85792179D285855753549eBAa",
+  tBTCAddress: "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
 };
 
 module.exports = {
   addresses,
 };
+
