@@ -6,13 +6,10 @@ import {IMellowHandler} from "../interfaces/symbiotic-vault/IMellowHandler.sol";
 import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/**
- *
- * @author The InceptionLRT team
- * @title The MellowHandler contract
- * @dev Serves communication with external Mellow Protocol
- * @dev Specifically, this includes depositing, and handling withdrawal requests
- */
+/// @author The InceptionLRT team
+/// @title The MellowHandler contract
+/// @dev Serves communication with external Mellow Protocol
+/// @dev Specifically, this includes depositing, and handling withdrawal requests
 contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     using SafeERC20 for IERC20;
 
@@ -154,9 +151,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     ////// GET functions //////
     ////////////////////////*/
 
-    /**
-     * @dev returns the total deposited into asset strategy
-     */
+    /// @dev returns the total deposited into asset strategy
     function getTotalDeposited() public view returns (uint256) {
         return
             getTotalDelegated() +

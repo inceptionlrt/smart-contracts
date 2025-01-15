@@ -23,7 +23,6 @@ import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMe
 /**
  * @title The MellowRestaker Contract
  * @author The InceptionLRT team
-
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
@@ -199,7 +198,7 @@ contract IMellowRestaker is
     //     uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(minAmounts, block.timestamp + _deadline);
 
     //     if (actualAmounts[1] > 0) {
-    //         IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this))); 
+    //         IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this)));
     //     }
 
     //     return _asset.balanceOf(address(this));
@@ -239,7 +238,7 @@ contract IMellowRestaker is
 
         emit VaultAdded(mellowVault, depositWrapper);
     }
-    function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
+   function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
 
         if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
         if (address(IMellowDepositWrapper(newDepositWrapper).vault()) != mellowVault) revert InvalidWrapperForVault();
@@ -309,7 +308,7 @@ contract IMellowRestaker is
         uint256 amount,
         IMellowVault mellowVault
     ) public view returns (uint256 lpAmount) {
-  
+
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
 
