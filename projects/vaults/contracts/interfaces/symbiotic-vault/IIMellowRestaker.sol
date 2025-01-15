@@ -20,6 +20,8 @@ interface IIEigenRestakerErrors {
 
     error NotVaultOrTrusteeManager();
 
+    error InvalidWrapperForVault();
+
     error LengthMismatch();
 
     error InactiveWrapper();
@@ -69,18 +71,21 @@ interface IIMellowRestaker {
     ) external returns (uint256 lpAmount);
 
     function delegate(
+        uint256 amount,
         uint256 deadline
-    ) external returns (uint256 amount, uint256 lpAmount);
+    ) external returns (uint256 tokenAmount, uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
         uint256 minLpAmount,
+        uint256 deadline,
         bool closePrevious
     ) external returns (uint256);
 
-    function withdrawEmergencyMellow(
-        address _mellowVault
-    ) external returns (uint256);
+    // function withdrawEmergencyMellow(
+    //     address _mellowVault,
+    //     uint256 _deadline
+    // ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);
 

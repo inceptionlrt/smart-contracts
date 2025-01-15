@@ -21,7 +21,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
-    uint256 public minAmount;
+    uint256 public withdrawMinAmount;
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
 
@@ -49,6 +49,10 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint64 public optimalWithdrawalRate;
     uint64 public withdrawUtilizationKink;
 
+    /// @dev flash and deposit minAmounts
+    uint256 public flashMinAmount;
+    uint256 public depositMinAmount;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -63,7 +67,9 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        minAmount = 10000000000000;
+        withdrawMinAmount = 1e16;
+        depositMinAmount = 1e16;
+        flashMinAmount = 1e16;
 
         protocolFee = 50 * 1e8;
 
@@ -86,7 +92,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
 
         if (targetCapacity == 0) revert InceptionOnPause();
     }
@@ -170,22 +176,25 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
-        uint256 amount
+        uint256 amount,
+        uint256 deadline
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault);
+        _depositAssetIntoMellow(amount, mellowVault, deadline);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto() external nonReentrant whenNotPaused onlyOperator {
-        _asset.safeApprove(address(mellowRestaker), getFreeBalance());
+    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+        uint256 balance = getFreeBalance();
+        _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
-            block.timestamp
+            balance,
+            deadline
         );
 
         emit Delegated(address(mellowRestaker), amount, lpAmount);
@@ -213,7 +222,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = convertToAssets(iShares);
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount < withdrawMinAmount) revert LowerMinAmount(withdrawMinAmount);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
@@ -314,7 +323,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
-        if (amount < minAmount) revert LowerMinAmount(minAmount);
+        if (amount < flashMinAmount) revert LowerMinAmount(flashMinAmount);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
@@ -338,14 +347,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
                 amount,
                 getFlashCapacity(),
-                (_getTargetCapacity() * depositUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
                 optimalBonusRate,
                 maxBonusRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
@@ -355,15 +365,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
-
+        uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 capacity,
-                (_getTargetCapacity() * withdrawUtilizationKink) / MAX_PERCENT,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
-                _getTargetCapacity()
+                targetCapacity
             );
     }
 
@@ -561,9 +571,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         _operator = newOperator;
     }
 
-    function setMinAmount(uint256 newMinAmount) external onlyOwner {
-        emit MinAmountChanged(minAmount, newMinAmount);
-        minAmount = newMinAmount;
+    function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
+        emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
+        withdrawMinAmount = newMinAmount;
+    }
+
+    function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
+        emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
+        depositMinAmount = newMinAmount;
+    }
+
+    function setFlashMinAmont(uint256 newMinAmount) external onlyOwner {
+        emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
+        flashMinAmount = newMinAmount;
     }
 
     function setName(string memory newVaultName) external onlyOwner {

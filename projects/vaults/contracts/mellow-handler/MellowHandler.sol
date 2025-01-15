@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/IMellowHandler.sol";
 import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  *
@@ -13,6 +14,8 @@ import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.s
  * @dev Specifically, this includes depositing, and handling withdrawal requests
  */
 contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
+    using SafeERC20 for IERC20;
+
     uint256 public epoch;
 
     /// @dev inception operator
@@ -63,10 +66,11 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
 
     function _depositAssetIntoMellow(
         uint256 amount,
-        address mellowVault
+        address mellowVault,
+        uint256 deadline
     ) internal {
-        _asset.approve(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, block.timestamp, mellowVault);
+        _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
+        mellowRestaker.delegateMellow(amount, deadline, mellowVault);
     }
 
     /*/////////////////////////////////
@@ -77,26 +81,26 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     /// @dev requires a specific amount to withdraw
     function undelegateFrom(
         address mellowVault,
-        uint256 amount
+        uint256 amount,
+        uint256 deadline
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
-        amount = mellowRestaker.withdrawMellow(mellowVault, amount, true);
+        amount = mellowRestaker.withdrawMellow(mellowVault, amount, deadline, true);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }
 
-    /**
-     * @dev performs creating a withdrawal request from Mellow Protocol
-     * @dev requires a specific amount to withdraw
-     */
-    function undelegateForceFrom(
-        address mellowVault
-    ) external whenNotPaused nonReentrant onlyOperator {
-        if (mellowVault == address(0)) revert InvalidAddress();
-        uint256 amount = mellowRestaker.withdrawEmergencyMellow(mellowVault);
-        emit StartEmergencyMellowWithdrawal(address(mellowRestaker), amount);
-        return;
-    }
+    // /// @dev performs creating a withdrawal request from Mellow Protocol
+    // /// @dev requires a specific amount to withdraw
+    // function undelegateForceFrom(
+    //     address mellowVault,
+    //     uint256 deadline
+    // ) external whenNotPaused nonReentrant onlyOperator {
+    //     if (mellowVault == address(0)) revert InvalidAddress();
+    //     uint256 amount = mellowRestaker.withdrawEmergencyMellow(mellowVault, deadline);
+    //     emit StartEmergencyMellowWithdrawal(address(mellowRestaker), amount);
+    //     return;
+    // }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawals() public whenNotPaused nonReentrant {
@@ -128,18 +132,22 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
      */
     function _updateEpoch(uint256 availableBalance) internal {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
+        uint256 redeemReservedBuffer;
+        uint256 epochBuffer;
         for (uint256 i = epoch; i < withdrawalsNum; ) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
             unchecked {
                 if (amount > availableBalance) {
                     break;
                 }
-                redeemReservedAmount += amount;
+                redeemReservedBuffer += amount;
                 availableBalance -= amount;
-                ++epoch;
+                ++epochBuffer;
                 ++i;
             }
         }
+        redeemReservedAmount += redeemReservedBuffer;
+        epoch += epochBuffer;
     }
 
     /*//////////////////////////
@@ -163,10 +171,12 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     }
 
     function getFreeBalance() public view returns (uint256 total) {
+        uint256 flashCapacity = getFlashCapacity();
+        uint256 targetFlash = _getTargetCapacity();
         return
-            getFlashCapacity() < _getTargetCapacity()
+            flashCapacity < targetFlash
                 ? 0
-                : getFlashCapacity() - _getTargetCapacity();
+                : flashCapacity - targetFlash;
     }
 
     /// @dev returns the total amount of pending withdrawals from Mellow LRT
@@ -181,7 +191,10 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
-        return totalAssets() - redeemReservedAmount - depositBonusAmount;
+        uint256 _assets = totalAssets();
+        uint256 _sum = redeemReservedAmount + depositBonusAmount;
+        if (_sum > _assets) return 0;
+        else return _assets - _sum;
     }
 
     function _getTargetCapacity() internal view returns (uint256) {
