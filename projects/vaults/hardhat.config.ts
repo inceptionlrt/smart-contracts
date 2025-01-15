@@ -21,15 +21,6 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  networks: {
-    hardhat: {
-      forking: {
-        url: process.env.HOLESKY_RPC || "https://rpc.ankr.com/eth_holesky",
-        blockNumber: 2994508,
-      },
-    },
-  },
 };
 
 export default config;
-
