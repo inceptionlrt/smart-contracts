@@ -40,7 +40,7 @@ async function main() {
 
   // update InceptionEigenRestaker implementation at InceptionVault_EL
 
-  tx = await setterFacet.upgradeTo(newRestakerImpl);
+  const tx = await setterFacet.upgradeTo(newRestakerImpl);
   await tx.wait();
 
   console.log(`Inception Restaker Impl has been upgraded for the vault: ${IVAULT_ADDRESS}`);
