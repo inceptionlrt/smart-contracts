@@ -33,6 +33,7 @@ export const CONFIG = {
       gasPrice: 20000000000,
       gas: 6721975,
     },
+
   },
   mocha: {
     enableTimeouts: false,
@@ -95,3 +96,4 @@ export const CONFIG = {
     enabled: false,
   },
 };
+

@@ -2,10 +2,8 @@ import { HardhatUserConfig } from "hardhat/config";
 import { CONFIG } from "../../hh.config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
-import "hardhat-deploy";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-storage-layout";
-import "hardhat-tracer";
 
 // Hardhat tasks
 import "./tasks/get-free-balances";
@@ -19,7 +17,15 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 100,
+      },
+    },
+  },
+  networks: {
+    hardhat: {
+      forking: {
+        url: `${process.env.HOLESKY_RPC}`,
+        blockNumber: 2680454,
       },
     },
   },
