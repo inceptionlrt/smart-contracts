@@ -10,7 +10,6 @@ async function main() {
   const iMellowRestakerFactory = await ethers.getContractFactory("IMellowRestaker");
   const mrestakerImpl = await upgrades.prepareUpgrade(IMellowRestaker, iMellowRestakerFactory, {
     kind: "transparent",
-    unsafeAllowLinkedLibraries: true,
   });
   console.log(`New Impl of MellowRestaker(${mrestakerImpl}) was deployed`);
 }

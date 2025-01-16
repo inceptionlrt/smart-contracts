@@ -7296,6 +7296,227 @@
         },
         "namespaces": {}
       }
+    },
+    "e27ca5eba034413313f93f2747077de1ec026cdb2a5ae5bf77f6d036dd821254": {
+      "address": "0xc4f4D60b84082a5be1E44146116b7bdEa57f8691",
+      "txHash": "0x0d2ca0ce7df9c4f29499a166d755bd9533b17199075312b65c073135cd621f85",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_contract(IERC20)2903",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:38"
+          },
+          {
+            "label": "_trusteeManager",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_address",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:39"
+          },
+          {
+            "label": "_vault",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_address",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:40"
+          },
+          {
+            "label": "mellowDepositWrappers",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_mapping(t_address,t_contract(IMellowDepositWrapper)6790)",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:43"
+          },
+          {
+            "label": "mellowVaults",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_array(t_contract(IMellowVault)7239)dyn_storage",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:44"
+          },
+          {
+            "label": "allocations",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:46"
+          },
+          {
+            "label": "totalAllocations",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_uint256",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:47"
+          },
+          {
+            "label": "requestDeadline",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_uint256",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:49"
+          },
+          {
+            "label": "depositSlippage",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_uint256",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:51"
+          },
+          {
+            "label": "withdrawSlippage",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_uint256",
+            "contract": "IMellowRestaker",
+            "src": "contracts/restakers/IMellowRestaker.sol:52"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(IMellowVault)7239)dyn_storage": {
+            "label": "contract IMellowVault[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20)2903": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IMellowDepositWrapper)6790": {
+            "label": "contract IMellowDepositWrapper",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IMellowVault)7239": {
+            "label": "contract IMellowVault",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_contract(IMellowDepositWrapper)6790)": {
+            "label": "mapping(address => contract IMellowDepositWrapper)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
     }
   }
 }
