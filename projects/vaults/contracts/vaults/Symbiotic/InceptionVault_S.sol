@@ -50,8 +50,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint64 public withdrawUtilizationKink;
 
     /// @dev flash and deposit minAmounts
-    uint256 public flashMinAmount;
-    uint256 public depositMinAmount;
+    uint256 private flashMinAmount;
+    uint256 private depositMinAmount;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -90,9 +90,13 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////// Deposit functions //////
     ////////////////////////////*/
 
+    function depositMinAmount() public pure returns (uint256) {
+        return 100;
+    }
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
-        if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        
+        if (amount < depositMinAmount()) revert LowerMinAmount(depositMinAmount());
 
         if (targetCapacity == 0) revert InceptionOnPause();
     }
@@ -133,7 +137,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeDeposit(receiver, amount);
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
-        uint256 availableBonusAmount = depositBonusAmount;
+        // uint256 availableBonusAmount = depositBonusAmount;
+        uint256 availableBonusAmount = 0;
         if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
@@ -299,6 +304,10 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ///////// Flash Withdrawal functions /////////
     ///////////////////////////////////////////*/
 
+    function flashMinAmount() public pure returns (uint256) {
+        return 100;
+    }
+
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
@@ -323,7 +332,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
-        if (amount < flashMinAmount) revert LowerMinAmount(flashMinAmount);
+        if (amount < flashMinAmount()) revert LowerMinAmount(flashMinAmount());
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
@@ -456,11 +465,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         uint256 depositBonus;
-        if (depositBonusAmount > 0) {
-            depositBonus = calculateDepositBonus(assets);
-            if (depositBonus > depositBonusAmount)
-                depositBonus = depositBonusAmount;
-        }
+        //        if (depositBonusAmount > 0) {
+        //            depositBonus = calculateDepositBonus(assets);
+        //            if (depositBonus > depositBonusAmount)
+        //                depositBonus = depositBonusAmount;
+        //        }
 
         return convertToShares(assets + depositBonus);
     }

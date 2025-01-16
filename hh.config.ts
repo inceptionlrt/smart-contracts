@@ -33,12 +33,7 @@ export const CONFIG = {
       gasPrice: 20000000000,
       gas: 6721975,
     },
-    hardhat: {
-      forking: {
-        url: `${process.env.MAINNET_RPC}`,
-        blockNumber: 20871635,
-      },
-    },
+
   },
   mocha: {
     enableTimeouts: false,
