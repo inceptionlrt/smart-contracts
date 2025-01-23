@@ -59,6 +59,8 @@ interface IIMellowRestaker {
     event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
 
     event WrapperChanged(address indexed _mellowVault, address indexed _oldWrapper, address indexed _newWrapper);
+
+    event EthWrapperChanged(address indexed _old, address indexed _new);
     
     function getDeposited(address _mellowVault) external view returns (uint256);
 
@@ -66,20 +68,18 @@ interface IIMellowRestaker {
 
     function delegateMellow(
         uint256 amount,
-        uint256 deadline,
-        address mellowVault
+        address mellowVault,
+        address referral
     ) external returns (uint256 lpAmount);
 
     function delegate(
         uint256 amount,
-        uint256 deadline
-    ) external returns (uint256 tokenAmount, uint256 lpAmount);
+        address referral
+    ) external returns (uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
-        uint256 minLpAmount,
-        uint256 deadline,
-        bool closePrevious
+        uint256 amount
     ) external returns (uint256);
 
     

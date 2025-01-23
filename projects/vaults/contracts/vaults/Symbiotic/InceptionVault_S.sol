@@ -177,27 +177,27 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount,
-        uint256 deadline
+        address referral
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, deadline);
+        _depositAssetIntoMellow(amount, mellowVault, referral);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+    function delegateAuto(address referral) external nonReentrant whenNotPaused onlyOperator {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
+        uint256 lpAmount = mellowRestaker.delegate(
             balance,
-            deadline
+            referral
         );
 
-        emit Delegated(address(mellowRestaker), amount, lpAmount);
+        emit Delegated(address(mellowRestaker), balance, lpAmount);
     }
 
     /*///////////////////////////////////////
