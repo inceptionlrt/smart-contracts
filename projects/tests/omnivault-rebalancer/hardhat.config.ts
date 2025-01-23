@@ -10,7 +10,7 @@ import fse from "fs-extra";
 import path from "path";
 
 const TARGET_DIR = "./contracts";
-const EXTERNAL_PROJECTS = ["../../bridge-lz", "../../restaking-pool", "../../vaults"];
+const EXTERNAL_PROJECTS = ["../../bridge-lz", "../../restaking-pool", "../../vaults", "./mocks"];
 
 const copyContracts = () => {
   EXTERNAL_PROJECTS.forEach(project => {

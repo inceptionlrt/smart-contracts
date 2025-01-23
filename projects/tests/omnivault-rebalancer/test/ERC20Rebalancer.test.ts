@@ -18,6 +18,9 @@ import {
   RatioFeed,
   RestakingPool,
   InceptionVault,
+  IERC20Mintable,
+  MockFraxferry,
+  FraxFerryLZCrossChainAdapterL2,
 } from "../typechain-types";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { min } from "hardhat/internal/util/bigint";
@@ -37,25 +40,30 @@ const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).to
 
 describe("Omnivault integration tests", function () {
   this.timeout(150000);
+  // new
+  let underlyingL1, underlyingL2: IERC20Mintable
+  let ferryL2: MockFraxferry
+  let adapterL2: FraxFerryLZCrossChainAdapterL2
+  // end new
   //Adapters
-  let adapterL1: LZCrossChainAdapterL1;
-  let maliciousAdapterL1: LZCrossChainAdapterL1;
-  let adapterFrax: LZCrossChainAdapterL2;
+ // let adapterL1: LZCrossChainAdapterL1;
+  //let maliciousAdapterL1: LZCrossChainAdapterL1;
+  //let adapterFrax: LZCrossChainAdapterL2;
 
   let ethEndpoint: EndpointMock;
   let fraxEndpoint: EndpointMock;
 
-  let maliciousAdapterL2: LZCrossChainAdapterL2;
+  //let maliciousAdapterL2: LZCrossChainAdapterL2;
 
   // ============ L1 ============
   let ratioFeedL1: RatioFeed;
-  let underlyingToken: InceptionToken;
+  let iTokenL1: InceptionToken;
   let rebalancer: ERC20Rebalancer;
   let inceptionVault: InceptionVault;
 
   // ============ L2 ============
-  let iToken: InceptionToken;
-  let fraxToken: ERC20;
+  let iTokenL2: InceptionToken;
+  //let fraxToken: ERC20;
   let omniVault: InceptionERC20OmniVault; // Frax chain
   let ratioFeedL2: InceptionRatioFeed;
 
@@ -77,13 +85,26 @@ describe("Omnivault integration tests", function () {
     console.log(`Starting at block number: ${block.number}`);
     lockboxAddress = network.config.addresses.lockbox;
 
-    //    ____                        _           _                   _             _
-    //   / ___|_ __ ___  ___ ___  ___| |__   __ _(_)_ __     __ _  __| | __ _ _ __ | |_ ___ _ __ ___
-    //  | |   | '__/ _ \/ __/ __|/ __| '_ \ / _` | | '_ \   / _` |/ _` |/ _` | '_ \| __/ _ \ '__/ __|
-    //  | |___| | | (_) \__ \__ \ (__| | | | (_| | | | | | | (_| | (_| | (_| | |_) | ||  __/ |  \__ \
-    //   \____|_|  \___/|___/___/\___|_| |_|\__,_|_|_| |_|  \__,_|\__,_|\__,_| .__/ \__\___|_|  |___/
-    //                                                                       |_|
-    console.log("============ Crosschain adapters ============");
+
+    // Deploy fake ERC20 and Ferries
+    // then deploy L1 incToken
+    // L1 reb
+    // L2 CCA
+    // L2 incToken
+    // deploy and set ratio feeds
+    // set target receivers
+    // set reb in L1it
+    // set reb delays
+    // set ratios
+
+    console.log("=== Underlying asset mocks");
+    const DummyTokenFactory = await ethers.getContractFactory("DummyToken");
+    underlyingL1 = await DummyTokenFactory.deploy();
+    underlyingL2 = await DummyTokenFactory.deploy();
+    console.log("=== Ferry mocks");
+    const MockFerryFactory = await ethers.getContractFactory("MockFraxferry")
+    ferryL2 = await MockFerryFactory.deploy(underlyingL2);
+
     console.log("=== CrossChainAdapterL1");
     const ethEndpoint = await ethers.deployContract("EndpointMock", [ETH_EID]);
     (ethEndpoint as any).address = await ethEndpoint.getAddress();
@@ -96,14 +117,59 @@ describe("Omnivault integration tests", function () {
     ]);
     (adapterL1 as any).address = await adapterL1.getAddress();
 
+    console.log("=== ERC20Rebalancer");
+    const Rebalancer = await ethers.getContractFactory("ERC20Rebalancer");
+    const rebalancer = await upgrades.deployProxy(Rebalancer, [
+      31337,// def chainid
+      // incToken
+      // underlying asset
+      // lockbox
+      // ivault
+      // adapter
+      // operator
+      inceptionToken.address,
+      lockboxAddress,
+      inceptionVault.address,
+      adapterL1.address,
+      ratioFeedL1.address,
+      operator.address,
+    ]);
+    rebalancer.address = await rebalancer.getAddress();
+    await rebalancer.connect(owner).addChainId(FRAX_ID);
+    // await rebalancer.connect(owner).addChainId(OPT_ID);
+    // await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
+
+    //    ____                        _           _                   _             _
+    //   / ___|_ __ ___  ___ ___  ___| |__   __ _(_)_ __     __ _  __| | __ _ _ __ | |_ ___ _ __ ___
+    //  | |   | '__/ _ \/ __/ __|/ __| '_ \ / _` | | '_ \   / _` |/ _` |/ _` | '_ \| __/ _ \ '__/ __|
+    //  | |___| | | (_) \__ \__ \ (__| | | | (_| | | | | | | (_| | (_| | (_| | |_) | ||  __/ |  \__ \
+    //   \____|_|  \___/|___/___/\___|_| |_|\__,_|_|_| |_|  \__,_|\__,_|\__,_| .__/ \__\___|_|  |___/
+    //                                                                       |_|
+    console.log("============ Crosschain adapters ============");
+    /*
+    console.log("=== CrossChainAdapterL1");
+    const ethEndpoint = await ethers.deployContract("EndpointMock", [ETH_EID]);
+    (ethEndpoint as any).address = await ethEndpoint.getAddress();
+    const LZCrossChainAdapterL1 = await ethers.getContractFactory("LZCrossChainAdapterL1");
+    const adapterL1 = await upgrades.deployProxy(LZCrossChainAdapterL1, [
+      (ethEndpoint as any).address,
+      (ethEndpoint as any).address,
+      eIds,
+      chainIds,
+    ]);
+    (adapterL1 as any).address = await adapterL1.getAddress();
+*/
     console.log("=== Frax LZCrossChainAdapterL2");
     const fraxEndpoint = await ethers.deployContract("EndpointMock", [FRAX_EID]);
     (fraxEndpoint as any).address = await fraxEndpoint.getAddress();
-    const LZCrossChainAdapterL2 = await ethers.getContractFactory("LZCrossChainAdapterL2");
-    const adapterFrax = await upgrades.deployProxy(LZCrossChainAdapterL2, [
-      (fraxEndpoint as any).address,
-      (owner as any).address,
-      ETH_ID,
+    const FraxFerryLZCrossChainAdapterL2 = await ethers.getContractFactory("FraxFerryLZCrossChainAdapterL2");
+    const adapterFrax = await upgrades.deployProxy(FraxFerryLZCrossChainAdapterL2, [
+      // token
+      // ferry
+      // rebalancer
+      (fraxEndpoint as any).address, // endpoint
+      (owner as any).address, // delegate
+      ETH_ID, // chainID
       eIds,
       chainIds,
     ]);
@@ -115,13 +181,13 @@ describe("Omnivault integration tests", function () {
     };
 
     // Connect endpoints
-    await fraxEndpoint.setDestLzEndpoint(adapterL1.address, ethEndpoint.address);
+    // await fraxEndpoint.setDestLzEndpoint(adapterL1.address, ethEndpoint.address);
     await ethEndpoint.setDestLzEndpoint(adapterFrax.address, fraxEndpoint.address);
 
     /************************************
      ******** Malicious adapters ********
      ************************************/
-
+/*
     const maliciousAdapterL1 = await upgrades.deployProxy(LZCrossChainAdapterL1, [
       ethEndpoint.address,
       owner.address,
@@ -130,7 +196,7 @@ describe("Omnivault integration tests", function () {
     ]);
     maliciousAdapterL1.address = await maliciousAdapterL1.getAddress();
 
-    const maliciousAdapterL2 = await upgrades.deployProxy(LZCrossChainAdapterL2, [
+    const maliciousAdapterL2 = await upgrades.deployProxy(FraxFerryLZCrossChainAdapterL2, [
       fraxEndpoint.address,
       owner.address,
       ETH_ID,
@@ -138,16 +204,16 @@ describe("Omnivault integration tests", function () {
       chainIds,
     ]);
     maliciousAdapterL2.address = await maliciousAdapterL2.getAddress();
-
+*/
     //   ____   _
     //   | |   / |
     //   | |   | |
     //   | |___| |
     //   |_____| |
 
-    console.log("============ FraxETH ============");
+    //console.log("============ FraxETH ============");
 
-    const sfrxETH = await ethers.getContractAt("ERC20", network.config.addresses.sfrxETH);
+    //const sfrxETH = await ethers.getContractAt("ERC20", network.config.addresses.sfrxETH);
 
     //   impersonateStaker: async (staker, iVault, asset, assetPool) => {
     //     const donor = await impersonateWithEth("0xe7d40d9a77caddd8e8b4b484ed14c42f3b8d763a", toWei(1));
@@ -210,20 +276,7 @@ describe("Omnivault integration tests", function () {
     const ratioFeedL1 = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
     ratioFeedL1.address = await ratioFeedL1.getAddress();
 
-    console.log("=== ERC20Rebalancer");
-    const Rebalancer = await ethers.getContractFactory("ERC20Rebalancer");
-    const rebalancer = await upgrades.deployProxy(Rebalancer, [
-      inceptionToken.address,
-      lockboxAddress,
-      inceptionVault.address,
-      adapterL1.address,
-      ratioFeedL1.address,
-      operator.address,
-    ]);
-    rebalancer.address = await rebalancer.getAddress();
-    await rebalancer.connect(owner).addChainId(FRAX_ID);
-    // await rebalancer.connect(owner).addChainId(OPT_ID);
-    // await restakingPoolConfig.connect(owner).setRebalancer(rebalancer.address);
+    
 
     //    ___                  ___     __          _ _     _     ____
     //   / _ \ _ __ ___  _ __ (_) \   / /_ _ _   _| | |_  | |   |___ \
