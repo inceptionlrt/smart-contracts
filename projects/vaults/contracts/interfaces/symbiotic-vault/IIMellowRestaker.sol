@@ -94,6 +94,7 @@ interface IIMellowRestaker {
         IMellowVault mellowVault
     ) external returns (IMellowVault.WithdrawalRequest memory);
 
+    function claimableWithdrawalAmount() external view returns (uint256);
     function pendingWithdrawalAmount() external view returns (uint256);
 
     function claimableAmount() external view returns (uint256);
