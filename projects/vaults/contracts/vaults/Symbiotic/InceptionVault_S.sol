@@ -105,10 +105,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Mints Inception tokens in accordance with the current ratio.
     /// @dev Issues the tokens to the specified receiver address.
     /** @dev See {IERC4626-deposit}. */
-    function deposit(
-        uint256 amount,
-        address receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    function deposit(uint256 amount, address receiver)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -155,10 +157,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /** @dev See {IERC4626-mint}. */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    function mint(uint256 shares, address receiver)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         uint256 maxShares = maxMint(msg.sender);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
@@ -189,7 +193,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+    function delegateAutoMellow(uint256 deadline)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyOperator
+    {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
@@ -215,14 +224,16 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
-    function withdraw(
-        uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+    function withdraw(uint256 iShares, address receiver)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = convertToAssets(iShares);
-        if (amount < withdrawMinAmount) revert LowerMinAmount(withdrawMinAmount);
+        if (amount < withdrawMinAmount)
+            revert LowerMinAmount(withdrawMinAmount);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
@@ -302,10 +313,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
-    function flashWithdraw(
-        uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+    function flashWithdraw(uint256 iShares, address receiver)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
@@ -344,9 +356,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
-    function calculateDepositBonus(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateDepositBonus(uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
@@ -360,9 +374,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashWithdrawFee(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateFlashWithdrawFee(uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
         uint256 targetCapacity = _getTargetCapacity();
@@ -381,9 +397,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function isAbleToRedeem(
-        address claimer
-    ) public view returns (bool able, uint256[] memory) {
+    function isAbleToRedeem(address claimer)
+        public
+        view
+        returns (bool able, uint256[] memory)
+    {
         // get the general request
         uint256 index;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
@@ -412,15 +430,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(
-        address mellowVault
-    ) external view returns (uint256) {
+    function getDelegatedTo(address mellowVault)
+        external
+        view
+        returns (uint256)
+    {
         return mellowRestaker.getDeposited(mellowVault);
     }
 
-    function getPendingWithdrawalOf(
-        address claimer
-    ) external view returns (uint256) {
+    function getPendingWithdrawalOf(address claimer)
+        external
+        view
+        returns (uint256)
+    {
         return _claimerWithdrawals[claimer].amount;
     }
 
@@ -466,9 +488,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
-    function previewRedeem(
-        uint256 shares
-    ) public view returns (uint256 assets) {
+    function previewRedeem(uint256 shares)
+        public
+        view
+        returns (uint256 assets)
+    {
         return
             convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));
@@ -479,16 +503,20 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////////////////////////////*/
 
     /** @dev See {IERC4626-convertToShares}. */
-    function convertToShares(
-        uint256 assets
-    ) public view returns (uint256 shares) {
+    function convertToShares(uint256 assets)
+        public
+        view
+        returns (uint256 shares)
+    {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
     /** @dev See {IERC4626-convertToAssets}. */
-    function convertToAssets(
-        uint256 iShares
-    ) public view returns (uint256 assets) {
+    function convertToAssets(uint256 iShares)
+        public
+        view
+        returns (uint256 assets)
+    {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
