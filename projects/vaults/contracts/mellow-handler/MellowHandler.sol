@@ -100,7 +100,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     // }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    function claimCompletedWithdrawals() public whenNotPaused nonReentrant {
+    function claimCompletedWithdrawals() public onlyOperator whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount = mellowRestaker
@@ -111,7 +111,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function updateEpoch() external whenNotPaused {
+    function updateEpoch() external onlyOperator whenNotPaused {
         _updateEpoch(getFreeBalance());
     }
 

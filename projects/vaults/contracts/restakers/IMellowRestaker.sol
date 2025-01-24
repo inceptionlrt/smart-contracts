@@ -99,12 +99,13 @@ contract IMellowRestaker is
     ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
         if (address(wrapper) == address(0)) revert InactiveWrapper();
+        uint256 balanceState = _asset.balanceOf(address(this));
         // transfer from the vault
         _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = (amount * (10000 - depositSlippage)) / 10000;
-        return
+        uint256 lpAmount =
             wrapper.deposit(
                 address(this),
                 address(_asset),
@@ -112,6 +113,9 @@ contract IMellowRestaker is
                 minAmount,
                 block.timestamp + deadline
             );
+
+        uint256 returned = _asset.balanceOf(address(this)) - balanceState;
+        IERC20(_asset).safeTransfer(_vault, returned);
     }
 
     function delegate(
@@ -119,6 +123,7 @@ contract IMellowRestaker is
         uint256 deadline
     ) external onlyTrustee whenNotPaused returns (uint256 tokenAmount, uint256 lpAmount) {
         uint256 allocationsTotal = totalAllocations;
+        uint256 balanceState = _asset.balanceOf(address(this));
         _asset.safeTransferFrom(_vault, address(this), amount);
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
@@ -137,9 +142,9 @@ contract IMellowRestaker is
                 );
             }
         }
-        uint256 returned = _asset.balanceOf(address(this));
+        uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         tokenAmount = amount - returned;
-        IERC20(_asset).safeTransfer(msg.sender, returned);
+        IERC20(_asset).safeTransfer(_vault, returned);
     }
 
     function withdrawMellow(
@@ -378,7 +383,11 @@ contract IMellowRestaker is
         IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
             .calculateStack();
         uint256 wstEthAmount = FullMath.mulDiv(
-            FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply),
+            FullMath.mulDiv(
+                FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply), 
+                mellowVault.D9() - s.feeD9, 
+                mellowVault.D9()
+            ),
             s.ratiosX96[0],
             s.ratiosX96Value
         );
