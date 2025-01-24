@@ -57,8 +57,9 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     ////////////////////////////*/
 
     function _beforeDeposit(uint256 amount) internal view {
-        if (amount > getFreeBalance())
-            revert InsufficientCapacity(totalAssets());
+        uint256 freeBalance = getFreeBalance();
+        if (amount > freeBalance)
+            revert InsufficientCapacity(freeBalance);
     }
 
     function _depositAssetIntoMellow(
@@ -82,6 +83,7 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
         uint256 deadline
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ValueZero();
         amount = mellowRestaker.withdrawMellow(mellowVault, amount, deadline, true);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
@@ -203,7 +205,8 @@ contract MellowHandler is InceptionAssetsHandler, IMellowHandler {
     function setTargetFlashCapacity(
         uint256 newTargetCapacity
     ) external onlyOwner {
-        if (newTargetCapacity <= 0) revert InvalidTargetFlashCapacity();
+        if (newTargetCapacity == 0) revert InvalidTargetFlashCapacity();
+        if (newTargetCapacity >= MAX_TARGET_PERCENT) revert MoreThanMax();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }

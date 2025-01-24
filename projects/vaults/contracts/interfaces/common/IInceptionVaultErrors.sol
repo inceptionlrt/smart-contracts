@@ -63,4 +63,8 @@ interface IInceptionVaultErrors {
     error TimelineNotOver();
 
     error InvalidAddress();
+
+    error MoreThanMax();
+
+    error ValueZero();
 }

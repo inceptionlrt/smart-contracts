@@ -209,7 +209,6 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (receiver == address(0)) revert NullParams();
 
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (treasury == address(0)) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -336,7 +335,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasury
-        _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (protocolWithdrawalFee != 0) _transferAssetTo(treasury, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -572,16 +571,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
-    function setFlashMinAmont(uint256 newMinAmount) external onlyOwner {
+    function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }

@@ -471,7 +471,7 @@ assets.forEach(function (a) {
         if (diff > 0n) {
           expect(diff).to.be.lte(transactErr * 2n);
           await asset.connect(staker3).transfer(iVault.address, diff + 1n);
-          await iVault.connect(staker3).updateEpoch();
+          await iVault.connect(iVaultOperator).updateEpoch();
         }
 
         console.log("Redeem reserve after", await iVault.redeemReservedAmount());
@@ -3323,7 +3323,7 @@ assets.forEach(function (a) {
       });
 
       it("Can not claim when restaker balance is 0", async function () {
-        await expect(iVault.connect(staker).claimCompletedWithdrawals()).to.be.revertedWithCustomError(
+        await expect(iVault.connect(iVaultOperator).claimCompletedWithdrawals()).to.be.revertedWithCustomError(
           mellowRestaker,
           "ValueZero",
         );
@@ -3379,7 +3379,7 @@ assets.forEach(function (a) {
 
       it("Can not claim funds from mellowRestaker when iVault is paused", async function () {
         await iVault.pause();
-        await expect(iVault.connect(staker).claimCompletedWithdrawals()).to.be.revertedWith("Pausable: paused");
+        await expect(iVault.connect(iVaultOperator).claimCompletedWithdrawals()).to.be.revertedWith("Pausable: paused");
       });
 
       it("Claim funds from mellowRestaker to iVault", async function () {
@@ -3391,7 +3391,7 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
         const freeBalanceBefore = await iVault.getFreeBalance();
 
-        await iVault.connect(staker).claimCompletedWithdrawals();
+        await iVault.connect(iVaultOperator).claimCompletedWithdrawals();
         console.log("getTotalDelegated", await iVault.getTotalDelegated());
         console.log("totalAssets", await iVault.totalAssets());
         console.log("getPendingWithdrawalAmountFromMellow", await iVault.getPendingWithdrawalAmountFromMellow());
@@ -3695,7 +3695,7 @@ assets.forEach(function (a) {
         const redeemReserveBefore = await iVault.redeemReservedAmount();
         const freeBalanceBefore = await iVault.getFreeBalance();
         const epochBefore = await iVault.epoch();
-        await iVault.connect(staker).updateEpoch();
+        await iVault.connect(iVaultOperator).updateEpoch();
 
         const redeemReserveAfter = await iVault.redeemReservedAmount();
         const freeBalanceAfter = await iVault.getFreeBalance();
@@ -3786,7 +3786,7 @@ assets.forEach(function (a) {
         const redeemReserveBefore = await iVault.redeemReservedAmount();
         const freeBalanceBefore = await iVault.getFreeBalance();
         const epochBefore = await iVault.epoch();
-        await iVault.connect(staker).updateEpoch();
+        await iVault.connect(iVaultOperator).updateEpoch();
 
         const redeemReserveAfter = await iVault.redeemReservedAmount();
         const freeBalanceAfter = await iVault.getFreeBalance();

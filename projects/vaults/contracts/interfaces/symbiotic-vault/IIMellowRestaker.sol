@@ -37,6 +37,8 @@ interface IIEigenRestakerErrors {
     error TooMuchSlippage();
 
     error AlreadyAdded();
+
+    error AlreadyDeactivated();
 }
 
 interface IIMellowRestaker {
@@ -59,6 +61,8 @@ interface IIMellowRestaker {
     event VaultAdded(address indexed _mellowVault, address indexed _depositWrapper);
 
     event WrapperChanged(address indexed _mellowVault, address indexed _oldWrapper, address indexed _newWrapper);
+
+    event DeactivatedMellowVault(address indexed _mellowVault);
 
     function getDeposited(address _mellowVault) external view returns (uint256);
 
