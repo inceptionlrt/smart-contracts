@@ -39,13 +39,13 @@ const deploy: DeployFunction = async (hre) => {
   };
 
   const ferryAddresses:Record<string, string> = {
-    fraxHolesky: "0x6a305b60141aca08C13e5Cc922AB145EE8e4120a", // WARNING: debug version
-    holesky: "0x18Efbe3dE9A87e7F910FB83D586A4b033FD9e35e", // WARNING: debug version
+    fraxHolesky: "0x54102317E9AeAcbb1Eac32214d099D60d260E9a3", // WARNING: debug version
+    holesky: "0x54102317E9AeAcbb1Eac32214d099D60d260E9a3", // WARNING: debug version
   }
 
   const dummyTokenAddresses:Record<string, string> = {
-    fraxHolesky: "0xFA4471cAA64E0A6F1a8A2328F01dD48D27Fa99a9", // WARNING: debug version
-    holesky: "0xFA4471cAA64E0A6F1a8A2328F01dD48D27Fa99a9", // WARNING: debug version
+    fraxHolesky: "0x72DE502C4F68DCE383b075dA455ed45e15122a46", // WARNING: debug version
+    holesky: "0x72DE502C4F68DCE383b075dA455ed45e15122a46", // WARNING: debug version
   }
 
   const endpointAddress = endpointAddresses[targetNetwork];
@@ -69,7 +69,7 @@ const deploy: DeployFunction = async (hre) => {
     );
   }
 
-  const rebalancerAddress = "0xEaF1abDDa7c3cE0cE46C83eEA0353B135996edDB";
+  const rebalancerAddress = "0x22cC881644076E5Db51ed965A7873c723A632A09";
 
   console.log(`Using EndpointV2 Address: ${endpointAddress}`);
   console.log(`Using Fraxferry Address: ${ferryAddress}`);

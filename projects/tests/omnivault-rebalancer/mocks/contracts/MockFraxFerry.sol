@@ -77,6 +77,7 @@ contract MockFraxferry {
    mapping(uint => bool) public cancelled;
    uint public executeIndex;
    Batch[] public batches;
+   uint256 public batchCtr;
    
    struct Transaction {
       address user;
@@ -107,7 +108,7 @@ contract MockFraxferry {
    // ############## Events ##############
    
    event Embark(address indexed sender, uint index, uint amount, uint amountAfterFee, uint timestamp);
-
+   event Disembark(uint start, uint end, bytes32 hash); 
 
    // ############## Ferry actions ##############
 
@@ -132,6 +133,8 @@ contract MockFraxferry {
 
     function mockDisembark(address _to, uint256 _amount) external {
         TransferHelper.safeTransfer(address(token), _to, _amount);
+        emit Disembark(batchCtr,batchCtr,bytes32(0));
+        batchCtr++;
     }
 
 }

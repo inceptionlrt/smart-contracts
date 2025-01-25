@@ -13,7 +13,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
  */
 contract ERC20Rebalancer is ERC20RebalancerStorage {
     using SafeERC20 for IERC20;
-
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }

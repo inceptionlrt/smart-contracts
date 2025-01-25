@@ -42,7 +42,7 @@ contract FraxFerryLZCrossChainAdapterL2 is
         );
         _;
     }
-
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }

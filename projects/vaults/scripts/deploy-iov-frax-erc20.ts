@@ -9,12 +9,14 @@ async function main() {
   let INCEPTION_TOKEN_ADDRESS: string;
   let CROSS_CHAIN_BRIDGE_ADDRESS_L2: string;
   let UNDERLYING_ASSET_ADDRESS: string = "";
+  let RATIOFEED_ADDRESS_L2: string = "";
 
   switch (networkName) {
     case "fraxHolesky":
       //    INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
-      UNDERLYING_ASSET_ADDRESS = "0xFA4471cAA64E0A6F1a8A2328F01dD48D27Fa99a9";
-      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0x728FC69750931AfA68830dA62662fE01895a8E61";
+      UNDERLYING_ASSET_ADDRESS = "0x72DE502C4F68DCE383b075dA455ed45e15122a46";
+      CROSS_CHAIN_BRIDGE_ADDRESS_L2 = "0xc671A6a4bF4Dcd0EE94d8D5558cD8B6EAdFD5A19";
+      RATIOFEED_ADDRESS_L2 = "0x676986B6263e106f2A6Aa84164057D5c3D1644a2"
       break;
     case "arbitrum":
       INCEPTION_TOKEN_ADDRESS = "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d";
@@ -103,6 +105,7 @@ async function main() {
 
   await inETH.setVault(deployedAddress);
   console.log(`Token vault address set: ${deployedAddress}`);
+  await inceptionOmniVault.setRatioFeed(RATIOFEED_ADDRESS_L2);
 
   console.log("Deployment complete.");
   /*
