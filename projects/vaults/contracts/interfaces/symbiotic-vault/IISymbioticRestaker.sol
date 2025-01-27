@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -75,29 +75,15 @@ interface IISymbioticRestaker {
 
     function getTotalDeposited() external view returns (uint256);
 
-    function delegateMellow(
-        uint256 amount,
-        uint256 deadline,
-        address mellowVault
-    ) external returns (uint256 lpAmount);
-
-    function delegate(uint256 amount, uint256 deadline)
+    function delegateToVault(uint256 amount, address vaultAddress)
         external
-        returns (uint256 tokenAmount, uint256 lpAmount);
+        returns (uint256 depositedAmount, uint256 mintedShares);
 
-    function withdrawMellow(
-        address mellowVault,
-        uint256 minLpAmount,
-        uint256 deadline,
-        bool closePrevious
-    ) external returns (uint256);
+    function withdrawFromVault(address vaultAddress, uint256 amount)
+        external
+        returns (uint256);
 
-    // function withdrawEmergencyMellow(
-    //     address _mellowVault,
-    //     uint256 _deadline
-    // ) external returns (uint256);
-
-    function claimMellowWithdrawalCallback() external returns (uint256);
+    function claimWithdrawal(uint256 epoch) external returns (uint256);
 
     function pendingMellowRequest(IMellowVault mellowVault)
         external

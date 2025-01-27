@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -78,7 +78,10 @@ contract IMellowRestaker is
             revert LengthMismatch();
 
         for (uint256 i = 0; i < _mellowDepositWrapper.length; i++) {
-            if (address(_mellowDepositWrapper[i].vault()) != address(_mellowVault[i])) revert InvalidWrapperForVault();
+            if (
+                address(_mellowDepositWrapper[i].vault()) !=
+                address(_mellowVault[i])
+            ) revert InvalidWrapperForVault();
             mellowDepositWrappers[
                 address(_mellowVault[i])
             ] = IMellowDepositWrapper(_mellowDepositWrapper[i]);
@@ -117,7 +120,12 @@ contract IMellowRestaker is
     function delegate(
         uint256 amount,
         uint256 deadline
-    ) external onlyTrustee whenNotPaused returns (uint256 tokenAmount, uint256 lpAmount) {
+    )
+        external
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 tokenAmount, uint256 lpAmount)
+    {
         uint256 allocationsTotal = totalAllocations;
         _asset.safeTransferFrom(_vault, address(this), amount);
 
@@ -125,9 +133,15 @@ contract IMellowRestaker is
             uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
                 uint256 localBalance = (amount * allocation) / allocationsTotal;
-                IMellowDepositWrapper wrapper = mellowDepositWrappers[address(mellowVaults[i])];
-                IERC20(_asset).safeIncreaseAllowance(address(wrapper), localBalance);
-                uint256 minAmount = (localBalance * (10000 - depositSlippage)) / 10000;
+                IMellowDepositWrapper wrapper = mellowDepositWrappers[
+                    address(mellowVaults[i])
+                ];
+                IERC20(_asset).safeIncreaseAllowance(
+                    address(wrapper),
+                    localBalance
+                );
+                uint256 minAmount = (localBalance * (10000 - depositSlippage)) /
+                    10000;
                 lpAmount += wrapper.deposit(
                     address(this),
                     address(_asset),
@@ -221,11 +235,16 @@ contract IMellowRestaker is
         return amount;
     }
 
-    function addMellowVault(address mellowVault, address depositWrapper) external onlyOwner {
-
-        if (mellowVault == address(0) || depositWrapper == address(0)) revert ZeroAddress();
-        if (address(IMellowDepositWrapper(depositWrapper).vault()) != mellowVault) revert InvalidWrapperForVault();
-
+    function addMellowVault(
+        address mellowVault,
+        address depositWrapper
+    ) external onlyOwner {
+        if (mellowVault == address(0) || depositWrapper == address(0))
+            revert ZeroAddress();
+        if (
+            address(IMellowDepositWrapper(depositWrapper).vault()) !=
+            mellowVault
+        ) revert InvalidWrapperForVault();
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             if (mellowVault == address(mellowVaults[i])) {
@@ -233,23 +252,35 @@ contract IMellowRestaker is
             }
         }
 
-        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(depositWrapper);
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(
+            depositWrapper
+        );
         mellowVaults.push(IMellowVault(mellowVault));
 
         emit VaultAdded(mellowVault, depositWrapper);
     }
-   function changeMellowWrapper(address mellowVault, address newDepositWrapper) external onlyOwner {
 
-        if (mellowVault == address(0) || newDepositWrapper == address(0)) revert ZeroAddress();
-        if (address(IMellowDepositWrapper(newDepositWrapper).vault()) != mellowVault) revert InvalidWrapperForVault();
+    function changeMellowWrapper(
+        address mellowVault,
+        address newDepositWrapper
+    ) external onlyOwner {
+        if (mellowVault == address(0) || newDepositWrapper == address(0))
+            revert ZeroAddress();
+        if (
+            address(IMellowDepositWrapper(newDepositWrapper).vault()) !=
+            mellowVault
+        ) revert InvalidWrapperForVault();
 
         address oldWrapper = address(mellowDepositWrappers[mellowVault]);
         if (oldWrapper == address(0)) revert NoWrapperExists();
 
-        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(newDepositWrapper);
+        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(
+            newDepositWrapper
+        );
 
         emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
     }
+
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
@@ -308,7 +339,6 @@ contract IMellowRestaker is
         uint256 amount,
         IMellowVault mellowVault
     ) public view returns (uint256 lpAmount) {
-
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
 

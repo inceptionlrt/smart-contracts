@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {InceptionVault_S, IInceptionToken, IERC20} from "../InceptionVault_S.sol";
 import {IIMellowRestaker} from "../../../interfaces/symbiotic-vault/IIMellowRestaker.sol";
@@ -27,15 +27,21 @@ contract InVault_S_E2 is InceptionVault_S {
         );
     }
 
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
+    function _getAssetWithdrawAmount(uint256 amount)
+        internal
+        pure
+        override
+        returns (uint256)
+    {
         return amount + 2;
     }
 
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
+    function _getAssetReceivedAmount(uint256 amount)
+        internal
+        pure
+        override
+        returns (uint256)
+    {
         return amount - 2;
     }
 }

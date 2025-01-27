@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -71,9 +71,9 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         emit ELOperatorAdded(newELOperator);
     }
 
-    function setDelegationManager(
-        IDelegationManager newDelegationManager
-    ) external {
+    function setDelegationManager(IDelegationManager newDelegationManager)
+        external
+    {
         if (address(delegationManager) != address(0))
             revert DelegationManagerImmutable();
 

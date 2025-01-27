@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/IMellowHandler.sol";
 import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
-import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
+import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @author The InceptionLRT team
@@ -37,12 +37,13 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    SymbioticHandler public symbioticRestaker;
+    IISymbioticRestaker public symbioticRestaker;
 
+    /// TODO
     uint256[50 - 9] private __gap;
 
     modifier onlyOperator() {
-        if (msg.sender != _operator) revert OnlyOperatorAllowed();
+        require(msg.sender == _operator, OnlyOperatorAllowed());
         _;
     }
 
@@ -76,8 +77,8 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
     function _depositAssetInto_Symbiotic(uint256 amount, address vault)
         internal
     {
-        _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
-        symbioticRestaker.delegateMellow(amount, deadline, mellowVault);
+        _asset.safeIncreaseAllowance(address(symbioticRestaker), amount);
+        symbioticRestaker.delegateToVault(amount, vault);
     }
 
     /*/////////////////////////////////
@@ -111,9 +112,27 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         onlyOperator
     {
         if (vault == address(0)) revert InvalidAddress();
-        amount = mellowRestaker.withdrawMellow(vault, amount, deadline, true);
+        amount = symbioticRestaker.withdrawFromVault(vault, amount);
+
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
+    }
+
+    /// @dev claims completed withdrawals from Mellow Protocol, if they exist
+    function claimCompletedWithdrawals(bytes[] calldata withdrawalData)
+        public
+        whenNotPaused
+        nonReentrant
+    {
+        uint256 availableBalance = getFreeBalance();
+
+        // withdrawalData = restakerAddress + dataToClaim
+        uint256 withdrawnAmount = mellowRestaker
+            .claimMellowWithdrawalCallback();
+
+        emit WithdrawalClaimed(withdrawnAmount);
+
+        _updateEpoch(availableBalance + withdrawnAmount);
     }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
@@ -126,6 +145,20 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
 
         uint256 withdrawnAmount = mellowRestaker
             .claimMellowWithdrawalCallback();
+
+        emit WithdrawalClaimed(withdrawnAmount);
+
+        _updateEpoch(availableBalance + withdrawnAmount);
+    }
+
+    function claimCompletedWithdrawals_Symbiotic(uint256 sEpoch)
+        public
+        whenNotPaused
+        nonReentrant
+    {
+        uint256 availableBalance = getFreeBalance();
+
+        uint256 withdrawnAmount = symbioticRestaker.claimWithdrawal(sEpoch);
 
         emit WithdrawalClaimed(withdrawnAmount);
 

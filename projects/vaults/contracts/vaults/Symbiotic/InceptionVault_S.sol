@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {MellowHandler, IIMellowRestaker, IERC20} from "../../mellow-handler/MellowHandler.sol";
+import {SymbioticHandler, IIMellowRestaker, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -14,7 +14,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
-contract InceptionVault_S is MellowHandler, IInceptionVault_S {
+contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
 
     /// @dev Inception restaking token
@@ -186,7 +186,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, deadline);
+        _depositAssetInto_Mellow(amount, mellowVault, deadline);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;

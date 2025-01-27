@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.28;
 
 import {ERC4626Facet_EL} from "./ERC4626Facet_EL.sol";
 
@@ -10,15 +10,21 @@ import {ERC4626Facet_EL} from "./ERC4626Facet_EL.sol";
 contract ERC4626Facet_EL_E2 is ERC4626Facet_EL {
     constructor() payable {}
 
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
+    function _getAssetWithdrawAmount(uint256 amount)
+        internal
+        pure
+        override
+        returns (uint256)
+    {
         return amount + 2;
     }
 
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal pure override returns (uint256) {
+    function _getAssetReceivedAmount(uint256 amount)
+        internal
+        pure
+        override
+        returns (uint256)
+    {
         return amount - 2;
     }
 }
