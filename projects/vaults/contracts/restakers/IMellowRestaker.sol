@@ -277,7 +277,7 @@ contract IMellowRestaker is
             }
         }
 
-        if (!exists) revert Invalid InvalidVault();
+        if (!exists) revert InvalidVault();
 
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;

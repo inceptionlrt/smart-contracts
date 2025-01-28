@@ -39,8 +39,6 @@ interface IIEigenRestakerErrors {
     error AlreadyAdded();
 
     error AlreadyDeactivated();
-
-    error InvalidVault();
 }
 
 interface IIMellowRestaker {
