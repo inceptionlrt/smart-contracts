@@ -270,6 +270,15 @@ contract IMellowRestaker is
     ) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
+        bool exists;
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                exists = true;
+            }
+        }
+
+        if (!exists) revert Invalid InvalidVault();
+
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
 
