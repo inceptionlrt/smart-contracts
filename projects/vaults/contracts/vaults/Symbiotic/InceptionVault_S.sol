@@ -53,6 +53,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) private _traversalEpoch;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -263,6 +265,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
+        _traversalEpoch[receiver] = epoch - 1;
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
@@ -391,7 +394,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        for (uint256 i = 0; i < epoch; ++i) {
+        for (uint256 i = _traversalEpoch[claimer]; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;

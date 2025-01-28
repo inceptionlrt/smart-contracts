@@ -116,7 +116,7 @@ contract IMellowRestaker is
             );
 
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
-        IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
     }
 
     function delegate(
@@ -147,7 +147,7 @@ contract IMellowRestaker is
         }
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         tokenAmount = amount - returned;
-        IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
     }
 
     function withdrawMellow(
