@@ -104,10 +104,8 @@ export const CONFIG = {
     hardhat: {
       forking: {
         url: `${process.env.HOLESKY_RPC}`,
+        blockNumber: 3236102,
       },
-      accounts: process.env.DEPLOYER_PRIVATE_KEY
-        ? [{ privateKey: process.env.DEPLOYER_PRIVATE_KEY, balance: "10000000000000000000" }]
-        : [],
     },
   },
   solidity: {

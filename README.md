@@ -9,12 +9,14 @@ OmniStaking is a cross-chain staking system designed to maintain the balance of 
 OmniStaking operates through a sequence of cross-chain communications involving several key contracts and components:
 
 1. **InceptionOmniVault**: This contract initiates the transfer process. Operators (backend) interact with it to send either:
+
    - **Data Messages**: For reporting asset balances, using `sendAssetsInfoToL1()`.
    - **ETH Transfers**: For transferring ETH across chains, using `sendEthCrossChain()`.
 
 2. **LZCrossChainAdapterL2**: This contract, specific to L2 chains, is responsible for processing and transmitting cross-chain messages. It receives calls from `InceptionOmniVault` and initiates cross-chain transfers using the LayerZero protocol.
 
 3. **LZCrossChainAdapterL1**: After a specified delay (e.g., 7 days for mainnets or 20 minutes for testnets), messages or ETH transfers from L2 arrive at this L1 contract. Here, the contract:
+
    - Decodes data messages.
    - Relays the decoded information or ETH to the **NativeRebalancer**.
 
@@ -28,11 +30,12 @@ $$
 
 ### L2 to L1 (Data and ETH Transfer)
 
-1. **Data Transfer**: 
+1. **Data Transfer**:
+
    - The operator calls `sendAssetsInfoToL1()` on **InceptionOmniVault**.
    - This data message is forwarded to **LZCrossChainAdapterL2**, which encodes and sends the data across chains.
 
-2. **ETH Transfer**: 
+2. **ETH Transfer**:
    - The operator initiates `sendEthCrossChain()` on **InceptionOmniVault**.
    - **LZCrossChainAdapterL2** processes and sends the ETH transfer request to **LZCrossChainAdapterL1**.
 
@@ -59,6 +62,5 @@ OmniStaking maintains the invariant:
 $$
 \text{sum(Inception Tokens on L2s)} = \text{Inception Tokens on L1}
 $$
-
 
 This ensures that the total supply of Inception Tokens is balanced across all chains in the OmniStaking ecosystem.

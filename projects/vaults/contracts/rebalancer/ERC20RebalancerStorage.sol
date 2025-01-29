@@ -12,8 +12,8 @@ import {IInceptionVault} from "../interfaces/IInceptionVault.sol";
 import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
 
 /**
- * @author The InceptionLRT team
  * @title ERC20RebalancerStorage
+ * @author The InceptionLRT team
  * @dev TODO
  */
 contract ERC20RebalancerStorage is
@@ -85,16 +85,15 @@ contract ERC20RebalancerStorage is
         emit OperatorChanged(address(0), _operator);
     }
 
+    /**********************************************************
+     ********************* View Functions *********************
+     **********************************************************/
 
     function _lockboxSupply() internal view returns (uint256) {
         return IERC20(address(inceptionToken)).balanceOf(lockBox);
     }
 
-    function getTransactionData()
-        public
-        view
-        returns (Transaction memory)
-    {
+    function getTransactionData() public view returns (Transaction memory) {
         return lastTx;
     }
 
@@ -125,7 +124,10 @@ contract ERC20RebalancerStorage is
         onlyOwner
     {
         require(address(_inceptionToken) != address(0), SettingZeroAddress());
-        emit InceptionTokenChanged(address(inceptionToken),address(_inceptionToken));
+        emit InceptionTokenChanged(
+            address(inceptionToken),
+            address(_inceptionToken)
+        );
         inceptionToken = _inceptionToken;
     }
 
@@ -133,12 +135,12 @@ contract ERC20RebalancerStorage is
      * @notice Updates the underlying asset address.
      * @param _underlyingAsset The new InceptionToken address.
      */
-    function setUnderlyingAsset(IERC20 _underlyingAsset)
-        external
-        onlyOwner
-    {
+    function setUnderlyingAsset(IERC20 _underlyingAsset) external onlyOwner {
         require(address(_underlyingAsset) != address(0), SettingZeroAddress());
-        emit UnderlyingAssetChanged(address(underlyingAsset), address(_underlyingAsset));
+        emit UnderlyingAssetChanged(
+            address(underlyingAsset),
+            address(_underlyingAsset)
+        );
         underlyingAsset = _underlyingAsset;
     }
 

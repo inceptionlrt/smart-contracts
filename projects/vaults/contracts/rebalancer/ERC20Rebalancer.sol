@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ERC20RebalancerStorage} from "./ERC20RebalancerStorage.sol";
-
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {ERC20RebalancerStorage} from "./ERC20RebalancerStorage.sol";
+
 /**
- * @author The InceptionLRT team
  * @title ERC20Rebalancer
+ * @author The InceptionLRT team
  * @dev This contract handles staking(transfer to a specific vault),
  *      manages treasury data and facilitates cross-chain ERC20 transfers.
  */
 contract ERC20Rebalancer is ERC20RebalancerStorage {
     using SafeERC20 for IERC20;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 
@@ -65,7 +66,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         uint256 totalL2Supply = txData.inceptionTokenSupply;
 
         uint256 lockBoxSupply = _lockboxSupply();
-        if (totalL2Supply > lockBoxSupply ) {
+        if (totalL2Supply > lockBoxSupply) {
             uint256 amountToMint = totalL2Supply - lockBoxSupply;
             _mintInceptionToken(amountToMint);
 
@@ -74,11 +75,13 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
                 lockBoxSupply + amountToMint
             );
         } else if (lockBoxSupply > totalL2Supply) {
-            uint256 amountToBurn = lockBoxSupply -
-                totalL2Supply;
+            uint256 amountToBurn = lockBoxSupply - totalL2Supply;
             _burnInceptionToken(amountToBurn);
 
-            emit SyncedSupplyChanged(lockBoxSupply, lockBoxSupply - amountToBurn);
+            emit SyncedSupplyChanged(
+                lockBoxSupply,
+                lockBoxSupply - amountToBurn
+            );
         } else {
             revert NoRebalancingRequired();
         }
@@ -86,7 +89,11 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         uint256 bal = IERC20(address(underlyingAsset)).balanceOf(address(this));
         if (bal == 0) return;
 
-        IERC20(address(underlyingAsset)).safeTransfer(address(inceptionVault), bal);
+        IERC20(address(underlyingAsset)).safeTransfer(
+            address(inceptionVault),
+            bal
+        );
+
         emit TransferToInceptionVault(bal);
     }
 
@@ -98,7 +105,8 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
     function stake(uint256 _amount) external onlyOperator {
         require(address(inceptionVault) != address(0), InceptionVaultNotSet());
         require(
-            _amount <= IERC20(address(underlyingAsset)).balanceOf(address(this)),
+            _amount <=
+                IERC20(address(underlyingAsset)).balanceOf(address(this)),
             StakeAmountExceedsBalance(
                 _amount,
                 IERC20(address(underlyingAsset)).balanceOf(address(this))
@@ -113,7 +121,6 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         emit TransferToInceptionVault(_amount);
     }
 
-
     /**
      * @notice Handles Layer 2 information and updates the transaction data for a specific Chain ID.
      * @dev Verifies that the caller is the correct defaultAdapter and that the timestamp is valid.
@@ -127,7 +134,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         uint256 _timestamp,
         uint256 _balance,
         uint256 _totalSupply
-    ) external onlyAdapter() {
+    ) external onlyAdapter {
         require(
             _timestamp <= block.timestamp,
             TimeCannotBeInFuture(_timestamp)
@@ -150,7 +157,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         emit L2InfoReceived(_chainId, _timestamp, _balance, _totalSupply);
     }
 
-    function _mintInceptionToken(uint256 _amountToMint) internal {
+    function _mintInceptionToken(uint256 _amountToMint) private {
         require(
             address(inceptionToken) != address(0),
             InceptionTokenAddressNotSet()
@@ -159,7 +166,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         emit TreasuryUpdateMint(_amountToMint);
     }
 
-    function _burnInceptionToken(uint256 _amountToBurn) internal {
+    function _burnInceptionToken(uint256 _amountToBurn) private {
         require(
             address(inceptionToken) != address(0),
             InceptionTokenAddressNotSet()

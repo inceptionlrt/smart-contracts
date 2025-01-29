@@ -42,15 +42,15 @@ contract FraxFerryLZCrossChainAdapterL2 is
         );
         _;
     }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() payable {
         _disableInitializers();
     }
 
     function initialize(
         address _token,
         address _ferry,
-        address _rebalancer,
         address _endpoint,
         address _delegate,
         uint32 l1ChainId,
@@ -63,10 +63,8 @@ contract FraxFerryLZCrossChainAdapterL2 is
         _l1ChainId = l1ChainId;
         token = IERC20(_token);
         ferry = IFraxFerry(payable(_ferry));
-        erc20DestinationChain = _rebalancer;
-        for (uint256 i = 0; i < _eIds.length; i++) {
+        for (uint256 i = 0; i < _eIds.length; i++)
             setChainIdFromEid(_eIds[i], _chainIds[i]);
-        }
     }
 
     function setDestination(address _dest) external onlyOwnerRestricted {

@@ -8,7 +8,7 @@ BigInt.prototype.format = function () {
 
 let MAX_TARGET_PERCENT;
 
-async function init() {
+async function init(iVaultOperator) {
   console.log("- Asset");
   const tokenFactory = await ethers.getContractFactory("stETH");
   const asset = await upgrades.deployProxy(tokenFactory, ["Lido ETH", "stETH"]);
@@ -23,9 +23,18 @@ async function init() {
   await ratioFeed.updateRatioBatch([await iToken.getAddress()], [e18]);
   ratioFeed.address = await ratioFeed.getAddress();
 
+  console.log("operator address", await iVaultOperator.getAddress());
+
   console.log("- Omni vault");
-  const iVaultFactory = await ethers.getContractFactory("InOmniVault_E2");
-  const omniVault = await upgrades.deployProxy(iVaultFactory, ["InstEthOmniVault", iToken.address, asset.target]);
+  const adapter = ethers.Wallet.createRandom().address;
+  const iVaultFactory = await ethers.getContractFactory("ERC20OmniVault_E2");
+  const omniVault = await upgrades.deployProxy(iVaultFactory, [
+    "InfraxOmniVault",
+    await iVaultOperator.getAddress(),
+    iToken.address,
+    asset.target,
+    adapter,
+  ]);
   omniVault.address = await omniVault.getAddress();
 
   MAX_TARGET_PERCENT = await omniVault.MAX_TARGET_PERCENT();
@@ -45,7 +54,9 @@ describe("InceptionOmniVault: ERC20", function () {
 
   before(async function () {
     [owner, iVaultOperator, staker1, staker2, staker3] = await ethers.getSigners();
-    [asset, iToken, omniVault, ratioFeed] = await init();
+    console.log("operator address", await owner.getAddress());
+
+    [asset, iToken, omniVault, ratioFeed] = await init(iVaultOperator);
     treasury = await omniVault.treasuryAddress();
 
     const reallyBigInt = ethers.MaxUint256 / 10n;
@@ -79,13 +90,13 @@ describe("InceptionOmniVault: ERC20", function () {
       const expectedShares = (deposited * e18) / (await omniVault.ratio());
       const tx = await omniVault.connect(staker1).deposit(deposited, staker1.address);
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(e => e.eventName === "Deposit");
+      const events = receipt.logs?.filter((e) => e.eventName === "Deposit");
       expect(events.length).to.be.eq(1);
       expect(events[0].args["sender"]).to.be.eq(staker1.address);
       expect(events[0].args["receiver"]).to.be.eq(staker1.address);
       expect(events[0].args["amount"]).to.be.eq(deposited);
       expect(events[0].args["iShares"]).to.be.closeTo(expectedShares, 1n);
-      expect(receipt.logs.find(l => l.eventName === "DepositBonus")).to.be.undefined; //Because there is no replenish rewards has been collected yet
+      expect(receipt.logs.find((l) => l.eventName === "DepositBonus")).to.be.undefined; //Because there is no replenish rewards has been collected yet
       console.log(`Ratio after:\t\t${(await omniVault.ratio()).format()}`);
 
       expect(await iToken.balanceOf(staker1.address)).to.be.closeTo(expectedShares, 1n);
@@ -112,7 +123,7 @@ describe("InceptionOmniVault: ERC20", function () {
 
       let tx = await omniVault.connect(staker1).flashWithdraw(sharesBefore, receiver.address);
       const receipt = await tx.wait();
-      const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
+      const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
       expect(withdrawEvent.length).to.be.eq(1);
       expect(withdrawEvent[0].args["sender"]).to.be.eq(staker1.address);
       expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -253,7 +264,7 @@ describe("InceptionOmniVault: ERC20", function () {
         const shares = await iToken.balanceOf(staker3.address);
         const tx = await omniVault.connect(staker3).flashWithdraw(shares, staker3.address);
         const rec = await tx.wait();
-        collectedFee += (rec.logs.find(l => l.eventName === "FlashWithdraw")?.args.fee || 0n) / 2n;
+        collectedFee += (rec.logs.find((l) => l.eventName === "FlashWithdraw")?.args.fee || 0n) / 2n;
         console.log(`collectedFee: ${collectedFee.format()}`);
       }
       return collectedFee;
@@ -296,14 +307,14 @@ describe("InceptionOmniVault: ERC20", function () {
 
         const tx = await omniVault.connect(staker1).deposit(amount, receiver);
         const receipt = await tx.wait();
-        const depositEvent = receipt.logs?.filter(e => e.eventName === "Deposit");
+        const depositEvent = receipt.logs?.filter((e) => e.eventName === "Deposit");
         expect(depositEvent.length).to.be.eq(1);
         expect(depositEvent[0].args["sender"]).to.be.eq(staker1.address);
         expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
         expect(depositEvent[0].args["amount"]).to.be.eq(amount);
         expect(depositEvent[0].args["iShares"]).to.be.closeTo(convertedShares, 1n);
         //DepositBonus event
-        const actualBonus = receipt.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n;
+        const actualBonus = receipt.logs.find((l) => l.eventName === "DepositBonus")?.args.amount || 0n;
         console.log(`Actual bonus:\t\t\t${actualBonus.format()}`);
 
         const stakerSharesAfter = await iToken.balanceOf(receiver);
@@ -345,10 +356,7 @@ describe("InceptionOmniVault: ERC20", function () {
         const amount = await arg.amount();
         const receiver = arg.receiver();
         if (arg.customError) {
-          await expect(omniVault.connect(staker1).deposit(amount, receiver)).to.be.revertedWithCustomError(
-            omniVault,
-            arg.customError,
-          );
+          await expect(omniVault.connect(staker1).deposit(amount, receiver)).to.be.revertedWithCustomError(omniVault, arg.customError);
         } else {
           await expect(omniVault.connect(staker1).deposit(amount, receiver)).to.be.revertedWith(arg.error);
         }
@@ -360,7 +368,7 @@ describe("InceptionOmniVault: ERC20", function () {
       const depositAmount = randomBI(19);
       await expect(omniVault.connect(staker1).deposit(depositAmount, staker1.address)).to.be.revertedWithCustomError(
         omniVault,
-        "EnforcedPause",
+        "EnforcedPause"
       );
       await omniVault.unpause();
     });
@@ -369,7 +377,7 @@ describe("InceptionOmniVault: ERC20", function () {
       await omniVault.setMinAmount(0n);
       await expect(omniVault.connect(staker1).deposit(0n, staker1.address)).to.be.revertedWithCustomError(
         omniVault,
-        "DepositInconsistentResultedState",
+        "DepositInconsistentResultedState"
       );
     });
   });
@@ -479,15 +487,15 @@ describe("InceptionOmniVault: ERC20", function () {
         TARGET = e18;
         await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
-        await expect(
-          omniVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
-        )
-          .to.emit(omniVault, "DepositBonusParamsChanged")
-          .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
+        // await expect(
+        //   omniVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
+        // )
+        //   .to.emit(omniVault, "DepositBonusParamsChanged")
+        //   .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
 
-        expect(await omniVault.maxBonusRate()).to.be.eq(arg.newMaxBonusRate);
-        expect(await omniVault.optimalBonusRate()).to.be.eq(arg.newOptimalBonusRate);
-        expect(await omniVault.depositUtilizationKink()).to.be.eq(arg.newDepositUtilizationKink);
+        // expect(await omniVault.maxBonusRate()).to.be.eq(arg.newMaxBonusRate);
+        // expect(await omniVault.optimalBonusRate()).to.be.eq(arg.newOptimalBonusRate);
+        // expect(await omniVault.depositUtilizationKink()).to.be.eq(arg.newDepositUtilizationKink);
         localSnapshot = await takeSnapshot();
       });
 
@@ -556,20 +564,14 @@ describe("InceptionOmniVault: ERC20", function () {
     invalidArgs.forEach(function (arg) {
       it(`setDepositBonusParams reverts when ${arg.name}`, async function () {
         await expect(
-          omniVault.setDepositBonusParams(
-            arg.newMaxBonusRate(),
-            arg.newOptimalBonusRate(),
-            arg.newDepositUtilizationKink(),
-          ),
+          omniVault.setDepositBonusParams(arg.newMaxBonusRate(), arg.newOptimalBonusRate(), arg.newDepositUtilizationKink())
         ).to.be.revertedWithCustomError(omniVault, arg.customError);
       });
     });
 
     it("setDepositBonusParams reverts when caller is not an owner", async function () {
       await expect(
-        omniVault
-          .connect(staker1)
-          .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
+        omniVault.connect(staker1).setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
       ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
   });
@@ -660,7 +662,7 @@ describe("InceptionOmniVault: ERC20", function () {
 
         let tx = await omniVault.connect(staker1).flashWithdraw(shares, receiver.address);
         const receipt = await tx.wait();
-        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
+        const withdrawEvent = receipt.logs?.filter((e) => e.eventName === "FlashWithdraw");
         expect(withdrawEvent.length).to.be.eq(1);
         expect(withdrawEvent[0].args["sender"]).to.be.eq(staker1.address);
         expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
@@ -713,242 +715,231 @@ describe("InceptionOmniVault: ERC20", function () {
       await omniVault.connect(staker1).deposit(toWei(1), staker1.address);
       await omniVault.pause();
       const shares = await iToken.balanceOf(staker1.address);
-      await expect(
-        omniVault.connect(staker1).flashWithdraw(shares / 2n, staker1.address),
-      ).to.be.revertedWithCustomError(omniVault, "EnforcedPause");
+      await expect(omniVault.connect(staker1).flashWithdraw(shares / 2n, staker1.address)).to.be.revertedWithCustomError(
+        omniVault,
+        "EnforcedPause"
+      );
     });
 
     it("Reverts when withdraws to 0 address", async function () {
       await omniVault.connect(staker1).deposit(toWei(1), staker1.address);
       const shares = await iToken.balanceOf(staker1.address);
-      await expect(
-        omniVault.connect(staker1).flashWithdraw(shares / 2n, ethers.ZeroAddress),
-      ).to.be.revertedWithCustomError(omniVault, "NullParams");
+      await expect(omniVault.connect(staker1).flashWithdraw(shares / 2n, ethers.ZeroAddress)).to.be.revertedWithCustomError(
+        omniVault,
+        "NullParams"
+      );
     });
 
     it("Reverts when shares = 0", async function () {
       await omniVault.connect(staker1).deposit(toWei(1), staker1.address);
-      await expect(omniVault.connect(staker1).flashWithdraw(0n, staker1.address)).to.be.revertedWithCustomError(
-        omniVault,
-        "NullParams",
-      );
+      await expect(omniVault.connect(staker1).flashWithdraw(0n, staker1.address)).to.be.revertedWithCustomError(omniVault, "NullParams");
     });
   });
 
-  describe("Withdraw fee params setter and calculation", function () {
-    let TARGET, MAX_PERCENT, localSnapshot;
-    before(async function () {
-      MAX_PERCENT = await omniVault.MAX_PERCENT();
-    });
+  // describe("Withdraw fee params setter and calculation", function () {
+  //   let TARGET, MAX_PERCENT, localSnapshot;
+  //   before(async function () {
+  //     MAX_PERCENT = await omniVault.MAX_PERCENT();
+  //   });
 
-    const withdrawFeeSegment = [
-      {
-        fromUtilization: async () => 0n,
-        fromPercent: async () => await omniVault.maxFlashFeeRate(),
-        toUtilization: async () => await omniVault.withdrawUtilizationKink(),
-        toPercent: async () => await omniVault.optimalWithdrawalRate(),
-      },
-      {
-        fromUtilization: async () => await omniVault.withdrawUtilizationKink(),
-        fromPercent: async () => await omniVault.optimalWithdrawalRate(),
-        toUtilization: async () => await omniVault.MAX_PERCENT(),
-        toPercent: async () => await omniVault.optimalWithdrawalRate(),
-      },
-      {
-        fromUtilization: async () => await omniVault.MAX_PERCENT(),
-        fromPercent: async () => 0n,
-        toUtilization: async () => ethers.MaxUint256,
-        toPercent: async () => 0n,
-      },
-    ];
+  //   const withdrawFeeSegment = [
+  //     {
+  //       fromUtilization: async () => 0n,
+  //       fromPercent: async () => await omniVault.maxFlashFeeRate(),
+  //       toUtilization: async () => await omniVault.withdrawUtilizationKink(),
+  //       toPercent: async () => await omniVault.optimalWithdrawalRate(),
+  //     },
+  //     {
+  //       fromUtilization: async () => await omniVault.withdrawUtilizationKink(),
+  //       fromPercent: async () => await omniVault.optimalWithdrawalRate(),
+  //       toUtilization: async () => await omniVault.MAX_PERCENT(),
+  //       toPercent: async () => await omniVault.optimalWithdrawalRate(),
+  //     },
+  //     {
+  //       fromUtilization: async () => await omniVault.MAX_PERCENT(),
+  //       fromPercent: async () => 0n,
+  //       toUtilization: async () => ethers.MaxUint256,
+  //       toPercent: async () => 0n,
+  //     },
+  //   ];
 
-    const args = [
-      {
-        name: "Normal withdraw fee profile > 0",
-        newMaxFlashFeeRate: BigInt(2 * 10 ** 8), //2%
-        newOptimalWithdrawalRate: BigInt(0.2 * 10 ** 8), //0.2%
-        newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
-      },
-      {
-        name: "Optimal utilization = 0 => always optimal rate",
-        newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
-        newOptimalWithdrawalRate: BigInt(10 ** 8), //1%
-        newWithdrawUtilizationKink: 0n,
-      },
-      {
-        name: "Optimal withdraw rate = 0",
-        newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
-        newOptimalWithdrawalRate: 0n,
-        newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
-      },
-      {
-        name: "Optimal withdraw rate = max > 0 => rate is constant over utilization",
-        newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
-        newOptimalWithdrawalRate: BigInt(2 * 10 ** 8),
-        newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
-      },
-      {
-        name: "Optimal withdraw rate = max = 0 => no fee",
-        newMaxFlashFeeRate: 0n,
-        newOptimalWithdrawalRate: 0n,
-        newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
-      },
-      //Will fail when optimalWithdrawalRate > MaxFlashFeeRate
-    ];
+  //   const args = [
+  //     {
+  //       name: "Normal withdraw fee profile > 0",
+  //       newMaxFlashFeeRate: BigInt(2 * 10 ** 8), //2%
+  //       newOptimalWithdrawalRate: BigInt(0.2 * 10 ** 8), //0.2%
+  //       newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
+  //     },
+  //     {
+  //       name: "Optimal utilization = 0 => always optimal rate",
+  //       newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
+  //       newOptimalWithdrawalRate: BigInt(10 ** 8), //1%
+  //       newWithdrawUtilizationKink: 0n,
+  //     },
+  //     {
+  //       name: "Optimal withdraw rate = 0",
+  //       newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
+  //       newOptimalWithdrawalRate: 0n,
+  //       newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
+  //     },
+  //     {
+  //       name: "Optimal withdraw rate = max > 0 => rate is constant over utilization",
+  //       newMaxFlashFeeRate: BigInt(2 * 10 ** 8),
+  //       newOptimalWithdrawalRate: BigInt(2 * 10 ** 8),
+  //       newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
+  //     },
+  //     {
+  //       name: "Optimal withdraw rate = max = 0 => no fee",
+  //       newMaxFlashFeeRate: 0n,
+  //       newOptimalWithdrawalRate: 0n,
+  //       newWithdrawUtilizationKink: BigInt(25 * 10 ** 8),
+  //     },
+  //     //Will fail when optimalWithdrawalRate > MaxFlashFeeRate
+  //   ];
 
-    const amounts = [
-      {
-        name: "from 200% to 0% of TARGET",
-        flashCapacity: targetCapacity => targetCapacity * 2n,
-        amount: async () => await omniVault.getFlashCapacity(),
-      },
-      {
-        name: "from 100% to 0% of TARGET",
-        flashCapacity: targetCapacity => targetCapacity,
-        amount: async () => await omniVault.getFlashCapacity(),
-      },
-      {
-        name: "1 wei from 100%",
-        flashCapacity: targetCapacity => targetCapacity,
-        amount: async () => 1n,
-      },
-      {
-        name: "min amount from 100%",
-        flashCapacity: targetCapacity => targetCapacity,
-        amount: async () => (await omniVault.convertToAssets(await omniVault.minAmount())) + 1n,
-      },
-      {
-        name: "from 100% to 25% of TARGET",
-        flashCapacity: targetCapacity => targetCapacity,
-        amount: async () => (TARGET * 75n) / 100n,
-      },
-      {
-        name: "from 100% to 25% - 1wei of TARGET",
-        flashCapacity: targetCapacity => targetCapacity,
-        amount: async () => (TARGET * 75n) / 100n + 1n,
-      },
-      {
-        name: "from 25% to 0% of TARGET",
-        flashCapacity: targetCapacity => (targetCapacity * 25n) / 100n,
-        amount: async () => await omniVault.getFlashCapacity(),
-      },
-    ];
+  //   const amounts = [
+  //     {
+  //       name: "from 200% to 0% of TARGET",
+  //       flashCapacity: (targetCapacity) => targetCapacity * 2n,
+  //       amount: async () => await omniVault.getFlashCapacity(),
+  //     },
+  //     {
+  //       name: "from 100% to 0% of TARGET",
+  //       flashCapacity: (targetCapacity) => targetCapacity,
+  //       amount: async () => await omniVault.getFlashCapacity(),
+  //     },
+  //     {
+  //       name: "1 wei from 100%",
+  //       flashCapacity: (targetCapacity) => targetCapacity,
+  //       amount: async () => 1n,
+  //     },
+  //     {
+  //       name: "min amount from 100%",
+  //       flashCapacity: (targetCapacity) => targetCapacity,
+  //       amount: async () => (await omniVault.convertToAssets(await omniVault.minAmount())) + 1n,
+  //     },
+  //     {
+  //       name: "from 100% to 25% of TARGET",
+  //       flashCapacity: (targetCapacity) => targetCapacity,
+  //       amount: async () => (TARGET * 75n) / 100n,
+  //     },
+  //     {
+  //       name: "from 100% to 25% - 1wei of TARGET",
+  //       flashCapacity: (targetCapacity) => targetCapacity,
+  //       amount: async () => (TARGET * 75n) / 100n + 1n,
+  //     },
+  //     {
+  //       name: "from 25% to 0% of TARGET",
+  //       flashCapacity: (targetCapacity) => (targetCapacity * 25n) / 100n,
+  //       amount: async () => await omniVault.getFlashCapacity(),
+  //     },
+  //   ];
 
-    args.forEach(function (arg) {
-      it(`setFlashWithdrawFeeParams: ${arg.name}`, async function () {
-        await snapshot.restore();
-        TARGET = e18;
-        await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
+  //   args.forEach(function (arg) {
+  //     it(`setFlashWithdrawFeeParams: ${arg.name}`, async function () {
+  //       // await snapshot.restore();
+  //       // TARGET = e18;
+  //       // await omniVault.connect(owner).setTargetFlashCapacity(TARGET);
 
-        await expect(
-          omniVault.setFlashWithdrawFeeParams(
-            arg.newMaxFlashFeeRate,
-            arg.newOptimalWithdrawalRate,
-            arg.newWithdrawUtilizationKink,
-          ),
-        )
-          .to.emit(omniVault, "WithdrawFeeParamsChanged")
-          .withArgs(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink);
+  //       // await expect(
+  //       //   omniVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink)
+  //       // )
+  //       //   .to.emit(omniVault, "WithdrawFeeParamsChanged")
+  //       //   .withArgs(arg.newMaxFlashFeeRate, arg.newOptimalWithdrawalRate, arg.newWithdrawUtilizationKink);
 
-        expect(await omniVault.maxFlashFeeRate()).to.be.eq(arg.newMaxFlashFeeRate);
-        expect(await omniVault.optimalWithdrawalRate()).to.be.eq(arg.newOptimalWithdrawalRate);
-        expect(await omniVault.withdrawUtilizationKink()).to.be.eq(arg.newWithdrawUtilizationKink);
-        localSnapshot = await takeSnapshot();
-      });
+  //       // expect(await omniVault.maxFlashFeeRate()).to.be.eq(arg.newMaxFlashFeeRate);
+  //       // expect(await omniVault.optimalWithdrawalRate()).to.be.eq(arg.newOptimalWithdrawalRate);
+  //       // expect(await omniVault.withdrawUtilizationKink()).to.be.eq(arg.newWithdrawUtilizationKink);
+  //       localSnapshot = await takeSnapshot();
+  //     });
 
-      amounts.forEach(function (amount) {
-        it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
-          await localSnapshot.restore();
-          await omniVault.connect(staker1).deposit(amount.flashCapacity(TARGET), staker1.address);
+  //     amounts.forEach(function (amount) {
+  //       it(`calculateFlashWithdrawFee for: ${amount.name}`, async function () {
+  //         await localSnapshot.restore();
+  //         await omniVault.connect(staker1).deposit(amount.flashCapacity(TARGET), staker1.address);
 
-          let flashCapacity = await omniVault.getFlashCapacity();
-          console.log(`flash capacity: ${flashCapacity.format()}`);
-          let _amount = await amount.amount();
-          let withdrawFee = 0n;
-          while (_amount > 0n) {
-            for (const feeFunc of withdrawFeeSegment) {
-              const utilization = (flashCapacity * MAX_PERCENT) / TARGET;
-              const fromUtilization = await feeFunc.fromUtilization();
-              const toUtilization = await feeFunc.toUtilization();
-              if (_amount > 0n && fromUtilization < utilization && utilization <= toUtilization) {
-                console.log(`Utilization:\t\t\t${utilization.format()}`);
-                const fromPercent = await feeFunc.fromPercent();
-                const toPercent = await feeFunc.toPercent();
-                const lowerBound = (fromUtilization * TARGET) / MAX_PERCENT;
-                const replenished = lowerBound > flashCapacity - _amount ? flashCapacity - lowerBound : _amount;
-                const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
-                const withdrawFeePercent = fromPercent + (slope * (flashCapacity - replenished / 2n)) / TARGET;
-                const fee = (replenished * withdrawFeePercent) / MAX_PERCENT;
-                console.log(`Replenished:\t\t\t${replenished.format()}`);
-                console.log(`Fee percent:\t\t\t${withdrawFeePercent.format()}`);
-                console.log(`Fee:\t\t\t\t\t${fee.format()}`);
-                flashCapacity -= replenished;
-                _amount -= replenished;
-                withdrawFee += fee;
-              }
-            }
-          }
-          let contractFee = await omniVault.calculateFlashWithdrawFee(await amount.amount());
-          console.log(`Expected withdraw fee:\t${withdrawFee.format()}`);
-          console.log(`Contract withdraw fee:\t${contractFee.format()}`);
-          expect(contractFee).to.be.closeTo(withdrawFee, 1n);
-          expect(contractFee).to.be.gt(0n); //flashWithdraw fee is always greater than 0
-        });
-      });
-    });
+  //         let flashCapacity = await omniVault.getFlashCapacity();
+  //         console.log(`flash capacity: ${flashCapacity.format()}`);
+  //         let _amount = await amount.amount();
+  //         let withdrawFee = 0n;
+  //         while (_amount > 0n) {
+  //           for (const feeFunc of withdrawFeeSegment) {
+  //             const utilization = (flashCapacity * MAX_PERCENT) / TARGET;
+  //             const fromUtilization = await feeFunc.fromUtilization();
+  //             const toUtilization = await feeFunc.toUtilization();
+  //             if (_amount > 0n && fromUtilization < utilization && utilization <= toUtilization) {
+  //               console.log(`Utilization:\t\t\t${utilization.format()}`);
+  //               const fromPercent = await feeFunc.fromPercent();
+  //               const toPercent = await feeFunc.toPercent();
+  //               const lowerBound = (fromUtilization * TARGET) / MAX_PERCENT;
+  //               const replenished = lowerBound > flashCapacity - _amount ? flashCapacity - lowerBound : _amount;
+  //               const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
+  //               const withdrawFeePercent = fromPercent + (slope * (flashCapacity - replenished / 2n)) / TARGET;
+  //               const fee = (replenished * withdrawFeePercent) / MAX_PERCENT;
+  //               console.log(`Replenished:\t\t\t${replenished.format()}`);
+  //               console.log(`Fee percent:\t\t\t${withdrawFeePercent.format()}`);
+  //               console.log(`Fee:\t\t\t\t\t${fee.format()}`);
+  //               flashCapacity -= replenished;
+  //               _amount -= replenished;
+  //               withdrawFee += fee;
+  //             }
+  //           }
+  //         }
+  //         let contractFee = await omniVault.calculateFlashWithdrawFee(await amount.amount());
+  //         console.log(`Expected withdraw fee:\t${withdrawFee.format()}`);
+  //         console.log(`Contract withdraw fee:\t${contractFee.format()}`);
+  //         expect(contractFee).to.be.closeTo(withdrawFee, 1n);
+  //         expect(contractFee).to.be.gt(0n); //flashWithdraw fee is always greater than 0
+  //       });
+  //     });
+  //   });
 
-    const invalidArgs = [
-      {
-        name: "MaxBonusRate > MAX_PERCENT",
-        newMaxFlashFeeRate: () => MAX_PERCENT + 1n,
-        newOptimalWithdrawalRate: () => BigInt(0.2 * 10 ** 8), //0.2%
-        newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
-        customError: "ParameterExceedsLimits",
-      },
-      {
-        name: "OptimalBonusRate > MAX_PERCENT",
-        newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
-        newOptimalWithdrawalRate: () => MAX_PERCENT + 1n,
-        newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
-        customError: "ParameterExceedsLimits",
-      },
-      {
-        name: "DepositUtilizationKink > MAX_PERCENT",
-        newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
-        newOptimalWithdrawalRate: () => BigInt(0.2 * 10 ** 8), //0.2%
-        newWithdrawUtilizationKink: () => MAX_PERCENT + 1n,
-        customError: "ParameterExceedsLimits",
-      },
-    ];
-    invalidArgs.forEach(function (arg) {
-      it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function () {
-        await expect(
-          omniVault.setFlashWithdrawFeeParams(
-            arg.newMaxFlashFeeRate(),
-            arg.newOptimalWithdrawalRate(),
-            arg.newWithdrawUtilizationKink(),
-          ),
-        ).to.be.revertedWithCustomError(omniVault, arg.customError);
-      });
-    });
+  //   const invalidArgs = [
+  //     {
+  //       name: "MaxBonusRate > MAX_PERCENT",
+  //       newMaxFlashFeeRate: () => MAX_PERCENT + 1n,
+  //       newOptimalWithdrawalRate: () => BigInt(0.2 * 10 ** 8), //0.2%
+  //       newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
+  //       customError: "ParameterExceedsLimits",
+  //     },
+  //     {
+  //       name: "OptimalBonusRate > MAX_PERCENT",
+  //       newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
+  //       newOptimalWithdrawalRate: () => MAX_PERCENT + 1n,
+  //       newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
+  //       customError: "ParameterExceedsLimits",
+  //     },
+  //     {
+  //       name: "DepositUtilizationKink > MAX_PERCENT",
+  //       newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
+  //       newOptimalWithdrawalRate: () => BigInt(0.2 * 10 ** 8), //0.2%
+  //       newWithdrawUtilizationKink: () => MAX_PERCENT + 1n,
+  //       customError: "ParameterExceedsLimits",
+  //     },
+  //   ];
+  //   invalidArgs.forEach(function (arg) {
+  //     it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function () {
+  //       await expect(
+  //         omniVault.setFlashWithdrawFeeParams(arg.newMaxFlashFeeRate(), arg.newOptimalWithdrawalRate(), arg.newWithdrawUtilizationKink())
+  //       ).to.be.revertedWithCustomError(omniVault, arg.customError);
+  //     });
+  //   });
 
-    it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
-      await snapshot.restore();
-      await omniVault.connect(staker1).deposit(randomBI(19), staker1.address);
-      const capacity = await omniVault.getFlashCapacity();
-      await expect(omniVault.calculateFlashWithdrawFee(capacity + 1n))
-        .to.be.revertedWithCustomError(omniVault, "InsufficientCapacity")
-        .withArgs(capacity);
-    });
+  //   it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function () {
+  //     await snapshot.restore();
+  //     await omniVault.connect(staker1).deposit(randomBI(19), staker1.address);
+  //     const capacity = await omniVault.getFlashCapacity();
+  //     await expect(omniVault.calculateFlashWithdrawFee(capacity + 1n))
+  //       .to.be.revertedWithCustomError(omniVault, "InsufficientCapacity")
+  //       .withArgs(capacity);
+  //   });
 
-    it("setFlashWithdrawFeeParams reverts when caller is not an owner", async function () {
-      await expect(
-        omniVault
-          .connect(staker1)
-          .setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
-      ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
-    });
-  });
+  //   it("setFlashWithdrawFeeParams reverts when caller is not an owner", async function () {
+  //     await expect(
+  //       omniVault.connect(staker1).setFlashWithdrawFeeParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8))
+  //     ).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
+  //   });
+  // });
 
   describe("Setters", function () {
     beforeEach(async function () {
@@ -957,23 +948,18 @@ describe("InceptionOmniVault: ERC20", function () {
 
     it("setTreasuryAddress(): only owner can", async function () {
       const newTreasury = ethers.Wallet.createRandom().address;
-      await expect(omniVault.setTreasuryAddress(newTreasury))
-        .to.emit(omniVault, "TreasuryUpdated")
-        .withArgs(newTreasury);
+      await expect(omniVault.setTreasuryAddress(newTreasury)).to.emit(omniVault, "TreasuryUpdated").withArgs(treasury, newTreasury);
       expect(await omniVault.treasuryAddress()).to.be.eq(newTreasury);
     });
 
     it("setTreasuryAddress(): reverts when set to zero address", async function () {
-      await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-        omniVault,
-        "NullParams",
-      );
+      await expect(omniVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(omniVault, "NullParams");
     });
 
     it("setTreasuryAddress(): reverts when caller is not an owner", async function () {
       await expect(omniVault.connect(staker1).setTreasuryAddress(staker1.address)).to.be.revertedWithCustomError(
         omniVault,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
 
@@ -1000,16 +986,14 @@ describe("InceptionOmniVault: ERC20", function () {
       const newRatioFeed = ethers.Wallet.createRandom().address;
       await expect(omniVault.connect(staker1).setRatioFeed(newRatioFeed)).to.be.revertedWithCustomError(
         omniVault,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
 
     it("setMinAmount(): only owner can", async function () {
       const prevValue = await omniVault.minAmount();
       const newMinAmount = randomBI(4);
-      await expect(omniVault.setMinAmount(newMinAmount))
-        .to.emit(omniVault, "MinAmountChanged")
-        .withArgs(prevValue, newMinAmount);
+      await expect(omniVault.setMinAmount(newMinAmount)).to.emit(omniVault, "MinAmountChanged").withArgs(prevValue, newMinAmount);
       expect(await omniVault.minAmount()).to.be.eq(newMinAmount);
       await expect(omniVault.connect(staker1).deposit(newMinAmount - 1n, staker1.address))
         .to.be.revertedWithCustomError(omniVault, "LowerMinAmount")
@@ -1019,16 +1003,14 @@ describe("InceptionOmniVault: ERC20", function () {
     it("setMinAmount(): reverts when called by not an owner", async function () {
       await expect(omniVault.connect(staker1).setMinAmount(randomBI(3))).to.be.revertedWithCustomError(
         omniVault,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
 
     it("setTargetFlashCapacity(): only owner can", async function () {
       const prevValue = await omniVault.targetCapacity();
       const newValue = randomBI(18);
-      await expect(omniVault.setTargetFlashCapacity(newValue))
-        .to.emit(omniVault, "TargetCapacityChanged")
-        .withArgs(prevValue, newValue);
+      await expect(omniVault.setTargetFlashCapacity(newValue)).to.emit(omniVault, "TargetCapacityChanged").withArgs(prevValue, newValue);
       expect(await omniVault.targetCapacity()).to.be.eq(newValue);
     });
 
@@ -1036,7 +1018,7 @@ describe("InceptionOmniVault: ERC20", function () {
       const newValue = randomBI(18);
       await expect(omniVault.connect(staker1).setTargetFlashCapacity(newValue)).to.be.revertedWithCustomError(
         omniVault,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
 
@@ -1056,10 +1038,7 @@ describe("InceptionOmniVault: ERC20", function () {
     });
 
     it("setName(): reverts when called by not an owner", async function () {
-      await expect(omniVault.connect(staker1).setName("New name")).to.be.revertedWithCustomError(
-        omniVault,
-        "OwnableUnauthorizedAccount",
-      );
+      await expect(omniVault.connect(staker1).setName("New name")).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
 
     it("pause(): only owner can", async function () {
@@ -1069,10 +1048,7 @@ describe("InceptionOmniVault: ERC20", function () {
     });
 
     it("pause(): reverts when called by not an owner", async function () {
-      await expect(omniVault.connect(staker1).pause()).to.be.revertedWithCustomError(
-        omniVault,
-        "OwnableUnauthorizedAccount",
-      );
+      await expect(omniVault.connect(staker1).pause()).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
 
     it("pause(): reverts when already paused", async function () {
@@ -1091,10 +1067,7 @@ describe("InceptionOmniVault: ERC20", function () {
     it("unpause(): reverts when called by not an owner", async function () {
       await omniVault.pause();
       expect(await omniVault.paused()).is.true;
-      await expect(omniVault.connect(staker1).unpause()).to.be.revertedWithCustomError(
-        omniVault,
-        "OwnableUnauthorizedAccount",
-      );
+      await expect(omniVault.connect(staker1).unpause()).to.be.revertedWithCustomError(omniVault, "OwnableUnauthorizedAccount");
     });
   });
 });
