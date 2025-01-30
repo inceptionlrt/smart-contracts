@@ -22,10 +22,16 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    // local: {
+    //   url: "http://127.0.0.1:8545",
+    //   // chainId: 1337,
+    //   // gasPrice: 20000000000,
+    //   // gas: 6721975,
+    // },
     hardhat: {
       forking: {
-        url: `${process.env.HOLESKY_RPC}`,
-        blockNumber: 2680454,
+        url: `${process.env.MAINNET_RPC}`,
+        blockNumber: 21687985,
       },
     },
   },

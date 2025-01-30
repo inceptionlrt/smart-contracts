@@ -4,6 +4,27 @@ pragma solidity ^0.8.0;
 import {IVaultStorage} from "./IVaultStorage.sol";
 
 interface IVault is IVaultStorage {
+    error AlreadyClaimed();
+    error AlreadySet();
+    error InsufficientClaim();
+    error InsufficientDeposit();
+    error InsufficientWithdrawal();
+    error InvalidAccount();
+    error InvalidCaptureEpoch();
+    error InvalidClaimer();
+    error InvalidCollateral();
+    error InvalidEpoch();
+    error InvalidEpochDuration();
+    error InvalidLengthEpochs();
+    error InvalidOnBehalfOf();
+    error InvalidRecipient();
+    error MissingRoles();
+    error NoDepositWhitelist();
+    error NotDelegator();
+    error NotSlasher();
+    error NotWhitelistedDepositor();
+    error TooMuchWithdraw();
+
     /**
      * @notice Initial parameters needed for a vault deployment.
      * @param collateral vault's underlying collateral
@@ -165,6 +186,12 @@ interface IVault is IVaultStorage {
      */
     function totalStake() external view returns (uint256);
 
+    function currentEpoch() external view returns (uint256);
+
+    function epochDurationInit() external view returns (uint48);
+
+    function epochDuration() external view returns (uint48);
+
     /**
      * @notice Get an active balance for a particular account at a given timestamp using hints.
      * @param account account to get the active balance for
@@ -191,19 +218,20 @@ interface IVault is IVaultStorage {
      * @param account account to get the withdrawals for
      * @return withdrawals for the account at the epoch
      */
-    function withdrawalsOf(
-        uint256 epoch,
-        address account
-    ) external view returns (uint256);
+    function withdrawalsOf(uint256 epoch, address account)
+        external
+        view
+        returns (uint256);
 
     /**
      * @notice Get a total amount of the collateral that can be slashed for a given account.
      * @param account account to get the slashable collateral for
      * @return total amount of the account's slashable collateral
      */
-    function slashableBalanceOf(
-        address account
-    ) external view returns (uint256);
+    function slashableBalanceOf(address account)
+        external
+        view
+        returns (uint256);
 
     /**
      * @notice Deposit collateral into the vault.
@@ -212,10 +240,9 @@ interface IVault is IVaultStorage {
      * @return depositedAmount real amount of the collateral deposited
      * @return mintedShares amount of the active shares minted
      */
-    function deposit(
-        address onBehalfOf,
-        uint256 amount
-    ) external returns (uint256 depositedAmount, uint256 mintedShares);
+    function deposit(address onBehalfOf, uint256 amount)
+        external
+        returns (uint256 depositedAmount, uint256 mintedShares);
 
     /**
      * @notice Withdraw collateral from the vault (it will be claimable after the next epoch).
@@ -224,10 +251,9 @@ interface IVault is IVaultStorage {
      * @return burnedShares amount of the active shares burned
      * @return mintedShares amount of the epoch withdrawal shares minted
      */
-    function withdraw(
-        address claimer,
-        uint256 amount
-    ) external returns (uint256 burnedShares, uint256 mintedShares);
+    function withdraw(address claimer, uint256 amount)
+        external
+        returns (uint256 burnedShares, uint256 mintedShares);
 
     /**
      * @notice Redeem collateral from the vault (it will be claimable after the next epoch).
@@ -236,10 +262,9 @@ interface IVault is IVaultStorage {
      * @return withdrawnAssets amount of the collateral withdrawn
      * @return mintedShares amount of the epoch withdrawal shares minted
      */
-    function redeem(
-        address claimer,
-        uint256 shares
-    ) external returns (uint256 withdrawnAssets, uint256 mintedShares);
+    function redeem(address claimer, uint256 shares)
+        external
+        returns (uint256 withdrawnAssets, uint256 mintedShares);
 
     /**
      * @notice Claim collateral from the vault.
@@ -247,10 +272,9 @@ interface IVault is IVaultStorage {
      * @param epoch epoch to claim the collateral for
      * @return amount amount of the collateral claimed
      */
-    function claim(
-        address recipient,
-        uint256 epoch
-    ) external returns (uint256 amount);
+    function claim(address recipient, uint256 epoch)
+        external
+        returns (uint256 amount);
 
     /**
      * @notice Claim collateral from the vault for multiple epochs.
@@ -258,10 +282,9 @@ interface IVault is IVaultStorage {
      * @param epochs epochs to claim the collateral for
      * @return amount amount of the collateral claimed
      */
-    function claimBatch(
-        address recipient,
-        uint256[] calldata epochs
-    ) external returns (uint256 amount);
+    function claimBatch(address recipient, uint256[] calldata epochs)
+        external
+        returns (uint256 amount);
 
     /**
      * @notice Slash callback for burning collateral.
@@ -270,10 +293,9 @@ interface IVault is IVaultStorage {
      * @return slashedAmount real amount of the collateral slashed
      * @dev Only the slasher can call this function.
      */
-    function onSlash(
-        uint256 amount,
-        uint48 captureTimestamp
-    ) external returns (uint256 slashedAmount);
+    function onSlash(uint256 amount, uint48 captureTimestamp)
+        external
+        returns (uint256 slashedAmount);
 
     /**
      * @notice Enable/disable deposit whitelist.

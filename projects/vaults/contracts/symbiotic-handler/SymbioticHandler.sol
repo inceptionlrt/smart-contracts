@@ -7,6 +7,8 @@ import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.s
 import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "hardhat/console.sol";
+
 /// @author The InceptionLRT team
 /// @title The SymbioticHandler contract
 /// @dev Serves communication with external Mellow Protocol
@@ -47,7 +49,7 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         _;
     }
 
-    function __MellowHandler_init(
+    function __SymbioticHandler_init(
         IERC20 assetAddress,
         IIMellowRestaker _mellowRestaker
     ) internal onlyInitializing {
@@ -74,11 +76,11 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         mellowRestaker.delegateMellow(amount, deadline, mellowVault);
     }
 
-    function _depositAssetInto_Symbiotic(uint256 amount, address vault)
+    function _depositAssetIntoSymbiotic(uint256 amount, address vault)
         internal
     {
         _asset.safeIncreaseAllowance(address(symbioticRestaker), amount);
-        symbioticRestaker.delegateToVault(amount, vault);
+        symbioticRestaker.delegate(amount, vault);
     }
 
     /*/////////////////////////////////
@@ -105,38 +107,22 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
 
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
-    function undelegateFrom_Symbiotic(address vault, uint256 amount)
+    function undelegateFromSymbiotic(address vault, uint256 amount)
         external
         whenNotPaused
         nonReentrant
         onlyOperator
     {
         if (vault == address(0)) revert InvalidAddress();
-        amount = symbioticRestaker.withdrawFromVault(vault, amount);
+        amount = symbioticRestaker.withdraw(vault, amount);
 
-        emit StartMellowWithdrawal(address(mellowRestaker), amount);
+        /// TODO
+        emit StartMellowWithdrawal(address(symbioticRestaker), amount);
         return;
     }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    function claimCompletedWithdrawals(bytes[] calldata withdrawalData)
-        public
-        whenNotPaused
-        nonReentrant
-    {
-        uint256 availableBalance = getFreeBalance();
-
-        // withdrawalData = restakerAddress + dataToClaim
-        uint256 withdrawnAmount = mellowRestaker
-            .claimMellowWithdrawalCallback();
-
-        emit WithdrawalClaimed(withdrawnAmount);
-
-        _updateEpoch(availableBalance + withdrawnAmount);
-    }
-
-    /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    function claimCompletedWithdrawals_Mellow()
+    function claimCompletedWithdrawalsMellow()
         public
         whenNotPaused
         nonReentrant
@@ -151,14 +137,14 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function claimCompletedWithdrawals_Symbiotic(uint256 sEpoch)
+    function claimCompletedWithdrawalsSymbiotic(address vault, uint256 sEpoch)
         public
         whenNotPaused
         nonReentrant
     {
         uint256 availableBalance = getFreeBalance();
 
-        uint256 withdrawnAmount = symbioticRestaker.claimWithdrawal(sEpoch);
+        uint256 withdrawnAmount = symbioticRestaker.claim(vault, sEpoch);
 
         emit WithdrawalClaimed(withdrawnAmount);
 
@@ -210,13 +196,16 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         return
             getTotalDelegated() +
             totalAssets() +
+            symbioticRestaker.pendingWithdrawalAmount() +
             getPendingWithdrawalAmountFromMellow() -
             // redeemReservedAmount - subtracted offchain
             depositBonusAmount;
     }
 
     function getTotalDelegated() public view returns (uint256) {
-        return mellowRestaker.getTotalDeposited();
+        return
+            mellowRestaker.getTotalDeposited() +
+            symbioticRestaker.getTotalDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -258,5 +247,15 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         if (newTargetCapacity <= 0) revert InvalidTargetFlashCapacity();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
+    }
+
+    function setSymbioticRestaker(IISymbioticRestaker newSymbioticRestaker)
+        external
+        onlyOwner
+    {
+        require(address(newSymbioticRestaker) != address(0), InvalidAddress());
+
+        // emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
+        symbioticRestaker = newSymbioticRestaker;
     }
 }

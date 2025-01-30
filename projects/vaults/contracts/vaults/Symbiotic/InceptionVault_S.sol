@@ -61,7 +61,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         IIMellowRestaker _mellowRestaker
     ) internal {
         __Ownable2Step_init();
-        __MellowHandler_init(assetAddress, _mellowRestaker);
+        __SymbioticHandler_init(assetAddress, _mellowRestaker);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -176,6 +176,23 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     /*/////////////////////////////////
     ////// Delegation functions //////
     ///////////////////////////////*/
+
+    /// @dev Sends underlying to a single mellow vault
+    function delegateToSymbioticVault(address vault, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyOperator
+    {
+        if (vault == address(0) || amount == 0) revert NullParams();
+
+        /// TODO
+        //  _beforeDeposit(amount);
+        _depositAssetIntoSymbiotic(amount, vault);
+
+        emit DelegatedTo(address(symbioticRestaker), vault, amount);
+        return;
+    }
 
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(

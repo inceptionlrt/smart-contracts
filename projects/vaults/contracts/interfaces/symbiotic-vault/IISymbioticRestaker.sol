@@ -3,8 +3,6 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IMellowVault} from "./mellow-core/IMellowVault.sol";
-
 interface IIEigenRestakerErrors {
     error BadMellowWithdrawRequest();
 
@@ -37,15 +35,11 @@ interface IIEigenRestakerErrors {
     error TooMuchSlippage();
 
     error AlreadyAdded();
+
+    error NotContract();
 }
 
 interface IISymbioticRestaker {
-    event AllocationChanged(
-        address mellowVault,
-        uint256 oldAllocation,
-        uint256 newAllocation
-    );
-
     event VaultSet(address indexed oldVault, address indexed newVault);
 
     event RequestDealineSet(
@@ -58,36 +52,21 @@ interface IISymbioticRestaker {
         address indexed _newTrusteeManager
     );
 
-    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
-
-    event VaultAdded(
-        address indexed _mellowVault,
-        address indexed _depositWrapper
-    );
-
-    event WrapperChanged(
-        address indexed _mellowVault,
-        address indexed _oldWrapper,
-        address indexed _newWrapper
-    );
+    event VaultAdded(address indexed vault);
 
     function getDeposited(address _mellowVault) external view returns (uint256);
 
     function getTotalDeposited() external view returns (uint256);
 
-    function delegateToVault(uint256 amount, address vaultAddress)
+    function delegate(uint256 amount, address vaultAddress)
         external
         returns (uint256 depositedAmount, uint256 mintedShares);
 
-    function withdrawFromVault(address vaultAddress, uint256 amount)
+    function withdraw(address vaultAddress, uint256 amount)
         external
         returns (uint256);
 
-    function claimWithdrawal(uint256 epoch) external returns (uint256);
-
-    function pendingMellowRequest(IMellowVault mellowVault)
-        external
-        returns (IMellowVault.WithdrawalRequest memory);
+    function claim(address vault, uint256 epoch) external returns (uint256);
 
     function pendingWithdrawalAmount() external view returns (uint256);
 
