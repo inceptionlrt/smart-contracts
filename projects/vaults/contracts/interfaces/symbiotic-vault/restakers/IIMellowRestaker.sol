@@ -3,50 +3,22 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IMellowVault} from "./mellow-core/IMellowVault.sol";
+import {IMellowVault} from "../mellow-core/IMellowVault.sol";
+import {IIBaseRestaker} from "./IIBaseRestaker.sol";
 
-interface IIEigenRestakerErrors {
-    error BadMellowWithdrawRequest();
-
-    error ValueZero();
-
-    error TransferAssetFailed(address assetAddress);
-
-    error InconsistentData();
-
-    error WrongClaimWithdrawalParams();
-
-    error NullParams();
-
-    error NotVaultOrTrusteeManager();
-
-    error InvalidWrapperForVault();
-
-    error LengthMismatch();
-
+interface IIMellowRestaker is IIBaseRestaker {
     error InactiveWrapper();
-
-    error InvalidVault();
-
-    error ZeroAddress();
-
     error NoWrapperExists();
-
+    error BadMellowWithdrawRequest();
+    error InvalidWrapperForVault();
     error InvalidAllocation();
-
     error TooMuchSlippage();
 
-    error AlreadyAdded();
-}
-
-interface IIMellowRestaker {
     event AllocationChanged(
         address mellowVault,
         uint256 oldAllocation,
         uint256 newAllocation
     );
-
-    event VaultSet(address indexed oldVault, address indexed newVault);
 
     event RequestDealineSet(
         uint256 indexed oldDeadline,
@@ -54,11 +26,6 @@ interface IIMellowRestaker {
     );
 
     event NewSlippages(uint256 _deposit, uint256 _withdraw);
-
-    event TrusteeManagerSet(
-        address indexed _trusteeManager,
-        address indexed _newTrusteeManager
-    );
 
     event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
 
@@ -72,10 +39,6 @@ interface IIMellowRestaker {
         address indexed _oldWrapper,
         address indexed _newWrapper
     );
-
-    function getDeposited(address _mellowVault) external view returns (uint256);
-
-    function getTotalDeposited() external view returns (uint256);
 
     function delegateMellow(
         uint256 amount,
@@ -104,8 +67,4 @@ interface IIMellowRestaker {
     function pendingMellowRequest(IMellowVault mellowVault)
         external
         returns (IMellowVault.WithdrawalRequest memory);
-
-    function pendingWithdrawalAmount() external view returns (uint256);
-
-    function claimableAmount() external view returns (uint256);
 }

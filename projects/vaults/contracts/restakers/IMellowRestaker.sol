@@ -10,7 +10,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
-import {IIMellowRestaker, IIEigenRestakerErrors} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+import {IIMellowRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/mellow-core/IMellowHandler.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
@@ -31,8 +31,7 @@ contract IMellowRestaker is
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIMellowRestaker,
-    IIEigenRestakerErrors
+    IIMellowRestaker
 {
     using SafeERC20 for IERC20;
 
@@ -117,10 +116,7 @@ contract IMellowRestaker is
             );
     }
 
-    function delegate(
-        uint256 amount,
-        uint256 deadline
-    )
+    function delegate(uint256 amount, uint256 deadline)
         external
         onlyTrustee
         whenNotPaused
@@ -235,10 +231,10 @@ contract IMellowRestaker is
         return amount;
     }
 
-    function addMellowVault(
-        address mellowVault,
-        address depositWrapper
-    ) external onlyOwner {
+    function addMellowVault(address mellowVault, address depositWrapper)
+        external
+        onlyOwner
+    {
         if (mellowVault == address(0) || depositWrapper == address(0))
             revert ZeroAddress();
         if (
@@ -260,10 +256,10 @@ contract IMellowRestaker is
         emit VaultAdded(mellowVault, depositWrapper);
     }
 
-    function changeMellowWrapper(
-        address mellowVault,
-        address newDepositWrapper
-    ) external onlyOwner {
+    function changeMellowWrapper(address mellowVault, address newDepositWrapper)
+        external
+        onlyOwner
+    {
         if (mellowVault == address(0) || newDepositWrapper == address(0))
             revert ZeroAddress();
         if (
@@ -281,10 +277,10 @@ contract IMellowRestaker is
         emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
     }
 
-    function changeAllocation(
-        address mellowVault,
-        uint256 newAllocation
-    ) external onlyOwner {
+    function changeAllocation(address mellowVault, uint256 newAllocation)
+        external
+        onlyOwner
+    {
         if (mellowVault == address(0)) revert ZeroAddress();
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
@@ -294,9 +290,12 @@ contract IMellowRestaker is
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
 
-    function pendingMellowRequest(
-        IMellowVault mellowVault
-    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
+    function pendingMellowRequest(IMellowVault mellowVault)
+        public
+        view
+        override
+        returns (IMellowVault.WithdrawalRequest memory)
+    {
         return mellowVault.withdrawalRequest(address(this));
     }
 
@@ -335,10 +334,11 @@ contract IMellowRestaker is
         return 1;
     }
 
-    function amountToLpAmount(
-        uint256 amount,
-        IMellowVault mellowVault
-    ) public view returns (uint256 lpAmount) {
+    function amountToLpAmount(uint256 amount, IMellowVault mellowVault)
+        public
+        view
+        returns (uint256 lpAmount)
+    {
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
 
@@ -399,10 +399,11 @@ contract IMellowRestaker is
         lpAmount = FullMath.mulDiv(depositValue, totalSupply, totalValue);
     }
 
-    function lpAmountToAmount(
-        uint256 lpAmount,
-        IMellowVault mellowVault
-    ) public view returns (uint256) {
+    function lpAmountToAmount(uint256 lpAmount, IMellowVault mellowVault)
+        public
+        view
+        returns (uint256)
+    {
         if (lpAmount == 0) return 0;
 
         IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
@@ -426,10 +427,10 @@ contract IMellowRestaker is
         requestDeadline = newDealine;
     }
 
-    function setSlippages(
-        uint256 _depositSlippage,
-        uint256 _withdrawSlippage
-    ) external onlyOwner {
+    function setSlippages(uint256 _depositSlippage, uint256 _withdrawSlippage)
+        external
+        onlyOwner
+    {
         if (_depositSlippage > 3000 || _withdrawSlippage > 3000)
             revert TooMuchSlippage();
         depositSlippage = _depositSlippage;

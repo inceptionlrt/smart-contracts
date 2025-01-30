@@ -2,18 +2,18 @@
 pragma solidity ^0.8.28;
 
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
-import {IMellowHandler} from "../interfaces/symbiotic-vault/IMellowHandler.sol";
-import {IIMellowRestaker} from "../interfaces/symbiotic-vault/IIMellowRestaker.sol";
-import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
+import {ISymbioticHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
+import {IIMellowRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
+import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import "hardhat/console.sol";
 
 /// @author The InceptionLRT team
 /// @title The SymbioticHandler contract
 /// @dev Serves communication with external Mellow Protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
+contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     using SafeERC20 for IERC20;
 
     uint256 public epoch;
@@ -198,7 +198,6 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
             totalAssets() +
             symbioticRestaker.pendingWithdrawalAmount() +
             getPendingWithdrawalAmountFromMellow() -
-            // redeemReservedAmount - subtracted offchain
             depositBonusAmount;
     }
 
@@ -249,13 +248,14 @@ contract SymbioticHandler is InceptionAssetsHandler, IMellowHandler {
         targetCapacity = newTargetCapacity;
     }
 
-    function setSymbioticRestaker(IISymbioticRestaker newSymbioticRestaker)
+    function setSymbioticRestaker(address newSymbioticRestaker)
         external
         onlyOwner
     {
-        require(address(newSymbioticRestaker) != address(0), InvalidAddress());
+        require(newSymbioticRestaker != address(0), InvalidAddress());
+        require(Address.isContract(newSymbioticRestaker), NotContract());
 
-        // emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
-        symbioticRestaker = newSymbioticRestaker;
+        symbioticRestaker = IISymbioticRestaker(newSymbioticRestaker);
+        emit SymbioticRestakerAdded(newSymbioticRestaker);
     }
 }

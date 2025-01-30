@@ -275,8 +275,6 @@ assets.forEach(function (a) {
       let totalDeposited = 0n;
       let delegatedSymbiotic = 0n;
       let rewardsSymbiotic = 0n;
-      let symbioticVaultEpoch1 = 0n;
-      let symbioticVaultEpoch2 = 0n;
 
       before(async function () {
         await snapshot.restore();
@@ -388,32 +386,24 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).eq(ratio);
       });
 
-      // it("Add rewards to Mellow protocol and estimate ratio", async function () {
-      //   const ratioBefore = await calculateRatio(iVault, iToken);
-      //   const totalDelegatedToBefore = await iVault.getDelegatedTo(mellowVaults[0].vaultAddress);
-      //   const totalDelegatedBefore = await iVault.getTotalDelegated();
-      //   console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
-      //   console.log(`Delegated to before:\t${totalDelegatedToBefore.format()}`);
+      it("Add rewards to Symbiotic protocol and estimate ratio, it remains the same", async function () {
+        const ratioBefore = await calculateRatio(iVault, iToken);
+        const totalDelegatedToBefore = await symbioticRestaker.getDeposited(symbioticVaults[0].vaultAddress);
+        const totalDelegatedBefore = await iVault.getTotalDelegated();
+        console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
+        console.log(`Delegated to before:\t${totalDelegatedToBefore.format()}`);
 
-      //   await asset.connect(staker3).transfer(mellowVaults[0].vaultAddress, e18);
+        console.log(`vault bal before: ${await asset.balanceOf(symbioticVaults[0].vaultAddress)}`);
+        await asset.connect(staker3).transfer(symbioticVaults[0].vaultAddress, e18);
+        console.log(`vault bal after: ${await asset.balanceOf(symbioticVaults[0].vaultAddress)}`);
 
-      //   const ratioAfter = await calculateRatio(iVault, iToken);
-      //   const totalDelegatedToAfter = await iVault.getDelegatedTo(mellowVaults[0].vaultAddress);
-      //   const totalDelegatedAfter = await iVault.getTotalDelegated();
-      //   rewardsMellow += totalDelegatedToAfter - totalDelegatedToBefore;
-
-      //   console.log(`Ratio after:\t\t\t${ratioAfter.format()}`);
-      //   console.log(`Delegated to after:\t\t${totalDelegatedToAfter.format()}`);
-      //   console.log(`mellow rewards:\t\t\t${rewardsMellow.format()}`);
-      //   await ratioFeed.updateRatioBatch([iToken.address], [ratioAfter]);
-      //   expect(totalDelegatedAfter - totalDelegatedBefore).to.be.eq(totalDelegatedToAfter - totalDelegatedToBefore);
-      // });
-
-      // it("Estimate the amount that user can withdraw", async function () {
-      //   const shares = await iToken.balanceOf(staker.address);
-      //   const assetValue = await iVault.convertToAssets(shares);
-      //   expect(assetValue).closeTo(totalDeposited + rewardsMellow, transactErr * 10n);
-      // });
+        const ratioAfter = await calculateRatio(iVault, iToken);
+        const totalDelegatedToAfter = await symbioticRestaker.getDeposited(symbioticVaults[0].vaultAddress);
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        expect(ratioAfter).to.be.eq(ratioBefore);
+        expect(totalDelegatedToAfter - totalDelegatedToBefore).to.be.eq(0n);
+        expect(totalDelegatedAfter - totalDelegatedBefore).to.be.eq(totalDelegatedToAfter - totalDelegatedToBefore);
+      });
 
       it("User can withdraw all", async function () {
         const shares = await iToken.balanceOf(staker.address);
@@ -824,7 +814,7 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
         const restakerBalanceBefore = await asset.balanceOf(mellowRestaker.address);
 
-        await iVault.connect(iVaultOperator).claimCompletedWithdrawals(["0x"]);
+        await iVault.connect(iVaultOperator).claimCompletedWithdrawalsMellow();
 
         const totalAssetsAfter = await iVault.totalAssets();
         const restakerBalanceAfter = await asset.balanceOf(mellowRestaker.address);

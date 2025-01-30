@@ -9,7 +9,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IISymbioticRestaker, IIEigenRestakerErrors} from "../interfaces/symbiotic-vault/IISymbioticRestaker.sol";
+import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
 import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
@@ -24,8 +24,7 @@ contract ISymbioticRestaker is
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IISymbioticRestaker,
-    IIEigenRestakerErrors
+    IISymbioticRestaker
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -39,15 +38,14 @@ contract ISymbioticRestaker is
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
 
-    mapping(address => uint256) public allocations;
-    uint256 public totalAllocations;
-
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
 
     modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager)
-            revert NotVaultOrTrusteeManager();
+        require(
+            msg.sender == _vault || msg.sender == _trusteeManager,
+            NotVaultOrTrusteeManager()
+        );
         _;
     }
 
@@ -68,9 +66,11 @@ contract ISymbioticRestaker is
 
         for (uint256 i = 0; i < vaults.length; i++) {
             _vaults.add(vaults[i]);
+            emit VaultAdded(vaults[i]);
         }
 
         _asset = asset;
+
         _trusteeManager = trusteeManager;
     }
 
@@ -82,9 +82,7 @@ contract ISymbioticRestaker is
     {
         _asset.safeTransferFrom(_vault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-
-        IVault(vaultAddress).deposit(address(this), amount);
-        return (0, 0);
+        return IVault(vaultAddress).deposit(address(this), amount);
     }
 
     function withdraw(address vaultAddress, uint256 amount)
@@ -154,6 +152,7 @@ contract ISymbioticRestaker is
 
     function addVault(address vaultAddress) external onlyOwner {
         if (vaultAddress == address(0)) revert ZeroAddress();
+        if (!Address.isContract(vaultAddress)) revert NotContract();
 
         if (_vaults.contains(vaultAddress)) revert AlreadyAdded();
 
@@ -163,12 +162,14 @@ contract ISymbioticRestaker is
     }
 
     function setVault(address iVault) external onlyOwner {
+        if (iVault == address(0)) revert ZeroAddress();
         if (!Address.isContract(iVault)) revert NotContract();
         emit VaultSet(_vault, iVault);
         _vault = iVault;
     }
 
     function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+        if (_newTrusteeManager == address(0)) revert ZeroAddress();
         emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
         _trusteeManager = _newTrusteeManager;
     }

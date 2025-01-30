@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {InceptionVault_S, IInceptionToken, IERC20} from "../InceptionVault_S.sol";
-import {IIMellowRestaker} from "../../../interfaces/symbiotic-vault/IIMellowRestaker.sol";
+import {IIMellowRestaker} from "../../../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
 
 /// @author The InceptionLRT team
 contract InVault_S_E2 is InceptionVault_S {
