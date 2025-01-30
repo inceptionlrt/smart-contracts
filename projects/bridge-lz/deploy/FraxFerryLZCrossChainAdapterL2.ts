@@ -69,7 +69,7 @@ const deploy: DeployFunction = async (hre) => {
     );
   }
 
-  const rebalancerAddress = "0x22cC881644076E5Db51ed965A7873c723A632A09";
+  const rebalancerAddress = "0x7c702FFfCB87a0d72613bDed942925b462aCcBf0";
 
   console.log(`Using EndpointV2 Address: ${endpointAddress}`);
   console.log(`Using Fraxferry Address: ${ferryAddress}`);
