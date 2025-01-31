@@ -23,7 +23,7 @@ const func: DeployFunction = async function ({ deployments, network }) {
   } else {
     libAddress = "0x4db1487f376efe5116af8491ece85f52e7082ce8";
   }
-  console.log("InceptionLibrary address(15):", libAddress);
+  console.log("InceptionLibrary address(16):", libAddress);
 
   /// 2. RestakingPool Upgrade
   const RestakingPoolFactory = await ethers.getContractFactory("RestakingPool", {
@@ -56,8 +56,8 @@ const func: DeployFunction = async function ({ deployments, network }) {
 };
 
 module.exports = func;
-module.exports.tags = ["15_upgrade_pool"];
+module.exports.tags = ["16_upgrade_pool"];
 module.exports.dependencies = [];
 module.exports.skip = false;
-module.exports.id = "15";
+module.exports.id = "16";
 

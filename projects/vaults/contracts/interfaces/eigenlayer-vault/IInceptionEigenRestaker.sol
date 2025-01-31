@@ -44,12 +44,17 @@ interface IInceptionEigenRestaker {
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) external;
 
+    function redelegateToOperator(
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external;
+
     function withdrawFromEL(uint256 shares) external;
 
     function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external returns (uint256);
 

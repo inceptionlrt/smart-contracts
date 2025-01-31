@@ -153,7 +153,7 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
         address staker
     ) internal returns (uint256) {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
+        uint256 totalAssetSharesInEL = strategyManager.stakerDepositShares(
             staker,
             strategy
         );
@@ -184,7 +184,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
     ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
-        uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
         bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
 
         for (uint256 i = 0; i < withdrawalsNum; ++i) {
@@ -200,7 +199,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
-                middlewareTimesIndexes,
                 receiveAsTokens
             );
         } else {
@@ -209,7 +207,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
                 .claimWithdrawals(
                     withdrawals,
                     tokens,
-                    middlewareTimesIndexes,
                     receiveAsTokens
                 );
         }
@@ -230,17 +227,11 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
     function _claimCompletedWithdrawalsForVault(
         IDelegationManager.Withdrawal[] memory withdrawals,
         IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) internal returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
 
-        delegationManager.completeQueuedWithdrawals(
-            withdrawals,
-            tokens,
-            middlewareTimesIndexes,
-            receiveAsTokens
-        );
+        delegationManager.completeQueuedWithdrawals(withdrawals, tokens, receiveAsTokens);
 
         // send tokens to the vault
         uint256 withdrawnAmount = _asset.balanceOf(address(this)) -

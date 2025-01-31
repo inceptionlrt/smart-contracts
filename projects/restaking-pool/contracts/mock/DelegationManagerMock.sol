@@ -29,14 +29,12 @@ contract DelegationManagerMock is IDelegationManager {
     function completeQueuedWithdrawal(
         Withdrawal calldata withdrawal,
         IERC20[] calldata tokens,
-        uint256 middlewareTimesIndex,
         bool receiveAsTokens
     ) external override {}
 
     function completeQueuedWithdrawals(
         Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external override {}
 

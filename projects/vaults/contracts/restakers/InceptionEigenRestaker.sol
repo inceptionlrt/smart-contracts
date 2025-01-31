@@ -98,6 +98,20 @@ contract InceptionEigenRestaker is
         );
     }
 
+    function redelegateToOperator(
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee {
+        if (newOperator == address(0)) revert NullParams();
+
+        _delegationManager.redelegate(
+            newOperator,
+            newOperatorApproverSig,
+            approverSalt
+        );
+    }
+
     function withdrawFromEL(uint256 shares) external onlyTrustee {
         uint256[] memory sharesToWithdraw = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
@@ -121,7 +135,6 @@ contract InceptionEigenRestaker is
     function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -129,7 +142,6 @@ contract InceptionEigenRestaker is
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
@@ -150,9 +162,10 @@ contract InceptionEigenRestaker is
         return 2;
     }
 
-    function setRewardsCoordinator(
-        address newRewardsCoordinator
-    ) external onlyOwner {
+    function setRewardsCoordinator(address newRewardsCoordinator)
+        external
+        onlyOwner
+    {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 

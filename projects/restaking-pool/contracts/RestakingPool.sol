@@ -477,7 +477,6 @@ contract RestakingPool is
         string memory provider,
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) external onlyOperator {
         IDelegationManager restaker = IDelegationManager(
@@ -486,7 +485,6 @@ contract RestakingPool is
         restaker.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
     }

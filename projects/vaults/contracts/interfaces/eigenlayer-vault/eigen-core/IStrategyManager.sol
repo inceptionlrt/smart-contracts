@@ -3,7 +3,26 @@ pragma solidity ^0.8.20;
 
 import "./IStrategy.sol";
 
-interface IStrategyManager {
+interface IStrategyManagerErrors {
+    /// @dev Thrown when total strategies deployed exceeds max.
+    error MaxStrategiesExceeded();
+    /// @dev Thrown when call attempted from address that's not delegation manager.
+    error OnlyDelegationManager();
+    /// @dev Thrown when call attempted from address that's not strategy whitelister.
+    error OnlyStrategyWhitelister();
+    /// @dev Thrown when provided `shares` amount is too high.
+    error SharesAmountTooHigh();
+    /// @dev Thrown when provided `shares` amount is zero.
+    error SharesAmountZero();
+    /// @dev Thrown when provided `staker` address is null.
+    error StakerAddressZero();
+    /// @dev Thrown when provided `strategy` not found.
+    error StrategyNotFound();
+    /// @dev Thrown when attempting to deposit to a non-whitelisted strategy.
+    error StrategyNotWhitelisted();
+}
+
+interface IStrategyManager is IStrategyManagerErrors {
     struct WithdrawerAndNonce {
         address withdrawer;
         uint96 nonce;
@@ -26,18 +45,26 @@ interface IStrategyManager {
         uint256 amount
     ) external returns (uint256 shares);
 
-    function stakerStrategyShares(
-        address user,
-        IStrategy strategy
-    ) external view returns (uint256 shares);
+    function stakerStrategyShares(address user, IStrategy strategy)
+        external
+        view
+        returns (uint256 shares);
 
-    function getDeposits(
-        address depositor
-    ) external view returns (IStrategy[] memory, uint256[] memory);
+    /// @dev the same as stakerStrategyShares, but it's coming with Slashing Update For Node Operators/LRTs
+    function stakerDepositShares(address user, IStrategy strategy)
+        external
+        view
+        returns (uint256 depositShares);
 
-    function stakerStrategyListLength(
-        address staker
-    ) external view returns (uint256);
+    function getDeposits(address depositor)
+        external
+        view
+        returns (IStrategy[] memory, uint256[] memory);
+
+    function stakerStrategyListLength(address staker)
+        external
+        view
+        returns (uint256);
 
     function queueWithdrawal(
         uint256[] calldata strategyIndexes,
@@ -77,9 +104,10 @@ interface IStrategyManager {
         uint256[] calldata indicesToSkip
     ) external;
 
-    function calculateWithdrawalRoot(
-        QueuedWithdrawal memory queuedWithdrawal
-    ) external pure returns (bytes32);
+    function calculateWithdrawalRoot(QueuedWithdrawal memory queuedWithdrawal)
+        external
+        pure
+        returns (bytes32);
 
     function addStrategiesToDepositWhitelist(
         IStrategy[] calldata strategiesToWhitelist
@@ -91,9 +119,10 @@ interface IStrategyManager {
 
     function withdrawalDelayBlocks() external view returns (uint256);
 
-    function numWithdrawalsQueued(
-        address account
-    ) external view returns (uint256);
+    function numWithdrawalsQueued(address account)
+        external
+        view
+        returns (uint256);
 
     function delegation() external view returns (address);
 }

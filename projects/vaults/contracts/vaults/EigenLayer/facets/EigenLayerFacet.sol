@@ -30,6 +30,55 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
     }
 
+    function redelegateToOperator(
+        address elOperator,
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external nonReentrant {
+        if (elOperator == address(0) || newOperator == address(0))
+            revert NullParams();
+
+        // try to find a restaker for the specific EL operator
+        address restaker = _operatorRestakers[elOperator];
+        if (restaker == address(0)) revert OperatorNotRegistered();
+        if (restaker == _MOCK_ADDRESS) revert OperatorNotDelegated();
+
+        // try to find a restaker for the specific new operator
+        address newOperatorRestaker = _operatorRestakers[newOperator];
+        if (newOperatorRestaker == address(0)) revert OperatorNotRegistered();
+        if (newOperatorRestaker != _MOCK_ADDRESS)
+            revert OperatorAlreadyDelegated();
+
+        _operatorRestakers[newOperator] = restaker;
+        _operatorRestakers[elOperator] = _MOCK_ADDRESS;
+
+        _redelegateToOperator(
+            restaker,
+            newOperator,
+            newOperatorApproverSig,
+            approverSalt
+        );
+
+        emit RedelegatedTo(restaker, elOperator, newOperator);
+    }
+
+    /**
+     * @dev redelegates assets held in the strategy to the new operator.
+     */
+    function _redelegateToOperator(
+        address restaker,
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) internal {
+        IInceptionEigenRestaker(restaker).redelegateToOperator(
+            newOperator,
+            newOperatorApproverSig,
+            approverSalt
+        );
+    }
+
     function delegateToOperator(
         uint256 amount,
         address elOperator,
@@ -83,10 +132,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     }
 
     /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategy(
-        address restaker,
-        uint256 amount
-    ) internal {
+    function _depositAssetIntoStrategy(address restaker, uint256 amount)
+        internal
+    {
         _asset.approve(restaker, amount);
         IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
@@ -123,10 +171,10 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
      * @dev performs creating a withdrawal request from EigenLayer
      * @dev requires a specific amount to withdraw
      */
-    function undelegateFrom(
-        address elOperatorAddress,
-        uint256 amount
-    ) external nonReentrant {
+    function undelegateFrom(address elOperatorAddress, uint256 amount)
+        external
+        nonReentrant
+    {
         address staker = _operatorRestakers[elOperatorAddress];
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
@@ -136,12 +184,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         );
     }
 
-    function _undelegate(
-        uint256 amount,
-        address staker
-    ) internal returns (uint256) {
+    function _undelegate(uint256 amount, address staker)
+        internal
+        returns (uint256)
+    {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
-        uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
+        uint256 totalAssetSharesInEL = strategyManager.stakerDepositShares(
             staker,
             strategy
         );
@@ -149,6 +197,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
 
         // we need to withdraw the remaining dust from EigenLayer
         if (totalAssetSharesInEL < shares + 5) shares = totalAssetSharesInEL;
+
+        IStrategy[] memory strategies = new IStrategy[](1);
+        strategies[0] = strategy;
+        (uint256[] memory withdrawableShares, ) = delegationManager
+            .getWithdrawableShares(staker, strategies);
+        if (shares > withdrawableShares[0]) revert WithdrawableSharesExceeded();
 
         amount = strategy.sharesToUnderlyingView(shares);
         _pendingWithdrawalAmount += amount;
@@ -173,7 +227,6 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
-        uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
         bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
 
         for (uint256 i = 0; i < withdrawalsNum; ++i) {
@@ -189,18 +242,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
-                middlewareTimesIndexes,
                 receiveAsTokens
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
             withdrawnAmount = IInceptionEigenRestaker(restaker)
-                .claimWithdrawals(
-                    withdrawals,
-                    tokens,
-                    middlewareTimesIndexes,
-                    receiveAsTokens
-                );
+                .claimWithdrawals(withdrawals, tokens, receiveAsTokens);
         }
 
         emit WithdrawalClaimed(withdrawnAmount);
@@ -219,7 +266,6 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
     function _claimCompletedWithdrawalsForVault(
         IDelegationManager.Withdrawal[] memory withdrawals,
         IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) internal returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -227,7 +273,6 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
@@ -242,9 +287,11 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         _updateEpoch(getFreeBalance());
     }
 
-    function _restakerExists(
-        address restakerAddress
-    ) internal view returns (bool) {
+    function _restakerExists(address restakerAddress)
+        internal
+        view
+        returns (bool)
+    {
         uint256 numOfRestakers = restakers.length;
         for (uint256 i = 0; i < numOfRestakers; ++i) {
             if (restakerAddress == restakers[i]) return true;
@@ -268,10 +315,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         }
     }
 
-    function forceUndelegateRecovery(
-        uint256 amount,
-        address restaker
-    ) external {
+    function forceUndelegateRecovery(uint256 amount, address restaker)
+        external
+    {
         if (restaker == address(0)) revert NullParams();
         for (uint256 i = 0; i < restakers.length; ++i) {
             if (
@@ -323,9 +369,5 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         startTimeline = block.timestamp;
 
         emit RewardsAdded(amount, startTimeline);
-    }
-
-    function setPendingWithdrawalAmount(uint256 newPendingWithdrawalAmount) external {
-        _pendingWithdrawalAmount = newPendingWithdrawalAmount;
     }
 }

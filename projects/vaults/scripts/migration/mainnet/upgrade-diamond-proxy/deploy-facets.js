@@ -1,5 +1,4 @@
 const { ethers } = require("hardhat");
-const fs = require("fs");
 
 const INCEPTION_LIBRARY = "0x8a6a8a7233b16d0ecaa7510bfd110464a0d69f66";
 

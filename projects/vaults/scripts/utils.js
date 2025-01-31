@@ -23,6 +23,9 @@ async function readJsonFiles(dirPath) {
       const filePath = path.join(dirPath, file);
       const fileContent = await fs.readFile(filePath, "utf8");
       const jsonData = JSON.parse(fileContent);
+      if (!file.includes("mainnet_")) {
+        continue;
+      }
       const modifiedName = file.replace("mainnet_", "").replace(".json", "");
       vaults.set(modifiedName, jsonData);
     }
@@ -105,3 +108,4 @@ module.exports = {
   readJsonFiles,
   printBalance,
 };
+
