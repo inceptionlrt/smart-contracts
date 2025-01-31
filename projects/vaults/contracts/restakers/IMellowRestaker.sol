@@ -132,7 +132,7 @@ contract IMellowRestaker is
 
         uint256 lpAmount = IERC4626(_mellowVault).withdraw(amount,address(this), address(this));
         
-        return amount;
+        return lpAmountToAmount(lpAmount, mellowVault);
     }
 
     function claimPending() external returns (uint256) {
@@ -226,6 +226,11 @@ contract IMellowRestaker is
         return total;
     }
 
+    function claimableWithdrawalAmount(address _mellowVault) external view returns (uint256) {
+
+        return IMellowSymbioticVault(_mellowVault).claimableAssetsOf(address(this));
+    }
+
     function pendingWithdrawalAmount() external view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
@@ -234,6 +239,11 @@ contract IMellowRestaker is
         }
 
         return total;
+    }
+
+    function pendingWithdrawalAmount(address _mellowVault) external view returns (uint256) {
+
+        return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
     }
 
     function getDeposited(address _mellowVault) public view returns (uint256) {
