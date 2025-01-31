@@ -63,8 +63,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ////////////////////////////*/
 
     function _beforeDeposit(uint256 amount) internal view {
-        if (amount > getFreeBalance())
-            revert InsufficientCapacity(totalAssets());
+        uint256 freeBalance = getFreeBalance();
+        if (amount > freeBalance)
+            revert InsufficientCapacity(freeBalance);
     }
 
     function _depositAssetInto_Mellow(
@@ -95,6 +96,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         uint256 deadline
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ValueZero();
         amount = mellowRestaker.withdrawMellow(
             mellowVault,
             amount,
@@ -114,6 +116,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         onlyOperator
     {
         if (vault == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ValueZero();
         amount = symbioticRestaker.withdraw(vault, amount);
 
         /// TODO
@@ -124,6 +127,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawalsMellow()
         public
+        onlyOperator
         whenNotPaused
         nonReentrant
     {
@@ -139,6 +143,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     function claimCompletedWithdrawalsSymbiotic(address vault, uint256 sEpoch)
         public
+        onlyOperator
         whenNotPaused
         nonReentrant
     {
@@ -151,7 +156,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function updateEpoch() external whenNotPaused {
+    function updateEpoch() external onlyOperator whenNotPaused {
         _updateEpoch(getFreeBalance());
     }
 
@@ -243,7 +248,8 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         external
         onlyOwner
     {
-        if (newTargetCapacity <= 0) revert InvalidTargetFlashCapacity();
+        if (newTargetCapacity == 0) revert InvalidTargetFlashCapacity();
+        if (newTargetCapacity >= MAX_TARGET_PERCENT) revert MoreThanMax();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }

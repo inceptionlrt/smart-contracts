@@ -53,6 +53,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) private _traversalEpoch;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -235,7 +237,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (receiver == address(0)) revert NullParams();
 
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (treasury == address(0)) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -292,6 +293,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
+        _traversalEpoch[receiver] = epoch - 1;
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
@@ -365,7 +367,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasury
-        _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (protocolWithdrawalFee != 0) _transferAssetTo(treasury, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -427,7 +429,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        for (uint256 i = 0; i < epoch; ++i) {
+        for (uint256 i = _traversalEpoch[claimer]; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
@@ -617,16 +619,19 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     }
 
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
-    function setFlashMinAmont(uint256 newMinAmount) external onlyOwner {
+    function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }
