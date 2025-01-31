@@ -14,3 +14,5 @@ artifacts
 # Inception LRT custom ignore
 *.tgz
 /projects/tests/omnivault-rebalancer/contracts/
+/projects/omnichain-deployer/contracts/
+

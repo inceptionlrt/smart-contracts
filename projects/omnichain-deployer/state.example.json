@@ -1,0 +1,20 @@
+{
+    "chainIdL1": "1",
+    
+    "inceptionLibAddress": "",
+    "strategyAddress": "",
+    "ratioFeedAddressL1": "",
+    
+    "iTokenAddressL1": "",
+    "iVaultAddressL1": "",
+    "lockbox": "",
+    "crossChainL1": "",
+    "rebalancer": "",
+
+    "underlyingAssetL1": "",
+    "underlyingAssetL2": "",
+    "iTokenAddressL2": "",
+    "iVaultAddressL2": "",
+    "crossChainL2": ""
+    
+}
