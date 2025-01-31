@@ -203,7 +203,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetInto_Mellow(amount, mellowVault, deadline);
+        _depositAssetIntoMellow(amount, mellowVault, deadline);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;

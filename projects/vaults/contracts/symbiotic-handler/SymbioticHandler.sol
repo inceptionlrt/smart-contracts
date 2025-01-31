@@ -67,7 +67,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
             revert InsufficientCapacity(totalAssets());
     }
 
-    function _depositAssetInto_Mellow(
+    function _depositAssetIntoMellow(
         uint256 amount,
         address mellowVault,
         uint256 deadline
@@ -89,7 +89,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
-    function undelegateFrom_Mellow(
+    function undelegateFromMellow(
         address mellowVault,
         uint256 amount,
         uint256 deadline
