@@ -13,7 +13,8 @@ interface IIMellowRestaker is IIBaseRestaker {
     error InvalidWrapperForVault();
     error InvalidAllocation();
     error TooMuchSlippage();
-
+    error AlreadyDeactivated();
+    
     event AllocationChanged(
         address mellowVault,
         uint256 oldAllocation,
@@ -39,6 +40,8 @@ interface IIMellowRestaker is IIBaseRestaker {
         address indexed _oldWrapper,
         address indexed _newWrapper
     );
+
+    event DeactivatedMellowVault(address indexed _mellowVault);
 
     function delegateMellow(
         uint256 amount,
