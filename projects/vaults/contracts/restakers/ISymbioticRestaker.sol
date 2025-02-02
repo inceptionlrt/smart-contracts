@@ -74,12 +74,13 @@ contract ISymbioticRestaker is
         _trusteeManager = trusteeManager;
     }
 
-    function delegate(uint256 amount, address vaultAddress)
+    function delegate(address vaultAddress, uint256 amount)
         external
         onlyTrustee
         whenNotPaused
         returns (uint256 depositedAmount, uint256 mintedShares)
     {
+        require(_vaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(_vault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
         return IVault(vaultAddress).deposit(address(this), amount);
@@ -91,9 +92,13 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256)
     {
+        require(_vaults.contains(vaultAddress), InvalidVault());
+        require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
+
         IVault vault = IVault(vaultAddress);
         (, uint256 mintedShares) = vault.withdraw(address(this), amount);
         withdrawals[vaultAddress] = vault.currentEpoch() + 1;
+
         return mintedShares;
     }
 
@@ -103,6 +108,9 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256)
     {
+        require(_vaults.contains(vaultAddress), InvalidVault());
+        require(withdrawals[vaultAddress] != 0, NothingToClaim());
+
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_vault, sEpoch);
     }

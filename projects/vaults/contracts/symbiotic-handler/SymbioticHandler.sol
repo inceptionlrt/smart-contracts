@@ -8,11 +8,12 @@ import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISym
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-
-/// @author The InceptionLRT team
-/// @title The SymbioticHandler contract
-/// @dev Serves communication with external Mellow Protocol
-/// @dev Specifically, this includes depositing, and handling withdrawal requests
+/**
+ * @title The SymbioticHandler contract
+ * @author The InceptionLRT team
+ * @dev Serves communication with external Mellow Protocol
+ * @dev Specifically, this includes depositing, and handling withdrawal requests
+ */
 contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     using SafeERC20 for IERC20;
 
@@ -64,8 +65,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     function _beforeDeposit(uint256 amount) internal view {
         uint256 freeBalance = getFreeBalance();
-        if (amount > freeBalance)
-            revert InsufficientCapacity(freeBalance);
+        if (amount > freeBalance) revert InsufficientCapacity(freeBalance);
     }
 
     function _depositAssetIntoMellow(
@@ -81,7 +81,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         internal
     {
         _asset.safeIncreaseAllowance(address(symbioticRestaker), amount);
-        symbioticRestaker.delegate(amount, vault);
+        symbioticRestaker.delegate(vault, amount);
     }
 
     /*/////////////////////////////////

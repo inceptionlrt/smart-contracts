@@ -6,9 +6,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IIBaseRestaker} from "./IIBaseRestaker.sol";
 
 interface IISymbioticRestaker is IIBaseRestaker {
+    error WithdrawalInProgress();
+
+    error NothingToClaim();
+
     event VaultAdded(address indexed vault);
 
-    function delegate(uint256 amount, address vaultAddress)
+    function delegate(address vaultAddress, uint256 amount)
         external
         returns (uint256 depositedAmount, uint256 mintedShares);
 
@@ -16,5 +20,7 @@ interface IISymbioticRestaker is IIBaseRestaker {
         external
         returns (uint256);
 
-    function claim(address vault, uint256 epoch) external returns (uint256);
+    function claim(address vaultAddress, uint256 epoch)
+        external
+        returns (uint256);
 }

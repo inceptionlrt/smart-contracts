@@ -14,7 +14,7 @@ interface IIMellowRestaker is IIBaseRestaker {
     error InvalidAllocation();
     error TooMuchSlippage();
     error AlreadyDeactivated();
-    
+
     event AllocationChanged(
         address mellowVault,
         uint256 oldAllocation,
