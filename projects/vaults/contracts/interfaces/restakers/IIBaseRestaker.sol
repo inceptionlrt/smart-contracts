@@ -28,6 +28,8 @@ interface IIBaseRestaker {
 
     error NotContract();
 
+    error InvalidDataLength(uint256 expected, uint256 received);
+
     /************************************
      ************** Events **************
      ************************************/

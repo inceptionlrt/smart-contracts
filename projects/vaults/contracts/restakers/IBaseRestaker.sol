@@ -49,22 +49,22 @@ abstract contract IBaseRestaker is
     }
 
     function delegate(
-        uint256 amount,
         address vault,
+        uint256 amount,
         bytes calldata _data
     ) external virtual returns (uint256 depositedAmount);
 
     function withdraw(
         address vault,
-        uint256 amount,
+        uint256 shares,
         bytes calldata _data
     ) external virtual returns (uint256);
+
+    function claim(bytes calldata _data) external virtual returns (uint256);
 
     function claimableAmount() external view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
-
-    function claim() external virtual returns (uint256);
 
     function pendingWithdrawalAmount()
         external

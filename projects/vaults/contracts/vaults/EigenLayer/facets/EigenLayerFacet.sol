@@ -75,11 +75,13 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        IIEigenLayerRestaker(restaker).delegateToOperator(
-            elOperator,
-            approverSalt,
-            approverSignatureAndExpiry
-        );
+        bytes[] memory _data = new bytes[](2);
+        // Encode the bytes32 value.
+        _data[0] = abi.encode(approverSalt);
+        // Encode the struct.
+        _data[1] = abi.encode(approverSignatureAndExpiry);
+
+        IIEigenLayerRestaker(restaker).delegate(elOperator, 0, _data);
     }
 
     /// @dev deposits asset to the corresponding strategy
@@ -87,7 +89,11 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         internal
     {
         _asset.approve(restaker, amount);
-        IIEigenLayerRestaker(restaker).depositAssetIntoStrategy(amount);
+        IIEigenLayerRestaker(restaker).delegate(
+            address(0),
+            amount,
+            new bytes[](0)
+        );
 
         emit DepositedToEL(restaker, amount);
     }
@@ -130,8 +136,10 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-        IIEigenLayerRestaker(staker).withdrawFromEL(
-            _undelegate(amount, staker)
+        IIEigenLayerRestaker(staker).withdraw(
+            address(0),
+            _undelegate(amount, staker),
+            new bytes[](0)
         );
     }
 
@@ -193,12 +201,15 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IIEigenLayerRestaker(restaker).claimWithdrawals(
-                withdrawals,
-                tokens,
-                middlewareTimesIndexes,
-                receiveAsTokens
-            );
+            bytes[] memory _data = new bytes[](4);
+            // Encode the bytes32 value.
+            _data[0] = abi.encode(withdrawals);
+            // Encode the struct.
+            _data[1] = abi.encode(tokens);
+            _data[2] = abi.encode(middlewareTimesIndexes);
+            _data[3] = abi.encode(receiveAsTokens);
+
+            withdrawnAmount = IIEigenLayerRestaker(restaker).claim(_data);
         }
 
         emit WithdrawalClaimed(withdrawnAmount);

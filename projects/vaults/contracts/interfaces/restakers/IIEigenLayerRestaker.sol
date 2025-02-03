@@ -40,22 +40,21 @@ interface IIEigenLayerRestaker is IIBaseRestaker {
         address indexed newValue
     );
 
-    function depositAssetIntoStrategy(uint256 amount) external;
+    // function depositAssetIntoStrategy(uint256 amount) external;
 
-    function delegateToOperator(
+    function delegate(
         address operator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
+        uint256 amount,
+        bytes[] calldata _data
+    ) external returns (uint256);
+
+    function withdraw(
+        address, /*vault*/
+        uint256 shares,
+        bytes[] calldata _data
     ) external;
 
-    function withdrawFromEL(uint256 shares) external;
-
-    function claimWithdrawals(
-        IDelegationManager.Withdrawal[] calldata withdrawals,
-        IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
-        bool[] calldata receiveAsTokens
-    ) external returns (uint256);
+    function claim(bytes[] calldata _data) external returns (uint256);
 
     function setRewardsCoordinator(address newRewardCoordinator) external;
 }

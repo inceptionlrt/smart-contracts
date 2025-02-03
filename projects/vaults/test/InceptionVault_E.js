@@ -17,6 +17,7 @@ const {
   day,
 } = require("./helpers/utils.js");
 const { applyProviderWrappers } = require("hardhat/internal/core/providers/construction");
+const { ZeroAddress } = require("ethers");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
 };
@@ -1675,6 +1676,12 @@ assets.forEach(function (a) {
 
     describe("InceptionEigenRestaker", function () {
       let restaker, iVaultMock, trusteeManager;
+      const coder = new ethers.AbiCoder();
+      const encodedSignatureWithExpiry = coder.encode(
+        ["tuple(uint256 expiry, bytes signature)"],
+        [{ expiry: 0, signature: ethers.ZeroHash }],
+      );
+      const delegateData = [ethers.ZeroHash, encodedSignatureWithExpiry];
 
       beforeEach(async function () {
         await snapshot.restore();
@@ -1695,10 +1702,9 @@ assets.forEach(function (a) {
       it("depositAssetIntoStrategy: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await expect(restaker.connect(staker).depositAssetIntoStrategy(amount)).to.be.revertedWithCustomError(
-          restaker,
-          "OnlyTrusteeAllowed",
-        );
+        await expect(
+          restaker.connect(staker).delegate(ZeroAddress, amount, delegateData),
+        ).to.be.revertedWithCustomError(restaker, "NotVaultOrTrusteeManager");
       });
 
       it("getOperatorAddress: equals 0 address before any delegation", async function () {
@@ -1708,62 +1714,56 @@ assets.forEach(function (a) {
       it("getOperatorAddress: equals operator after delegation", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
-        await restaker
-          .connect(trusteeManager)
-          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
+        await restaker.connect(trusteeManager).delegate(nodeOperators[0], 0n, delegateData);
         expect(await restaker.getOperatorAddress()).to.be.eq(nodeOperators[0]);
       });
 
       it("delegateToOperator: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
+        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
 
         await expect(
-          restaker.connect(staker).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
-        ).to.be.revertedWithCustomError(restaker, "OnlyTrusteeAllowed");
+          restaker.connect(staker).delegate(nodeOperators[0], 0n, delegateData),
+        ).to.be.revertedWithCustomError(restaker, "NotVaultOrTrusteeManager");
       });
 
       it("delegateToOperator: reverts when delegates to 0 address", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
+        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
 
         await expect(
-          restaker
-            .connect(trusteeManager)
-            .delegateToOperator(ethers.ZeroAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]),
+          restaker.connect(trusteeManager).delegate(ethers.ZeroAddress, 0n, delegateData),
         ).to.be.revertedWithCustomError(restaker, "NullParams");
       });
 
       it("delegateToOperator: reverts when delegates unknown operator", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
+        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
 
         const unknownOperator = ethers.Wallet.createRandom().address;
-        await expect(
-          restaker.connect(trusteeManager).delegateToOperator(unknownOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
-        ).to.be.revertedWith("DelegationManager._delegate: operator is not registered in EigenLayer");
+        await expect(restaker.connect(trusteeManager).delegate(unknownOperator, 0n, delegateData)).to.be.revertedWith(
+          "DelegationManager._delegate: operator is not registered in EigenLayer",
+        );
       });
 
       it("withdrawFromEL: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
-        await restaker
-          .connect(trusteeManager)
-          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
+        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
+        await restaker.connect(trusteeManager).delegate(nodeOperators[0], 0n, delegateData);
 
-        await expect(restaker.connect(staker).withdrawFromEL(amount / 2n)).to.be.revertedWithCustomError(
+        await expect(restaker.connect(staker).withdraw(ZeroAddress, amount / 2n, [])).to.be.revertedWithCustomError(
           restaker,
-          "OnlyTrusteeAllowed",
+          "NotVaultOrTrusteeManager",
         );
       });
 
-      it("getVersion: equals 2", async function () {
-        expect(await restaker.getVersion()).to.be.eq(2);
+      it("getVersion: equals 3", async function () {
+        expect(await restaker.getVersion()).to.be.eq(3);
       });
 
       it("pause(): only owner can", async function () {

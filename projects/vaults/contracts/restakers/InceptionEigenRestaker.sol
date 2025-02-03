@@ -77,28 +77,43 @@ contract InceptionEigenRestaker is
         _asset.approve(strategyManager, type(uint256).max);
     }
 
-    function depositAssetIntoStrategy(uint256 amount) external onlyTrustee {
-        // transfer from the vault
-        _asset.safeTransferFrom(_vault, address(this), amount);
-        // deposit the asset to the appropriate strategy
-        _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
-    }
-
-    function delegateToOperator(
+    function delegate(
         address operator,
-        bytes32 approverSalt,
-        IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
-    ) external onlyTrustee {
-        if (operator == address(0)) revert NullParams();
+        uint256 amount,
+        bytes[] calldata _data
+    ) external override onlyTrustee returns (uint256) {
+        /// 1. delegate or depositIntoStrategy
+        if (amount > 0 && operator == address(0)) {
+            // transfer from the vault
+            _asset.safeTransferFrom(_vault, address(this), amount);
+            // deposit the asset to the appropriate strategy
+            return
+                _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
+        }
+        require(operator != address(0), NullParams());
+        require(_data.length == 2, InvalidDataLength(4, _data.length));
+        bytes32 approverSalt = abi.decode(_data[0], (bytes32));
+        IDelegationManager.SignatureWithExpiry
+            memory approverSignatureAndExpiry = abi.decode(
+                _data[1],
+                (IDelegationManager.SignatureWithExpiry)
+            );
 
         _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
         );
+        return 0;
     }
 
-    function withdrawFromEL(uint256 shares) external onlyTrustee {
+    function withdraw(
+        address, /*vault*/
+        uint256 shares,
+        bytes[] calldata _data
+    ) external onlyTrustee {
+        require(_data.length == 0, InvalidDataLength(0, _data.length));
+
         uint256[] memory sharesToWithdraw = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
 
@@ -118,13 +133,23 @@ contract InceptionEigenRestaker is
         _delegationManager.queueWithdrawals(withdrawals);
     }
 
-    function claimWithdrawals(
-        IDelegationManager.Withdrawal[] calldata withdrawals,
-        IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
-        bool[] calldata receiveAsTokens
-    ) external onlyTrustee returns (uint256) {
+    function claim(bytes[] calldata _data)
+        external
+        onlyTrustee
+        returns (uint256)
+    {
         uint256 balanceBefore = _asset.balanceOf(address(this));
+
+        IDelegationManager.Withdrawal[] memory withdrawals = abi.decode(
+            _data[0],
+            (IDelegationManager.Withdrawal[])
+        );
+        IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
+        uint256[] memory middlewareTimesIndexes = abi.decode(
+            _data[2],
+            (uint256[])
+        );
+        bool[] memory receiveAsTokens = abi.decode(_data[3], (bool[]));
 
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
@@ -150,11 +175,9 @@ contract InceptionEigenRestaker is
         return 0;
     }
 
-    function getDeposited(address operatorAddress)
-        external
-        view
-        returns (uint256)
-    {
+    function getDeposited(
+        address /*operatorAddress*/
+    ) external view returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
