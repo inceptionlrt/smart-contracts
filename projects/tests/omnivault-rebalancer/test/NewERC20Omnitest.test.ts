@@ -247,48 +247,102 @@ describe("Omnivault integration tests", function () {
             iToken, // l2
             ratioFeedL2,
             omniVault, // l2
-//            maliciousAdapterL1,
-//            maliciousAdapterL2,
-          ];
-        }
+            //            maliciousAdapterL1,
+            //            maliciousAdapterL2,
+        ];
+    }
 
 
-        before(async function () {
-            [owner, operator, treasury, signer1, signer2, signer3, target] = await ethers.getSigners();
-            [
-                adapterL1, // l1 receiver adapter
-                ethEndpoint,
-                adapterFrax, // l2 adapter
-                fraxEndpoint,
-                iTokenL1, // l1 token
-                rebalancer,
-                ratioFeedL1,
-                inceptionVault, // l1
-                iTokenL2, // l2
-                ratioFeedL2,
-                omniVault,
-            ] = await init(owner, operator);
-        
-            snapshot = await takeSnapshot();
-          });
+    before(async function () {
+        [owner, operator, treasury, signer1, signer2, signer3, target] = await ethers.getSigners();
+        [
+            adapterL1, // l1 receiver adapter
+            ethEndpoint,
+            adapterFrax, // l2 adapter
+            fraxEndpoint,
+            iTokenL1, // l1 token
+            rebalancer,
+            ratioFeedL1,
+            inceptionVault, // l1
+            iTokenL2, // l2
+            ratioFeedL2,
+            omniVault,
+        ] = await init(owner, operator);
 
-          describe("InceptionVault", function () {
-            describe("After deployments checks", function () {
-              before(async function () {
+        snapshot = await takeSnapshot();
+    });
+
+    describe("InceptionVault", function () {
+        describe("After deployments checks", function () {
+            before(async function () {
                 await snapshot.restore();
-              });
-        
-              it("Signer can stake", async function () {
-                await underlyingL2.connect(signer1).approve(omniVault.getAddress(), 2n*e18)
-                await omniVault.connect(signer1).deposit(2n * e18, signer1);
-              });
-        
-              it("Get min stake amount", async function () {
-                console.log("Min stake amount: ", await omniVault.minAmount());
-              });
             });
-          });
-        
-    })
 
-    
+            it("Signer can stake", async function () {
+                await underlyingL2.connect(signer1).approve(omniVault.getAddress(), 2n * e18)
+                await omniVault.connect(signer1).deposit(2n * e18, signer1);
+            });
+
+            it("Get min stake amount", async function () {
+                console.log("Min stake amount: ", await omniVault.minAmount());
+            });
+        });
+    });
+
+
+
+
+
+
+
+    describe("Bridge base flow", function () {
+        const TARGET = e18 / 10n;
+        let iTokenOpt: InceptionToken;
+        let omniVaultOpt: InceptionERC20OmniVault;
+        let ratioFeedL2Opt: InceptionRatioFeed;
+        before(async function () {
+            await snapshot.restore();
+        })
+
+
+        it("Sync ratio from ETH to FRAX", async function () {
+            const l1Ratio = await inceptionVault.ratio();
+            console.log("L1 ratio:", l1Ratio.format());
+            await ratioFeedL2.updateRatioBatch([iTokenL2.address], [l1Ratio]);
+            console.log("Frax ratio:", (await omniVault.ratio()).format());
+        });
+
+        it("Stake on FRAX", async function () {
+            await underlyingL2.mint(signer1, TARGET + e18);
+            await underlyingL2.mint(signer2, e18);
+            await underlyingL2.connect(signer1).approve(omniVault, TARGET + e18);
+            await omniVault.connect(signer1).deposit(TARGET + e18, signer1);
+            await underlyingL2.connect(signer2).approve(omniVault, e18);
+            await omniVault.connect(signer2).deposit(e18, signer2);
+            expect(await omniVault.getFreeBalance()).to.be.approximately(TARGET + e18 + e18, e18/1000000000000000n);
+            console.log(await iTokenL2.totalSupply());
+            console.log(await omniVault.getFlashCapacity());
+            console.log(await omniVault.getFreeBalance());
+            console.log(await ethers.provider.getBalance(omniVault.getAddress()));
+        });
+
+        let mintShares = 0n;
+        it("Send info from FRAX", async function () {
+            const totalSupply = await iTokenL2.totalSupply();
+            mintShares += totalSupply;
+            const ethBalance = await omniVault.getFlashCapacity();
+
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+            const timestamp = (await time.latest()) + 1;
+            const tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+            const txData = await rebalancer.getTransactionData(FRAX_ID);
+            await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(FRAX_ID, timestamp, ethBalance, totalSupply);
+            expect(txData.inceptionTokenSupply).to.be.eq(totalSupply);
+            expect(txData.underlyingBalance).to.be.eq(ethBalance);
+            expect(txData.timestamp).to.be.eq(timestamp);
+        });
+    })
+})
+
