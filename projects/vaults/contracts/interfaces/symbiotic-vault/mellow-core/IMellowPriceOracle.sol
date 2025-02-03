@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity ^0.8.28;
 
 /**
  * @title IPriceOracle
@@ -14,8 +14,8 @@ interface IMellowPriceOracle {
      * @dev Implementations should ensure prices are accurate and may involve external oracle data.
      *      Reverts with an appropriate error if the price cannot be provided.
      */
-    function priceX96(
-        address vault,
-        address token
-    ) external view returns (uint256 priceX96_);
+    function priceX96(address vault, address token)
+        external
+        view
+        returns (uint256 priceX96_);
 }

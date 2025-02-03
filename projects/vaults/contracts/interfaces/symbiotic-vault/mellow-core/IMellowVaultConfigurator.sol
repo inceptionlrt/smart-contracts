@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity 0.8.24;
+pragma solidity 0.8.28;
 
 /**
  * @title IVaultConfigurator
@@ -78,9 +78,10 @@ interface IMellowVaultConfigurator {
     /// @notice Checks if the specified delegate module is approved for use.
     /// @param module The address of the module to check.
     /// @return bool `true` if the module is approved, otherwise `false`.
-    function isDelegateModuleApproved(
-        address module
-    ) external view returns (bool);
+    function isDelegateModuleApproved(address module)
+        external
+        view
+        returns (bool);
 
     /// @notice Returns whether deposits are currently locked.
     /// @notice operator owned parameter.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -150,9 +150,10 @@ contract InceptionEigenRestaker is
         return 2;
     }
 
-    function setRewardsCoordinator(
-        address newRewardsCoordinator
-    ) external onlyOwner {
+    function setRewardsCoordinator(address newRewardsCoordinator)
+        external
+        onlyOwner
+    {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 

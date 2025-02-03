@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {MellowHandler, IIMellowRestaker, IERC20} from "../../mellow-handler/MellowHandler.sol";
+import {SymbioticHandler, IIMellowRestaker, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -14,7 +14,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
-contract InceptionVault_S is MellowHandler, IInceptionVault_S {
+contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
 
     /// @dev Inception restaking token
@@ -53,6 +53,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) private _traversalEpoch;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -61,7 +63,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         IIMellowRestaker _mellowRestaker
     ) internal {
         __Ownable2Step_init();
-        __MellowHandler_init(assetAddress, _mellowRestaker);
+        __SymbioticHandler_init(assetAddress, _mellowRestaker);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -105,11 +107,13 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Mints Inception tokens in accordance with the current ratio.
     /// @dev Issues the tokens to the specified receiver address.
     /** @dev See {IERC4626-deposit}. */
-    function deposit(
-        uint256 amount,
-        address receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _deposit(amount, msg.sender, receiver);
+    function deposit(uint256 amount, address receiver)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
+        return _deposit(amount, msg.sender, receiver, true);
     }
 
     /// @notice The deposit function but with a referral code
@@ -119,13 +123,14 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
-        return _deposit(amount, msg.sender, receiver);
+        return _deposit(amount, msg.sender, receiver, true);
     }
 
     function _deposit(
         uint256 amount,
         address sender,
-        address receiver
+        address receiver,
+        bool calculate
     ) internal returns (uint256) {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
@@ -134,7 +139,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
-        if (availableBonusAmount > 0) {
+        if (availableBonusAmount > 0 && calculate) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
                 depositBonus = availableBonusAmount;
@@ -155,16 +160,18 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /** @dev See {IERC4626-mint}. */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    function mint(uint256 shares, address receiver)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         uint256 maxShares = maxMint(msg.sender);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        _deposit(assetsAmount, msg.sender, receiver, false);
 
         return assetsAmount;
     }
@@ -172,6 +179,23 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /*/////////////////////////////////
     ////// Delegation functions //////
     ///////////////////////////////*/
+
+    /// @dev Sends underlying to a single mellow vault
+    function delegateToSymbioticVault(address vault, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyOperator
+    {
+        if (vault == address(0) || amount == 0) revert NullParams();
+
+        /// TODO
+        //  _beforeDeposit(amount);
+        _depositAssetIntoSymbiotic(amount, vault);
+
+        emit DelegatedTo(address(symbioticRestaker), vault, amount);
+        return;
+    }
 
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
@@ -189,7 +213,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+    function delegateAutoMellow(uint256 deadline)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyOperator
+    {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
         (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
@@ -209,20 +238,21 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (receiver == address(0)) revert NullParams();
 
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (treasury == address(0)) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
-    function withdraw(
-        uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+    function withdraw(uint256 iShares, address receiver)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = convertToAssets(iShares);
-        if (amount < withdrawMinAmount) revert LowerMinAmount(withdrawMinAmount);
+        if (amount < withdrawMinAmount)
+            revert LowerMinAmount(withdrawMinAmount);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
@@ -264,6 +294,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
+        _traversalEpoch[receiver] = epoch - 1;
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
@@ -302,10 +333,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     /// @dev Performs burning iToken from mgs.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
-    function flashWithdraw(
-        uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+    function flashWithdraw(uint256 iShares, address receiver)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
@@ -336,7 +368,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasury
-        _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (protocolWithdrawalFee != 0) _transferAssetTo(treasury, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -344,9 +376,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
-    function calculateDepositBonus(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateDepositBonus(uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
@@ -360,9 +394,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashWithdrawFee(
-        uint256 amount
-    ) public view returns (uint256) {
+    function calculateFlashWithdrawFee(uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
         uint256 targetCapacity = _getTargetCapacity();
@@ -381,9 +417,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function isAbleToRedeem(
-        address claimer
-    ) public view returns (bool able, uint256[] memory) {
+    function isAbleToRedeem(address claimer)
+        public
+        view
+        returns (bool able, uint256[] memory)
+    {
         // get the general request
         uint256 index;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
@@ -392,7 +430,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        for (uint256 i = 0; i < epoch; ++i) {
+        for (uint256 i = _traversalEpoch[claimer]; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
@@ -412,15 +450,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(
-        address mellowVault
-    ) external view returns (uint256) {
+    function getDelegatedTo(address mellowVault)
+        external
+        view
+        returns (uint256)
+    {
         return mellowRestaker.getDeposited(mellowVault);
     }
 
-    function getPendingWithdrawalOf(
-        address claimer
-    ) external view returns (uint256) {
+    function getPendingWithdrawalOf(address claimer)
+        external
+        view
+        returns (uint256)
+    {
         return _claimerWithdrawals[claimer].amount;
     }
 
@@ -466,9 +508,11 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
-    function previewRedeem(
-        uint256 shares
-    ) public view returns (uint256 assets) {
+    function previewRedeem(uint256 shares)
+        public
+        view
+        returns (uint256 assets)
+    {
         return
             convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));
@@ -479,16 +523,20 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////////////////////////////*/
 
     /** @dev See {IERC4626-convertToShares}. */
-    function convertToShares(
-        uint256 assets
-    ) public view returns (uint256 shares) {
+    function convertToShares(uint256 assets)
+        public
+        view
+        returns (uint256 shares)
+    {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
     /** @dev See {IERC4626-convertToAssets}. */
-    function convertToAssets(
-        uint256 iShares
-    ) public view returns (uint256 assets) {
+    function convertToAssets(uint256 iShares)
+        public
+        view
+        returns (uint256 assets)
+    {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
@@ -507,6 +555,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalBonusRate);
         if (newDepositUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newDepositUtilizationKink);
+        if (newOptimalBonusRate > newMaxBonusRate) 
+            revert InconsistentData();
 
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
@@ -530,6 +580,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalWithdrawalRate);
         if (newWithdrawUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+        if (newOptimalWithdrawalRate > newMaxFlashFeeRate) 
+            revert InconsistentData();
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
@@ -572,16 +624,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
-    function setFlashMinAmont(uint256 newMinAmount) external onlyOwner {
+    function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }

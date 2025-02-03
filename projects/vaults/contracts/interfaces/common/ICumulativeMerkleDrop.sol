@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.24;
+pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -38,7 +38,11 @@ interface ICumulativeMerkleDrop {
     /// @param account The account that made the claim.
     /// @param amount The amount of token claimed.
     /// @param amountToLock The amount of token locked.
-    event Claimed(address indexed account, uint256 amount, uint256 amountToLock);
+    event Claimed(
+        address indexed account,
+        uint256 amount,
+        uint256 amountToLock
+    );
 
     /// @notice event emitted when claim status is updated.
     /// @param oldStatus The old status of the claim.
@@ -53,7 +57,10 @@ interface ICumulativeMerkleDrop {
     /// @notice event emitted when stakingContract contract is updated.
     /// @param oldStakingContract The old stakingContract contract address.
     /// @param newStakingContract The new stakingContract contract address.
-    event StakingContractUpdated(address oldStakingContract, address newStakingContract);
+    event StakingContractUpdated(
+        address oldStakingContract,
+        address newStakingContract
+    );
 
     /// @notice event emitted when stakingContract contract is cleared.
     event StakingContractCleared();
@@ -63,7 +70,11 @@ interface ICumulativeMerkleDrop {
     /// @param amountToLock The amount of token to lock.
     /// @param merkleProof The merkle proof.
     /// @notice It is only possible to lock if there is a staking contract set.
-    function claimAndLock(uint256 cumulativeAmount, uint256 amountToLock, bytes32[] memory merkleProof) external;
+    function claimAndLock(
+        uint256 cumulativeAmount,
+        uint256 amountToLock,
+        bytes32[] memory merkleProof
+    ) external;
 
     /// @notice Get the status of the claim.
     /// @return The status of the claim, 1 for open, 2 for closed.
@@ -102,5 +113,9 @@ interface ICumulativeMerkleDrop {
     /// @param amount The amount of token claimed.
     /// @param addr The address of the claimer.
     /// @return True if the proof is valid, false otherwise.
-    function verifyProof(bytes32[] memory proof, uint256 amount, address addr) external view returns (bool);
+    function verifyProof(
+        bytes32[] memory proof,
+        uint256 amount,
+        address addr
+    ) external view returns (bool);
 }
