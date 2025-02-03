@@ -113,7 +113,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         whenNotPaused
         returns (uint256)
     {
-        return _deposit(amount, msg.sender, receiver);
+        return _deposit(amount, msg.sender, receiver, true);
     }
 
     /// @notice The deposit function but with a referral code
@@ -123,13 +123,14 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
-        return _deposit(amount, msg.sender, receiver);
+        return _deposit(amount, msg.sender, receiver, true);
     }
 
     function _deposit(
         uint256 amount,
         address sender,
-        address receiver
+        address receiver,
+        bool calculate
     ) internal returns (uint256) {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
@@ -138,7 +139,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
-        if (availableBonusAmount > 0) {
+        if (availableBonusAmount > 0 && calculate) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
                 depositBonus = availableBonusAmount;
@@ -170,7 +171,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        _deposit(assetsAmount, msg.sender, receiver, false);
 
         return assetsAmount;
     }
@@ -554,6 +555,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalBonusRate);
         if (newDepositUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newDepositUtilizationKink);
+        if (newOptimalBonusRate > newMaxBonusRate) 
+            revert InconsistentData();
 
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
@@ -577,6 +580,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalWithdrawalRate);
         if (newWithdrawUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+        if (newOptimalWithdrawalRate > newMaxFlashFeeRate) 
+            revert InconsistentData();
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
