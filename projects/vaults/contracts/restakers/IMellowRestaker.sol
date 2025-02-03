@@ -10,7 +10,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
-import {IIMellowRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
+import {IIMellowRestaker} from "../interfaces/restakers/IIMellowRestaker.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/mellow-core/IMellowHandler.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
@@ -108,14 +108,13 @@ contract IMellowRestaker is
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = amountToLpAmount(amount, IMellowVault(mellowVault));
         minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
-        lpAmount =
-            wrapper.deposit(
-                address(this),
-                address(_asset),
-                amount,
-                minAmount,
-                block.timestamp + deadline
-            );
+        lpAmount = wrapper.deposit(
+            address(this),
+            address(_asset),
+            amount,
+            minAmount,
+            block.timestamp + deadline
+        );
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
     }
@@ -142,7 +141,10 @@ contract IMellowRestaker is
                     address(wrapper),
                     localBalance
                 );
-                uint256 minAmount = amountToLpAmount(localBalance, mellowVaults[i]);
+                uint256 minAmount = amountToLpAmount(
+                    localBalance,
+                    mellowVaults[i]
+                );
                 minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
                 lpAmount += wrapper.deposit(
                     address(this),
@@ -281,9 +283,10 @@ contract IMellowRestaker is
 
         emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
     }
-    
+
     function deactivateMellowVault(address mellowVault) external onlyOwner {
-        if (address(mellowDepositWrappers[mellowVault]) == address(0)) revert AlreadyDeactivated();
+        if (address(mellowDepositWrappers[mellowVault]) == address(0))
+            revert AlreadyDeactivated();
         mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(address(0));
         emit DeactivatedMellowVault(mellowVault);
     }
@@ -358,9 +361,8 @@ contract IMellowRestaker is
         view
         returns (uint256 lpAmount)
     {
-
         if (amount == 0) return 0;
-        
+
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
 
@@ -432,8 +434,8 @@ contract IMellowRestaker is
             .calculateStack();
         uint256 wstEthAmount = FullMath.mulDiv(
             FullMath.mulDiv(
-                FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply), 
-                mellowVault.D9() - s.feeD9, 
+                FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply),
+                mellowVault.D9() - s.feeD9,
                 mellowVault.D9()
             ),
             s.ratiosX96[0],

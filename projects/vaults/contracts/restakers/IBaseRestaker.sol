@@ -7,7 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIBaseRestaker} from "../interfaces/symbiotic-vault/restakers/IIBaseRestaker.sol";
+import {IIBaseRestaker} from "../interfaces/restakers/IIBaseRestaker.sol";
 
 abstract contract IBaseRestaker is
     PausableUpgradeable,

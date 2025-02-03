@@ -75,7 +75,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        IInceptionEigenRestaker(restaker).delegateToOperator(
+        IIEigenLayerRestaker(restaker).delegateToOperator(
             elOperator,
             approverSalt,
             approverSignatureAndExpiry
@@ -87,7 +87,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         internal
     {
         _asset.approve(restaker, amount);
-        IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
+        IIEigenLayerRestaker(restaker).depositAssetIntoStrategy(amount);
 
         emit DepositedToEL(restaker, amount);
     }
@@ -130,7 +130,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-        IInceptionEigenRestaker(staker).withdrawFromEL(
+        IIEigenLayerRestaker(staker).withdrawFromEL(
             _undelegate(amount, staker)
         );
     }
@@ -193,13 +193,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-            withdrawnAmount = IInceptionEigenRestaker(restaker)
-                .claimWithdrawals(
-                    withdrawals,
-                    tokens,
-                    middlewareTimesIndexes,
-                    receiveAsTokens
-                );
+            withdrawnAmount = IIEigenLayerRestaker(restaker).claimWithdrawals(
+                withdrawals,
+                tokens,
+                middlewareTimesIndexes,
+                receiveAsTokens
+            );
         }
 
         emit WithdrawalClaimed(withdrawnAmount);

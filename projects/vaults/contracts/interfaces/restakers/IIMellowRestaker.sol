@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IMellowVault} from "../mellow-core/IMellowVault.sol";
+import {IMellowVault} from "../symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IIBaseRestaker} from "./IIBaseRestaker.sol";
 
 interface IIMellowRestaker is IIBaseRestaker {

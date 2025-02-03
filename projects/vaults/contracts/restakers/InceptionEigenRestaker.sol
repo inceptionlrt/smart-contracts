@@ -7,7 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
+import {IIEigenLayerRestaker} from "../interfaces/restakers/IIEigenLayerRestaker.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
@@ -24,8 +24,7 @@ contract InceptionEigenRestaker is
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IInceptionEigenRestaker,
-    IInceptionEigenRestakerErrors
+    IIEigenLayerRestaker
 {
     using SafeERC20 for IERC20;
 
@@ -39,9 +38,10 @@ contract InceptionEigenRestaker is
     IRewardsCoordinator public rewardsCoordinator;
 
     modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager)
-            revert OnlyTrusteeAllowed();
-
+        require(
+            msg.sender == _vault || msg.sender == _trusteeManager,
+            NotVaultOrTrusteeManager()
+        );
         _;
     }
 
@@ -142,12 +142,32 @@ contract InceptionEigenRestaker is
         return withdrawnAmount;
     }
 
+    function claimableAmount() external pure returns (uint256) {
+        return 0;
+    }
+
+    function pendingWithdrawalAmount() external pure returns (uint256 total) {
+        return 0;
+    }
+
+    function getDeposited(address operatorAddress)
+        external
+        view
+        returns (uint256)
+    {
+        return _strategy.userUnderlyingView(address(this));
+    }
+
+    function getTotalDeposited() external view returns (uint256) {
+        return _strategy.userUnderlyingView(address(this));
+    }
+
     function getOperatorAddress() public view returns (address) {
         return _delegationManager.delegatedTo(address(this));
     }
 
     function getVersion() external pure returns (uint256) {
-        return 2;
+        return 3;
     }
 
     function setRewardsCoordinator(address newRewardsCoordinator)

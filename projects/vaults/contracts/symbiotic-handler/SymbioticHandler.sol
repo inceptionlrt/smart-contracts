@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {ISymbioticHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
-import {IIMellowRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
-import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
+import {IIMellowRestaker} from "../interfaces/restakers/IIMellowRestaker.sol";
+import {IISymbioticRestaker} from "../interfaces/restakers/IISymbioticRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
