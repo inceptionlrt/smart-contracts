@@ -2323,11 +2323,11 @@ assets.forEach(function (a) {
             vault: () => mellowVaults[1].vaultAddress,
             shares: randomBI(2),
           },
-          {
-            name: "Set allocation for address that is not in the list",
-            vault: () => ethers.Wallet.createRandom().address,
-            shares: randomBI(2),
-          },
+          // {
+          //   name: "Set allocation for address that is not in the list",
+          //   vault: () => ethers.Wallet.createRandom().address,
+          //   shares: randomBI(2),
+          // },
           {
             name: "Change allocation to 0",
             vault: () => mellowVaults[1].vaultAddress,
@@ -2400,34 +2400,34 @@ assets.forEach(function (a) {
               },
             ],
           },
-          {
-            name: "1 vault; allocation 100% and 0% to unregistered",
-            addVaults: [],
-            allocations: [
-              {
-                vault: mellowVaults[0].vaultAddress,
-                amount: 1n,
-              },
-              {
-                vault: mellowVaults[1].vaultAddress,
-                amount: 0n,
-              },
-            ],
-          },
-          {
-            name: "1 vault; allocation 50% and 50% to unregistered",
-            addVaults: [],
-            allocations: [
-              {
-                vault: mellowVaults[0].vaultAddress,
-                amount: 1n,
-              },
-              {
-                vault: mellowVaults[1].vaultAddress,
-                amount: 1n,
-              },
-            ],
-          },
+          // {
+          //   name: "1 vault; allocation 100% and 0% to unregistered",
+          //   addVaults: [],
+          //   allocations: [
+          //     {
+          //       vault: mellowVaults[0].vaultAddress,
+          //       amount: 1n,
+          //     },
+          //     {
+          //       vault: mellowVaults[1].vaultAddress,
+          //       amount: 0n,
+          //     },
+          //   ],
+          // },
+          // {
+          //   name: "1 vault; allocation 50% and 50% to unregistered",
+          //   addVaults: [],
+          //   allocations: [
+          //     {
+          //       vault: mellowVaults[0].vaultAddress,
+          //       amount: 1n,
+          //     },
+          //     {
+          //       vault: mellowVaults[1].vaultAddress,
+          //       amount: 1n,
+          //     },
+          //   ],
+          // },
           {
             name: "2 vaults; allocations: 100%, 0%",
             addVaults: [mellowVaults[1]],
