@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+error MaxRateUnderflow();
+error TargetCapacityZero();
+error MaxRateUnderflowBySubtractor();
+
 /// @author The InceptionLRT team
 /// @title The InceptionLibrary library
 /// @dev It serves two primary functions:
@@ -27,14 +31,14 @@ library InceptionLibrary {
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
-            require(optimalBonusRate <= maxDepositBonusRate, "InceptionLibrary/maxDepositBonusRate-underflow");
-            require(targetCapacity != 0, "InceptionLibrary/targetCapacity-zero");
+            if (optimalBonusRate > maxDepositBonusRate) revert MaxRateUnderflow();
+            if (targetCapacity == 0) revert TargetCapacityZero();
 
             uint256 bonusSlope = ((maxDepositBonusRate - optimalBonusRate) *
                 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 subtractor = (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
-            require(subtractor <= maxDepositBonusRate, "InceptionLibrary/maxDepositBonusRate-underflow-by-subtractor");
+            if (subtractor > maxDepositBonusRate) revert MaxRateUnderflowBySubtractor();
             uint256 bonusPercent = maxDepositBonusRate - subtractor;
 
             capacity += replenished;
@@ -72,14 +76,14 @@ library InceptionLibrary {
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
-            require(optimaFeeRate <= maxFlashWithdrawalFeeRate, "InceptionLibrary/maxFlashWithdrawalFeeRate-underflow");
-            require(targetCapacity != 0, "InceptionLibrary/targetCapacity-zero");
+            if (optimaFeeRate > maxFlashWithdrawalFeeRate) revert MaxRateUnderflow();
+            if (targetCapacity == 0) revert TargetCapacityZero();
 
             uint256 feeSlope = ((maxFlashWithdrawalFeeRate - optimaFeeRate) *
                 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
             uint256 subtractor = (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
-                require(subtractor <= maxFlashWithdrawalFeeRate, "InceptionLibrary/maxFlashWithdrawalFeeRate-underflow-by-subtractor");
+                if (subtractor > maxFlashWithdrawalFeeRate) revert MaxRateUnderflowBySubtractor();
             uint256 bonusPercent = maxFlashWithdrawalFeeRate - subtractor;
             fee += (amount * bonusPercent) / MAX_PERCENT;
             if (fee == 0) ++fee;
