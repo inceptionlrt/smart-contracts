@@ -134,6 +134,7 @@ describe("Omnivault integration tests", function () {
             chainIds,
         ]);
         (adapterFrax as any).address = await adapterFrax.getAddress();
+        await fraxEndpoint.setDestLzEndpoint(await adapterL1.getAddress(), await ethEndpoint.getAddress())
 
 
         // TODO malicious adapters
@@ -183,18 +184,20 @@ describe("Omnivault integration tests", function () {
         console.log("=== ERC20Rebalancer");
         const Rebalancer = await ethers.getContractFactory("ERC20Rebalancer");
         const rebalancer = await upgrades.deployProxy(Rebalancer, [
-            31337, // def chainid
+             // def chainid
             // incToken
             // underlying asset
             // lockbox
             // ivault
             // adapter
             // operator
+            31337,
             inceptionToken.address,
+            underlyingL1.address,
             lockboxAddress,
             inceptionVault.address,
             adapterL1.address,
-            ratioFeedL1.address,
+            //ratioFeedL1.address,
             operator.address,
         ]);
         rebalancer.address = await rebalancer.getAddress();
@@ -319,7 +322,7 @@ describe("Omnivault integration tests", function () {
             await omniVault.connect(signer1).deposit(TARGET + e18, signer1);
             await underlyingL2.connect(signer2).approve(omniVault, e18);
             await omniVault.connect(signer2).deposit(e18, signer2);
-            expect(await omniVault.getFreeBalance()).to.be.approximately(TARGET + e18 + e18, e18/1000000000000000n);
+            expect(await omniVault.getFreeBalance()).to.be.approximately(TARGET + e18 + e18, 10n);
             console.log(await iTokenL2.totalSupply());
             console.log(await omniVault.getFlashCapacity());
             console.log(await omniVault.getFreeBalance());
@@ -337,7 +340,7 @@ describe("Omnivault integration tests", function () {
             const timestamp = (await time.latest()) + 1;
             const tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
 
-            const txData = await rebalancer.getTransactionData(FRAX_ID);
+            const txData = await rebalancer.getTransactionData();
             await expect(tx).to.emit(rebalancer, "L2InfoReceived").withArgs(FRAX_ID, timestamp, ethBalance, totalSupply);
             expect(txData.inceptionTokenSupply).to.be.eq(totalSupply);
             expect(txData.underlyingBalance).to.be.eq(ethBalance);
