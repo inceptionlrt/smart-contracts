@@ -162,6 +162,7 @@ describe("Omnivault integration tests", function () {
         inceptionVault.address = await inceptionVault.getAddress();
 
         console.log("=== InceptionToken");
+        /*
         const inceptionTokenAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.inceptionToken);
         console.log(inceptionTokenAdminAddress);
         slot = "0x" + (0).toString(16);
@@ -170,7 +171,16 @@ describe("Omnivault integration tests", function () {
         const InceptionTokenFactory = await ethers.getContractFactory("InceptionToken", owner);
         await upgrades.forceImport(network.config.addresses.inceptionToken, InceptionTokenFactory);
         const inceptionToken = await upgrades.upgradeProxy(network.config.addresses.inceptionToken, InceptionTokenFactory);
+        */
+        const iTokenFactoryL1 = await ethers.getContractFactory("InceptionToken");
+        const inceptionToken = await upgrades.deployProxy(iTokenFactoryL1, ["InsfrxETH", "InsfrxETH"], { kind: "transparent" });
+        await inceptionToken.waitForDeployment();
         inceptionToken.address = await inceptionToken.getAddress();
+
+        // 3. set the vault
+        let tx = await inceptionToken.setVault(inceptionVault.address);
+        await tx.wait();
+        
 
         console.log("=== RatioFeed");
         const ratioFeedAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.ratioFeed);
@@ -202,6 +212,10 @@ describe("Omnivault integration tests", function () {
         ]);
         rebalancer.address = await rebalancer.getAddress();
         await rebalancer.connect(owner).setDefaultChainId(FRAX_ID);
+        await rebalancer.connect(owner).setInfoMaxDelay(36000n);
+        
+        tx = await inceptionToken.setRebalancer(rebalancer.address);
+        await tx.wait();
         ///////////// end layer 1 /////////////
 
         console.log("============ OmniVault Layer2 ============");
@@ -346,6 +360,22 @@ describe("Omnivault integration tests", function () {
             expect(txData.underlyingBalance).to.be.eq(ethBalance);
             expect(txData.timestamp).to.be.eq(timestamp);
         });
+
+        it("Update data and mint", async function () {
+            const inEthSupplyBefore = await iTokenL1.totalSupply();
+      
+            const tx = await rebalancer.connect(signer1).updateTreasuryData();
+      
+            const inEthSupplyAfter = await iTokenL1.totalSupply();
+            await expect(tx).to.emit(rebalancer, "SyncedSupplyChanged").withArgs(0n, mintShares);
+            await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(mintShares);
+            await expect(tx).changeTokenBalance(iTokenL1, lockboxAddress, mintShares);
+            expect(inEthSupplyAfter - inEthSupplyBefore).to.be.eq(mintShares);
+          });
+      
+          it("updateTreasuryData reverts when there are no changes", async function () {
+            await expect(rebalancer.connect(signer1).updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
+          });
     })
 })
 
