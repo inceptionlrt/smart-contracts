@@ -19,6 +19,10 @@ const impersonateWithEth = async (address, amount) => {
   return account;
 };
 
+const approx = async (amount, delta) => {
+  return (v) => ((amount - delta < v) && (amount + delta > v))
+}
+
 const getStaker = async (address, iVault, asset, donor, amount = 10n ** 21n) => {
   const staker = await impersonateWithEth(address, toWei(1));
   await asset.connect(donor).transfer(address, amount);
@@ -93,4 +97,5 @@ module.exports = {
   randomBIMax,
   e18,
   getSlotByName,
+  approx
 };

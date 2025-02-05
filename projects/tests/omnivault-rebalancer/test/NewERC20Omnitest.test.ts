@@ -1,7 +1,7 @@
 import { ethers, network, upgrades } from "hardhat";
 import { expect } from "chai";
 import { takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
-import { e18, getSlotByName, impersonateWithEth, randomBI, randomBIMax, toWei } from "./helpers/utils.js";
+import { e18, getSlotByName, impersonateWithEth, randomBI, randomBIMax, toWei, approx } from "./helpers/utils.js";
 import { SnapshotRestorer } from "@nomicfoundation/hardhat-network-helpers/src/helpers/takeSnapshot";
 import { AbiCoder, Signer } from "ethers";
 import { Options } from "@layerzerolabs/lz-v2-utilities";
@@ -24,6 +24,7 @@ import {
 } from "../typechain-types";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { min } from "hardhat/internal/util/bigint";
+import { text } from "stream/consumers";
 
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
@@ -126,7 +127,7 @@ describe("Omnivault integration tests", function () {
         const FraxFerryLZCrossChainAdapterL2 = await ethers.getContractFactory("FraxFerryLZCrossChainAdapterL2");
         const adapterFrax = await upgrades.deployProxy(FraxFerryLZCrossChainAdapterL2, [
             (underlyingL2 as any).address, // underlying token
-            (ferryL2 as any).address, // ferry mock bridge
+            (ferryL2 as any).address, // ferry mock bridge (actually set later)
             (fraxEndpoint as any).address, // endpoint
             (owner as any).address, // delegate
             ETH_ID, // chainID
@@ -135,6 +136,7 @@ describe("Omnivault integration tests", function () {
         ]);
         (adapterFrax as any).address = await adapterFrax.getAddress();
         await fraxEndpoint.setDestLzEndpoint(await adapterL1.getAddress(), await ethEndpoint.getAddress())
+
 
 
         // TODO malicious adapters
@@ -180,9 +182,10 @@ describe("Omnivault integration tests", function () {
         // 3. set the vault
         let tx = await inceptionToken.setVault(inceptionVault.address);
         await tx.wait();
-        
+
 
         console.log("=== RatioFeed");
+        /*
         const ratioFeedAdminAddress = await upgrades.erc1967.getAdminAddress(network.config.addresses.ratioFeed);
         slot = "0x" + (0).toString(16);
         value = ethers.zeroPadValue(owner.address, 32);
@@ -190,11 +193,17 @@ describe("Omnivault integration tests", function () {
         const RatioFeed = await ethers.getContractFactory("RatioFeed", owner);
         const ratioFeedL1 = await upgrades.upgradeProxy(network.config.addresses.ratioFeed, RatioFeed);
         ratioFeedL1.address = await ratioFeedL1.getAddress();
+*/
+        const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
+        const ratioFeedL1 = await upgrades.deployProxy(iRatioFeedFactory, []);
+        await ratioFeedL1.waitForDeployment();
+        ratioFeedL1.address = await ratioFeedL1.getAddress();
+        await (await ratioFeedL1.updateRatioBatch([await inceptionToken.getAddress()], [e18])).wait();
 
         console.log("=== ERC20Rebalancer");
         const Rebalancer = await ethers.getContractFactory("ERC20Rebalancer");
         const rebalancer = await upgrades.deployProxy(Rebalancer, [
-             // def chainid
+            // def chainid
             // incToken
             // underlying asset
             // lockbox
@@ -212,10 +221,11 @@ describe("Omnivault integration tests", function () {
         ]);
         rebalancer.address = await rebalancer.getAddress();
         await rebalancer.connect(owner).setDefaultChainId(FRAX_ID);
-        await rebalancer.connect(owner).setInfoMaxDelay(36000n);
-        
+        await rebalancer.connect(owner).setInfoMaxDelay(3600n);
+
         tx = await inceptionToken.setRebalancer(rebalancer.address);
         await tx.wait();
+
         ///////////// end layer 1 /////////////
 
         console.log("============ OmniVault Layer2 ============");
@@ -226,7 +236,7 @@ describe("Omnivault integration tests", function () {
         iToken.address = await iToken.getAddress();
 
         console.log("=== InceptionRatioFeed");
-        const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
+        //const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed", owner);
         const ratioFeedL2 = await upgrades.deployProxy(iRatioFeedFactory, []);
         await ratioFeedL2.waitForDeployment();
         ratioFeedL2.address = await ratioFeedL2.getAddress();
@@ -251,6 +261,10 @@ describe("Omnivault integration tests", function () {
         await adapterL1.setPeer(FRAX_EID, ethers.zeroPadValue(adapterFrax.address, 32));
         await adapterFrax.setTargetReceiver(omniVault.address);
         await adapterFrax.setPeer(ETH_EID, ethers.zeroPadValue(adapterL1.address, 32));
+        await adapterFrax.setDestination(await rebalancer.getAddress())
+
+        await ratioFeedL1.updateRatioBatch([inceptionToken.address], [e18]);
+        await ratioFeedL2.updateRatioBatch([iToken.address], [e18]);
 
         return [
             adapterL1, // l1 receiver adapter
@@ -329,6 +343,7 @@ describe("Omnivault integration tests", function () {
             console.log("Frax ratio:", (await omniVault.ratio()).format());
         });
 
+        let sharesReceived = 0n;
         it("Stake on FRAX", async function () {
             await underlyingL2.mint(signer1, TARGET + e18);
             await underlyingL2.mint(signer2, e18);
@@ -343,11 +358,17 @@ describe("Omnivault integration tests", function () {
             console.log(await ethers.provider.getBalance(omniVault.getAddress()));
         });
 
+        it("updateTreasuryData reverts when nothing was ever received", async function () {
+            await expect(rebalancer.connect(signer1).updateTreasuryData()).to.be.reverted;
+        });
+
         let mintShares = 0n;
+        let l2Balance = 0n;
         it("Send info from FRAX", async function () {
             const totalSupply = await iTokenL2.totalSupply();
             mintShares += totalSupply;
             const ethBalance = await omniVault.getFlashCapacity();
+            l2Balance = ethBalance;
 
             const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
             const fee = await omniVault.quoteSendAssetsInfoToL1(options);
@@ -363,19 +384,136 @@ describe("Omnivault integration tests", function () {
 
         it("Update data and mint", async function () {
             const inEthSupplyBefore = await iTokenL1.totalSupply();
-      
+
             const tx = await rebalancer.connect(signer1).updateTreasuryData();
-      
+
             const inEthSupplyAfter = await iTokenL1.totalSupply();
             await expect(tx).to.emit(rebalancer, "SyncedSupplyChanged").withArgs(0n, mintShares);
             await expect(tx).to.emit(rebalancer, "TreasuryUpdateMint").withArgs(mintShares);
             await expect(tx).changeTokenBalance(iTokenL1, lockboxAddress, mintShares);
             expect(inEthSupplyAfter - inEthSupplyBefore).to.be.eq(mintShares);
-          });
-      
-          it("updateTreasuryData reverts when there are no changes", async function () {
+        });
+
+        it("updateTreasuryData reverts when there are no changes", async function () {
             await expect(rebalancer.connect(signer1).updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "NoRebalancingRequired");
-          });
+        });
+
+        it("updateTreasuryData reverts when the data packet is expired", async function () {
+            await time.increase(3601);
+            await expect(rebalancer.connect(signer1).updateTreasuryData()).to.be.revertedWithCustomError(rebalancer, "OutdatedAssetInfo");;
+        });
+
+        it("Flash withdraw on FRAX", async function () {
+            let iBalance = await iTokenL2.balanceOf(signer2);
+            let underPreBal = await underlyingL2.balanceOf(signer2);
+            await omniVault.connect(signer2).flashWithdraw(iBalance, await signer2.getAddress())
+            expect(await iTokenL2.balanceOf(signer2)).to.be.eq(0n);
+            expect(await underlyingL2.balanceOf(signer2)).to.be.above(underPreBal)
+        });
+
+        it("Burn tokens on L1 after the withdrawal on L2", async () => {
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+            const timestamp = (await time.latest()) + 1;
+            let tx = await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+            const txData = await rebalancer.getTransactionData();
+            await expect(tx).to.emit(rebalancer, "L2InfoReceived");
+
+            const inEthSupplyBefore = await iTokenL1.totalSupply();
+
+            tx = await rebalancer.connect(signer1).updateTreasuryData();
+
+            const inEthSupplyAfter = await iTokenL1.totalSupply();
+            await expect(tx).to.emit(rebalancer, "SyncedSupplyChanged")//.withArgs(mintShares, mintShares-e18);
+            await expect(tx).to.emit(rebalancer, "TreasuryUpdateBurn")//.withArgs(approx(e18, 100n));
+            await expect(tx).changeTokenBalance(iTokenL1, lockboxAddress, -e18+1n);
+            expect(inEthSupplyBefore- inEthSupplyAfter).to.be.approximately(e18, 100n);
+        })
+
+        let amountFerried = 0n;
+        let snap2;
+        it("Move tokens from L2 to L1 and stake immediately", async function () {
+            snap2 = await takeSnapshot();
+
+            await underlyingL2.mint(signer1, TARGET + e18);
+            await underlyingL2.mint(signer2, e18);
+            await underlyingL2.connect(signer1).approve(omniVault, TARGET + e18);
+            await omniVault.connect(signer1).deposit(TARGET + e18, signer1);
+            await underlyingL2.connect(signer2).approve(omniVault, e18);
+            await omniVault.connect(signer2).deposit(e18, signer2);
+
+
+            const options = Options.newOptions().addExecutorLzReceiveOption(200_000n, 0n).toHex().toString();
+            const fee = await omniVault.quoteSendAssetsInfoToL1(options);
+            const timestamp = (await time.latest()) + 1;
+            await omniVault.connect(operator).sendAssetsInfoToL1(options, { value: fee });
+
+
+            await expect(omniVault.sendERC20ToL1(1n)).to.emit(ferryL2, "Embark").withArgs(
+                anyValue,
+                anyValue,
+                anyValue,
+                (v: bigint) => {
+                    amountFerried = v;
+                    console.log(v);
+                    return true;
+                },
+                anyValue);
+            // just mint ferried tokens to L1 rebalancer without emulating the actual disembark
+            await underlyingL1.mint(await rebalancer.getAddress(), amountFerried)
+
+            expect(await rebalancer.connect(signer1).updateTreasuryData()).to.emit(rebalancer, "TransferToInceptionVault").withArgs(amountFerried);
+            await snap2.restore();
+        })
+
+        it("Won't stake by non-op", async () => {
+            const oldAF = amountFerried;
+            const s = await takeSnapshot();
+            await expect(omniVault.sendERC20ToL1(1n)).to.emit(ferryL2, "Embark").withArgs(
+                anyValue,
+                anyValue,
+                anyValue,
+                (v: bigint) => {
+                    amountFerried = v;
+                    console.log(v);
+                    return true;
+                },
+                anyValue);
+            // just mint ferried tokens to L1 rebalancer without emulating the actual disembark
+            await underlyingL1.mint(await rebalancer.getAddress(), amountFerried)
+
+            const beforeDepo = await underlyingL1.balanceOf(inceptionVault.address);
+            //console.log(beforeDepo);
+            await expect(rebalancer.connect(signer3).stake(amountFerried)).to.be.revertedWithCustomError(rebalancer, "OnlyOperator");
+
+            await s.restore();
+            amountFerried = oldAF;
+        })
+
+        it("Separate stake() by rebalancer", async function () {
+            await expect(omniVault.sendERC20ToL1(1n)).to.emit(ferryL2, "Embark").withArgs(
+                anyValue,
+                anyValue,
+                anyValue,
+                (v: bigint) => {
+                    amountFerried = v;
+                    console.log(v);
+                    return true;
+                },
+                anyValue);
+            // just mint ferried tokens to L1 rebalancer without emulating the actual disembark
+            await underlyingL1.mint(await rebalancer.getAddress(), amountFerried)
+
+            const beforeDepo = await underlyingL1.balanceOf(inceptionVault.address);
+            //console.log(beforeDepo);
+            let tx = await rebalancer.connect(operator).stake(amountFerried)
+            await tx.wait();
+            expect(tx).to.emit(rebalancer, "TransferToInceptionVault").withArgs(amountFerried);
+            const afterDepo = await await underlyingL1.balanceOf(inceptionVault.address);
+            //console.log(afterDepo);
+            expect(afterDepo - beforeDepo).to.be.eq(amountFerried);
+        });
     })
 })
 
