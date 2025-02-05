@@ -25,6 +25,7 @@ import {
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { min } from "hardhat/internal/util/bigint";
 import { text } from "stream/consumers";
+import { zeroAddress } from "ethereumjs-util";
 
 BigInt.prototype.format = function () {
     return this.toLocaleString("de-DE");
@@ -462,14 +463,16 @@ describe("Omnivault integration tests", function () {
                 anyValue);
             // just mint ferried tokens to L1 rebalancer without emulating the actual disembark
             await underlyingL1.mint(await rebalancer.getAddress(), amountFerried)
-
             expect(await rebalancer.connect(signer1).updateTreasuryData()).to.emit(rebalancer, "TransferToInceptionVault").withArgs(amountFerried);
             await snap2.restore();
         })
 
-        it("Won't stake by non-op", async () => {
+        it("Won't stake by non-op and other negative scenarios", async () => {
             const oldAF = amountFerried;
             const s = await takeSnapshot();
+
+            expect(rebalancer.connect(owner).setInceptionToken(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+
             await expect(omniVault.sendERC20ToL1(1n)).to.emit(ferryL2, "Embark").withArgs(
                 anyValue,
                 anyValue,
@@ -482,9 +485,10 @@ describe("Omnivault integration tests", function () {
                 anyValue);
             // just mint ferried tokens to L1 rebalancer without emulating the actual disembark
             await underlyingL1.mint(await rebalancer.getAddress(), amountFerried)
-
-            const beforeDepo = await underlyingL1.balanceOf(inceptionVault.address);
-            //console.log(beforeDepo);
+            const s2 = await takeSnapshot();
+            await expect(rebalancer.connect(owner).setInceptionVault(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            //await expect(rebalancer.connect(operator).stake(amountFerried)).to.be.revertedWithCustomError(rebalancer, "InceptionVaultNotSet");
+            await s2.restore();
             await expect(rebalancer.connect(signer3).stake(amountFerried)).to.be.revertedWithCustomError(rebalancer, "OnlyOperator");
 
             await s.restore();
@@ -507,6 +511,7 @@ describe("Omnivault integration tests", function () {
 
             const beforeDepo = await underlyingL1.balanceOf(inceptionVault.address);
             //console.log(beforeDepo);
+            await expect(rebalancer.connect(operator).stake(amountFerried*4n)).to.be.revertedWithCustomError(rebalancer, "StakeAmountExceedsBalance");
             let tx = await rebalancer.connect(operator).stake(amountFerried)
             await tx.wait();
             expect(tx).to.emit(rebalancer, "TransferToInceptionVault").withArgs(amountFerried);
@@ -514,6 +519,40 @@ describe("Omnivault integration tests", function () {
             //console.log(afterDepo);
             expect(afterDepo - beforeDepo).to.be.eq(amountFerried);
         });
+
+        it("Rebalancer setters", async () => {
+            const sn = await takeSnapshot();
+            await expect(rebalancer.connect(operator).setDefaultAdapter(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setDefaultAdapter(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setDefaultAdapter(adapterL1.address)).to.emit(rebalancer, "DefaultAdapterChanged").withArgs(adapterL1.address);
+
+            await expect(rebalancer.connect(operator).setInceptionToken(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setInceptionToken(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setInceptionToken(iTokenL1.address)).to.emit(rebalancer, "InceptionTokenChanged").withArgs(iTokenL1.address);
+
+            await expect(rebalancer.connect(operator).setUnderlyingAsset(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setUnderlyingAsset(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setUnderlyingAsset(underlyingL1.address)).to.emit(rebalancer, "UnderlyingAssetChanged").withArgs(underlyingL1.address);
+
+            await expect(rebalancer.connect(operator).setLockbox(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setLockbox(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setLockbox(lockboxAddress)).to.emit(rebalancer, "LockboxChanged").withArgs(lockboxAddress);
+
+            await expect(rebalancer.connect(operator).setInceptionVault(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setInceptionVault(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setInceptionVault(inceptionVault.address)).to.emit(rebalancer, "LiqPoolChanged").withArgs(inceptionVault.address);
+
+            await expect(rebalancer.connect(operator).setOperator(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setOperator(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
+            expect(await rebalancer.connect(owner).setOperator(operator)).to.emit(rebalancer, "OperatorChanged").withArgs(operator);
+
+            await expect(rebalancer.connect(operator).setDefaultChainId(228n)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setDefaultChainId(0n)).to.be.revertedWithCustomError(rebalancer, "SettingZeroChainId");
+
+            await expect(rebalancer.connect(operator).setInfoMaxDelay(228n)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(owner).setInfoMaxDelay(0n)).to.be.revertedWithCustomError(rebalancer, "SettingZeroDelay");
+            await sn.restore();
+        })
     })
 })
 
