@@ -1,18 +1,19 @@
 {
-    "chainIdL1": "1",
+    "chainIdL1": "17000",
+    "chainIdL2": "2522",
     
-    "inceptionLibAddress": "",
-    "strategyAddress": "",
-    "ratioFeedAddressL1": "",
+    "inceptionLibAddress": "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca",
+    "strategyAddress": "0x865Ff05496eA73b0fA49fbBB97F2812776362c87",
+    "ratioFeedAddressL1": "0x90D5a4860e087462F8eE15B52D9b1914BdC977B5",
     
     "iTokenAddressL1": "",
     "iVaultAddressL1": "",
-    "lockbox": "",
-    "crossChainL1": "",
+    "lockbox": "0x865Ff05496eA73b0fA49fbBB97F2812776362c87",
+    "crossChainL1": "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E",
     "rebalancer": "",
 
-    "underlyingAssetL1": "",
-    "underlyingAssetL2": "",
+    "underlyingAssetL1": "0x72DE502C4F68DCE383b075dA455ed45e15122a46",
+    "underlyingAssetL2": "0x72DE502C4F68DCE383b075dA455ed45e15122a46",
     "iTokenAddressL2": "",
     "iVaultAddressL2": "",
     "crossChainL2": ""
