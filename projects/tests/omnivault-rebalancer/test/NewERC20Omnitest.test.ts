@@ -520,7 +520,7 @@ describe("Omnivault integration tests", function () {
             expect(afterDepo - beforeDepo).to.be.eq(amountFerried);
         });
 
-        it("Rebalancer setters", async () => {
+        it("Rebalancer access control and validation", async () => {
             const sn = await takeSnapshot();
             await expect(rebalancer.connect(operator).setDefaultAdapter(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
             await expect(rebalancer.connect(owner).setDefaultAdapter(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
@@ -551,6 +551,32 @@ describe("Omnivault integration tests", function () {
 
             await expect(rebalancer.connect(operator).setInfoMaxDelay(228n)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
             await expect(rebalancer.connect(owner).setInfoMaxDelay(0n)).to.be.revertedWithCustomError(rebalancer, "SettingZeroDelay");
+            await sn.restore();
+        })
+
+        it("L2 adapter access control and validation", async () => {
+            const sn = await takeSnapshot();
+
+            await expect(adapterFrax.connect(operator).setFerry(adapterL1.address)).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            await expect(adapterFrax.connect(owner).setFerry(zeroAddress())).to.be.revertedWithCustomError(adapterFrax, "errNullFerry");
+            expect(await adapterFrax.connect(owner).setFerry(ferryL2.address)).to.emit(adapterFrax, "DefaultAdapterChanged").withArgs(ferryL2.address);
+
+            await expect(adapterFrax.connect(operator).setDestination(adapterL1.address)).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            await expect(adapterFrax.connect(owner).setDestination(zeroAddress())).to.be.revertedWithCustomError(adapterFrax, "errNullDestination");
+            expect(await adapterFrax.connect(owner).setDestination(rebalancer.address)).to.emit(adapterFrax, "DestinationChanged").withArgs(rebalancer.address);
+
+            await expect(adapterFrax.connect(operator).sendDataL1(
+                "0x000000000000000000000000c671A6a4bF4Dcd0EE94d8D5558cD8B6EAdFD5A19",
+                "0x000000000000000000000000c671A6a4bF4Dcd0EE94d8D5558cD8B6EAdFD5A19"
+            )).to.be.revertedWithCustomError(adapterFrax, "NotTargetReceiver");
+
+            await expect(adapterFrax.connect(operator).recoverFunds()).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            expect(await adapterFrax.connect(owner).recoverFunds()).to.emit("IERC20", "Transfer");
+
+            await expect(adapterFrax.connect(operator).sendEthCrossChain(0n, "0x0001")).to.be.revertedWithCustomError(adapterFrax, "NotAllowedInThisAdapterType");
+
+            await expect(adapterFrax.connect(operator).quoteSendEth(0n, "0x0001")).to.be.revertedWithCustomError(adapterFrax, "NotAllowedInThisAdapterType");
+
             await sn.restore();
         })
     })
