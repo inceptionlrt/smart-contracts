@@ -272,7 +272,7 @@ contract IMellowRestaker is
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) {
+            if (mellowVault == address(mellowVaults[i]) && address(mellowDepositWrappers[address(mellowVaults[i])]) != address(0)) {
                 exists = true;
             }
         }
@@ -334,6 +334,7 @@ contract IMellowRestaker is
     ) public view returns (uint256 lpAmount) {
 
         if (amount == 0) return 0;
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
 
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
@@ -400,6 +401,7 @@ contract IMellowRestaker is
         IMellowVault mellowVault
     ) public view returns (uint256) {
         if (lpAmount == 0) return 0;
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
 
         IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
             .calculateStack();

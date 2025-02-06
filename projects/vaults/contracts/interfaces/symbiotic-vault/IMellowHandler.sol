@@ -5,10 +5,12 @@ interface IMellowHandler {
     /// @dev Epoch represents the period of the rebalancing process
     /// @dev Receiver is a receiver of assets in claim()
     /// @dev Amount represents the exact amount of the asset to be claimed
+    /// @dev Number of awaiting withdrawals that are not yet redeemed
     struct Withdrawal {
         uint256 epoch;
         address receiver;
         uint256 amount;
+        uint256 withdrawals;
     }
 
     event StartMellowWithdrawal(

@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 error MaxRateUnderflow();
 error TargetCapacityZero();
 error MaxRateUnderflowBySubtractor();
+error AmountGreater();
+error OptimalCapacityZero();
 
 /// @author The InceptionLRT team
 /// @title The InceptionLibrary library
@@ -78,6 +80,8 @@ library InceptionLibrary {
         if (amount > 0) {
             if (optimaFeeRate > maxFlashWithdrawalFeeRate) revert MaxRateUnderflow();
             if (targetCapacity == 0) revert TargetCapacityZero();
+            if (amount > capacity) revert AmountGreater();
+            if (optimalCapacity == 0) revert OptimalCapacityZero();
 
             uint256 feeSlope = ((maxFlashWithdrawalFeeRate - optimaFeeRate) *
                 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
