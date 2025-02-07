@@ -52,9 +52,11 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     function __SymbioticHandler_init(
         IERC20 assetAddress,
-        IIMellowRestaker _mellowRestaker
+        IIMellowRestaker _mellowRestaker,
+        IISymbioticRestaker _symbioticRestaker
     ) internal onlyInitializing {
         mellowRestaker = _mellowRestaker;
+        symbioticRestaker = _symbioticRestaker;
 
         __InceptionAssetsHandler_init(assetAddress);
     }
@@ -107,7 +109,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         return;
     }
 
-    /// @dev performs creating a withdrawal request from Mellow Protocol
+    /// @dev performs creating a withdrawal request from Symbiotic Protocol
     /// @dev requires a specific amount to withdraw
     function undelegateFromSymbiotic(address vault, uint256 amount)
         external
@@ -120,7 +122,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         amount = symbioticRestaker.withdraw(vault, amount);
 
         /// TODO
-        emit StartMellowWithdrawal(address(symbioticRestaker), amount);
+        emit StartSymbioticWithdrawal(address(symbioticRestaker), amount);
         return;
     }
 

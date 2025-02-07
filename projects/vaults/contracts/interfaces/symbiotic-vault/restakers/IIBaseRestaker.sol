@@ -28,6 +28,10 @@ interface IIBaseRestaker {
 
     error NotContract();
 
+    error NotAdded();
+
+    error InvalidCollateral();
+
     /************************************
      ************** Events **************
      ************************************/
