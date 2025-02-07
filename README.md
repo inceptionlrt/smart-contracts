@@ -1,5 +1,15 @@
 ![OmniStaking Architecture](./OmniStaking_Architecture.jpg)
 
+<details>
+  <summary>Deposit and (flash) withdrawal</summary>
+   ![OmniStaking Architecture](./img/OmniStaking-Deposit-FWithdrawal.svg)
+   <summary>Sync to L1</summary>
+   ![OmniStaking Architecture](./img/OmniStaking-SyncToL1.svg)
+   <summary>Token transfer to L1 via FraxFerry</summary>
+   ![OmniStaking Architecture](./img/OmniStaking-FerryToL1.svg)
+</details>
+
+
 # OmniStaking
 
 OmniStaking is a cross-chain staking system designed to maintain the balance of Inception Tokens across Layer 1 (L1) and multiple Layer 2 (L2) networks. By managing both data and ETH transfers between chains, OmniStaking ensures that the protocol maintains a consistent supply of Inception Tokens across all deployed chains, creating a unified and decentralized staking ecosystem.
