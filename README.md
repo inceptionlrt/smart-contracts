@@ -3,8 +3,12 @@
 <details>
   <summary>Deposit and (flash) withdrawal</summary>
    ![OmniStaking Architecture](./img/OmniStaking-Deposit-FWithdrawal.svg)
+</details>
+<details>
    <summary>Sync to L1</summary>
    ![OmniStaking Architecture](./img/OmniStaking-SyncToL1.svg)
+</details>
+<details>
    <summary>Token transfer to L1 via FraxFerry</summary>
    ![OmniStaking Architecture](./img/OmniStaking-FerryToL1.svg)
 </details>
