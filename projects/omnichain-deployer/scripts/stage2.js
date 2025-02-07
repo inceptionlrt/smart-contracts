@@ -24,7 +24,7 @@ const deployL2token = async (name, symbol) => {
   return inETHAddress;
 }
 
-const deployL2vault = async (incToken, underlying, adapter, ratiofeed) => {
+const deployL2vault = async (incToken, underlying, adapter, ratiofeed, vaultName, operatorAddress) => {
 
   const InceptionOmniVaultFactory = await ethers.getContractFactory("ERC20OmniVault_E2");
   console.log("Deploying Transparent Proxy...");
@@ -60,9 +60,9 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed) => {
   await inceptionOmniVault.setRatioFeed(ratiofeed);
 
   // uncomment if needed
-  
-  const feed = ethers.getContractAt("IInceptionRatioFeed", ratiofeed); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
-  await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
+  //TODO fix
+ // const feed = ethers.getContractAt("InceptionRatioFeed", ratiofeed); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+ // await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
   
   // todo: is it safe with live token but no vault?
   //await inETH.setVault(deployedAddress);
@@ -72,14 +72,19 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed) => {
   return deployedAddress;
 }
 
-const setVaultInIncToken = async (vault, token) => {
-  const token = await ethers.getContractAt("InceptionToken", token);
+const setVaultInIncToken = async (vault, tokenAddr) => {
+  const token = await ethers.getContractAt("InceptionToken", tokenAddr);
   await token.setVault(vault);
+}
+
+const setTargetReceiver = async (adapter, tr) => {
+  const a = await ethers.getContractAt("FraxFerryLZCrossChainAdapterL2", adapter);
+  await a.setTargetReceiver(tr);
 }
 
 const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2, assetL2, rebalancerL1, adapterL1, vaultL2) => {
 
-  const args_x = [assetL2, ferryL2, rebalancerL1, LZEndpointL2, deployer, l1ChainId, [eidL1], [chainidL1]];
+  const args_x = [assetL2, ferryL2/*, rebalancerL1*/, LZEndpointL2, deployer, chainidL1, [eidL1], [chainidL1]];
   console.log("Deploying L2 adapter...");
   const contractFactory = await ethers.getContractFactory("FraxFerryLZCrossChainAdapterL2");
   const contract = await upgrades.deployProxy(contractFactory, args_x, {
@@ -87,9 +92,11 @@ const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2
   });
   await contract.waitForDeployment();
   console.log(
-    `${contractName} Proxy deployed at:`,
+    `Proxy deployed at:`,
     await contract.getAddress(),
   );
+
+  await contract.setDestination(rebalancerL1);
 
   const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(
     await contract.getAddress(),
@@ -101,7 +108,7 @@ const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2
   );
   console.log("Implementation deployed at:", implementationAddress);
 
-  await contract.setTargetReceiver(vaultL2);
+  //await contract.setTargetReceiver(vaultL2);
   await contract.setPeer(eidL1,"0x000000000000000000000000" + adapterL1.substring(2));
 
   return contract.getAddress();
@@ -109,8 +116,8 @@ const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2
 }
 
 
-
 const main = async () => {
+  const [deployer] = await ethers.getSigners();
     // Stage 2: deploy L2 with L1 addresses already being known
     let obj = await loadState();
 
@@ -120,18 +127,23 @@ const main = async () => {
     }
     await saveState(obj);
 
-    if (obj.iVaultAddressL2) {
-      console.log("Deploying L2 IOV...");
-        obj.iVaultAddressL2 = await deployL2vault(obj.iTokenAddressL2, obj.underlyingAssetL2, obj.CrossChainL2, obj.ratioFeedAddressL2);
-        await setVaultInIncToken(obj.iTokenAddressL2, obj.iVaultAddressL2);
+    if (!obj.crossChainL2) {
+      console.log("Deploying L2 adapter...");
+        obj.crossChainL2 = await deployL2adapter(await deployer.getAddress(), obj.chainIdL1, obj.eidL1, obj.lzEndpointL2, obj.ferryL2, obj.underlyingAssetL2, obj.rebalancer, obj.crossChainL1);
     }
     await saveState(obj);
 
-    if (obj.adapterAddressL2) {
-      console.log("Deploying L2 adapter...");
-        obj.adapterAddressL2 = await deployL2adapter(await deployer.getAddress(), obj.chainIdL1, obj.EidL1, obj.LZEndpointL2, obj.FerryL2, obj.underlyingAssetL2, obj.rebalancer);
+    if (!obj.iVaultAddressL2) {
+      console.log("Deploying L2 IOV...");
+        obj.iVaultAddressL2 = await deployL2vault(obj.iTokenAddressL2, obj.underlyingAssetL2, obj.crossChainL2, obj.ratioFeedAddressL2, obj.vaultNameL2, await deployer.getAddress());
+        console.log("Config 1...");
+        await setVaultInIncToken(obj.iTokenAddressL2, obj.iVaultAddressL2);
+        console.log("Config 2...");
+        await setTargetReceiver(obj.crossChainL2, obj.iVaultAddressL2)
     }
     await saveState(obj);
+
+    
 }
 
 main().then(() => process.exit(0))
