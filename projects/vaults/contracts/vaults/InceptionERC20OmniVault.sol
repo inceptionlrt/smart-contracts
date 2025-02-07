@@ -19,7 +19,7 @@ import {Convert} from "../lib/Convert.sol";
  * @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
  * @notice Allows users to deposit an asset(e.g. stETH), receive inception tokens, and handle asset transfers between L1 and L2.
  */
-contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
+abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 

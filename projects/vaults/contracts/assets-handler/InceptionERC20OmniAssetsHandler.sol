@@ -12,7 +12,7 @@ import {IInceptionAssetHandler} from "../interfaces/IInceptionAssetHandler.sol";
 /// @author The InceptionLRT team
 /// @title The InceptionERC20OmniAssetsHandler contract
 /// @dev Handles operations with the corresponding asset (erc20 base token)
-contract InceptionERC20OmniAssetsHandler is
+abstract contract InceptionERC20OmniAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,

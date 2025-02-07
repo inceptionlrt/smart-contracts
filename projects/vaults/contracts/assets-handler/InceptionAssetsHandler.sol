@@ -15,7 +15,7 @@ import {Convert} from "../lib/Convert.sol";
 /// @author The InceptionLRT team
 /// @title The InceptionAssetsHandler contract
 /// @dev Handles operations with the corresponding asset
-contract InceptionAssetsHandler is
+abstract contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,

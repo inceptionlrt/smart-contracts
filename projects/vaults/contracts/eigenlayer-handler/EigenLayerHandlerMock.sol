@@ -18,7 +18,7 @@ interface IMockStrategy {
 /// @title The EigenLayerHandler contract
 /// @dev Serves communication with external EigenLayer protocol
 /// @dev Specifically, this includes depositing, and handling withdrawal requests
-contract EigenLayerHandlerMock is InceptionAssetsHandler, IEigenLayerHandler {
+abstract contract EigenLayerHandlerMock is InceptionAssetsHandler, IEigenLayerHandler {
     address public strategy;
 
     uint256 public epoch;

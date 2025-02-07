@@ -16,7 +16,7 @@ import {IInceptionToken} from "../interfaces/IInceptionToken.sol";
  * @author The InceptionLRT team
  * @dev TODO
  */
-contract ERC20RebalancerStorage is
+abstract contract ERC20RebalancerStorage is
     Initializable,
     Ownable2StepUpgradeable,
     IRebalancer
