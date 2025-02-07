@@ -363,7 +363,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
-        if (fee == 0) revert ZeroFlashWithdrawFee();
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
 
         amount -= fee;
