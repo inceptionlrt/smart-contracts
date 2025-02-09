@@ -224,8 +224,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         returns (uint256)
     {
         uint256 pendingWithdrawal = mellowAdapter.pendingWithdrawalAmount();
+        uint256 mellowClaimable = mellowAdapter.claimableWithdrawalAmount();
         uint256 claimableAmount = mellowAdapter.claimableAmount();
-        return pendingWithdrawal + claimableAmount;
+        return pendingWithdrawal + claimableAmount + mellowClaimable;
     }
 
     function getFlashCapacity() public view returns (uint256 total) {

@@ -212,7 +212,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAutoMellow(uint256 deadline)
+    function delegateAutoMellow(address referral)
         external
         nonReentrant
         whenNotPaused
@@ -222,7 +222,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _asset.safeIncreaseAllowance(address(mellowAdapter), balance);
         (uint256 amount, uint256 lpAmount) = mellowAdapter.delegateAuto(
             balance,
-            deadline
+            referral
         );
 
         emit Delegated(address(mellowAdapter), amount, lpAmount);

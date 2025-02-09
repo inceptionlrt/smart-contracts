@@ -21,27 +21,11 @@ interface IIMellowAdapter is IIBaseAdapter {
         uint256 newAllocation
     );
 
-    event RequestDealineSet(
-        uint256 indexed oldDeadline,
-        uint256 indexed newDealine
-    );
-
-    event NewSlippages(uint256 _deposit, uint256 _withdraw);
-
-    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
-
-    event VaultAdded(
-        address indexed _mellowVault,
-        address indexed _depositWrapper
-    );
-
-    event WrapperChanged(
-        address indexed _mellowVault,
-        address indexed _oldWrapper,
-        address indexed _newWrapper
-    );
+    event VaultAdded(address indexed _mellowVault);
 
     event DeactivatedMellowVault(address indexed _mellowVault);
+
+    event EthWrapperChanged(address indexed _old, address indexed _new);
 
     function delegate(
         address mellowVault,
@@ -49,7 +33,7 @@ interface IIMellowAdapter is IIBaseAdapter {
         bytes calldata _data
     ) external returns (uint256 lpAmount);
 
-    function delegateAuto(uint256 amount, uint256 deadline)
+    function delegateAuto(uint256 amount, address referral)
         external
         returns (uint256 tokenAmount, uint256 lpAmount);
 
@@ -64,4 +48,7 @@ interface IIMellowAdapter is IIBaseAdapter {
     function pendingMellowRequest(IMellowVault mellowVault)
         external
         returns (IMellowVault.WithdrawalRequest memory);
+
+    function claimableWithdrawalAmount() external view returns (uint256);
+    function pendingWithdrawalAmount() external view returns (uint256);
 }
