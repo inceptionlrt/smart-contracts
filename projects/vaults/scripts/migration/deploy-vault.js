@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const RESTAKER_ADDRESS = "";
+const ADAPTER_ADDRESS = "";
 
 const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const [deployer] = await ethers.getSigners();
@@ -10,7 +10,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
-  console.log(`InceptionAdapter address: ${RESTAKER_ADDRESS}`);
+  console.log(`InceptionAdapter address: ${ADAPTER_ADDRESS}`);
 
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
@@ -123,7 +123,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   await tx.wait();
 
   // 5. set the IAdapter Impl
-  tx = await iVault.upgradeTo(RESTAKER_ADDRESS);
+  tx = await iVault.upgradeTo(ADAPTER_ADDRESS);
   await tx.wait();
 
   // 6. set RatioFeed
@@ -151,7 +151,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     //    iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    AdapterImpl: RESTAKER_ADDRESS,
+    AdapterImpl: ADAPTER_ADDRESS,
   };
 
   const json_addresses = JSON.stringify(iAddresses);

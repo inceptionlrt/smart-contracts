@@ -37,7 +37,7 @@ contract IMellowAdapter is
 
     IERC20 internal _asset;
     address internal _trusteeManager;
-    address internal _vault;
+    address internal _inceptionVault;
 
     // If mellowDepositWrapper exists, then mellowVault is active
     mapping(address => IMellowDepositWrapper) public mellowDepositWrappers; // mellowVault => mellowDepositWrapper
@@ -52,8 +52,10 @@ contract IMellowAdapter is
     uint256 public withdrawSlippage;
 
     modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager)
-            revert NotVaultOrTrusteeManager();
+        require(
+            msg.sender == _inceptionVault || msg.sender == _trusteeManager,
+            NotVaultOrTrusteeManager()
+        );
         _;
     }
 
@@ -94,21 +96,22 @@ contract IMellowAdapter is
         withdrawSlippage = 10;
     }
 
-    function delegateMellow(
+    function delegate(
+        address mellowVault,
         uint256 amount,
-        uint256 deadline,
-        address mellowVault
-    ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
+        bytes calldata _data
+    ) external onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
+        uint256 deadline = abi.decode(_data, (uint256));
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
         if (address(wrapper) == address(0)) revert InactiveWrapper();
         uint256 balanceState = _asset.balanceOf(address(this));
         // transfer from the vault
-        _asset.safeTransferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         // deposit the asset to the appropriate strategy
         IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = amountToLpAmount(amount, IMellowVault(mellowVault));
         minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
-        lpAmount = wrapper.deposit(
+        depositedAmount = wrapper.deposit(
             address(this),
             address(_asset),
             amount,
@@ -116,10 +119,10 @@ contract IMellowAdapter is
             block.timestamp + deadline
         );
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
-        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) IERC20(_asset).safeTransfer(_inceptionVault, returned);
     }
 
-    function delegate(uint256 amount, uint256 deadline)
+    function delegateAuto(uint256 amount, uint256 deadline)
         external
         onlyTrustee
         whenNotPaused
@@ -127,7 +130,7 @@ contract IMellowAdapter is
     {
         uint256 allocationsTotal = totalAllocations;
         uint256 balanceState = _asset.balanceOf(address(this));
-        _asset.safeTransferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];
@@ -157,15 +160,15 @@ contract IMellowAdapter is
         }
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         tokenAmount = amount - returned;
-        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) IERC20(_asset).safeTransfer(_inceptionVault, returned);
     }
 
-    function withdrawMellow(
+    function withdraw(
         address _mellowVault,
         uint256 amount,
-        uint256 deadline,
-        bool closePrevious
+        bytes calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
+        (uint256 deadline, bool closePrevious) = abi.decode(_data, (uint256, bool));
         if (address(mellowDepositWrappers[_mellowVault]) == address(0))
             revert InvalidVault();
         IMellowVault mellowVault = IMellowVault(_mellowVault);
@@ -195,37 +198,11 @@ contract IMellowAdapter is
         return expectedAmounts[0];
     }
 
-    // function withdrawEmergencyMellow(
-    //     address _mellowVault,
-    //     uint256 _deadline
-    // ) external override onlyTrustee whenNotPaused returns (uint256) {
-    //     IMellowVault mellowVault = IMellowVault(_mellowVault);
-    //     address[] memory tokens;
-    //     uint256[] memory baseTvlAmounts;
-    //     (tokens, baseTvlAmounts) = mellowVault.baseTvl();
-    //     uint256 totalSupply = IERC20(_mellowVault).totalSupply();
-
-    //     uint256[] memory minAmounts = new uint256[](baseTvlAmounts.length);
-    //     for (uint256 i = 0; i < baseTvlAmounts.length; i++) {
-    //         minAmounts[i] = (baseTvlAmounts[i] * pendingMellowRequest(IMellowVault(_mellowVault)).lpAmount / totalSupply) - 1 gwei;
-    //     }
-
-    //     if (address(mellowDepositWrappers[_mellowVault]) == address(0)) revert InvalidVault();
-
-    //     uint256[] memory actualAmounts = mellowVault.emergencyWithdraw(minAmounts, block.timestamp + _deadline);
-
-    //     if (actualAmounts[1] > 0) {
-    //         IDefaultCollateral(tokens[1]).withdraw(address(this), IERC20(tokens[1]).balanceOf(address(this)));
-    //     }
-
-    //     return _asset.balanceOf(address(this));
-    // }
-
     function claimableAmount() external view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
-    function claimMellowWithdrawalCallback()
+    function claim(bytes calldata _data)
         external
         onlyTrustee
         returns (uint256)
@@ -233,7 +210,7 @@ contract IMellowAdapter is
         uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
-        _asset.safeTransfer(_vault, amount);
+        _asset.safeTransfer(_inceptionVault, amount);
 
         return amount;
     }
@@ -321,15 +298,13 @@ contract IMellowAdapter is
         return mellowVault.withdrawalRequest(address(this));
     }
 
-    function pendingWithdrawalAmount() external view returns (uint256) {
-        uint256 total;
+    function pendingWithdrawalAmount() external view returns (uint256 total) {
+
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             IMellowVault.WithdrawalRequest memory request = mellowVaults[i]
                 .withdrawalRequest(address(this));
             total += lpAmountToAmount(request.lpAmount, mellowVaults[i]);
         }
-
-        return total;
     }
 
     function getDeposited(address _mellowVault) public view returns (uint256) {
@@ -444,9 +419,9 @@ contract IMellowAdapter is
         return wstEthAmount;
     }
 
-    function setVault(address vault) external onlyOwner {
-        emit VaultSet(_vault, vault);
-        _vault = vault;
+    function setInceptionVault(address inceptionVault) external onlyOwner {
+        emit VaultSet(_inceptionVault, inceptionVault);
+        _inceptionVault = inceptionVault;
     }
 
     function setRequestDeadline(uint256 _days) external onlyOwner {

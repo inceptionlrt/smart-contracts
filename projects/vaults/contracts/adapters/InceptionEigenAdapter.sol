@@ -30,7 +30,7 @@ contract InceptionEigenAdapter is
 
     IERC20 internal _asset;
     address internal _trusteeManager;
-    address internal _vault;
+    address internal _inceptionVault;
 
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
@@ -39,7 +39,7 @@ contract InceptionEigenAdapter is
 
     modifier onlyTrustee() {
         require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
+            msg.sender == _inceptionVault || msg.sender == _trusteeManager,
             NotVaultOrTrusteeManager()
         );
         _;
@@ -70,7 +70,7 @@ contract InceptionEigenAdapter is
         _strategy = IStrategy(strategy);
         _asset = IERC20(asset);
         _trusteeManager = trusteeManager;
-        _vault = msg.sender;
+        _inceptionVault = msg.sender;
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
@@ -85,7 +85,7 @@ contract InceptionEigenAdapter is
         /// 1. delegate or depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
-            _asset.safeTransferFrom(_vault, address(this), amount);
+            _asset.safeTransferFrom(_inceptionVault, address(this), amount);
             // deposit the asset to the appropriate strategy
             return
                 _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
@@ -162,16 +162,16 @@ contract InceptionEigenAdapter is
         uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
             balanceBefore;
 
-        _asset.safeTransfer(_vault, withdrawnAmount);
+        _asset.safeTransfer(_inceptionVault, withdrawnAmount);
 
         return withdrawnAmount;
     }
 
-    function claimableAmount() external pure returns (uint256) {
+    function claimableAmount() external view returns (uint256) {
         return 0;
     }
 
-    function pendingWithdrawalAmount() external pure returns (uint256 total) {
+    function pendingWithdrawalAmount() external view returns (uint256 total) {
         return 0;
     }
 
@@ -212,6 +212,16 @@ contract InceptionEigenAdapter is
         );
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+    }
+
+    function setInceptionVault(address inceptionVault) external onlyOwner {
+        emit VaultSet(_inceptionVault, inceptionVault);
+        _inceptionVault = inceptionVault;
+    }
+
+    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+        _trusteeManager = _newTrusteeManager;
     }
 
     function pause() external onlyOwner {

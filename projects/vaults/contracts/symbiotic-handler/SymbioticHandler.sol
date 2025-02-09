@@ -69,19 +69,19 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     }
 
     function _depositAssetIntoMellow(
-        uint256 amount,
         address mellowVault,
-        uint256 deadline
+        uint256 amount,
+        bytes calldata _data
     ) internal {
         _asset.safeIncreaseAllowance(address(mellowAdapter), amount);
-        mellowAdapter.delegateMellow(amount, deadline, mellowVault);
+        mellowAdapter.delegate(mellowVault, amount, _data);
     }
 
-    function _depositAssetIntoSymbiotic(uint256 amount, address vault)
+    function _depositAssetIntoSymbiotic(uint256 amount, address vault, bytes calldata _data)
         internal
     {
         _asset.safeIncreaseAllowance(address(symbioticAdapter), amount);
-        symbioticAdapter.delegate(vault, amount);
+        symbioticAdapter.delegate(vault, amount, _data);
     }
 
     /*/////////////////////////////////
@@ -93,15 +93,14 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     function undelegateFromMellow(
         address mellowVault,
         uint256 amount,
-        uint256 deadline
+        bytes calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = mellowAdapter.withdrawMellow(
+        amount = mellowAdapter.withdraw(
             mellowVault,
             amount,
-            deadline,
-            true
+            _data
         );
         emit StartMellowWithdrawal(address(mellowAdapter), amount);
         return;
@@ -109,7 +108,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
-    function undelegateFromSymbiotic(address vault, uint256 amount)
+    function undelegateFromSymbiotic(address vault, uint256 amount, bytes calldata _data)
         external
         whenNotPaused
         nonReentrant
@@ -117,7 +116,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = symbioticAdapter.withdraw(vault, amount);
+        amount = symbioticAdapter.withdraw(vault, amount, _data);
 
         /// TODO
         emit StartMellowWithdrawal(address(symbioticAdapter), amount);
@@ -125,7 +124,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    function claimCompletedWithdrawalsMellow()
+    function claimCompletedWithdrawalsMellow(bytes calldata _data)
         public
         onlyOperator
         whenNotPaused
@@ -134,14 +133,14 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount = mellowAdapter
-            .claimMellowWithdrawalCallback();
+            .claim(_data);
 
         emit WithdrawalClaimed(withdrawnAmount);
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function claimCompletedWithdrawalsSymbiotic(address vault, uint256 sEpoch)
+    function claimCompletedWithdrawalsSymbiotic(bytes calldata _data)
         public
         onlyOperator
         whenNotPaused
@@ -149,7 +148,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     {
         uint256 availableBalance = getFreeBalance();
 
-        uint256 withdrawnAmount = symbioticAdapter.claim(vault, sEpoch);
+        uint256 withdrawnAmount = symbioticAdapter.claim(_data);
 
         emit WithdrawalClaimed(withdrawnAmount);
 

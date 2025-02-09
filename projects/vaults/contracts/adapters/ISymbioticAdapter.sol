@@ -31,7 +31,7 @@ contract ISymbioticAdapter is
 
     IERC20 internal _asset;
     address internal _trusteeManager;
-    address internal _vault;
+    address internal _inceptionVault;
 
     EnumerableSet.AddressSet internal _vaults;
 
@@ -43,7 +43,7 @@ contract ISymbioticAdapter is
 
     modifier onlyTrustee() {
         require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
+            msg.sender == _inceptionVault || msg.sender == _trusteeManager,
             NotVaultOrTrusteeManager()
         );
         _;
@@ -74,19 +74,20 @@ contract ISymbioticAdapter is
         _trusteeManager = trusteeManager;
     }
 
-    function delegate(address vaultAddress, uint256 amount)
+    function delegate(address vaultAddress, uint256 amount, bytes calldata _data)
         external
         onlyTrustee
         whenNotPaused
-        returns (uint256 depositedAmount, uint256 mintedShares)
+        returns (uint256 depositedAmount)
     {
         require(_vaults.contains(vaultAddress), InvalidVault());
-        _asset.safeTransferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-        return IVault(vaultAddress).deposit(address(this), amount);
+        (depositedAmount, ) = IVault(vaultAddress).deposit(address(this), amount);
+        return depositedAmount;
     }
 
-    function withdraw(address vaultAddress, uint256 amount)
+    function withdraw(address vaultAddress, uint256 amount, bytes calldata _data)
         external
         onlyTrustee
         whenNotPaused
@@ -102,17 +103,18 @@ contract ISymbioticAdapter is
         return mintedShares;
     }
 
-    function claim(address vaultAddress, uint256 sEpoch)
+    function claim(bytes calldata _data)
         external
         onlyTrustee
         whenNotPaused
         returns (uint256)
     {
+        (address vaultAddress, uint256 sEpoch) = abi.decode(_data, (address, uint256));
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] != 0, NothingToClaim());
 
         delete withdrawals[vaultAddress];
-        return IVault(vaultAddress).claim(_vault, sEpoch);
+        return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
     }
 
     // /// TODO
@@ -154,7 +156,7 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function claimableAmount() external pure returns (uint256) {
+    function claimableAmount() external view returns (uint256) {
         return 0;
     }
 
@@ -169,11 +171,11 @@ contract ISymbioticAdapter is
         emit VaultAdded(vaultAddress);
     }
 
-    function setVault(address iVault) external onlyOwner {
-        if (iVault == address(0)) revert ZeroAddress();
-        if (!Address.isContract(iVault)) revert NotContract();
-        emit VaultSet(_vault, iVault);
-        _vault = iVault;
+    function setInceptionVault(address inceptionVault) external onlyOwner {
+        if (inceptionVault == address(0)) revert ZeroAddress();
+        if (!Address.isContract(inceptionVault)) revert NotContract();
+        emit VaultSet(_inceptionVault, inceptionVault);
+        _inceptionVault = inceptionVault;
     }
 
     function setTrusteeManager(address _newTrusteeManager) external onlyOwner {

@@ -43,29 +43,23 @@ interface IIMellowAdapter is IIBaseAdapter {
 
     event DeactivatedMellowVault(address indexed _mellowVault);
 
-    function delegateMellow(
+    function delegate(
+        address mellowVault,
         uint256 amount,
-        uint256 deadline,
-        address mellowVault
+        bytes calldata _data
     ) external returns (uint256 lpAmount);
 
-    function delegate(uint256 amount, uint256 deadline)
+    function delegateAuto(uint256 amount, uint256 deadline)
         external
         returns (uint256 tokenAmount, uint256 lpAmount);
 
-    function withdrawMellow(
-        address mellowVault,
-        uint256 minLpAmount,
-        uint256 deadline,
-        bool closePrevious
+    function withdraw(
+        address vault,
+        uint256 amount,
+        bytes calldata _data
     ) external returns (uint256);
 
-    // function withdrawEmergencyMellow(
-    //     address _mellowVault,
-    //     uint256 _deadline
-    // ) external returns (uint256);
-
-    function claimMellowWithdrawalCallback() external returns (uint256);
+    function claim(bytes calldata _data) external returns (uint256);
 
     function pendingMellowRequest(IMellowVault mellowVault)
         external

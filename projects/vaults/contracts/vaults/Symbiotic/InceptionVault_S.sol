@@ -180,7 +180,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ///////////////////////////////*/
 
     /// @dev Sends underlying to a single mellow vault
-    function delegateToSymbioticVault(address vault, uint256 amount)
+    function delegateToSymbioticVault(address vault, uint256 amount, bytes calldata _data)
         external
         nonReentrant
         whenNotPaused
@@ -190,7 +190,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
 
         /// TODO
         //  _beforeDeposit(amount);
-        _depositAssetIntoSymbiotic(amount, vault);
+        _depositAssetIntoSymbiotic(amount, vault, _data);
 
         emit DelegatedTo(address(symbioticAdapter), vault, amount);
         return;
@@ -200,12 +200,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount,
-        uint256 deadline
+        bytes calldata _data
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, deadline);
+        _depositAssetIntoMellow(mellowVault, amount, _data);
 
         emit DelegatedTo(address(mellowAdapter), mellowVault, amount);
         return;
@@ -220,7 +220,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowAdapter), balance);
-        (uint256 amount, uint256 lpAmount) = mellowAdapter.delegate(
+        (uint256 amount, uint256 lpAmount) = mellowAdapter.delegateAuto(
             balance,
             deadline
         );
