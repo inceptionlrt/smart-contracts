@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {ISymbioticHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
-import {IIMellowRestaker} from "../interfaces/restakers/IIMellowRestaker.sol";
-import {IISymbioticRestaker} from "../interfaces/restakers/IISymbioticRestaker.sol";
+import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -22,7 +22,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     /// @dev inception operator
     address internal _operator;
 
-    IIMellowRestaker public mellowRestaker;
+    IIMellowAdapter public mellowAdapter;
 
     /// @dev represents the pending amount to be redeemed by claimers,
     /// @notice + amount to undelegate from Mellow
@@ -40,7 +40,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IISymbioticRestaker public symbioticRestaker;
+    IISymbioticAdapter public symbioticAdapter;
 
     /// TODO
     uint256[50 - 9] private __gap;
@@ -52,9 +52,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     function __SymbioticHandler_init(
         IERC20 assetAddress,
-        IIMellowRestaker _mellowRestaker
+        IIMellowAdapter _mellowAdapter
     ) internal onlyInitializing {
-        mellowRestaker = _mellowRestaker;
+        mellowAdapter = _mellowAdapter;
 
         __InceptionAssetsHandler_init(assetAddress);
     }
@@ -73,15 +73,15 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         address mellowVault,
         uint256 deadline
     ) internal {
-        _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, deadline, mellowVault);
+        _asset.safeIncreaseAllowance(address(mellowAdapter), amount);
+        mellowAdapter.delegateMellow(amount, deadline, mellowVault);
     }
 
     function _depositAssetIntoSymbiotic(uint256 amount, address vault)
         internal
     {
-        _asset.safeIncreaseAllowance(address(symbioticRestaker), amount);
-        symbioticRestaker.delegate(vault, amount);
+        _asset.safeIncreaseAllowance(address(symbioticAdapter), amount);
+        symbioticAdapter.delegate(vault, amount);
     }
 
     /*/////////////////////////////////
@@ -97,13 +97,13 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = mellowRestaker.withdrawMellow(
+        amount = mellowAdapter.withdrawMellow(
             mellowVault,
             amount,
             deadline,
             true
         );
-        emit StartMellowWithdrawal(address(mellowRestaker), amount);
+        emit StartMellowWithdrawal(address(mellowAdapter), amount);
         return;
     }
 
@@ -117,10 +117,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = symbioticRestaker.withdraw(vault, amount);
+        amount = symbioticAdapter.withdraw(vault, amount);
 
         /// TODO
-        emit StartMellowWithdrawal(address(symbioticRestaker), amount);
+        emit StartMellowWithdrawal(address(symbioticAdapter), amount);
         return;
     }
 
@@ -133,7 +133,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     {
         uint256 availableBalance = getFreeBalance();
 
-        uint256 withdrawnAmount = mellowRestaker
+        uint256 withdrawnAmount = mellowAdapter
             .claimMellowWithdrawalCallback();
 
         emit WithdrawalClaimed(withdrawnAmount);
@@ -149,7 +149,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     {
         uint256 availableBalance = getFreeBalance();
 
-        uint256 withdrawnAmount = symbioticRestaker.claim(vault, sEpoch);
+        uint256 withdrawnAmount = symbioticAdapter.claim(vault, sEpoch);
 
         emit WithdrawalClaimed(withdrawnAmount);
 
@@ -201,15 +201,15 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         return
             getTotalDelegated() +
             totalAssets() +
-            symbioticRestaker.pendingWithdrawalAmount() +
+            symbioticAdapter.pendingWithdrawalAmount() +
             getPendingWithdrawalAmountFromMellow() -
             depositBonusAmount;
     }
 
     function getTotalDelegated() public view returns (uint256) {
         return
-            mellowRestaker.getTotalDeposited() +
-            symbioticRestaker.getTotalDeposited();
+            mellowAdapter.getTotalDeposited() +
+            symbioticAdapter.getTotalDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -224,8 +224,8 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         view
         returns (uint256)
     {
-        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
-        uint256 claimableAmount = mellowRestaker.claimableAmount();
+        uint256 pendingWithdrawal = mellowAdapter.pendingWithdrawalAmount();
+        uint256 claimableAmount = mellowAdapter.claimableAmount();
         return pendingWithdrawal + claimableAmount;
     }
 
@@ -254,14 +254,14 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         targetCapacity = newTargetCapacity;
     }
 
-    function setSymbioticRestaker(address newSymbioticRestaker)
+    function setSymbioticAdapter(address newSymbioticAdapter)
         external
         onlyOwner
     {
-        require(newSymbioticRestaker != address(0), InvalidAddress());
-        require(Address.isContract(newSymbioticRestaker), NotContract());
+        require(newSymbioticAdapter != address(0), InvalidAddress());
+        require(Address.isContract(newSymbioticAdapter), NotContract());
 
-        symbioticRestaker = IISymbioticRestaker(newSymbioticRestaker);
-        emit SymbioticRestakerAdded(newSymbioticRestaker);
+        symbioticAdapter = IISymbioticAdapter(newSymbioticAdapter);
+        emit SymbioticAdapterAdded(newSymbioticAdapter);
     }
 }

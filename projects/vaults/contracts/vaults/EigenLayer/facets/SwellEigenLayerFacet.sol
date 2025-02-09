@@ -52,42 +52,42 @@
 
 //         _beforeDepositAssetIntoStrategy(amount);
 
-//         // try to find a restaker for the specific EL operator
-//         address restaker = _operatorRestakers[elOperator];
-//         if (restaker == address(0)) revert OperatorNotRegistered();
+//         // try to find a adapter for the specific EL operator
+//         address adapter = _operatorAdapters[elOperator];
+//         if (adapter == address(0)) revert OperatorNotRegistered();
 
 //         bool delegate = false;
-//         if (restaker == _MOCK_ADDRESS) {
+//         if (adapter == _MOCK_ADDRESS) {
 //             delegate = true;
-//             // deploy a new restaker
-//             restaker = _deployNewStub();
-//             _operatorRestakers[elOperator] = restaker;
-//             restakers.push(restaker);
+//             // deploy a new adapter
+//             adapter = _deployNewStub();
+//             _operatorAdapters[elOperator] = adapter;
+//             adapters.push(adapter);
 //         }
 
-//         _depositAssetIntoStrategy(restaker, amount);
+//         _depositAssetIntoStrategy(adapter, amount);
 
 //         if (delegate)
 //             _delegateToOperator(
-//                 restaker,
+//                 adapter,
 //                 elOperator,
 //                 approverSalt,
 //                 approverSignatureAndExpiry
 //             );
 
-//         emit DelegatedTo(restaker, elOperator, amount);
+//         emit DelegatedTo(adapter, elOperator, amount);
 //     }
 
 //     /**
 //      * @dev delegates assets held in the strategy to the EL operator.
 //      */
 //     function _delegateToOperator(
-//         address restaker,
+//         address adapter,
 //         address elOperator,
 //         bytes32 approverSalt,
 //         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
 //     ) internal {
-//         IInceptionEigenRestaker(restaker).delegateToOperator(
+//         IInceptionEigenAdapter(adapter).delegateToOperator(
 //             elOperator,
 //             approverSalt,
 //             approverSignatureAndExpiry
@@ -95,13 +95,13 @@
 //     }
 
 //     /// @dev deposits asset to the corresponding strategy
-//     function _depositAssetIntoStrategy(address restaker, uint256 amount)
+//     function _depositAssetIntoStrategy(address adapter, uint256 amount)
 //         internal
 //     {
-//         _asset.approve(restaker, amount);
-//         IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
+//         _asset.approve(adapter, amount);
+//         IInceptionEigenAdapter(adapter).depositAssetIntoStrategy(amount);
 
-//         emit DepositedToEL(restaker, amount);
+//         emit DepositedToEL(adapter, amount);
 //     }
 
 //     /**
@@ -138,11 +138,11 @@
 //         external
 //         nonReentrant
 //     {
-//         address staker = _operatorRestakers[elOperatorAddress];
+//         address staker = _operatorAdapters[elOperatorAddress];
 //         if (staker == address(0)) revert OperatorNotRegistered();
 //         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-//         IInceptionEigenRestaker(staker).withdrawFromEL(
+//         IInceptionEigenAdapter(staker).withdrawFromEL(
 //             _undelegate(amount, staker)
 //         );
 //     }
@@ -178,7 +178,7 @@
 //      * @dev claims completed withdrawals from EigenLayer, if they exist
 //      */
 //     function claimCompletedWithdrawals(
-//         address restaker,
+//         address adapter,
 //         IDelegationManager.Withdrawal[] calldata withdrawals
 //     ) public nonReentrant {
 //         uint256 withdrawalsNum = withdrawals.length;
@@ -195,7 +195,7 @@
 //         uint256 availableBalance = getFreeBalance();
 
 //         uint256 withdrawnAmount;
-//         if (restaker == address(this)) {
+//         if (adapter == address(this)) {
 //             withdrawnAmount = _claimCompletedWithdrawalsForVault(
 //                 withdrawals,
 //                 tokens,
@@ -203,8 +203,8 @@
 //                 receiveAsTokens
 //             );
 //         } else {
-//             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-//             withdrawnAmount = IInceptionEigenRestaker(restaker)
+//             if (!_adapterExists(adapter)) revert AdapterNotRegistered();
+//             withdrawnAmount = IInceptionEigenAdapter(adapter)
 //                 .claimWithdrawals(
 //                     withdrawals,
 //                     tokens,
@@ -252,14 +252,14 @@
 //         _updateEpoch(getFreeBalance());
 //     }
 
-//     function _restakerExists(address restakerAddress)
+//     function _adapterExists(address adapterAddress)
 //         internal
 //         view
 //         returns (bool)
 //     {
-//         uint256 numOfRestakers = restakers.length;
-//         for (uint256 i = 0; i < numOfRestakers; ++i) {
-//             if (restakerAddress == restakers[i]) return true;
+//         uint256 numOfAdapters = adapters.length;
+//         for (uint256 i = 0; i < numOfAdapters; ++i) {
+//             if (adapterAddress == adapters[i]) return true;
 //         }
 //         return false;
 //     }
@@ -280,16 +280,16 @@
 //         }
 //     }
 
-//     function forceUndelegateRecovery(uint256 amount, address restaker)
+//     function forceUndelegateRecovery(uint256 amount, address adapter)
 //         external
 //     {
-//         if (restaker == address(0)) revert NullParams();
-//         for (uint256 i = 0; i < restakers.length; ++i) {
+//         if (adapter == address(0)) revert NullParams();
+//         for (uint256 i = 0; i < adapters.length; ++i) {
 //             if (
-//                 restakers[i] == restaker &&
-//                 !delegationManager.isDelegated(restakers[i])
+//                 adapters[i] == adapter &&
+//                 !delegationManager.isDelegated(adapters[i])
 //             ) {
-//                 restakers[i] == _MOCK_ADDRESS;
+//                 adapters[i] == _MOCK_ADDRESS;
 //                 break;
 //             }
 //         }
@@ -314,7 +314,7 @@
 //         IOwnable asOwnable = IOwnable(deployedAddress);
 //         asOwnable.transferOwnership(owner());
 
-//         emit RestakerDeployed(deployedAddress);
+//         emit AdapterDeployed(deployedAddress);
 //         return deployedAddress;
 //     }
 

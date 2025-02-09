@@ -7,24 +7,24 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIEigenLayerRestaker} from "../interfaces/restakers/IIEigenLayerRestaker.sol";
+import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
 /**
- * @title The InceptionEigenRestaker Contract
+ * @title The InceptionEigenAdapter Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenRestaker is
+contract InceptionEigenAdapter is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIEigenLayerRestaker
+    IIEigenLayerAdapter
 {
     using SafeERC20 for IERC20;
 

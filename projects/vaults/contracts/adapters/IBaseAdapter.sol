@@ -7,14 +7,14 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIBaseRestaker} from "../interfaces/restakers/IIBaseRestaker.sol";
+import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 
-abstract contract IBaseRestaker is
+abstract contract IBaseAdapter is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIBaseRestaker
+    IIBaseAdapter
 {
     using SafeERC20 for IERC20;
 
@@ -35,7 +35,7 @@ abstract contract IBaseRestaker is
         _disableInitializers();
     }
 
-    function __IBaseRestaker_init(IERC20 asset, address trusteeManager)
+    function __IBaseAdapter_init(IERC20 asset, address trusteeManager)
         public
         initializer
     {

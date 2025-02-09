@@ -5,9 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IDelegationManager, IStrategy, IERC20} from "../eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IMellowVault} from "../symbiotic-vault/mellow-core/IMellowVault.sol";
-import {IIBaseRestaker} from "./IIBaseRestaker.sol";
+import {IIBaseAdapter} from "./IIBaseAdapter.sol";
 
-interface IInceptionEigenRestakerErrors {
+interface IInceptionEigenAdapterErrors {
     error OnlyTrusteeAllowed();
 
     error InconsistentData();
@@ -17,7 +17,7 @@ interface IInceptionEigenRestakerErrors {
     error NullParams();
 }
 
-interface IIEigenLayerRestaker is IIBaseRestaker {
+interface IIEigenLayerAdapter is IIBaseAdapter {
     event StartWithdrawal(
         address indexed stakerAddress,
         bytes32 withdrawalRoot,

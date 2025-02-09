@@ -172,30 +172,30 @@
 
 //         _beforeDepositAssetIntoStrategy(amount);
 
-//         // try to find a restaker for the specific EL operator
-//         address restaker = _operatorRestakers[elOperator];
-//         if (restaker == address(0)) revert OperatorNotRegistered();
+//         // try to find a adapter for the specific EL operator
+//         address adapter = _operatorAdapters[elOperator];
+//         if (adapter == address(0)) revert OperatorNotRegistered();
 
 //         bool delegate = false;
-//         if (restaker == _MOCK_ADDRESS) {
+//         if (adapter == _MOCK_ADDRESS) {
 //             delegate = true;
-//             // deploy a new restaker
-//             restaker = _deployNewStub();
-//             _operatorRestakers[elOperator] = restaker;
-//             restakers.push(restaker);
+//             // deploy a new adapter
+//             adapter = _deployNewStub();
+//             _operatorAdapters[elOperator] = adapter;
+//             adapters.push(adapter);
 //         }
 
-//         _depositAssetIntoStrategy(restaker, amount);
+//         _depositAssetIntoStrategy(adapter, amount);
 
 //         if (delegate)
 //             _delegateToOperator(
-//                 restaker,
+//                 adapter,
 //                 elOperator,
 //                 approverSalt,
 //                 approverSignatureAndExpiry
 //             );
 
-//         emit DelegatedTo(restaker, elOperator, amount);
+//         emit DelegatedTo(adapter, elOperator, amount);
 //     }
 
 //     /*///////////////////////////////////////
@@ -365,7 +365,7 @@
 //         IOwnable asOwnable = IOwnable(deployedAddress);
 //         asOwnable.transferOwnership(owner());
 
-//         emit RestakerDeployed(deployedAddress);
+//         emit AdapterDeployed(deployedAddress);
 //         return deployedAddress;
 //     }
 
@@ -416,7 +416,7 @@
 //     function getDelegatedTo(
 //         address elOperator
 //     ) external view returns (uint256) {
-//         return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
+//         return strategy.userUnderlyingView(_operatorAdapters[elOperator]);
 //     }
 
 //     function getPendingWithdrawalOf(
@@ -426,11 +426,11 @@
 //     }
 
 //     function _verifyDelegated() internal view returns (bool) {
-//         for (uint256 i = 0; i < restakers.length; i++) {
-//             if (restakers[i] == address(0)) {
+//         for (uint256 i = 0; i < adapters.length; i++) {
+//             if (adapters[i] == address(0)) {
 //                 continue;
 //             }
-//             if (!delegationManager.isDelegated(restakers[i])) return false;
+//             if (!delegationManager.isDelegated(adapters[i])) return false;
 //         }
 
 //         if (
@@ -563,10 +563,10 @@
 //         if (!delegationManager.isOperator(newELOperator))
 //             revert NotEigenLayerOperator();
 
-//         if (_operatorRestakers[newELOperator] != address(0))
+//         if (_operatorAdapters[newELOperator] != address(0))
 //             revert EigenLayerOperatorAlreadyExists();
 
-//         _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
+//         _operatorAdapters[newELOperator] = _MOCK_ADDRESS;
 //         emit ELOperatorAdded(newELOperator);
 //     }
 

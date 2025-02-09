@@ -54,7 +54,7 @@ interface IInceptionVault_S {
 
     event TreasuryChanged(address prevValue, address newValue);
 
-    event MellowRestakerChanged(address prevValue, address newValue);
+    event MellowAdapterChanged(address prevValue, address newValue);
 
     event ReferralCode(bytes32 indexed code);
 

@@ -14,7 +14,7 @@ import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/I
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-import {IIEigenLayerRestaker} from "../../interfaces/restakers/IIEigenLayerRestaker.sol";
+import {IIEigenLayerAdapter} from "../../interfaces/adapters/IIEigenLayerAdapter.sol";
 import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 import {Convert} from "../../lib/Convert.sol";
@@ -63,8 +63,8 @@ contract InceptionVaultStorage_EL is
     uint256 public redeemReservedAmount;
 
     /// @dev Maps EigenLayer operators to Inception stakers.
-    mapping(address => address) internal _operatorRestakers;
-    address[] public restakers;
+    mapping(address => address) internal _operatorAdapters;
+    address[] public adapters;
 
     uint256 public depositBonusAmount;
 
@@ -146,14 +146,14 @@ contract InceptionVaultStorage_EL is
     }
 
     /**
-     * @notice Returns the total amount delegated to all restakers in EigenLayer.
+     * @notice Returns the total amount delegated to all adapters in EigenLayer.
      * @return total The total delegated amount.
      */
     function getTotalDelegated() public view returns (uint256 total) {
-        uint256 stakersNum = restakers.length;
+        uint256 stakersNum = adapters.length;
         for (uint256 i = 0; i < stakersNum; ++i) {
-            if (restakers[i] == address(0)) continue;
-            total += strategy.userUnderlyingView(restakers[i]);
+            if (adapters[i] == address(0)) continue;
+            total += strategy.userUnderlyingView(adapters[i]);
         }
         return total + strategy.userUnderlyingView(address(this));
     }
@@ -198,7 +198,7 @@ contract InceptionVaultStorage_EL is
         view
         returns (uint256)
     {
-        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
+        return strategy.userUnderlyingView(_operatorAdapters[elOperator]);
     }
 
     function getPendingWithdrawalOf(address claimer)

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {InceptionVault_S, IInceptionToken, IERC20} from "../InceptionVault_S.sol";
-import {IIMellowRestaker} from "../../../interfaces/restakers/IIMellowRestaker.sol";
+import {IIMellowAdapter} from "../../../interfaces/adapters/IIMellowAdapter.sol";
 
 /// @author The InceptionLRT team
 contract InVault_S_E2 is InceptionVault_S {
@@ -16,14 +16,14 @@ contract InVault_S_E2 is InceptionVault_S {
         address operatorAddress,
         IERC20 assetAddress,
         IInceptionToken _inceptionToken,
-        IIMellowRestaker _mellowRestaker
+        IIMellowAdapter _mellowAdapter
     ) external initializer {
         __InceptionVault_init(
             vaultName,
             operatorAddress,
             assetAddress,
             _inceptionToken,
-            _mellowRestaker
+            _mellowAdapter
         );
     }
 

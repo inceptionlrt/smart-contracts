@@ -104,7 +104,7 @@ interface IInceptionVault_EL {
 
     event ELOperatorAdded(address indexed newELOperator);
 
-    event RestakerDeployed(address indexed restaker);
+    event AdapterDeployed(address indexed adapter);
 
     event ImplementationUpgraded(address prevValue, address newValue);
 

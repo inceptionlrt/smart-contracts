@@ -51,7 +51,7 @@ const calculateRatio = async (vault, token) => {
   return ratio;
 };
 
-const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
+const withdrawDataFromTx = async (tx, operatorAddress, adapter) => {
   const receipt = await tx.wait();
   if (receipt.logs.length !== 3) {
     console.error("WRONG NUMBER OF EVENTS in withdrawFromEigenLayerEthAmount()", receipt.logs.length);
@@ -62,7 +62,7 @@ const withdrawDataFromTx = async (tx, operatorAddress, restaker) => {
   return [
     WithdrawalQueuedEvent["stakerAddress"],
     operatorAddress,
-    restaker,
+    adapter,
     WithdrawalQueuedEvent["nonce"],
     WithdrawalQueuedEvent["withdrawalStartBlock"],
     [WithdrawalQueuedEvent["strategy"]],

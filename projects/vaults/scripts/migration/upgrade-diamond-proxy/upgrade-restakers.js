@@ -9,13 +9,13 @@ async function main() {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
-  /// 1. deploy a new Restaker Implementation
+  /// 1. deploy a new Adapter Implementation
 
-  const BeaconProxyPatternV2 = await ethers.getContractFactory("InceptionEigenRestaker");
+  const BeaconProxyPatternV2 = await ethers.getContractFactory("InceptionEigenAdapter");
   const beaconImpl = await BeaconProxyPatternV2.deploy();
   await beaconImpl.waitForDeployment();
   const newRestakeImp = await beaconImpl.getAddress();
-  console.log(`-------- Restaker has been deployed at the address: ${newRestakeImp}`);
+  console.log(`-------- Adapter has been deployed at the address: ${newRestakeImp}`);
 
   const iVaultOldFactory = await ethers.getContractFactory("EigenSetterFacet", {
     libraries: { InceptionLibrary: INCEPTION_LIBRARY },
@@ -35,26 +35,26 @@ async function main() {
 
   /// 3. set rewardsCoordinator
   console.log(
-    `We're going to set rewardsCoordinator(${addresses.RewardsCoordinator}) for all previously deployed Restakers`,
+    `We're going to set rewardsCoordinator(${addresses.RewardsCoordinator}) for all previously deployed Adapters`,
   );
 
   try {
-    for (const [vaultAddress, vaultRestakers] of restakers.entries()) {
-      if (!vaultAddress || !Array.isArray(vaultRestakers)) continue;
+    for (const [vaultAddress, vaultAdapters] of adapters.entries()) {
+      if (!vaultAddress || !Array.isArray(vaultAdapters)) continue;
 
-      for (const restakerAddr of vaultRestakers) {
-        if (!restakerAddr) continue;
+      for (const adapterAddr of vaultAdapters) {
+        if (!adapterAddr) continue;
 
-        const restaker = BeaconProxyPatternV2.attach(restakerAddr);
-        tx = await restaker.setRewardsCoordinator(addresses.RewardsCoordinator);
+        const adapter = BeaconProxyPatternV2.attach(adapterAddr);
+        tx = await adapter.setRewardsCoordinator(addresses.RewardsCoordinator);
         await tx.wait();
         console.log(
-          `Restaker(${await restaker.getAddress()}) for ${vaultAddress} was updated with the RewardsCoordinator:`,
+          `Adapter(${await adapter.getAddress()}) for ${vaultAddress} was updated with the RewardsCoordinator:`,
         );
       }
     }
   } catch (error) {
-    console.error("Error processing restakers:", error);
+    console.error("Error processing adapters:", error);
   }
 }
 
@@ -62,16 +62,16 @@ async function createGnosisBatch() {}
 
 async function upgradeOnTestnet(iVaultAddress) {
   try {
-    for (const [vaultAddress, vaultRestakers] of restakers.entries()) {
-      if (!vaultAddress || !Array.isArray(vaultRestakers)) continue;
+    for (const [vaultAddress, vaultAdapters] of adapters.entries()) {
+      if (!vaultAddress || !Array.isArray(vaultAdapters)) continue;
 
       const iVault = await ethers.getContractAt("EigenSetterFacet", vaultAddress);
       let tx = await iVault.upgradeTo(newRestakeImp);
       await tx.wait();
-      console.log("Inception Restaker Impl has been upgraded for the vault: ", vaultAddress);
+      console.log("Inception Adapter Impl has been upgraded for the vault: ", vaultAddress);
     }
   } catch (error) {
-    console.error("Error processing restakers:", error);
+    console.error("Error processing adapters:", error);
   }
 }
 

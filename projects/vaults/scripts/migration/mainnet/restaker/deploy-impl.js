@@ -1,10 +1,10 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const BeaconProxyPatternV1 = await ethers.getContractFactory("InceptionRestaker");
+  const BeaconProxyPatternV1 = await ethers.getContractFactory("InceptionAdapter");
   const beaconImpl = await BeaconProxyPatternV1.deploy();
   await beaconImpl.deployed();
-  console.log(`-------- Restaker has been deployed at the address: ${beaconImpl.address}`);
+  console.log(`-------- Adapter has been deployed at the address: ${beaconImpl.address}`);
 }
 
 main()

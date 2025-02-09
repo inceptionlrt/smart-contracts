@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {SymbioticHandler, IIMellowRestaker, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
+import {SymbioticHandler, IIMellowAdapter, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -60,10 +60,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         address operatorAddress,
         IERC20 assetAddress,
         IInceptionToken _inceptionToken,
-        IIMellowRestaker _mellowRestaker
+        IIMellowAdapter _mellowAdapter
     ) internal {
         __Ownable2Step_init();
-        __SymbioticHandler_init(assetAddress, _mellowRestaker);
+        __SymbioticHandler_init(assetAddress, _mellowAdapter);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -192,7 +192,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         //  _beforeDeposit(amount);
         _depositAssetIntoSymbiotic(amount, vault);
 
-        emit DelegatedTo(address(symbioticRestaker), vault, amount);
+        emit DelegatedTo(address(symbioticAdapter), vault, amount);
         return;
     }
 
@@ -207,7 +207,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _beforeDeposit(amount);
         _depositAssetIntoMellow(amount, mellowVault, deadline);
 
-        emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
+        emit DelegatedTo(address(mellowAdapter), mellowVault, amount);
         return;
     }
 
@@ -219,13 +219,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         onlyOperator
     {
         uint256 balance = getFreeBalance();
-        _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
+        _asset.safeIncreaseAllowance(address(mellowAdapter), balance);
+        (uint256 amount, uint256 lpAmount) = mellowAdapter.delegate(
             balance,
             deadline
         );
 
-        emit Delegated(address(mellowRestaker), amount, lpAmount);
+        emit Delegated(address(mellowAdapter), amount, lpAmount);
     }
 
     /*///////////////////////////////////////
@@ -454,7 +454,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         view
         returns (uint256)
     {
-        return mellowRestaker.getDeposited(mellowVault);
+        return mellowAdapter.getDeposited(mellowVault);
     }
 
     function getPendingWithdrawalOf(address claimer)

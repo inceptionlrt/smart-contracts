@@ -32,7 +32,7 @@ interface IInceptionVaultErrors {
 
     error OperatorNotRegistered();
 
-    error RestakerNotRegistered();
+    error AdapterNotRegistered();
 
     error ImplementationNotSet();
 

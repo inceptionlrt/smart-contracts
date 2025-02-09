@@ -64,10 +64,10 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         if (!delegationManager.isOperator(newELOperator))
             revert NotEigenLayerOperator();
 
-        if (_operatorRestakers[newELOperator] != address(0))
+        if (_operatorAdapters[newELOperator] != address(0))
             revert EigenLayerOperatorAlreadyExists();
 
-        _operatorRestakers[newELOperator] = _MOCK_ADDRESS;
+        _operatorAdapters[newELOperator] = _MOCK_ADDRESS;
         emit ELOperatorAdded(newELOperator);
     }
 

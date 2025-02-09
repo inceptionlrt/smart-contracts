@@ -3,7 +3,7 @@
 
 // import {IDelegationManager, IStrategy, IERC20} from "./eigen-core/IDelegationManager.sol";
 
-// interface IInceptionEigenRestakerErrors {
+// interface IInceptionEigenAdapterErrors {
 //     error OnlyTrusteeAllowed();
 
 //     error InconsistentData();
@@ -13,7 +13,7 @@
 //     error NullParams();
 // }
 
-// interface IInceptionEigenRestaker {
+// interface IInceptionEigenAdapter {
 //     event StartWithdrawal(
 //         address indexed stakerAddress,
 //         bytes32 withdrawalRoot,

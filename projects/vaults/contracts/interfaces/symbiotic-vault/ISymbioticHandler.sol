@@ -39,5 +39,5 @@ interface ISymbioticHandler is IMellowHandler {
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 
-    event SymbioticRestakerAdded(address indexed newValue);
+    event SymbioticAdapterAdded(address indexed newValue);
 }

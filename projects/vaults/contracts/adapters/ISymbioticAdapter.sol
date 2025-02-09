@@ -9,22 +9,22 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IISymbioticRestaker} from "../interfaces/restakers/IISymbioticRestaker.sol";
+import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
 import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 /**
- * @title The ISymbioticRestaker Contract
+ * @title The ISymbioticAdapter Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract ISymbioticRestaker is
+contract ISymbioticAdapter is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IISymbioticRestaker
+    IISymbioticAdapter
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;

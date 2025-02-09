@@ -17,12 +17,12 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
-  // 2. Mellow restaker
-  const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
-  const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrappers, mellowVaults, asset, addresses.Operator], { kind: "transparent" });
+  // 2. Mellow adapter
+  const mellowAdapterFactory = await hre.ethers.getContractFactory("IMellowAdapter");
+  const mr = await upgrades.deployProxy(mellowAdapterFactory, [mellowWrappers, mellowVaults, asset, addresses.Operator], { kind: "transparent" });
   await mr.waitForDeployment();
   const mrAddress = await mr.getAddress();
-  console.log(`MellowRestaker address: ${mrAddress}`);
+  console.log(`MellowAdapter address: ${mrAddress}`);
 
   const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
 
@@ -65,8 +65,8 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
     iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    Restaker: mrAddress,
-    RestakerImpl: mrImpAddress,
+    Adapter: mrAddress,
+    AdapterImpl: mrImpAddress,
   };
 
   const json_addresses = JSON.stringify(iAddresses);
@@ -79,7 +79,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   tx = await mr.setVault(await iVault.getAddress());
   await tx.wait();
-  console.log("restaker vault set");
+  console.log("adapter vault set");
 
   tx = await iVault.setTargetFlashCapacity("5000000000000000000"); // 5%
   await tx.wait();

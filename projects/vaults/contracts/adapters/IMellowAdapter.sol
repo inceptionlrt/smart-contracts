@@ -10,7 +10,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
-import {IIMellowRestaker} from "../interfaces/restakers/IIMellowRestaker.sol";
+import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowHandler} from "../interfaces/symbiotic-vault/mellow-core/IMellowHandler.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
@@ -21,17 +21,17 @@ import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMel
 import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
 /**
- * @title The MellowRestaker Contract
+ * @title The MellowAdapter Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowRestaker is
+contract IMellowAdapter is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
     OwnableUpgradeable,
-    IIMellowRestaker
+    IIMellowAdapter
 {
     using SafeERC20 for IERC20;
 

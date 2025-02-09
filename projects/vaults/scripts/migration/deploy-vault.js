@@ -10,7 +10,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
-  console.log(`InceptionRestaker address: ${RESTAKER_ADDRESS}`);
+  console.log(`InceptionAdapter address: ${RESTAKER_ADDRESS}`);
 
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
@@ -122,7 +122,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   tx = await iVault.setDelegationManager(addresses.DelegationManager);
   await tx.wait();
 
-  // 5. set the IRestaker Impl
+  // 5. set the IAdapter Impl
   tx = await iVault.upgradeTo(RESTAKER_ADDRESS);
   await tx.wait();
 
@@ -151,7 +151,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     //    iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    RestakerImpl: RESTAKER_ADDRESS,
+    AdapterImpl: RESTAKER_ADDRESS,
   };
 
   const json_addresses = JSON.stringify(iAddresses);
