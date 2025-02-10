@@ -76,10 +76,6 @@ interface IInceptionVault_S {
 
     event WithdrawalFee(uint256 indexed fee);
 
-    event AdapterAdded(address);
-
-    event AdapterRemoved(address);
-
     function inceptionToken() external view returns (IInceptionToken);
 
     function ratio() external view returns (uint256);

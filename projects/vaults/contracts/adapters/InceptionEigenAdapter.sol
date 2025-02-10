@@ -154,12 +154,16 @@ contract InceptionEigenAdapter is
         return withdrawnAmount;
     }
 
-    function claimableAmount() external view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
+    function claimableAmount() public view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
         return 0;
     }
 
-    function pendingWithdrawalAmount() external view override returns (uint256 total) {
+    function pendingWithdrawalAmount() public view override returns (uint256 total) {
         return 0;
+    }
+
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + claimableAmount();
     }
 
     function getDeposited(

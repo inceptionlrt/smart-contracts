@@ -132,7 +132,7 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function pendingWithdrawalAmount() external view override returns (uint256 total) {
+    function pendingWithdrawalAmount() public view override returns (uint256 total) {
         for (uint256 i = 0; i < _vaults.length(); i++)
             if (withdrawals[_vaults.at(i)] != 0)
                 total += IVault(_vaults.at(i)).withdrawalsOf(
@@ -143,8 +143,12 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function claimableAmount() external view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
+    function claimableAmount() public view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
         return 0;
+    }
+
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + claimableAmount();
     }
 
     function addVault(address vaultAddress) external onlyOwner {

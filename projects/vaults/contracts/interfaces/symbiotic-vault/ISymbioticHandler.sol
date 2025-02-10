@@ -19,7 +19,7 @@ interface IMellowHandler {
     );
 }
 
-interface ISymbioticHandler is IMellowHandler {
+interface IAdapterHandler is IMellowHandler {
     /// @dev Epoch represents the period of the rebalancing process
     /// @dev Receiver is a receiver of assets in claim()
     /// @dev Amount represents the exact amount of the asset to be claimed
@@ -42,4 +42,8 @@ interface ISymbioticHandler is IMellowHandler {
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 
     event SymbioticAdapterAdded(address indexed newValue);
+    
+    event AdapterAdded(address);
+
+    event AdapterRemoved(address);
 }

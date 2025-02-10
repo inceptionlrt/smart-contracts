@@ -199,7 +199,7 @@ contract IMellowAdapter is
         return mellowVault.withdrawalRequest(address(this));
     }
 
-    function claimableWithdrawalAmount() external view returns (uint256 total) {
+    function claimableWithdrawalAmount() public view returns (uint256 total) {
         
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             
@@ -212,7 +212,7 @@ contract IMellowAdapter is
         return IMellowSymbioticVault(_mellowVault).claimableAssetsOf(address(this));
     }
 
-    function pendingWithdrawalAmount() external view override returns (uint256 total) {
+    function pendingWithdrawalAmount() public view override returns (uint256 total) {
 
         for (uint256 i = 0; i < mellowVaults.length; i++) {
 
@@ -243,6 +243,10 @@ contract IMellowAdapter is
             }
         }
         return total;
+    }
+
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + claimableWithdrawalAmount() + claimableAmount();
     }
 
     function amountToLpAmount(

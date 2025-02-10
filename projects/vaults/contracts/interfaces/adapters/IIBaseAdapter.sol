@@ -49,6 +49,8 @@ interface IIBaseAdapter {
 
     function claimableAmount() external view returns (uint256);
 
+    function inactiveBalance() external view returns (uint256);
+
     function delegate(address vault, uint256 amount, bytes[] calldata _data) external returns (uint256 depositedAmount);
 
     function withdraw(address vault, uint256 shares, bytes[] calldata _data) external returns (uint256);

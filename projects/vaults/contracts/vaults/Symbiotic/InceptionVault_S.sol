@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {SymbioticHandler, IIMellowAdapter, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
+import {AdapterHandler, IIMellowAdapter, IERC20} from "../../symbiotic-handler/AdapterHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -16,7 +16,7 @@ import {IIBaseAdapter} from "../../interfaces/adapters/IIBaseAdapter.sol";
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
-contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
+contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -56,17 +56,14 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
-    EnumerableSet.AddressSet internal _adapters;
-
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
         IERC20 assetAddress,
-        IInceptionToken _inceptionToken,
-        IIMellowAdapter _mellowAdapter
+        IInceptionToken _inceptionToken
     ) internal {
         __Ownable2Step_init();
-        __SymbioticHandler_init(assetAddress, _mellowAdapter);
+        __SymbioticHandler_init(assetAddress);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -176,41 +173,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _deposit(assetsAmount, msg.sender, receiver);
 
         return assetsAmount;
-    }
-
-    /*/////////////////////////////////
-    ////// Delegation functions //////
-    ///////////////////////////////*/
-    function delegate(address adapter, address vault, uint256 amount, bytes[] calldata _data) 
-        external 
-        nonReentrant 
-        whenNotPaused 
-        onlyOperator 
-    {
-        if (adapter == address (0) || vault == address(0) || amount == 0) revert NullParams();
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
-
-        _asset.safeIncreaseAllowance(address(adapter), amount);
-        IIBaseAdapter(adapter).delegate(vault, amount, _data);
-        emit DelegatedTo(adapter, vault, amount);
-    }
-
-    function undelegate(
-        address adapter,
-        address vault,
-        uint256 amount,
-        bytes[] calldata _data
-    ) external whenNotPaused nonReentrant onlyOperator {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        if (vault == address(0)) revert InvalidAddress();
-        if (amount == 0) revert ValueZero();
-        amount = IIBaseAdapter(adapter).withdraw(
-            vault,
-            amount,
-            _data
-        );
-        emit StartMellowWithdrawal(adapter, amount);
-        return;
     }
 
     /*///////////////////////////////////////
@@ -440,14 +402,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(address mellowVault)
-        external
-        view
-        returns (uint256)
-    {
-        return mellowAdapter.getDeposited(mellowVault);
-    }
-
     function getPendingWithdrawalOf(address claimer)
         external
         view
@@ -508,20 +462,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             calculateFlashWithdrawFee(convertToAssets(shares));
     }
 
-    /*//////////////////////////////
-    ////// Adapter functions //////
-    ////////////////////////////*/
-    function addAdapter(address adapter) external onlyOwner {
-        if (_adapters.contains(adapter)) revert AdapterAlreadyAdded();
-        emit AdapterAdded(adapter);
-        _adapters.add(adapter);
-    }
-
-    function removeAdapter(address adapter) external onlyOwner {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        emit AdapterRemoved(adapter);
-        _adapters.remove(adapter);
-    }
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/

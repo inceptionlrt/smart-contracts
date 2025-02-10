@@ -15,15 +15,13 @@ contract InVault_S_E2 is InceptionVault_S {
         string memory vaultName,
         address operatorAddress,
         IERC20 assetAddress,
-        IInceptionToken _inceptionToken,
-        IIMellowAdapter _mellowAdapter
+        IInceptionToken _inceptionToken
     ) external initializer {
         __InceptionVault_init(
             vaultName,
             operatorAddress,
             assetAddress,
-            _inceptionToken,
-            _mellowAdapter
+            _inceptionToken
         );
     }
 

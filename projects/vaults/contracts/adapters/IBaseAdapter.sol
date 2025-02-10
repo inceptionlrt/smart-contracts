@@ -43,7 +43,7 @@ abstract contract IBaseAdapter is
         _trusteeManager = trusteeManager;
     }
 
-    function claimableAmount() external view virtual override returns (uint256) {
+    function claimableAmount() public view virtual override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
