@@ -175,13 +175,6 @@ contract IMellowAdapter is
         emit VaultAdded(mellowVault);
     }
 
-    function deactivateMellowVault(address mellowVault) external onlyOwner {
-        if (address(mellowDepositWrappers[mellowVault]) == address(0))
-            revert AlreadyDeactivated();
-        mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(address(0));
-        emit DeactivatedMellowVault(mellowVault);
-    }
-
     function changeAllocation(address mellowVault, uint256 newAllocation)
         external
         onlyOwner

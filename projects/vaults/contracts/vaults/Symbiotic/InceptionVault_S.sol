@@ -260,11 +260,16 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
+
+        uint256 queueLength = claimerWithdrawalsQueue.length;
+        if (genRequest.withdrawals == 0) genRequest.epoch = queueLength;
+        genRequest.withdrawals++;
         claimerWithdrawalsQueue.push(
             Withdrawal({
-                epoch: claimerWithdrawalsQueue.length,
+                epoch: queueLength,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount)
+                amount: _getAssetReceivedAmount(amount),
+                withdrawals: 1
             })
         );
 
@@ -293,11 +298,9 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
         );
-        _traversalEpoch[receiver] = epoch - 1;
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
-        uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
@@ -311,7 +314,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            redeemedWithdrawals[i] = withdrawalNum;
+            genRequest.withdrawals--;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
@@ -321,7 +324,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
 
         _transferAssetTo(receiver, redeemedAmount);
 
-        emit RedeemedRequests(redeemedWithdrawals);
+        emit RedeemedRequests(availableWithdrawals);
         emit Redeem(msg.sender, receiver, redeemedAmount);
     }
 
@@ -423,13 +426,16 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     {
         // get the general request
         uint256 index;
+
+        uint256[] memory availableWithdrawals;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
-        uint256[] memory availableWithdrawals = new uint256[](
-            epoch - genRequest.epoch
-        );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        for (uint256 i = _traversalEpoch[claimer]; i < epoch; ++i) {
+        availableWithdrawals = new uint256[](
+            genRequest.withdrawals
+        );
+
+        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
@@ -478,7 +484,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
         return
-            !paused() ? previewDeposit(IERC20(asset()).balanceOf(receiver)) : 0;
+            !paused() ? convertToShares(IERC20(asset()).balanceOf(receiver)) : 0;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
