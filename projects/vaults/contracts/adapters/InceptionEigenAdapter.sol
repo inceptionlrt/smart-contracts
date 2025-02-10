@@ -13,6 +13,8 @@ import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
+import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+
 /**
  * @title The InceptionEigenAdapter Contract
  * @author The InceptionLRT team
@@ -20,30 +22,27 @@ import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRe
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract InceptionEigenAdapter is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IIEigenLayerAdapter
+    IIEigenLayerAdapter,
+    IBaseAdapter
 {
     using SafeERC20 for IERC20;
 
-    IERC20 internal _asset;
-    address internal _trusteeManager;
-    address internal _inceptionVault;
+    // IERC20 internal _asset;
+    // address internal _trusteeManager;
+    // address internal _inceptionVault;
 
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
 
-    modifier onlyTrustee() {
-        require(
-            msg.sender == _inceptionVault || msg.sender == _trusteeManager,
-            NotVaultOrTrusteeManager()
-        );
-        _;
-    }
+    // modifier onlyTrustee() {
+    //     require(
+    //         msg.sender == _inceptionVault || msg.sender == _trusteeManager,
+    //         NotVaultOrTrusteeManager()
+    //     );
+    //     _;
+    // }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -64,12 +63,13 @@ contract InceptionEigenAdapter is
         __Ownable_init();
         // Ensure compatibility with future versions of ERC165Upgradeable
         __ERC165_init();
+        __IBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _asset = IERC20(asset);
-        _trusteeManager = trusteeManager;
+        // _asset = IERC20(asset);
+        // _trusteeManager = trusteeManager;
         _inceptionVault = msg.sender;
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
@@ -111,7 +111,7 @@ contract InceptionEigenAdapter is
         address, /*vault*/
         uint256 shares,
         bytes[] calldata _data
-    ) external onlyTrustee {
+    ) external override onlyTrustee returns (uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
@@ -135,6 +135,7 @@ contract InceptionEigenAdapter is
 
     function claim(bytes[] calldata _data)
         external
+        override
         onlyTrustee
         returns (uint256)
     {
@@ -167,21 +168,21 @@ contract InceptionEigenAdapter is
         return withdrawnAmount;
     }
 
-    function claimableAmount() external view returns (uint256) {
+    function claimableAmount() external view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
         return 0;
     }
 
-    function pendingWithdrawalAmount() external view returns (uint256 total) {
+    function pendingWithdrawalAmount() external view override returns (uint256 total) {
         return 0;
     }
 
     function getDeposited(
         address /*operatorAddress*/
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
-    function getTotalDeposited() external view returns (uint256) {
+    function getTotalDeposited() external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
@@ -189,7 +190,7 @@ contract InceptionEigenAdapter is
         return _delegationManager.delegatedTo(address(this));
     }
 
-    function getVersion() external pure returns (uint256) {
+    function getVersion() external pure override returns (uint256) {
         return 3;
     }
 
@@ -214,21 +215,21 @@ contract InceptionEigenAdapter is
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
     }
 
-    function setInceptionVault(address inceptionVault) external onlyOwner {
-        emit VaultSet(_inceptionVault, inceptionVault);
-        _inceptionVault = inceptionVault;
-    }
+    // function setInceptionVault(address inceptionVault) external onlyOwner {
+    //     emit VaultSet(_inceptionVault, inceptionVault);
+    //     _inceptionVault = inceptionVault;
+    // }
 
-    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-        _trusteeManager = _newTrusteeManager;
-    }
+    // function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+    //     emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+    //     _trusteeManager = _newTrusteeManager;
+    // }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
+    // function pause() external onlyOwner {
+    //     _pause();
+    // }
 
-    function unpause() external onlyOwner {
-        _unpause();
-    }
+    // function unpause() external onlyOwner {
+    //     _unpause();
+    // }
 }

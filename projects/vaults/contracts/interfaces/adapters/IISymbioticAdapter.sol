@@ -12,15 +12,15 @@ interface IISymbioticAdapter is IIBaseAdapter {
 
     event VaultAdded(address indexed vault);
 
-    function delegate(address vaultAddress, uint256 amount, bytes calldata _data)
-        external
-        returns (uint256 depositedAmount);
+    // function delegate(address vaultAddress, uint256 amount, bytes[] calldata _data)
+    //     external
+    //     returns (uint256 depositedAmount);
 
-    function withdraw(address vaultAddress, uint256 amount, bytes calldata _data)
-        external
-        returns (uint256);
+    // function withdraw(address vaultAddress, uint256 amount, bytes[] calldata _data)
+    //     external
+    //     returns (uint256);
 
-    function claim(bytes calldata _data)
-        external
-        returns (uint256);
+    // function claim(bytes[] calldata _data)
+    //     external
+    //     returns (uint256);
 }

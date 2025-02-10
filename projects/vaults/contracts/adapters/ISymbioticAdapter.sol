@@ -13,6 +13,8 @@ import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol"
 import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
+import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+
 /**
  * @title The ISymbioticAdapter Contract
  * @author The InceptionLRT team
@@ -20,18 +22,15 @@ import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStak
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract ISymbioticAdapter is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IISymbioticAdapter
+    IISymbioticAdapter,
+    IBaseAdapter
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IERC20 internal _asset;
-    address internal _trusteeManager;
-    address internal _inceptionVault;
+    // IERC20 internal _asset;
+    // address internal _trusteeManager;
+    // address internal _inceptionVault;
 
     EnumerableSet.AddressSet internal _vaults;
 
@@ -41,13 +40,13 @@ contract ISymbioticAdapter is
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
 
-    modifier onlyTrustee() {
-        require(
-            msg.sender == _inceptionVault || msg.sender == _trusteeManager,
-            NotVaultOrTrusteeManager()
-        );
-        _;
-    }
+    // modifier onlyTrustee() {
+    //     require(
+    //         msg.sender == _inceptionVault || msg.sender == _trusteeManager,
+    //         NotVaultOrTrusteeManager()
+    //     );
+    //     _;
+    // }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -63,19 +62,21 @@ contract ISymbioticAdapter is
         __ReentrancyGuard_init();
         __Ownable_init();
         __ERC165_init();
+        __IBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
             _vaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
 
-        _asset = asset;
+        // _asset = asset;
 
-        _trusteeManager = trusteeManager;
+        // _trusteeManager = trusteeManager;
     }
 
-    function delegate(address vaultAddress, uint256 amount, bytes calldata _data)
+    function delegate(address vaultAddress, uint256 amount, bytes[] calldata _data)
         external
+        override
         onlyTrustee
         whenNotPaused
         returns (uint256 depositedAmount)
@@ -87,8 +88,9 @@ contract ISymbioticAdapter is
         return depositedAmount;
     }
 
-    function withdraw(address vaultAddress, uint256 amount, bytes calldata _data)
+    function withdraw(address vaultAddress, uint256 amount, bytes[] calldata _data)
         external
+        override
         onlyTrustee
         whenNotPaused
         returns (uint256)
@@ -103,13 +105,14 @@ contract ISymbioticAdapter is
         return mintedShares;
     }
 
-    function claim(bytes calldata _data)
+    function claim(bytes[] calldata _data)
         external
+        override
         onlyTrustee
         whenNotPaused
         returns (uint256)
     {
-        (address vaultAddress, uint256 sEpoch) = abi.decode(_data, (address, uint256));
+        (address vaultAddress, uint256 sEpoch) = abi.decode(_data[0], (address, uint256));
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] != 0, NothingToClaim());
 
@@ -134,18 +137,18 @@ contract ISymbioticAdapter is
         return _vaults.contains(vaultAddress);
     }
 
-    function getDeposited(address vaultAddress) public view returns (uint256) {
+    function getDeposited(address vaultAddress) public view override returns (uint256) {
         return IVault(vaultAddress).activeBalanceOf(address(this));
     }
 
-    function getTotalDeposited() public view returns (uint256 total) {
+    function getTotalDeposited() public view override returns (uint256 total) {
         for (uint256 i = 0; i < _vaults.length(); i++)
             total += IVault(_vaults.at(i)).activeBalanceOf(address(this));
 
         return total;
     }
 
-    function pendingWithdrawalAmount() external view returns (uint256 total) {
+    function pendingWithdrawalAmount() external view override returns (uint256 total) {
         for (uint256 i = 0; i < _vaults.length(); i++)
             if (withdrawals[_vaults.at(i)] != 0)
                 total += IVault(_vaults.at(i)).withdrawalsOf(
@@ -156,7 +159,7 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function claimableAmount() external view returns (uint256) {
+    function claimableAmount() external view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
         return 0;
     }
 
@@ -171,28 +174,28 @@ contract ISymbioticAdapter is
         emit VaultAdded(vaultAddress);
     }
 
-    function setInceptionVault(address inceptionVault) external onlyOwner {
-        if (inceptionVault == address(0)) revert ZeroAddress();
-        if (!Address.isContract(inceptionVault)) revert NotContract();
-        emit VaultSet(_inceptionVault, inceptionVault);
-        _inceptionVault = inceptionVault;
-    }
+    // function setInceptionVault(address inceptionVault) external onlyOwner {
+    //     if (inceptionVault == address(0)) revert ZeroAddress();
+    //     if (!Address.isContract(inceptionVault)) revert NotContract();
+    //     emit VaultSet(_inceptionVault, inceptionVault);
+    //     _inceptionVault = inceptionVault;
+    // }
 
-    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-        if (_newTrusteeManager == address(0)) revert ZeroAddress();
-        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-        _trusteeManager = _newTrusteeManager;
-    }
+    // function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+    //     if (_newTrusteeManager == address(0)) revert ZeroAddress();
+    //     emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+    //     _trusteeManager = _newTrusteeManager;
+    // }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
+    // function pause() external onlyOwner {
+    //     _pause();
+    // }
 
-    function unpause() external onlyOwner {
-        _unpause();
-    }
+    // function unpause() external onlyOwner {
+    //     _unpause();
+    // }
 
-    function getVersion() external pure returns (uint256) {
-        return 1;
-    }
+    // function getVersion() external pure returns (uint256) {
+    //     return 1;
+    // }
 }

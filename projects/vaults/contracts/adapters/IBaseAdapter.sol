@@ -30,10 +30,10 @@ abstract contract IBaseAdapter is
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() payable {
-        _disableInitializers();
-    }
+    // /// @custom:oz-upgrades-unsafe-allow constructor
+    // constructor() payable {
+    //     _disableInitializers();
+    // }
 
     function __IBaseAdapter_init(IERC20 asset, address trusteeManager)
         public
@@ -48,37 +48,39 @@ abstract contract IBaseAdapter is
         _trusteeManager = trusteeManager;
     }
 
-    function delegate(
-        address vault,
-        uint256 amount,
-        bytes calldata _data
-    ) external virtual returns (uint256 depositedAmount);
+    // function delegate(
+    //     address vault,
+    //     uint256 amount,
+    //     bytes[] calldata _data
+    // ) external virtual override returns (uint256 depositedAmount);
 
-    function withdraw(
-        address vault,
-        uint256 shares,
-        bytes calldata _data
-    ) external virtual returns (uint256);
+    // function withdraw(
+    //     address vault,
+    //     uint256 shares,
+    //     bytes[] calldata _data
+    // ) external virtual override returns (uint256);
 
-    function claim(bytes calldata _data) external virtual returns (uint256);
+    // function claim(bytes[] calldata _data) external virtual override returns (uint256);
 
-    function claimableAmount() external view returns (uint256) {
+    function claimableAmount() external view virtual override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
-    function pendingWithdrawalAmount()
-        external
-        view
-        virtual
-        returns (uint256 total);
+    // function pendingWithdrawalAmount()
+    //     external
+    //     view
+    //     virtual
+    //     override
+    //     returns (uint256 total);
 
-    function getDeposited(address vaultAddress)
-        public
-        view
-        virtual
-        returns (uint256);
+    // function getDeposited(address vaultAddress)
+    //     public
+    //     view
+    //     virtual
+    //     override
+    //     returns (uint256);
 
-    function getTotalDeposited() public view virtual returns (uint256);
+    // function getTotalDeposited() public view virtual returns (uint256);
 
     function setInceptionVault(address inceptionVault) external onlyOwner {
         emit VaultSet(_inceptionVault, inceptionVault);
@@ -98,7 +100,7 @@ abstract contract IBaseAdapter is
         _unpause();
     }
 
-    function getVersion() external pure returns (uint256) {
+    function getVersion() external pure virtual returns (uint256) {
         return 1;
     }
 }

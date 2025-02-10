@@ -42,19 +42,19 @@ interface IIEigenLayerAdapter is IIBaseAdapter {
 
     // function depositAssetIntoStrategy(uint256 amount) external;
 
-    function delegate(
-        address operator,
-        uint256 amount,
-        bytes[] calldata _data
-    ) external returns (uint256);
+    // function delegate(
+    //     address operator,
+    //     uint256 amount,
+    //     bytes[] calldata _data
+    // ) external returns (uint256);
 
-    function withdraw(
-        address, /*vault*/
-        uint256 shares,
-        bytes[] calldata _data
-    ) external;
+    // function withdraw(
+    //     address, /*vault*/
+    //     uint256 shares,
+    //     bytes[] calldata _data
+    // ) external returns(uint256);
 
-    function claim(bytes[] calldata _data) external returns (uint256);
+    // function claim(bytes[] calldata _data) external returns (uint256);
 
     function setRewardsCoordinator(address newRewardCoordinator) external;
 }

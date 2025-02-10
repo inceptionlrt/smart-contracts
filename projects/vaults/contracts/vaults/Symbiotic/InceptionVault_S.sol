@@ -10,12 +10,15 @@ import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.s
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IIBaseAdapter} from "../../interfaces/adapters/IIBaseAdapter.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of Mellow asset.
 contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -53,7 +56,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
-    mapping(address => uint256) private _traversalEpoch;
+    EnumerableSet.AddressSet internal _adapters;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -178,38 +181,51 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     /*/////////////////////////////////
     ////// Delegation functions //////
     ///////////////////////////////*/
-
-    /// @dev Sends underlying to a single mellow vault
-    function delegateToSymbioticVault(address vault, uint256 amount, bytes calldata _data)
-        external
-        nonReentrant
-        whenNotPaused
-        onlyOperator
+    function delegate(address adapter, address vault, uint256 amount, bytes[] calldata _data) 
+        external 
+        nonReentrant 
+        whenNotPaused 
+        onlyOperator 
     {
-        if (vault == address(0) || amount == 0) revert NullParams();
+        if (adapter == address (0) || vault == address(0) || amount == 0) revert NullParams();
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
 
-        /// TODO
-        //  _beforeDeposit(amount);
-        _depositAssetIntoSymbiotic(amount, vault, _data);
-
-        emit DelegatedTo(address(symbioticAdapter), vault, amount);
-        return;
+        _asset.safeIncreaseAllowance(address(adapter), amount);
+        IIBaseAdapter(adapter).delegate(vault, amount, _data);
+        emit DelegatedTo(adapter, vault, amount);
     }
 
-    /// @dev Sends underlying to a single mellow vault
-    function delegateToMellowVault(
-        address mellowVault,
-        uint256 amount,
-        bytes calldata _data
-    ) external nonReentrant whenNotPaused onlyOperator {
-        if (mellowVault == address(0) || amount == 0) revert NullParams();
+    // /// @dev Sends underlying to a single mellow vault
+    // function delegateToSymbioticVault(address vault, uint256 amount, bytes calldata _data)
+    //     external
+    //     nonReentrant
+    //     whenNotPaused
+    //     onlyOperator
+    // {
+    //     if (vault == address(0) || amount == 0) revert NullParams();
 
-        _beforeDeposit(amount);
-        _depositAssetIntoMellow(mellowVault, amount, _data);
+    //     /// TODO
+    //     //  _beforeDeposit(amount);
+    //     _depositAssetIntoSymbiotic(amount, vault, _data);
 
-        emit DelegatedTo(address(mellowAdapter), mellowVault, amount);
-        return;
-    }
+    //     emit DelegatedTo(address(symbioticAdapter), vault, amount);
+    //     return;
+    // }
+
+    // /// @dev Sends underlying to a single mellow vault
+    // function delegateToMellowVault(
+    //     address mellowVault,
+    //     uint256 amount,
+    //     bytes calldata _data
+    // ) external nonReentrant whenNotPaused onlyOperator {
+    //     if (mellowVault == address(0) || amount == 0) revert NullParams();
+
+    //     _beforeDeposit(amount);
+    //     _depositAssetIntoMellow(mellowVault, amount, _data);
+
+    //     emit DelegatedTo(address(mellowAdapter), mellowVault, amount);
+    //     return;
+    // }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
     function delegateAutoMellow(address referral)
@@ -226,6 +242,24 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         );
 
         emit Delegated(address(mellowAdapter), amount, lpAmount);
+    }
+
+    function undelegate(
+        address adapter,
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external whenNotPaused nonReentrant onlyOperator {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        if (vault == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ValueZero();
+        amount = IIBaseAdapter(adapter).withdraw(
+            vault,
+            amount,
+            _data
+        );
+        emit StartMellowWithdrawal(adapter, amount);
+        return;
     }
 
     /*///////////////////////////////////////
@@ -523,6 +557,20 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             calculateFlashWithdrawFee(convertToAssets(shares));
     }
 
+    /*//////////////////////////////
+    ////// Adapter functions //////
+    ////////////////////////////*/
+    function addAdapter(address adapter) external onlyOwner {
+        if (_adapters.contains(adapter)) revert AdapterAlreadyAdded();
+        emit AdapterAdded(adapter);
+        _adapters.add(adapter);
+    }
+
+    function removeAdapter(address adapter) external onlyOwner {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        emit AdapterRemoved(adapter);
+        _adapters.remove(adapter);
+    }
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
