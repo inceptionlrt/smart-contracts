@@ -522,34 +522,34 @@ describe("Omnivault integration tests", function () {
 
         it("Rebalancer access control and validation", async () => {
             const sn = await takeSnapshot();
-            await expect(rebalancer.connect(operator).setDefaultAdapter(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setDefaultAdapter(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setDefaultAdapter(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setDefaultAdapter(adapterL1.address)).to.emit(rebalancer, "DefaultAdapterChanged").withArgs(adapterL1.address);
 
-            await expect(rebalancer.connect(operator).setInceptionToken(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setInceptionToken(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setInceptionToken(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setInceptionToken(iTokenL1.address)).to.emit(rebalancer, "InceptionTokenChanged").withArgs(iTokenL1.address);
 
-            await expect(rebalancer.connect(operator).setUnderlyingAsset(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setUnderlyingAsset(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setUnderlyingAsset(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setUnderlyingAsset(underlyingL1.address)).to.emit(rebalancer, "UnderlyingAssetChanged").withArgs(underlyingL1.address);
 
-            await expect(rebalancer.connect(operator).setLockbox(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setLockbox(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setLockbox(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setLockbox(lockboxAddress)).to.emit(rebalancer, "LockboxChanged").withArgs(lockboxAddress);
 
-            await expect(rebalancer.connect(operator).setInceptionVault(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setInceptionVault(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setInceptionVault(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setInceptionVault(inceptionVault.address)).to.emit(rebalancer, "LiqPoolChanged").withArgs(inceptionVault.address);
 
-            await expect(rebalancer.connect(operator).setOperator(adapterL1.address)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setOperator(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setOperator(zeroAddress())).to.be.revertedWithCustomError(rebalancer, "SettingZeroAddress");
             expect(await rebalancer.connect(owner).setOperator(operator)).to.emit(rebalancer, "OperatorChanged").withArgs(operator);
 
-            await expect(rebalancer.connect(operator).setDefaultChainId(228n)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setDefaultChainId(228n)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setDefaultChainId(0n)).to.be.revertedWithCustomError(rebalancer, "SettingZeroChainId");
 
-            await expect(rebalancer.connect(operator).setInfoMaxDelay(228n)).to.be.revertedWithCustomError(rebalancer, "OwnableUnauthorizedAccount");
+            await expect(rebalancer.connect(operator).setInfoMaxDelay(228n)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(rebalancer.connect(owner).setInfoMaxDelay(0n)).to.be.revertedWithCustomError(rebalancer, "SettingZeroDelay");
             await sn.restore();
         })
@@ -557,11 +557,11 @@ describe("Omnivault integration tests", function () {
         it("L2 adapter access control and validation", async () => {
             const sn = await takeSnapshot();
 
-            await expect(adapterFrax.connect(operator).setFerry(adapterL1.address)).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            await expect(adapterFrax.connect(operator).setFerry(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(adapterFrax.connect(owner).setFerry(zeroAddress())).to.be.revertedWithCustomError(adapterFrax, "errNullFerry");
             expect(await adapterFrax.connect(owner).setFerry(ferryL2.address)).to.emit(adapterFrax, "DefaultAdapterChanged").withArgs(ferryL2.address);
 
-            await expect(adapterFrax.connect(operator).setDestination(adapterL1.address)).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            await expect(adapterFrax.connect(operator).setDestination(adapterL1.address)).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(adapterFrax.connect(owner).setDestination(zeroAddress())).to.be.revertedWithCustomError(adapterFrax, "errNullDestination");
             expect(await adapterFrax.connect(owner).setDestination(rebalancer.address)).to.emit(adapterFrax, "DestinationChanged").withArgs(rebalancer.address);
 
@@ -570,7 +570,7 @@ describe("Omnivault integration tests", function () {
                 "0x000000000000000000000000c671A6a4bF4Dcd0EE94d8D5558cD8B6EAdFD5A19"
             )).to.be.revertedWithCustomError(adapterFrax, "NotTargetReceiver");
 
-            await expect(adapterFrax.connect(operator).recoverFunds()).to.be.revertedWithCustomError(adapterFrax, "OwnableUnauthorizedAccount");
+            await expect(adapterFrax.connect(operator).recoverFunds()).to.be.revertedWith("Ownable: caller is not the owner");
             expect(await adapterFrax.connect(owner).recoverFunds()).to.emit("IERC20", "Transfer");
 
             await expect(adapterFrax.connect(operator).sendEthCrossChain(0n, "0x0001")).to.be.revertedWithCustomError(adapterFrax, "NotAllowedInThisAdapterType");
