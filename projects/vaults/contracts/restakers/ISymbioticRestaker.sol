@@ -92,14 +92,16 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256)
     {
-        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
-        if (withdrawals[vaultAddress] != 0) revert WithdrawalInProgress();
-
         IVault vault = IVault(vaultAddress);
-        (, uint256 mintedShares) = vault.withdraw(address(this), amount);
-        withdrawals[vaultAddress] = vault.currentEpoch() + 1;
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (withdrawals[vaultAddress] != vault.currentEpoch() + 1 && withdrawals[vaultAddress] > 0) revert WithdrawalInProgress();
 
-        return mintedShares;
+        vault.withdraw(address(this), amount);
+
+        uint256 epoch = vault.currentEpoch() + 1;
+        withdrawals[vaultAddress] = epoch;
+
+        return amount;
     }
 
     function claim(address vaultAddress, uint256 sEpoch)
@@ -110,6 +112,9 @@ contract ISymbioticRestaker is
     {
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch()) revert InvalidEpoch();
+        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender)) revert AlreadyClaimed();
+        
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_vault, sEpoch);
