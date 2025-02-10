@@ -20,10 +20,12 @@ contract InceptionToken is
 
     bool private _paused;
 
-    modifier onlyVault() {
+    address public rebalancer;
+
+    modifier onlyMinter() {
         require(
-            msg.sender == address(vault),
-            "InceptionToken: only vault allowed"
+            msg.sender == address(vault) ||  msg.sender == rebalancer,
+            "InceptionToken: only minter allowed"
         );
         _;
     }
@@ -60,11 +62,11 @@ contract InceptionToken is
         require(!paused(), "InceptionToken: token transfer while paused");
     }
 
-    function burn(address account, uint256 amount) external override onlyVault {
+    function burn(address account, uint256 amount) external override onlyMinter {
         _burn(account, amount);
     }
 
-    function mint(address account, uint256 amount) external override onlyVault {
+    function mint(address account, uint256 amount) external override onlyMinter {
         _mint(account, amount);
     }
 
@@ -75,6 +77,11 @@ contract InceptionToken is
     function setVault(IInceptionVault_EL newValue) external onlyOwner {
         emit VaultChanged(address(vault), address(newValue));
         vault = newValue;
+    }
+
+    function setRebalancer(address newRebalancer) external onlyOwner {
+        emit RebalancerChanged(rebalancer, newRebalancer);
+        rebalancer = newRebalancer;
     }
 
     /*///////////////////////////
