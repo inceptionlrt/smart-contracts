@@ -3,25 +3,30 @@
     "chainIdL2": "2522",
     "eidL1": "40217",
     "eidL2": "40255",
+    "tokenName": "Inception sfrxETH",
+    "tokenSymbol": "insfrxETH",
+    "vaultNameL2": "Inception_sfrxETH_Omnivault",
+
     "ferryL2": "0x54102317E9AeAcbb1Eac32214d099D60d260E9a3",
     "lzEndpointL2": "0x6EDCE65403992e310A62460808c4b910D972f10f",
     "ratioFeedAddressL2": "0xD4D49e67710d3d466417b566b6c0a3Dd4e94e87a",
+
     "inceptionLibAddress": "0x3022ad4552b5fb285F36C71Bdd1545c33a4937ca",
     "strategyAddress": "",
+
     "ratioFeedAddressL1": "0x90D5a4860e087462F8eE15B52D9b1914BdC977B5",
     "underlyingAssetL1": "0x72DE502C4F68DCE383b075dA455ed45e15122a46",
     "underlyingAssetL2": "0x72DE502C4F68DCE383b075dA455ed45e15122a46",
 
     "iTokenAddressL1": "",
     "iVaultAddressL1": "",
+
     "lockbox": "0x865Ff05496eA73b0fA49fbBB97F2812776362c87",
+
     "crossChainL1": "0xA2c902810eAE3C24208580e043cA0de36Ae66c3E",
     "rebalancer": "",
 
     "iTokenAddressL2": "",
     "iVaultAddressL2": "",
-    "crossChainL2": "",
-    "tokenName": "test",
-    "tokenSymbol": "TST",
-    "vaultNameL2": "IOVL2"
+    "crossChainL2": ""
 }

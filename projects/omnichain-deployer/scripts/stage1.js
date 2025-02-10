@@ -72,7 +72,7 @@ const deployERC20Rebalancer = async (
   // set rebalancer as target receiver in L1 adapter
   const l1addapter = await ethers.getContractAt("LZCrossChainAdapterL1", defaultAdapter);
   // TODO fix (permissions on L1 adapter?)
-  //  await l1addapter.setTargetReceiver(rebalancerAddr);
+  await l1addapter.setTargetReceiver(rebalancerAddr);
 
   return rebalancerAddr;
 };
