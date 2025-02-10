@@ -57,7 +57,7 @@ contract FraxFerryLZCrossChainAdapterL2 is
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __OAppUpgradeable_init(_endpoint, _delegate);
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
         _l1ChainId = l1ChainId;

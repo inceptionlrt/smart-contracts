@@ -45,7 +45,7 @@ contract LZCrossChainAdapterL2 is
         uint32[] memory _eIds,
         uint256[] memory _chainIds
     ) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable2Step_init();
         __OAppUpgradeable_init(_endpoint, _delegate);
         require(_eIds.length == _chainIds.length, ArraysLengthsMismatch());
         l1ChainId = _l1ChainId;
