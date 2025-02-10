@@ -27,10 +27,6 @@ interface IIMellowAdapter is IIBaseAdapter {
 
     event EthWrapperChanged(address indexed _old, address indexed _new);
 
-    function delegateAuto(uint256 amount, address referral)
-        external
-        returns (uint256 tokenAmount, uint256 lpAmount);
-
     function pendingMellowRequest(IMellowVault mellowVault)
         external
         returns (IMellowVault.WithdrawalRequest memory);

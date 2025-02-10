@@ -69,57 +69,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         if (amount > freeBalance) revert InsufficientCapacity(freeBalance);
     }
 
-    // function _depositAssetIntoMellow(
-    //     address mellowVault,
-    //     uint256 amount,
-    //     bytes calldata _data
-    // ) internal {
-    //     _asset.safeIncreaseAllowance(address(mellowAdapter), amount);
-    //     mellowAdapter.delegate(mellowVault, amount, _data);
-    // }
-
-    // function _depositAssetIntoSymbiotic(uint256 amount, address vault, bytes calldata _data)
-    //     internal
-    // {
-    //     _asset.safeIncreaseAllowance(address(symbioticAdapter), amount);
-    //     symbioticAdapter.delegate(vault, amount, _data);
-    // }
-
-    // /// @dev performs creating a withdrawal request from Mellow Protocol
-    // /// @dev requires a specific amount to withdraw
-    // function undelegateFromMellow(
-    //     address mellowVault,
-    //     uint256 amount,
-    //     bytes calldata _data
-    // ) external whenNotPaused nonReentrant onlyOperator {
-    //     if (mellowVault == address(0)) revert InvalidAddress();
-    //     if (amount == 0) revert ValueZero();
-    //     amount = mellowAdapter.withdraw(
-    //         mellowVault,
-    //         amount,
-    //         _data
-    //     );
-    //     emit StartMellowWithdrawal(address(mellowAdapter), amount);
-    //     return;
-    // }
-
-    // /// @dev performs creating a withdrawal request from Mellow Protocol
-    // /// @dev requires a specific amount to withdraw
-    // function undelegateFromSymbiotic(address vault, uint256 amount, bytes calldata _data)
-    //     external
-    //     whenNotPaused
-    //     nonReentrant
-    //     onlyOperator
-    // {
-    //     if (vault == address(0)) revert InvalidAddress();
-    //     if (amount == 0) revert ValueZero();
-    //     amount = symbioticAdapter.withdraw(vault, amount, _data);
-
-    //     /// TODO
-    //     emit StartMellowWithdrawal(address(symbioticAdapter), amount);
-    //     return;
-    // }
-
     function claim(address adapter, bytes[] calldata _data)
         public
         onlyOperator
@@ -135,38 +84,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }
-
-    // /// @dev claims completed withdrawals from Mellow Protocol, if they exist
-    // function claimCompletedWithdrawalsMellow(bytes[] calldata _data)
-    //     public
-    //     onlyOperator
-    //     whenNotPaused
-    //     nonReentrant
-    // {
-    //     uint256 availableBalance = getFreeBalance();
-
-    //     uint256 withdrawnAmount = mellowAdapter
-    //         .claim(_data);
-
-    //     emit WithdrawalClaimed(withdrawnAmount);
-
-    //     _updateEpoch(availableBalance + withdrawnAmount);
-    // }
-
-    // function claimCompletedWithdrawalsSymbiotic(bytes[] calldata _data)
-    //     public
-    //     onlyOperator
-    //     whenNotPaused
-    //     nonReentrant
-    // {
-    //     uint256 availableBalance = getFreeBalance();
-
-    //     uint256 withdrawnAmount = symbioticAdapter.claim(_data);
-
-    //     emit WithdrawalClaimed(withdrawnAmount);
-
-    //     _updateEpoch(availableBalance + withdrawnAmount);
-    // }
 
     function updateEpoch() external onlyOperator whenNotPaused {
         _updateEpoch(getFreeBalance());

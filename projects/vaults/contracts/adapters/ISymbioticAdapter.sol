@@ -28,10 +28,6 @@ contract ISymbioticAdapter is
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    // IERC20 internal _asset;
-    // address internal _trusteeManager;
-    // address internal _inceptionVault;
-
     EnumerableSet.AddressSet internal _vaults;
 
     /// @dev symbioticVault => withdrawal epoch
@@ -39,14 +35,6 @@ contract ISymbioticAdapter is
 
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
-
-    // modifier onlyTrustee() {
-    //     require(
-    //         msg.sender == _inceptionVault || msg.sender == _trusteeManager,
-    //         NotVaultOrTrusteeManager()
-    //     );
-    //     _;
-    // }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -68,10 +56,6 @@ contract ISymbioticAdapter is
             _vaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
-
-        // _asset = asset;
-
-        // _trusteeManager = trusteeManager;
     }
 
     function delegate(address vaultAddress, uint256 amount, bytes[] calldata _data)
@@ -173,29 +157,4 @@ contract ISymbioticAdapter is
 
         emit VaultAdded(vaultAddress);
     }
-
-    // function setInceptionVault(address inceptionVault) external onlyOwner {
-    //     if (inceptionVault == address(0)) revert ZeroAddress();
-    //     if (!Address.isContract(inceptionVault)) revert NotContract();
-    //     emit VaultSet(_inceptionVault, inceptionVault);
-    //     _inceptionVault = inceptionVault;
-    // }
-
-    // function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-    //     if (_newTrusteeManager == address(0)) revert ZeroAddress();
-    //     emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-    //     _trusteeManager = _newTrusteeManager;
-    // }
-
-    // function pause() external onlyOwner {
-    //     _pause();
-    // }
-
-    // function unpause() external onlyOwner {
-    //     _unpause();
-    // }
-
-    // function getVersion() external pure returns (uint256) {
-    //     return 1;
-    // }
 }

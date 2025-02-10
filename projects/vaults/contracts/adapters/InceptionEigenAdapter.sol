@@ -27,22 +27,10 @@ contract InceptionEigenAdapter is
 {
     using SafeERC20 for IERC20;
 
-    // IERC20 internal _asset;
-    // address internal _trusteeManager;
-    // address internal _inceptionVault;
-
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
-
-    // modifier onlyTrustee() {
-    //     require(
-    //         msg.sender == _inceptionVault || msg.sender == _trusteeManager,
-    //         NotVaultOrTrusteeManager()
-    //     );
-    //     _;
-    // }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -68,8 +56,6 @@ contract InceptionEigenAdapter is
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        // _asset = IERC20(asset);
-        // _trusteeManager = trusteeManager;
         _inceptionVault = msg.sender;
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
@@ -214,22 +200,4 @@ contract InceptionEigenAdapter is
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
     }
-
-    // function setInceptionVault(address inceptionVault) external onlyOwner {
-    //     emit VaultSet(_inceptionVault, inceptionVault);
-    //     _inceptionVault = inceptionVault;
-    // }
-
-    // function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-    //     emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-    //     _trusteeManager = _newTrusteeManager;
-    // }
-
-    // function pause() external onlyOwner {
-    //     _pause();
-    // }
-
-    // function unpause() external onlyOwner {
-    //     _unpause();
-    // }
 }
