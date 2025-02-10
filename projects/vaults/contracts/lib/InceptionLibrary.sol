@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+error MaxRateUnderflow();
+error TargetCapacityZero();
+error MaxRateUnderflowBySubtractor();
+error AmountGreater();
+error OptimalCapacityZero();
+
 /// @author The InceptionLRT team
 /// @title The InceptionLibrary library
 /// @dev It serves two primary functions:
@@ -27,11 +33,15 @@ library InceptionLibrary {
             if (optimalCapacity < capacity + amount)
                 replenished = optimalCapacity - capacity;
 
+            if (optimalBonusRate > maxDepositBonusRate) revert MaxRateUnderflow();
+            if (targetCapacity == 0) revert TargetCapacityZero();
+
             uint256 bonusSlope = ((maxDepositBonusRate - optimalBonusRate) *
                 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxDepositBonusRate -
-                (bonusSlope * (capacity + replenished / 2)) /
+            uint256 subtractor = (bonusSlope * (capacity + replenished / 2)) /
                 targetCapacity;
+            if (subtractor > maxDepositBonusRate) revert MaxRateUnderflowBySubtractor();
+            uint256 bonusPercent = maxDepositBonusRate - subtractor;
 
             capacity += replenished;
             bonus += (replenished * bonusPercent) / MAX_PERCENT;
@@ -68,11 +78,17 @@ library InceptionLibrary {
         }
         /// @dev the utilization rate is in the range [25:0] %
         if (amount > 0) {
+            if (optimaFeeRate > maxFlashWithdrawalFeeRate) revert MaxRateUnderflow();
+            if (targetCapacity == 0) revert TargetCapacityZero();
+            if (amount > capacity) revert AmountGreater();
+            if (optimalCapacity == 0) revert OptimalCapacityZero();
+
             uint256 feeSlope = ((maxFlashWithdrawalFeeRate - optimaFeeRate) *
                 1e18) / ((optimalCapacity * 1e18) / targetCapacity);
-            uint256 bonusPercent = maxFlashWithdrawalFeeRate -
-                (feeSlope * (capacity - amount / 2)) /
+            uint256 subtractor = (feeSlope * (capacity - amount / 2)) /
                 targetCapacity;
+                if (subtractor > maxFlashWithdrawalFeeRate) revert MaxRateUnderflowBySubtractor();
+            uint256 bonusPercent = maxFlashWithdrawalFeeRate - subtractor;
             fee += (amount * bonusPercent) / MAX_PERCENT;
             if (fee == 0) ++fee;
         }
