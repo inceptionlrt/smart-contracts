@@ -13,15 +13,16 @@ const saveState = async (state) => {
     const data = JSON.stringify(state);
     await fs.writeFile('state.json', data, { encoding: 'utf8' });
 }
-const setLZpeer = async (adapterL1, adapterL2) => {
+const setLZpeer = async (adapterL1, adapterL2, eidL2) => {
     let contract = await ethers.getContractAt("LZCrossChainAdapterL1", adapterL1);
-    await contract.setPeer(eidL1,"0x000000000000000000000000" + adapterL2.substring(2));
+    await contract.setPeer(eidL2,"0x000000000000000000000000" + adapterL2.substring(2));
 }
 
 const main = async () => {
-  // Stage 3: this configures L1 contracts with now known L2 addresses
+  // Stage 3: this configures L1 adapter with now known L2 addresses.
+  // Run as L1 adapter owner.
     let obj = await loadState();
-    await setLZpeer(obj.crossChainL1, obj.crossChainL2);
+    await setLZpeer(obj.crossChainL1, obj.crossChainL2, obj.eidL2);
     await saveState(obj);
 
 }

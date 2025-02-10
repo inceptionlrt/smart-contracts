@@ -1,7 +1,8 @@
 {
-    "chainIdL1": "1",
+    "chainIdL1": "17000",
     "chainIdL2": "2522",
-    "eidL1": "40255",
+    "eidL1": "40217",
+    "eidL2": "40255",
     "ferryL2": "0x54102317E9AeAcbb1Eac32214d099D60d260E9a3",
     "lzEndpointL2": "0x6EDCE65403992e310A62460808c4b910D972f10f",
     "ratioFeedAddressL2": "0xD4D49e67710d3d466417b566b6c0a3Dd4e94e87a",

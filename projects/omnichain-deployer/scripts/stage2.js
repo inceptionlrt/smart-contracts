@@ -74,7 +74,8 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed, vaultName
 
 const setVaultInIncToken = async (vault, tokenAddr) => {
   const token = await ethers.getContractAt("InceptionToken", tokenAddr);
-  await token.setVault(vault);
+  const vCon = await ethers.getContractAt("ERC20OmniVault_E2", vault)
+  await token.setVault(await vCon.getAddress());
 }
 
 const setTargetReceiver = async (adapter, tr) => {
@@ -82,7 +83,7 @@ const setTargetReceiver = async (adapter, tr) => {
   await a.setTargetReceiver(tr);
 }
 
-const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2, assetL2, rebalancerL1, adapterL1, vaultL2) => {
+const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2, assetL2, rebalancerL1, adapterL1) => {
 
   const args_x = [assetL2, ferryL2/*, rebalancerL1*/, LZEndpointL2, deployer, chainidL1, [eidL1], [chainidL1]];
   console.log("Deploying L2 adapter...");
@@ -137,7 +138,7 @@ const main = async () => {
       console.log("Deploying L2 IOV...");
         obj.iVaultAddressL2 = await deployL2vault(obj.iTokenAddressL2, obj.underlyingAssetL2, obj.crossChainL2, obj.ratioFeedAddressL2, obj.vaultNameL2, await deployer.getAddress());
         console.log("Config 1...");
-        await setVaultInIncToken(obj.iTokenAddressL2, obj.iVaultAddressL2);
+        await setVaultInIncToken(obj.iVaultAddressL2, obj.iTokenAddressL2);
         console.log("Config 2...");
         await setTargetReceiver(obj.crossChainL2, obj.iVaultAddressL2)
     }
