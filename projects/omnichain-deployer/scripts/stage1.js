@@ -148,7 +148,7 @@ const main = async () => {
 
   if (!obj.rebalancer) {
     console.log(`Deploying rebalancer...`);
-    obj.rebalancer = await deployERC20Rebalancer(obj.chainIdL1, obj.iTokenAddressL1, obj.underlyingAssetL1, obj.lockbox, obj.iVaultAddressL1, obj.crossChainL1, await deployer.getAddress());
+    obj.rebalancer = await deployERC20Rebalancer(obj.chainIdL2, obj.iTokenAddressL1, obj.underlyingAssetL1, obj.lockbox, obj.iVaultAddressL1, obj.crossChainL1, await deployer.getAddress());
     await setRebalancerForItoken(obj.rebalancer, obj.iTokenAddressL1);
     await setTargetReceiver(obj.crossChainL1, obj.rebalancer);
   }
