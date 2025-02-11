@@ -30,3 +30,5 @@ These scripts assume that the deployer has all the required permissions to set p
 
 Currently commented out:
 - Setting target receiver on L1 adapter (no permission on testnet)
+- Setting ratio feed for newly deployed iToken on L1
+- Setting peer on L1 adapter

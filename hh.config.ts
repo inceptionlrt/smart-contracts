@@ -113,6 +113,8 @@ export const CONFIG = {
   etherscan: {
     apiKey: {
       holesky: "PP5CDPZBG6AF6FBGE9CJNYGCRYXYN549M1",
+      fraxHolesky: process.env.FRAXSCAN_API_KEY,
+      fraxtal: process.env.FRAXSCAN_API_KEY,
       mainnet: process.env.ETHERSCAN_API_KEY,
     },
     customChains: [
@@ -133,7 +135,7 @@ export const CONFIG = {
         },
       },
       {
-        network: "fraxHolesky",
+        network: "fraxtal",
         chainId: 252,
         urls: {
           apiURL: "https://api.fraxscan.com/api",
