@@ -27,3 +27,6 @@ Stage 3:
 1. Set L1 adapter's LZ peer to the L2 adapter's address and EID.
 
 These scripts assume that the deployer has all the required permissions to set properties of the existing contracts.
+
+Currently commented out:
+- Setting target receiver on L1 adapter (no permission on testnet)

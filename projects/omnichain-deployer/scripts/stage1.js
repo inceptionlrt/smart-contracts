@@ -43,7 +43,7 @@ const deployVaultAndToken = async (operatorAddress, strategyAddress, inceptionLi
   tx = await iVault.setRatioFeed(ratioFeedAddress);//("0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
   await tx.wait();
 
-  const feed = await ethers.getContractAt("IInceptionRatioFeed", ratioFeedAddress); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  const feed = await ethers.getContractAt("contracts/vaults/interfaces/common/IInceptionRatioFeed.sol:IInceptionRatioFeed", ratioFeedAddress); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
   //await feed.updateRatioBatch([iTokenAddress], ["1000000000000000000"]); // currently reverts with L1 ratiofeed due to access stuff
 
   return [iTokenAddress, iVaultAddress];
@@ -72,15 +72,15 @@ const deployERC20Rebalancer = async (
   // set rebalancer as target receiver in L1 adapter
   const l1addapter = await ethers.getContractAt("LZCrossChainAdapterL1", defaultAdapter);
   // TODO fix (permissions on L1 adapter?)
-  await l1addapter.setTargetReceiver(rebalancerAddr);
+  //await l1addapter.setTargetReceiver(rebalancerAddr);
 
   return rebalancerAddr;
 };
 
 const setRebalancerForItoken = async (reb, it) => {
-  const itoken = ethers.getContractAt("InceptionToken", it);
+  const itoken = await ethers.getContractAt("InceptionToken", it);
   // TODO fix (permissions on L1 adapter?)
-  //await itoken.setRebalancer(reb);
+  await itoken.setRebalancer(reb);
 }
 
 const main = async () => {

@@ -36,7 +36,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
         address payable _defaultAdapter,
         address _operator
     ) public initializer {
-        __Ownable_init();
+        __Ownable2Step_init();
 
         __RebalancerStorage_init(
             defaultChainId,

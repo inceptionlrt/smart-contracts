@@ -8,7 +8,7 @@ import "@openzeppelin/hardhat-upgrades";
 import fse from "fs-extra";
 import path from "path";
 
-const EXTERNAL_PROJECTS = [ "../vaults", "../bridge-lz"];
+const EXTERNAL_PROJECTS = [ "../vaults", "../bridge-lz", "./mocks"];
 const TARGET_DIR = "./contracts";
 
 const copyContracts = () => {
