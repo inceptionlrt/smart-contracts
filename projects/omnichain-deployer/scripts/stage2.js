@@ -60,9 +60,9 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed, vaultName
   await inceptionOmniVault.setRatioFeed(ratiofeed);
 
   // uncomment if needed
-  //TODO fix
- // const feed = ethers.getContractAt("InceptionRatioFeed", ratiofeed); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
- // await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
+
+  const feed = await ethers.getContractAt("InceptionRatioFeed", ratiofeed); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
   
   // todo: is it safe with live token but no vault?
   //await inETH.setVault(deployedAddress);
