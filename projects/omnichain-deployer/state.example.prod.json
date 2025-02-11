@@ -1,0 +1,32 @@
+{
+    "chainIdL1": "1",
+    "chainIdL2": "252",
+    "eidL1": "30101",
+    "eidL2": "30217",
+    "tokenName": "Inception sfrxETH",
+    "tokenSymbol": "insfrxETH",
+    "vaultNameL2": "Inception_sfrxETH_Omnivault",
+
+    "ferryL2": "0x67c6A8A715fc726ffD0A40588701813d9eC04d9C",
+    "lzEndpointL2": "0x1a44076050125825900e736c501f859c50fE728c",
+    "ratioFeedAddressL2": "", // TODO deploy on L2
+
+    "inceptionLibAddress": "", // not used - reusing IOV-L1
+    "strategyAddress": "", // not used
+
+    "ratioFeedAddressL1": "0xFd73Be536503B5Aa80Bf99D1Fd65b1306c69B191", // OK
+    "underlyingAssetL1": "0xac3e018457b222d93114458476f3e3416abbe38f", // sfrxETH on L1
+    "underlyingAssetL2": "0xfc00000000000000000000000000000000000005", // sfrxETH on FRAX
+
+    "iTokenAddressL1": "0x668308d77be3533c909a692302Cb4D135Bf8041C", // OK (l1 itoken)
+    "iVaultAddressL1": "0x295234B7E370a5Db2D2447aCA83bc7448f151161", // OK (l1 ivault)
+
+    "lockbox": "", // TODO needed for rebalancer
+
+    "crossChainL1": "", // deployment needed
+    "rebalancer": "",
+
+    "iTokenAddressL2": "",
+    "iVaultAddressL2": "",
+    "crossChainL2": ""
+}
