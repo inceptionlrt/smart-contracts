@@ -55,19 +55,13 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed, vaultName
 
   const adminAddress = await upgrades.erc1967.getAdminAddress(deployedAddress);
   console.log("Proxy Admin Address:", adminAddress);
-//  console.log(`Target receiver set successfully on LZCrossChainAdapterL2: ${deployedAddress}`);
 
   await inceptionOmniVault.setRatioFeed(ratiofeed);
 
-  // uncomment if needed
+  // comment out if not needed
 
-  const feed = await ethers.getContractAt("InceptionRatioFeed", ratiofeed); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  const feed = await ethers.getContractAt("InceptionRatioFeed", ratiofeed);
   await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
-  
-  // todo: is it safe with live token but no vault?
-  //await inETH.setVault(deployedAddress);
-  //console.log(`Token vault address set: ${deployedAddress}`);
-
 
   return deployedAddress;
 }
@@ -85,7 +79,7 @@ const setTargetReceiver = async (adapter, tr) => {
 
 const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2, assetL2, rebalancerL1, adapterL1) => {
 
-  const args_x = [assetL2, ferryL2/*, rebalancerL1*/, LZEndpointL2, deployer, chainidL1, [eidL1], [chainidL1]];
+  const args_x = [assetL2, ferryL2, LZEndpointL2, deployer, chainidL1, [eidL1], [chainidL1]];
   console.log("Deploying L2 adapter...");
   const contractFactory = await ethers.getContractFactory("FraxFerryLZCrossChainAdapterL2");
   const contract = await upgrades.deployProxy(contractFactory, args_x, {
@@ -142,8 +136,6 @@ const main = async () => {
         await setTargetReceiver(obj.crossChainL2, obj.iVaultAddressL2)
     }
     await saveState(obj);
-
-    
 }
 
 main().then(() => process.exit(0))

@@ -15,13 +15,14 @@ const saveState = async (state) => {
 }
 
 const deployVaultAndToken = async (operatorAddress, strategyAddress, inceptionLibAddress, ratioFeedAddress, underlyingL1) => {
+  // Intended for testnet use - mainnet already has this deployed
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["InsfrxETH", "InsfrxETH"], { kind: "transparent" });
   await iToken.waitForDeployment();
   const iTokenAddress = await iToken.getAddress();
   console.log(`InceptionToken address: ${iTokenAddress}`);
-  //return iTokenAddress;
+
   // 2. Inception vault (mock)
   const InceptionVaultFactory = await hre.ethers.getContractFactory("InceptionVaultMock", {
     libraries: {
@@ -40,10 +41,10 @@ const deployVaultAndToken = async (operatorAddress, strategyAddress, inceptionLi
   tx = await iToken.setVault(iVaultAddress);
   await tx.wait();
   // 6. set RatioFeed
-  tx = await iVault.setRatioFeed(ratioFeedAddress);//("0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  tx = await iVault.setRatioFeed(ratioFeedAddress);
   await tx.wait();
 
-  const feed = await ethers.getContractAt("contracts/vaults/interfaces/common/IInceptionRatioFeed.sol:IInceptionRatioFeed", ratioFeedAddress); //"0x90D5a4860e087462F8eE15B52D9b1914BdC977B5");
+  const feed = await ethers.getContractAt("contracts/vaults/interfaces/common/IInceptionRatioFeed.sol:IInceptionRatioFeed", ratioFeedAddress);
   //await feed.updateRatioBatch([iTokenAddress], ["1000000000000000000"]); // currently reverts with L1 ratiofeed due to access stuff
 
   return [iTokenAddress, iVaultAddress];
@@ -69,17 +70,12 @@ const deployERC20Rebalancer = async (
   const rebalancerAddr = await rebalancer.getAddress();
   console.log(`ERC20Rebalancer address: ${rebalancerAddr}`);
   await rebalancer.setInfoMaxDelay(36000n);
-  // set rebalancer as target receiver in L1 adapter
-  const l1addapter = await ethers.getContractAt("LZCrossChainAdapterL1", defaultAdapter);
-  // TODO fix (permissions on L1 adapter?)
-  //await l1addapter.setTargetReceiver(rebalancerAddr);
 
   return rebalancerAddr;
 };
 
 const setRebalancerForItoken = async (reb, it) => {
   const itoken = await ethers.getContractAt("InceptionToken", it);
-  // TODO fix (permissions on L1 adapter?)
   await itoken.setRebalancer(reb);
 }
 
@@ -145,7 +141,7 @@ const main = async () => {
 
   if (!!obj.crossChainL1) {
     console.log(`Deploying L1 CCA...`);
-    obj.crossChainL1 = await deployL1adapter(await deployer.getAddress(), obj.lzEndpointL1, obj.eidL2, obj.chainidL2);
+    obj.crossChainL1 = await deployL1adapter(await deployer.getAddress(), obj.lzEndpointL1, obj.eidL2, obj.chainIdL2);
   }
   await saveState(obj);
 
