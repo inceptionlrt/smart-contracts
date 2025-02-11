@@ -109,7 +109,6 @@ const deployL2adapter = async (deployer, chainidL1, eidL1, LZEndpointL2, ferryL2
   );
   console.log("Implementation deployed at:", implementationAddress);
 
-  //await contract.setTargetReceiver(vaultL2);
   await contract.setPeer(eidL1,"0x000000000000000000000000" + adapterL1.substring(2));
 
   return contract.getAddress();

@@ -8,6 +8,7 @@
     "vaultNameL2": "Inception_sfrxETH_Omnivault",
 
     "ferryL2": "0x54102317E9AeAcbb1Eac32214d099D60d260E9a3",
+    "lzEndpointL1": "0x6EDCE65403992e310A62460808c4b910D972f10f",
     "lzEndpointL2": "0x6EDCE65403992e310A62460808c4b910D972f10f",
     "ratioFeedAddressL2": "0xD4D49e67710d3d466417b566b6c0a3Dd4e94e87a",
 

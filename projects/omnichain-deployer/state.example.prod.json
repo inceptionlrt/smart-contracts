@@ -8,6 +8,7 @@
     "vaultNameL2": "Inception_sfrxETH_Omnivault",
 
     "ferryL2": "0x67c6A8A715fc726ffD0A40588701813d9eC04d9C",
+    "lzEndpointL1": "0x1a44076050125825900e736c501f859c50fE728c",
     "lzEndpointL2": "0x1a44076050125825900e736c501f859c50fE728c",
     "ratioFeedAddressL2": "", // TODO deploy on L2
 

@@ -83,6 +83,39 @@ const setRebalancerForItoken = async (reb, it) => {
   await itoken.setRebalancer(reb);
 }
 
+const deployL1adapter = async (deployer, lzEndpointL1, eidL2, chainidL2) => {
+
+  const args_x = [lzEndpointL1, deployer, [eidL2], [chainidL2]];
+  console.log("Deploying L1 adapter...");
+  const contractFactory = await ethers.getContractFactory("LZCrossChainAdapterL1");
+  const contract = await upgrades.deployProxy(contractFactory, args_x, {
+    kind: "transparent",
+  });
+  await contract.waitForDeployment();
+  console.log(
+    `Proxy deployed at:`,
+    await contract.getAddress(),
+  );
+
+  const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(
+    await contract.getAddress(),
+  );
+  console.log("ProxyAdmin deployed at:", proxyAdminAddress);
+
+  const implementationAddress = await upgrades.erc1967.getImplementationAddress(
+    await contract.getAddress(),
+  );
+  console.log("Implementation deployed at:", implementationAddress);
+
+  return contract.getAddress();
+
+}
+
+const setTargetReceiver = async (adapter, tr) => {
+  const a = await ethers.getContractAt("LZCrossChainAdapterL1", adapter);
+  await a.setTargetReceiver(tr);
+}
+
 const main = async () => {
   const [deployer] = await ethers.getSigners();
   // Stage 1: this deploys and configures L1 contracts that don't depend on knowing L2 addresses
@@ -98,6 +131,11 @@ const main = async () => {
     return;
   }
 
+  if (!obj.crossChainL1 && (!obj.chainIdL1 || !obj.lzEndpointL1 || !obj.eidL2 || !obj.chainidL2)) {
+    console.log("Missing required config info for adapter deployment");
+    return;
+  }
+
   console.log(obj);
   if (!obj.iTokenAddressL1 || !obj.iVaultAddressL1) {
     console.log(`Deploying IOVL1...`);
@@ -105,10 +143,18 @@ const main = async () => {
   }
   await saveState(obj);
 
+  if (!!obj.crossChainL1) {
+    console.log(`Deploying L1 CCA...`);
+    obj.crossChainL1 = await deployL1adapter(await deployer.getAddress(), obj.lzEndpointL1, obj.eidL2, obj.chainidL2);
+  }
+  await saveState(obj);
+
+
   if (!obj.rebalancer) {
     console.log(`Deploying rebalancer...`);
     obj.rebalancer = await deployERC20Rebalancer(obj.chainIdL1, obj.iTokenAddressL1, obj.underlyingAssetL1, obj.lockbox, obj.iVaultAddressL1, obj.crossChainL1, await deployer.getAddress());
     await setRebalancerForItoken(obj.rebalancer, obj.iTokenAddressL1);
+    await setTargetReceiver(obj.crossChainL1, obj.rebalancer);
   }
   await saveState(obj);
 }
