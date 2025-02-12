@@ -1,0 +1,51 @@
+{
+    "name": "omnivault-integration-tests-l1",
+    "version": "1.0.0",
+    "description": "",
+    "directories": {
+        "test": "test"
+    },
+    "scripts": {
+        "format": "prettier --write test/*.ts test/*.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@layerzerolabs/lz-evm-protocol-v2": "^2.3.39",
+        "@layerzerolabs/lz-evm-messagelib-v2": "^2.3.39",
+        "@layerzerolabs/lz-v2-utilities": "^2.3.39",
+        "@layerzerolabs/oapp-evm": "^0.0.4",
+        "@layerzerolabs/oft-evm": "^0.0.11",
+        "@layerzerolabs/test-devtools-evm-hardhat": "~0.3.0",
+        "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+        "@nomicfoundation/hardhat-ethers": "^3.0.5",
+        "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "@nomicfoundation/hardhat-verify": "^2.0.5",
+        "@nomiclabs/hardhat-ethers": "^2.2.3",
+        "@openzeppelin/contracts": "^4.8.3",
+        "@openzeppelin/contracts-upgradeable": "^4.8.3",
+        "@openzeppelin/hardhat-upgrades": "^3.0.0",
+        "prettier": "3.3.2",
+        "@typechain/ethers-v6": "^0.5.1",
+        "@typechain/hardhat": "^9.1.0",
+        "@types/chai": "^4.3.11",
+        "@types/fs-extra": "^11.0.4",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "^20.10.1",
+        "chai": "^4.2.0",
+        "dotenv": "^16.3.1",
+        "ethereumjs-util": "^7.1.5",
+        "ethers": "^6.9.0",
+        "fs-extra": "^11.2.0",
+        "hardhat": "^2.19.1",
+        "hardhat-deploy": "^0.11.45",
+        "hardhat-gas-reporter": "^1.0.9",
+        "hardhat-tracer": "^2.7.0",
+        "solidity-bytes-utils": "^0.8.2",
+        "solidity-coverage": "^0.8.13",
+        "ts-node": "^10.9.1",
+        "typechain": "^8.3.2",
+        "typescript": "^5.2.2"
+    }
+}
