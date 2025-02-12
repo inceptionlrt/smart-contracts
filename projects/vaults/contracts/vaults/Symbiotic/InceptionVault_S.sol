@@ -53,6 +53,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) public withdrawals;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -232,14 +234,13 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         genRequest.amount += _getAssetReceivedAmount(amount);
 
         uint256 queueLength = claimerWithdrawalsQueue.length;
-        if (genRequest.withdrawals == 0) genRequest.epoch = queueLength;
-        genRequest.withdrawals++;
+        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
+        withdrawals[receiver]++;
         claimerWithdrawalsQueue.push(
             Withdrawal({
                 epoch: queueLength,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount),
-                withdrawals: 1
+                amount: _getAssetReceivedAmount(amount)
             })
         );
 
@@ -284,7 +285,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            genRequest.withdrawals--;
+            withdrawals[receiver]--;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
@@ -394,7 +395,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
         availableWithdrawals = new uint256[](
-            genRequest.withdrawals
+            withdrawals[claimer]
         );
 
         for (uint256 i = genRequest.epoch; i < epoch; ++i) {
@@ -603,6 +604,33 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
         emit NameChanged(name, newVaultName);
         name = newVaultName;
+    }
+
+    function adjustWithdrawals() external onlyOwner {
+        
+        uint256 queueLength = claimerWithdrawalsQueue.length;
+
+        // Duplicate queue
+        address[] memory queue = new address[](queueLength);
+
+        // Copy Address to new Array
+        for (uint256 i = 0; i < queueLength; i++) {
+            queue[i] = claimerWithdrawalsQueue[i].receiver;
+        }
+
+        // Traverse through the addresses
+        for (uint256 i = 0; i < queue.length; i++) {
+
+            // Skip if address(0), means fulfilled
+            if (queue[i] == address(0)) continue;
+            
+            uint256 numWithdrawal;
+            for (uint256 j = 0; j < queue.length; j++) {
+                if (queue[i] == queue[j]) numWithdrawal++;
+            }
+            
+            withdrawals[queue[i]] = numWithdrawal;
+        }
     }
 
     /*///////////////////////////////
