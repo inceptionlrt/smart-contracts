@@ -60,8 +60,8 @@ const deployL2vault = async (incToken, underlying, adapter, ratiofeed, vaultName
 
   // comment out if not needed
 
-  const feed = await ethers.getContractAt("InceptionRatioFeed", ratiofeed);
-  await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
+ // const feed = await ethers.getContractAt("InceptionRatioFeed", ratiofeed);
+ // await feed.updateRatioBatch([incToken], ["1000000000000000000"]);
 
   return deployedAddress;
 }
