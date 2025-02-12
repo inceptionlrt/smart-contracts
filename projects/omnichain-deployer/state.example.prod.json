@@ -24,7 +24,7 @@
 
     "lockbox": "", // TODO needed for rebalancer
 
-    "crossChainL1": "", // deployment needed
+    "crossChainL1": "",
     "rebalancer": "",
 
     "iTokenAddressL2": "",

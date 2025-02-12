@@ -17,7 +17,7 @@ import {Convert} from "../lib/Convert.sol";
  * @title InceptionERC20OmniVault
  * @author The InceptionLRT team
  * @dev A vault that handles deposits, withdrawals, and cross-chain operations for the Inception protocol.
- * @notice Allows users to deposit an asset(e.g. stETH), receive inception tokens, and handle asset transfers between L1 and L2.
+ * @notice Allows users to deposit an ERC20 asset (e.g. sfrxETH), receive inception tokens, and handle asset transfers between L1 and L2.
  */
 abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Inception restaking token
@@ -84,7 +84,6 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         minAmount = 1e8;
 
-        /// TODO !!!
         targetCapacity = 1;
         protocolFee = 50 * 1e8;
 

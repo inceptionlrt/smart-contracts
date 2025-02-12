@@ -7,7 +7,7 @@ import {InceptionERC20OmniVault, IInceptionToken} from "../InceptionERC20OmniVau
 import {IERC20CrossChainBridge} from "../../interfaces/IERC20CrossChainBridge.sol";
 
 /// @author The InceptionLRT team
-/// @title The ERC20OmniVault_E2, specifically designed for the LST Omni Restaking
+/// @title The ERC20OmniVault_E2, specifically designed for the Fraxtal Staked ETH omnichain restaking
 contract ERC20OmniVault_E2 is InceptionERC20OmniVault {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable{
