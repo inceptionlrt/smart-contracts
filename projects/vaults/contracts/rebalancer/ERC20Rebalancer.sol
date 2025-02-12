@@ -50,7 +50,7 @@ contract ERC20Rebalancer is ERC20RebalancerStorage {
     }
 
     /**
-     * @notice Updates the treasury data by comparing the total L2 inETH balance and adjusting the treasury accordingly.
+     * @notice Updates the treasury data by comparing the total L2 Inception Token balance and adjusting the treasury accordingly.
      */
     function updateTreasuryData() public {
         Transaction memory txData = getTransactionData();
