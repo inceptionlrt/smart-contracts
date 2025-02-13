@@ -72,6 +72,12 @@ const setVaultInIncToken = async (vault, tokenAddr) => {
   await token.setVault(await vCon.getAddress());
 }
 
+const setVaultAsXERC20Minter = async (vault, tokenAddr) => {
+  const token = await ethers.getContractAt("IXERC20", tokenAddr);
+  const vCon = await ethers.getContractAt("ERC20OmniVault_E2", vault)
+  await token.setBridgeLimits(await vCon.getAddress(), 1000000000000000000000n, 1000000000000000000000n);
+}
+
 const setTargetReceiver = async (adapter, tr) => {
   const a = await ethers.getContractAt("FraxFerryLZCrossChainAdapterL2", adapter);
   await a.setTargetReceiver(tr);
@@ -130,10 +136,12 @@ const main = async () => {
     if (!obj.iVaultAddressL2) {
       console.log("Deploying L2 IOV...");
         obj.iVaultAddressL2 = await deployL2vault(obj.iTokenAddressL2, obj.underlyingAssetL2, obj.crossChainL2, obj.ratioFeedAddressL2, obj.vaultNameL2, await deployer.getAddress());
-        console.log("Config 1...");
-        await setVaultInIncToken(obj.iVaultAddressL2, obj.iTokenAddressL2);
-        console.log("Config 2...");
+        console.log("Config 1... (target recv)");
         await setTargetReceiver(obj.crossChainL2, obj.iVaultAddressL2)
+        console.log("Config 2... (minter)");
+        //await setVaultInIncToken(obj.iVaultAddressL2, obj.iTokenAddressL2);
+        // replace with xerc20 bridge setup
+        await setVaultAsXERC20Minter(obj.iVaultAddressL2, obj.iTokenAddressL2);
     }
     await saveState(obj);
 }
