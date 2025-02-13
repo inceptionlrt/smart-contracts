@@ -21,11 +21,10 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @dev Issues the tokens to the specified receiver address.
      * @dev See {IERC4626-deposit}.
      */
-    function deposit(uint256 amount, address receiver)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function deposit(
+        uint256 amount,
+        address receiver
+    ) external nonReentrant returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -36,11 +35,10 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @param receiver The address of the shares receiver.
      * @dev See {IERC4626-mint}.
      */
-    function mint(uint256 shares, address receiver)
-        external
-        nonReentrant
-        returns (uint256)
-    {
+    function mint(
+        uint256 shares,
+        address receiver
+    ) external nonReentrant returns (uint256) {
         uint256 maxShares = maxMint(msg.sender);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
@@ -186,10 +184,10 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
      * @dev Creates a withdrawal requests based on the current ratio
      * @param iShares is measured in Inception token(shares)
      */
-    function flashWithdraw(uint256 iShares, address receiver)
-        external
-        nonReentrant
-    {
+    function flashWithdraw(
+        uint256 iShares,
+        address receiver
+    ) external nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
@@ -254,21 +252,15 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     /// @dev The functions below serve the proper withdrawal and claiming operations
     /// @notice Since a particular LST loses some wei on each transfer,
     /// this needs to be taken into account
-    function _getAssetWithdrawAmount(uint256 amount)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _getAssetWithdrawAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
         return amount;
     }
 
-    function _getAssetReceivedAmount(uint256 amount)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _getAssetReceivedAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
         return amount;
     }
 }
