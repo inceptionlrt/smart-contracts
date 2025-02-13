@@ -11,9 +11,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 
 /**
- * @title The SymbioticHandler contract
+ * @title The AdapterHandler contract
  * @author The InceptionLRT team
- * @dev Serves communication with external Mellow Protocol
+ * @dev Serves communication with external Protocols
  * @dev Specifically, this includes depositing, and handling withdrawal requests
  */
 contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
@@ -47,7 +47,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    /// TODO
     uint256[50 - 11] private __gap;
 
     modifier onlyOperator() {
@@ -55,7 +54,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         _;
     }
 
-    function __SymbioticHandler_init(
+    function __AdapterHandler_init(
         IERC20 assetAddress
     ) internal onlyInitializing {
         __InceptionAssetsHandler_init(assetAddress);
@@ -99,7 +98,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             amount,
             _data
         );
-        emit StartMellowWithdrawal(adapter, amount);
+        emit UndelegatedFrom(adapter, vault, amount);
         return;
     }
 
@@ -114,7 +113,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 withdrawnAmount = IIBaseAdapter(adapter)
             .claim(_data);
 
-        emit WithdrawalClaimed(withdrawnAmount);
+        emit WithdrawalClaimed(adapter, withdrawnAmount);
 
         _updateEpoch(availableBalance + withdrawnAmount);
     }

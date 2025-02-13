@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {AdapterHandler, IIMellowAdapter, IERC20} from "../../symbiotic-handler/AdapterHandler.sol";
+import {AdapterHandler, IERC20} from "../../adapter-handler/AdapterHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -11,11 +11,10 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IIBaseAdapter} from "../../interfaces/adapters/IIBaseAdapter.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of Mellow asset.
+/// @notice Aims to maximize the profit of deposited asset.
 contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -56,6 +55,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) public withdrawals;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -63,7 +64,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         IInceptionToken _inceptionToken
     ) internal {
         __Ownable2Step_init();
-        __SymbioticHandler_init(assetAddress);
+        __AdapterHandler_init(assetAddress);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -209,14 +210,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         genRequest.amount += _getAssetReceivedAmount(amount);
 
         uint256 queueLength = claimerWithdrawalsQueue.length;
-        if (genRequest.withdrawals == 0) genRequest.epoch = queueLength;
-        genRequest.withdrawals++;
+        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
+        withdrawals[receiver]++;
         claimerWithdrawalsQueue.push(
             Withdrawal({
                 epoch: queueLength,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount),
-                withdrawals: 1
+                amount: _getAssetReceivedAmount(amount)
             })
         );
 
@@ -261,7 +261,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            genRequest.withdrawals--;
+            withdrawals[receiver]--;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
@@ -379,7 +379,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
         availableWithdrawals = new uint256[](
-            genRequest.withdrawals
+            withdrawals[claimer]
         );
 
         for (uint256 i = genRequest.epoch; i < epoch; ++i) {
@@ -586,6 +586,34 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         emit NameChanged(name, newVaultName);
         name = newVaultName;
+    }
+
+    /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
+    function adjustWithdrawals() external onlyOwner {
+        
+        uint256 queueLength = claimerWithdrawalsQueue.length;
+
+        // Duplicate queue
+        address[] memory queue = new address[](queueLength);
+
+        // Copy Address to new Array
+        for (uint256 i = 0; i < queueLength; i++) {
+            queue[i] = claimerWithdrawalsQueue[i].receiver;
+        }
+
+        // Traverse through the addresses
+        for (uint256 i = 0; i < queue.length; i++) {
+
+            // Skip if address(0), means fulfilled
+            if (queue[i] == address(0)) continue;
+            
+            uint256 numWithdrawal;
+            for (uint256 j = 0; j < queue.length; j++) {
+                if (queue[i] == queue[j]) numWithdrawal++;
+            }
+            
+            withdrawals[queue[i]] = numWithdrawal;
+        }
     }
 
     /*///////////////////////////////
