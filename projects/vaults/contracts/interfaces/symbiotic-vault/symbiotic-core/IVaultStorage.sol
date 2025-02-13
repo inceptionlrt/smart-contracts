@@ -133,10 +133,9 @@ interface IVaultStorage {
      * @param account address to check
      * @return if the account is whitelisted as a depositor
      */
-    function isDepositorWhitelisted(address account)
-        external
-        view
-        returns (bool);
+    function isDepositorWhitelisted(
+        address account
+    ) external view returns (bool);
 
     /**
      * @notice Get if the deposit limit is set.
@@ -156,10 +155,10 @@ interface IVaultStorage {
      * @param hint hint for the checkpoint index
      * @return total number of active shares at the timestamp
      */
-    function activeSharesAt(uint48 timestamp, bytes memory hint)
-        external
-        view
-        returns (uint256);
+    function activeSharesAt(
+        uint48 timestamp,
+        bytes memory hint
+    ) external view returns (uint256);
 
     /**
      * @notice Get a total number of active shares in the vault.
@@ -173,10 +172,10 @@ interface IVaultStorage {
      * @param hint hint for the checkpoint index
      * @return total amount of active stake at the timestamp
      */
-    function activeStakeAt(uint48 timestamp, bytes memory hint)
-        external
-        view
-        returns (uint256);
+    function activeStakeAt(
+        uint48 timestamp,
+        bytes memory hint
+    ) external view returns (uint256);
 
     /**
      * @notice Get a total amount of active stake in the vault.
@@ -224,10 +223,10 @@ interface IVaultStorage {
      * @param account account to get the number of withdrawal shares for
      * @return number of withdrawal shares for the account at the epoch
      */
-    function withdrawalSharesOf(uint256 epoch, address account)
-        external
-        view
-        returns (uint256);
+    function withdrawalSharesOf(
+        uint256 epoch,
+        address account
+    ) external view returns (uint256);
 
     /**
      * @notice Get if the withdrawals are claimed for a particular account at a given epoch.
@@ -235,8 +234,8 @@ interface IVaultStorage {
      * @param account account to check the withdrawals for
      * @return if the withdrawals are claimed for the account at the epoch
      */
-    function isWithdrawalsClaimed(uint256 epoch, address account)
-        external
-        view
-        returns (bool);
+    function isWithdrawalsClaimed(
+        uint256 epoch,
+        address account
+    ) external view returns (bool);
 }

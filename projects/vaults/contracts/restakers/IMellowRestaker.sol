@@ -110,19 +110,21 @@ contract IMellowRestaker is
         _asset.safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = amountToLpAmount(amount, IMellowVault(mellowVault));
         minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
-        lpAmount =
-            wrapper.deposit(
-                address(this),
-                address(_asset),
-                amount,
-                minAmount,
-                block.timestamp + deadline
-            );
+        lpAmount = wrapper.deposit(
+            address(this),
+            address(_asset),
+            amount,
+            minAmount,
+            block.timestamp + deadline
+        );
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         if (returned != 0) _asset.safeTransfer(_vault, returned);
     }
 
-    function delegate(uint256 amount, uint256 deadline)
+    function delegate(
+        uint256 amount,
+        uint256 deadline
+    )
         external
         onlyTrustee
         whenNotPaused
@@ -140,11 +142,11 @@ contract IMellowRestaker is
                     address(mellowVaults[i])
                 ];
                 if (address(wrapper) == address(0)) continue;
-                _asset.safeIncreaseAllowance(
-                    address(wrapper),
-                    localBalance
+                _asset.safeIncreaseAllowance(address(wrapper), localBalance);
+                uint256 minAmount = amountToLpAmount(
+                    localBalance,
+                    mellowVaults[i]
                 );
-                uint256 minAmount = amountToLpAmount(localBalance, mellowVaults[i]);
                 minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
                 lpAmount += wrapper.deposit(
                     address(this),
@@ -238,10 +240,10 @@ contract IMellowRestaker is
         return amount;
     }
 
-    function addMellowVault(address mellowVault, address depositWrapper)
-        external
-        onlyOwner
-    {
+    function addMellowVault(
+        address mellowVault,
+        address depositWrapper
+    ) external onlyOwner {
         if (mellowVault == address(0) || depositWrapper == address(0))
             revert ZeroAddress();
         if (
@@ -263,10 +265,10 @@ contract IMellowRestaker is
         emit VaultAdded(mellowVault, depositWrapper);
     }
 
-    function changeMellowWrapper(address mellowVault, address newDepositWrapper)
-        external
-        onlyOwner
-    {
+    function changeMellowWrapper(
+        address mellowVault,
+        address newDepositWrapper
+    ) external onlyOwner {
         if (mellowVault == address(0) || newDepositWrapper == address(0))
             revert ZeroAddress();
         if (
@@ -283,22 +285,27 @@ contract IMellowRestaker is
 
         emit WrapperChanged(mellowVault, oldWrapper, newDepositWrapper);
     }
-    
+
     function deactivateMellowVault(address mellowVault) external onlyOwner {
-        if (address(mellowDepositWrappers[mellowVault]) == address(0)) revert AlreadyDeactivated();
+        if (address(mellowDepositWrappers[mellowVault]) == address(0))
+            revert AlreadyDeactivated();
         mellowDepositWrappers[mellowVault] = IMellowDepositWrapper(address(0));
         emit DeactivatedMellowVault(mellowVault);
     }
 
-    function changeAllocation(address mellowVault, uint256 newAllocation)
-        external
-        onlyOwner
-    {
+    function changeAllocation(
+        address mellowVault,
+        uint256 newAllocation
+    ) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i]) && address(mellowDepositWrappers[address(mellowVaults[i])]) != address(0)) {
+            if (
+                mellowVault == address(mellowVaults[i]) &&
+                address(mellowDepositWrappers[address(mellowVaults[i])]) !=
+                address(0)
+            ) {
                 exists = true;
             }
         }
@@ -313,12 +320,9 @@ contract IMellowRestaker is
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
 
-    function pendingMellowRequest(IMellowVault mellowVault)
-        public
-        view
-        override
-        returns (IMellowVault.WithdrawalRequest memory)
-    {
+    function pendingMellowRequest(
+        IMellowVault mellowVault
+    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
         return mellowVault.withdrawalRequest(address(this));
     }
 
@@ -357,15 +361,14 @@ contract IMellowRestaker is
         return 1;
     }
 
-    function amountToLpAmount(uint256 amount, IMellowVault mellowVault)
-        public
-        view
-        returns (uint256 lpAmount)
-    {
-
+    function amountToLpAmount(
+        uint256 amount,
+        IMellowVault mellowVault
+    ) public view returns (uint256 lpAmount) {
         if (amount == 0) return 0;
-        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
-        
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0))
+            revert NoWrapperExists();
+
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
 
@@ -426,20 +429,20 @@ contract IMellowRestaker is
         lpAmount = FullMath.mulDiv(depositValue, totalSupply, totalValue);
     }
 
-    function lpAmountToAmount(uint256 lpAmount, IMellowVault mellowVault)
-        public
-        view
-        returns (uint256)
-    {
+    function lpAmountToAmount(
+        uint256 lpAmount,
+        IMellowVault mellowVault
+    ) public view returns (uint256) {
         if (lpAmount == 0) return 0;
-        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0))
+            revert NoWrapperExists();
 
         IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
             .calculateStack();
         uint256 wstEthAmount = FullMath.mulDiv(
             FullMath.mulDiv(
-                FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply), 
-                mellowVault.D9() - s.feeD9, 
+                FullMath.mulDiv(lpAmount, s.totalValue, s.totalSupply),
+                mellowVault.D9() - s.feeD9,
                 mellowVault.D9()
             ),
             s.ratiosX96[0],
@@ -459,10 +462,10 @@ contract IMellowRestaker is
         requestDeadline = newDealine;
     }
 
-    function setSlippages(uint256 _depositSlippage, uint256 _withdrawSlippage)
-        external
-        onlyOwner
-    {
+    function setSlippages(
+        uint256 _depositSlippage,
+        uint256 _withdrawSlippage
+    ) external onlyOwner {
         if (_depositSlippage > 3000 || _withdrawSlippage > 3000)
             revert TooMuchSlippage();
         depositSlippage = _depositSlippage;

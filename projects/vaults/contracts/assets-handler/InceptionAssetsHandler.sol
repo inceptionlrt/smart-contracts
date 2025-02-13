@@ -25,10 +25,9 @@ contract InceptionAssetsHandler is
 
     uint256[50 - 1] private __reserver;
 
-    function __InceptionAssetsHandler_init(IERC20 assetAddress)
-        internal
-        onlyInitializing
-    {
+    function __InceptionAssetsHandler_init(
+        IERC20 assetAddress
+    ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
 
@@ -56,21 +55,15 @@ contract InceptionAssetsHandler is
     /// @dev The functions below serve the proper withdrawal and claiming operations
     /// @notice Since a particular LST loses some wei on each transfer,
     /// this needs to be taken into account
-    function _getAssetWithdrawAmount(uint256 amount)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _getAssetWithdrawAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
         return amount;
     }
 
-    function _getAssetReceivedAmount(uint256 amount)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _getAssetReceivedAmount(
+        uint256 amount
+    ) internal view virtual returns (uint256) {
         return amount;
     }
 }

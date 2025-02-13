@@ -35,10 +35,10 @@ abstract contract IBaseRestaker is
         _disableInitializers();
     }
 
-    function __IBaseRestaker_init(IERC20 asset, address trusteeManager)
-        public
-        initializer
-    {
+    function __IBaseRestaker_init(
+        IERC20 asset,
+        address trusteeManager
+    ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
@@ -72,11 +72,9 @@ abstract contract IBaseRestaker is
         virtual
         returns (uint256 total);
 
-    function getDeposited(address vaultAddress)
-        public
-        view
-        virtual
-        returns (uint256);
+    function getDeposited(
+        address vaultAddress
+    ) public view virtual returns (uint256);
 
     function getTotalDeposited() public view virtual returns (uint256);
 

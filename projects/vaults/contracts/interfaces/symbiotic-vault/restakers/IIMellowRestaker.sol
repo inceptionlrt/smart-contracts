@@ -49,9 +49,10 @@ interface IIMellowRestaker is IIBaseRestaker {
         address mellowVault
     ) external returns (uint256 lpAmount);
 
-    function delegate(uint256 amount, uint256 deadline)
-        external
-        returns (uint256 tokenAmount, uint256 lpAmount);
+    function delegate(
+        uint256 amount,
+        uint256 deadline
+    ) external returns (uint256 tokenAmount, uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
@@ -67,7 +68,7 @@ interface IIMellowRestaker is IIBaseRestaker {
 
     function claimMellowWithdrawalCallback() external returns (uint256);
 
-    function pendingMellowRequest(IMellowVault mellowVault)
-        external
-        returns (IMellowVault.WithdrawalRequest memory);
+    function pendingMellowRequest(
+        IMellowVault mellowVault
+    ) external returns (IMellowVault.WithdrawalRequest memory);
 }

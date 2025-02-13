@@ -79,9 +79,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         mellowRestaker.delegateMellow(amount, deadline, mellowVault);
     }
 
-    function _depositAssetIntoSymbiotic(uint256 amount, address vault)
-        internal
-    {
+    function _depositAssetIntoSymbiotic(
+        uint256 amount,
+        address vault
+    ) internal {
         _asset.safeIncreaseAllowance(address(symbioticRestaker), amount);
         symbioticRestaker.delegate(vault, amount);
     }
@@ -111,12 +112,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev performs creating a withdrawal request from Symbiotic Protocol
     /// @dev requires a specific amount to withdraw
-    function undelegateFromSymbiotic(address vault, uint256 amount)
-        external
-        whenNotPaused
-        nonReentrant
-        onlyOperator
-    {
+    function undelegateFromSymbiotic(
+        address vault,
+        uint256 amount
+    ) external whenNotPaused nonReentrant onlyOperator {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
         amount = symbioticRestaker.withdraw(vault, amount);
@@ -143,12 +142,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function claimCompletedWithdrawalsSymbiotic(address vault, uint256 sEpoch)
-        public
-        onlyOperator
-        whenNotPaused
-        nonReentrant
-    {
+    function claimCompletedWithdrawalsSymbiotic(
+        address vault,
+        uint256 sEpoch
+    ) public onlyOperator whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount = symbioticRestaker.claim(vault, sEpoch);
@@ -246,20 +243,18 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setTargetFlashCapacity(uint256 newTargetCapacity)
-        external
-        onlyOwner
-    {
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
         if (newTargetCapacity == 0) revert InvalidTargetFlashCapacity();
         if (newTargetCapacity >= MAX_TARGET_PERCENT) revert MoreThanMax();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
 
-    function setSymbioticRestaker(address newSymbioticRestaker)
-        external
-        onlyOwner
-    {
+    function setSymbioticRestaker(
+        address newSymbioticRestaker
+    ) external onlyOwner {
         require(newSymbioticRestaker != address(0), InvalidAddress());
         require(Address.isContract(newSymbioticRestaker), NotContract());
 

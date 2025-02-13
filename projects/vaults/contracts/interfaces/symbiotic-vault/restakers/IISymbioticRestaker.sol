@@ -18,15 +18,18 @@ interface IISymbioticRestaker is IIBaseRestaker {
 
     event VaultRemoved(address indexed vault);
 
-    function delegate(address vaultAddress, uint256 amount)
-        external
-        returns (uint256 depositedAmount, uint256 mintedShares);
+    function delegate(
+        address vaultAddress,
+        uint256 amount
+    ) external returns (uint256 depositedAmount, uint256 mintedShares);
 
-    function withdraw(address vaultAddress, uint256 amount)
-        external
-        returns (uint256);
+    function withdraw(
+        address vaultAddress,
+        uint256 amount
+    ) external returns (uint256);
 
-    function claim(address vaultAddress, uint256 epoch)
-        external
-        returns (uint256);
+    function claim(
+        address vaultAddress,
+        uint256 epoch
+    ) external returns (uint256);
 }

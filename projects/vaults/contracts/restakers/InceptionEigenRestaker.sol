@@ -150,10 +150,9 @@ contract InceptionEigenRestaker is
         return 2;
     }
 
-    function setRewardsCoordinator(address newRewardsCoordinator)
-        external
-        onlyOwner
-    {
+    function setRewardsCoordinator(
+        address newRewardsCoordinator
+    ) external onlyOwner {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 
