@@ -122,13 +122,13 @@ const main = async () => {
     return;
   }
 
-  if (!obj.rebalancer && (!obj.chainIdL1 || !obj.underlyingAssetL1 || !obj.lockbox || !obj.crossChainL1)) {
-    console.log("Missing required config info for rebalancer deployment");
+  if (!obj.crossChainL1 && (!obj.chainIdL1 || !obj.lzEndpointL1 || !obj.eidL2 || !obj.chainIdL2)) {
+    console.log("Missing required config info for adapter deployment");
     return;
   }
 
-  if (!obj.crossChainL1 && (!obj.chainIdL1 || !obj.lzEndpointL1 || !obj.eidL2 || !obj.chainIdL2)) {
-    console.log("Missing required config info for adapter deployment");
+  if (!obj.rebalancer && (!obj.chainIdL1 || !obj.underlyingAssetL1 || !obj.lockbox || !obj.crossChainL1)) {
+    console.log("Missing required config info for rebalancer deployment");
     return;
   }
 
