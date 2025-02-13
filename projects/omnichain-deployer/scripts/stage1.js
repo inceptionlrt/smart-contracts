@@ -127,7 +127,7 @@ const main = async () => {
     return;
   }
 
-  if (!obj.rebalancer && (!obj.chainIdL1 || !obj.underlyingAssetL1 || !obj.lockbox || !obj.crossChainL1)) {
+  if (!obj.rebalancer && (!obj.chainIdL1 || !obj.underlyingAssetL1 || !obj.lockbox)) {
     console.log("Missing required config info for rebalancer deployment");
     return;
   }
