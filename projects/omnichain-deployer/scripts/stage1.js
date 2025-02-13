@@ -139,7 +139,7 @@ const main = async () => {
   }
   await saveState(obj);
 
-  if (!!obj.crossChainL1) {
+  if (!obj.crossChainL1) {
     console.log(`Deploying L1 CCA...`);
     obj.crossChainL1 = await deployL1adapter(await deployer.getAddress(), obj.lzEndpointL1, obj.eidL2, obj.chainIdL2);
   }
