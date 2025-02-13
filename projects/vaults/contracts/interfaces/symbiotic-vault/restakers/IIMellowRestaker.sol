@@ -21,52 +21,30 @@ interface IIMellowRestaker is IIBaseRestaker {
         uint256 newAllocation
     );
 
-    event RequestDealineSet(
-        uint256 indexed oldDeadline,
-        uint256 indexed newDealine
-    );
-
-    event NewSlippages(uint256 _deposit, uint256 _withdraw);
-
-    event WrappedSet(address indexed _wrapped, address indexed _newWrapped);
-
-    event VaultAdded(
-        address indexed _mellowVault,
-        address indexed _depositWrapper
-    );
-
-    event WrapperChanged(
-        address indexed _mellowVault,
-        address indexed _oldWrapper,
-        address indexed _newWrapper
-    );
+    event EthWrapperChanged(address indexed _old, address indexed _new);
 
     event DeactivatedMellowVault(address indexed _mellowVault);
 
+    event VaultAdded(address indexed _mellowVault);
+
     function delegateMellow(
         uint256 amount,
-        uint256 deadline,
-        address mellowVault
+        address mellowVault,
+        address referral
     ) external returns (uint256 lpAmount);
 
     function delegate(
         uint256 amount,
-        uint256 deadline
-    ) external returns (uint256 tokenAmount, uint256 lpAmount);
+        address referral
+    ) external returns (uint256 lpAmount);
 
     function withdrawMellow(
         address mellowVault,
-        uint256 minLpAmount,
-        uint256 deadline,
-        bool closePrevious
+        uint256 amount
     ) external returns (uint256);
 
-    // function withdrawEmergencyMellow(
-    //     address _mellowVault,
-    //     uint256 _deadline
-    // ) external returns (uint256);
-
     function claimMellowWithdrawalCallback() external returns (uint256);
+    function claimableWithdrawalAmount() external view returns (uint256);
 
     function pendingMellowRequest(
         IMellowVault mellowVault

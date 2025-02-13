@@ -32,7 +32,6 @@ interface ISymbioticHandler is IMellowHandler {
         uint256 epoch;
         address receiver;
         uint256 amount;
-        uint256 withdrawals;
     }
 
     event DelegatedTo(

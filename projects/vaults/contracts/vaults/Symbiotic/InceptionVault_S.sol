@@ -13,7 +13,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of Mellow asset.
+/// @notice Aims to maximize the profit of asset.
 contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
 
@@ -114,7 +114,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 amount,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        return _deposit(amount, msg.sender, receiver, true);
+        return _deposit(amount, msg.sender, receiver);
     }
 
     /// @notice The deposit function but with a referral code
@@ -124,14 +124,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
-        return _deposit(amount, msg.sender, receiver, true);
+        return _deposit(amount, msg.sender, receiver);
     }
 
     function _deposit(
         uint256 amount,
         address sender,
-        address receiver,
-        bool calculate
+        address receiver
     ) internal returns (uint256) {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
@@ -140,7 +139,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
-        if (availableBonusAmount > 0 && calculate) {
+        if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
                 depositBonus = availableBonusAmount;
@@ -170,7 +169,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver, false);
+        _deposit(assetsAmount, msg.sender, receiver);
 
         return assetsAmount;
     }
@@ -179,14 +178,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
-    /// @dev Sends underlying to a single mellow vault
+    /// @dev Sends underlying to a single symbiotic vault
     function delegateToSymbioticVault(
         address vault,
         uint256 amount
     ) external nonReentrant whenNotPaused onlyOperator {
         if (vault == address(0) || amount == 0) revert NullParams();
 
-        /// TODO
         _beforeDeposit(amount);
         _depositAssetIntoSymbiotic(amount, vault);
 
@@ -198,12 +196,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount,
-        uint256 deadline
+        address referral
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, deadline);
+        _depositAssetIntoMellow(amount, mellowVault, referral);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
@@ -211,16 +209,16 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
     function delegateAutoMellow(
-        uint256 deadline
+        address referral
     ) external nonReentrant whenNotPaused onlyOperator {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
+        uint256 lpAmount = mellowRestaker.delegate(
             balance,
-            deadline
+            referral
         );
 
-        emit Delegated(address(mellowRestaker), amount, lpAmount);
+        emit Delegated(address(mellowRestaker), balance, lpAmount);
     }
 
     /*///////////////////////////////////////
@@ -255,15 +253,11 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
 
-        uint256 queueLength = claimerWithdrawalsQueue.length;
-        if (genRequest.withdrawals == 0) genRequest.epoch = queueLength;
-        genRequest.withdrawals++;
         claimerWithdrawalsQueue.push(
             Withdrawal({
-                epoch: queueLength,
+                epoch: claimerWithdrawalsQueue.length,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount),
-                withdrawals: 1
+                amount: _getAssetReceivedAmount(amount)
             })
         );
 
@@ -295,6 +289,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
+        uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
@@ -308,7 +303,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            genRequest.withdrawals--;
+            redeemedWithdrawals[i] = withdrawalNum;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
@@ -318,7 +313,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
 
         _transferAssetTo(receiver, redeemedAmount);
 
-        emit RedeemedRequests(availableWithdrawals);
+        emit RedeemedRequests(redeemedWithdrawals);
         emit Redeem(msg.sender, receiver, redeemedAmount);
     }
 
@@ -413,14 +408,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ) public view returns (bool able, uint256[] memory) {
         // get the general request
         uint256 index;
-
-        uint256[] memory availableWithdrawals;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+        uint256[] memory availableWithdrawals = new uint256[](
+            epoch - genRequest.epoch
+        );
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
-        availableWithdrawals = new uint256[](genRequest.withdrawals);
-
-        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
+        for (uint256 i = 0; i < epoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
@@ -440,10 +434,16 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(
-        address mellowVault
+    function getDelegatedToMellow(
+        address vault
     ) external view returns (uint256) {
-        return mellowRestaker.getDeposited(mellowVault);
+        return mellowRestaker.getDeposited(vault);
+    }
+
+    function getDelegatedToSymbiotic(
+        address vault
+    ) external view returns (uint256) {
+        return symbioticRestaker.getDeposited(vault);
     }
 
     function getPendingWithdrawalOf(

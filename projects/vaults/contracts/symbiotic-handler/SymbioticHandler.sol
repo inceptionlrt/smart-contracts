@@ -11,7 +11,7 @@ import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 /**
  * @title The SymbioticHandler contract
  * @author The InceptionLRT team
- * @dev Serves communication with external Mellow Protocol
+ * @dev Serves communication with external Protocol
  * @dev Specifically, this includes depositing, and handling withdrawal requests
  */
 contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
@@ -73,10 +73,11 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     function _depositAssetIntoMellow(
         uint256 amount,
         address mellowVault,
-        uint256 deadline
+        address referral
     ) internal {
+
         _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
-        mellowRestaker.delegateMellow(amount, deadline, mellowVault);
+        mellowRestaker.delegateMellow(amount, mellowVault, referral);
     }
 
     function _depositAssetIntoSymbiotic(
@@ -95,16 +96,13 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     /// @dev requires a specific amount to withdraw
     function undelegateFromMellow(
         address mellowVault,
-        uint256 amount,
-        uint256 deadline
+        uint256 amount
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
         amount = mellowRestaker.withdrawMellow(
-            mellowVault,
-            amount,
-            deadline,
-            true
+            mellowVault, 
+            amount
         );
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
@@ -120,7 +118,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         if (amount == 0) revert ValueZero();
         amount = symbioticRestaker.withdraw(vault, amount);
 
-        /// TODO
         emit StartSymbioticWithdrawal(address(symbioticRestaker), amount);
         return;
     }
@@ -224,8 +221,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         returns (uint256)
     {
         uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
+        uint256 mellowClaimable = mellowRestaker.claimableWithdrawalAmount();
         uint256 claimableAmount = mellowRestaker.claimableAmount();
-        return pendingWithdrawal + claimableAmount;
+        return pendingWithdrawal + claimableAmount + mellowClaimable;
     }
 
     function getFlashCapacity() public view returns (uint256 total) {
