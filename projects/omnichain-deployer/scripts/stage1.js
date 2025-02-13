@@ -127,7 +127,7 @@ const main = async () => {
     return;
   }
 
-  if (!obj.crossChainL1 && (!obj.chainIdL1 || !obj.lzEndpointL1 || !obj.eidL2 || !obj.chainidL2)) {
+  if (!obj.crossChainL1 && (!obj.chainIdL1 || !obj.lzEndpointL1 || !obj.eidL2 || !obj.chainIdL2)) {
     console.log("Missing required config info for adapter deployment");
     return;
   }
