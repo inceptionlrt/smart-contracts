@@ -21,6 +21,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
+    /// @custom:oz-renamed-from minAmount
     uint256 public withdrawMinAmount;
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
