@@ -84,7 +84,7 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
 
         minAmount = 1e8;
 
-        targetCapacity = 1;
+        targetCapacity = 0.5 ether;
         protocolFee = 50 * 1e8;
 
         /// @dev deposit bonus
@@ -123,12 +123,10 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Transfers the msg.sender's assets to the vault.
     /// @dev Mints Inception tokens in accordance with the current ratio.
     /// @dev Issues the tokens to the specified receiver address.
-    function deposit(uint256 amount, address receiver)
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256)
-    {
+    function deposit(
+        uint256 amount,
+        address receiver
+    ) external nonReentrant whenNotPaused returns (uint256) {
         return _deposit(amount, msg.sender, receiver);
     }
 
@@ -200,11 +198,10 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /// @dev Performs burning iToken from msg.sender
     /// @dev Creates a withdrawal requests based on the current ratio
     /// @param iShares is measured in Inception token(shares)
-    function flashWithdraw(uint256 iShares, address receiver)
-        external
-        whenNotPaused
-        nonReentrant
-    {
+    function flashWithdraw(
+        uint256 iShares,
+        address receiver
+    ) external whenNotPaused nonReentrant {
         __beforeWithdraw(receiver, iShares);
 
         address claimer = msg.sender;
@@ -242,11 +239,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /**
      * @notice Sends asset information (total Inception and underlying token balances) to Layer 1.
      */
-    function sendAssetsInfoToL1(bytes memory _options)
-        external
-        payable
-        onlyOwnerOrOperator
-    {
+    function sendAssetsInfoToL1(
+        bytes memory _options
+    ) external payable onlyOwnerOrOperator {
         require(
             address(crossChainAdapterERC20) != address(0),
             CrossChainAdapterNotSet()
@@ -284,11 +279,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     /**
      * @notice Calculates price to send data message to Layer 1.
      */
-    function quoteSendAssetsInfoToL1(bytes memory _options)
-        public
-        view
-        returns (uint256)
-    {
+    function quoteSendAssetsInfoToL1(
+        bytes memory _options
+    ) public view returns (uint256) {
         require(
             address(crossChainAdapterERC20) != address(0),
             CrossChainAdapterNotSet()
@@ -308,11 +301,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      * @notice Sends available ERC20 to another chain via cross-chain adapter.
      * @dev msg.value is used to pay for the cross-chain fees
      */
-    function sendERC20ToL1(uint256 _chainId)
-        external
-        payable
-        onlyOwnerOrOperator
-    {
+    function sendERC20ToL1(
+        uint256 _chainId
+    ) external payable onlyOwnerOrOperator {
         uint256 freeBalance = getFreeBalance();
 
         require(
@@ -329,11 +320,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      * @notice Calculates fees to send ERC20 to other chain. The `SEND_VALUE` encoded in options is not included in the return
      * @param _amount amount of token to be sent
      */
-    function quoteSendERC20CrossChain(uint256 _amount)
-        public
-        view
-        returns (uint256)
-    {
+    function quoteSendERC20CrossChain(
+        uint256 _amount
+    ) public view returns (uint256) {
         require(
             address(crossChainAdapterERC20) != address(0),
             CrossChainAdapterNotSet()
@@ -350,11 +339,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
      * @param amount Amount of the deposit.
      * @return bonus Calculated bonus.
      */
-    function calculateDepositBonus(uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function calculateDepositBonus(
+        uint256 amount
+    ) public view returns (uint256) {
         return
             InternalInceptionLibrary.calculateDepositBonus(
                 amount,
@@ -367,11 +354,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashWithdrawFee(uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function calculateFlashWithdrawFee(
+        uint256 amount
+    ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
 
@@ -417,19 +402,15 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
     ////// Convert functions //////
     ////////////////////////////*/
 
-    function convertToShares(uint256 assets)
-        public
-        view
-        returns (uint256 shares)
-    {
+    function convertToShares(
+        uint256 assets
+    ) public view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    function convertToAssets(uint256 iShares)
-        public
-        view
-        returns (uint256 assets)
-    {
+    function convertToAssets(
+        uint256 iShares
+    ) public view returns (uint256 assets) {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
@@ -524,10 +505,9 @@ abstract contract InceptionERC20OmniVault is InceptionERC20OmniAssetsHandler {
         treasuryAddress = _newTreasury;
     }
 
-    function setTargetFlashCapacity(uint256 newTargetCapacity)
-        external
-        onlyOwner
-    {
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
         if (newTargetCapacity == 0) revert NullParams();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
