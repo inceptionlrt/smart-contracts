@@ -42,7 +42,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     IISymbioticRestaker public symbioticRestaker;
 
-    /// TODO
     uint256[50 - 9] private __gap;
 
     modifier onlyOperator() {
@@ -75,7 +74,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         address mellowVault,
         address referral
     ) internal {
-
         _asset.safeIncreaseAllowance(address(mellowRestaker), amount);
         mellowRestaker.delegateMellow(amount, mellowVault, referral);
     }
@@ -100,10 +98,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ) external whenNotPaused nonReentrant onlyOperator {
         if (mellowVault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = mellowRestaker.withdrawMellow(
-            mellowVault, 
-            amount
-        );
+        amount = mellowRestaker.withdrawMellow(mellowVault, amount);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
         return;
     }

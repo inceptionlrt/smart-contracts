@@ -214,10 +214,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ) external nonReentrant whenNotPaused onlyOperator {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        uint256 lpAmount = mellowRestaker.delegate(
-            balance,
-            referral
-        );
+        uint256 lpAmount = mellowRestaker.delegate(balance, referral);
 
         emit Delegated(address(mellowRestaker), balance, lpAmount);
     }
