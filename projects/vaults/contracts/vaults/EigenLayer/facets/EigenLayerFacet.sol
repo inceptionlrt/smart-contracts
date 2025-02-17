@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.28;
 
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -325,7 +325,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         emit RewardsAdded(amount, startTimeline);
     }
 
-    function setPendingWithdrawalAmount(uint256 newPendingWithdrawalAmount) external {
+    function setPendingWithdrawalAmount(
+        uint256 newPendingWithdrawalAmount
+    ) external {
         _pendingWithdrawalAmount = newPendingWithdrawalAmount;
     }
 }

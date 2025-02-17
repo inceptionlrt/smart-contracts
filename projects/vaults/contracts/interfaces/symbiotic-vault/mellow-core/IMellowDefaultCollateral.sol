@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity ^0.8.28;
 
 interface IDefaultCollateral {
     /**
@@ -8,7 +8,9 @@ interface IDefaultCollateral {
      * @param amount amount of the underlying asset
      * @return amount of the collateral minted
      */
-    function deposit(address recipient, uint256 amount) external returns (uint256);
+    function deposit(address recipient, uint256 amount)
+        external
+        returns (uint256);
 
     /**
      * @notice Deposit a given amount of the underlying asset using a permit functionality, and mint the collateral to a particular recipient.

@@ -13,19 +13,11 @@ import "./tasks/deposit-extra";
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
   solidity: {
-    version: "0.8.24",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
         runs: 100,
-      },
-    },
-  },
-  networks: {
-    hardhat: {
-      forking: {
-        url: `${process.env.HOLESKY_RPC}`,
-        blockNumber: 2680454,
       },
     },
   },

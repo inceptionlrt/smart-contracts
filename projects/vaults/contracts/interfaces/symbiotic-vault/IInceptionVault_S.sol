@@ -48,7 +48,6 @@ interface IInceptionVault_S {
 
     event FlashMinAmountChanged(uint256 prevValue, uint256 newValue);
 
-
     event RatioFeedChanged(address prevValue, address newValue);
 
     event NameChanged(string prevValue, string newValue);

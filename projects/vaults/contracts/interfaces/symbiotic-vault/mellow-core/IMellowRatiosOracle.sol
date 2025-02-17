@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.24;
+pragma solidity ^0.8.28;
 
 /**
  * @title IRatiosOracle
@@ -14,8 +14,8 @@ interface IMellowRatiosOracle {
      * @dev The array of ratios should align with the underlying tokens associated with the vault.
      *      Reverts if the ratios cannot be provided due to missing or mismatched data.
      */
-    function getTargetRatiosX96(
-        address vault,
-        bool isDeposit
-    ) external view returns (uint128[] memory ratiosX96);
+    function getTargetRatiosX96(address vault, bool isDeposit)
+        external
+        view
+        returns (uint128[] memory ratiosX96);
 }

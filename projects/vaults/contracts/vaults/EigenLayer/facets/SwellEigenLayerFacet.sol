@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.28;
 
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {ICumulativeMerkleDrop} from "../../../interfaces/common/ICumulativeMerkleDrop.sol";
@@ -348,9 +348,15 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
         );
 
         SWELL_ASSET.transfer(INCEPTION_AIDROP_CONTRACT, cumulativeAmount);
-        if (initBalance + cumulativeAmount != SWELL_ASSET.balanceOf(INCEPTION_AIDROP_CONTRACT))
-            revert InconsistentData();
+        if (
+            initBalance + cumulativeAmount !=
+            SWELL_ASSET.balanceOf(INCEPTION_AIDROP_CONTRACT)
+        ) revert InconsistentData();
 
-        emit AirDropClaimed(_msgSender(), INCEPTION_AIDROP_CONTRACT, cumulativeAmount);
+        emit AirDropClaimed(
+            _msgSender(),
+            INCEPTION_AIDROP_CONTRACT,
+            cumulativeAmount
+        );
     }
 }
