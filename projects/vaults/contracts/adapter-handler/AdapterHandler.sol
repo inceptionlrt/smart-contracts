@@ -47,7 +47,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    uint256[50 - 11] private __gap;
+    uint256[50 - 10] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
@@ -76,6 +76,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         bytes[] calldata _data
     ) external nonReentrant whenNotPaused onlyOperator {
         _beforeDeposit(amount);
+
         if (adapter == address(0)) revert NullParams();
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
 

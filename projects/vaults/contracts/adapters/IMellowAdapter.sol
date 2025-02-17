@@ -1,26 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
-import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
 
 import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
-import {IMellowHandler} from "../interfaces/symbiotic-vault/mellow-core/IMellowHandler.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
-import {IDefaultCollateral} from "../interfaces/symbiotic-vault/mellow-core/IMellowDefaultCollateral.sol";
-import {FullMath} from "../lib/FullMath.sol";
-
-import {IMellowPriceOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowPriceOracle.sol";
-import {IMellowRatiosOracle} from "../interfaces/symbiotic-vault/mellow-core/IMellowRatiosOracle.sol";
-
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 
@@ -143,7 +129,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     function withdraw(
         address _mellowVault,
         uint256 amount,
-        bytes[] calldata _data
+        bytes[] calldata /*_data */
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         uint256 balanceState = _asset.balanceOf(address(this));
         IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
@@ -162,7 +148,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     function claim(
-        bytes[] calldata _data
+        bytes[] calldata /*_data */
     ) external override onlyTrustee returns (uint256) {
         uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();

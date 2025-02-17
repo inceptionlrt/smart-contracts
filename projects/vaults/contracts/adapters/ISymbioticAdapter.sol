@@ -149,15 +149,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return total;
     }
 
-    function claimableAmount()
-        public
-        pure
-        override(IBaseAdapter, IIBaseAdapter)
-        returns (uint256)
-    {
-        return 0;
-    }
-
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
     }

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IWStethInterface} from "../interfaces/common/IStEth.sol";
@@ -70,7 +66,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         uint256 amount,
         bytes[] calldata _data
     ) external override onlyTrustee returns (uint256) {
-        /// 1. delegate or depositIntoStrategy
+        /// depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(_inceptionVault, address(this), amount);
@@ -175,15 +171,6 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         return withdrawnAmount;
-    }
-
-    function claimableAmount()
-        public
-        view
-        override(IBaseAdapter, IIBaseAdapter)
-        returns (uint256)
-    {
-        return _asset.balanceOf(address(this));
     }
 
     function pendingWithdrawalAmount()
