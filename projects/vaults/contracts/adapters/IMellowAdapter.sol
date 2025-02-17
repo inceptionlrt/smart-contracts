@@ -32,10 +32,7 @@ import {IBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowAdapter is
-    IIMellowAdapter,
-    IBaseAdapter
-{
+contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
 
     /// @dev Kept only for storage slot
@@ -79,8 +76,17 @@ contract IMellowAdapter is
         address mellowVault,
         uint256 amount,
         bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
-        (address referral, bool delegateAuto) = abi.decode(_data[0], (address, bool));
+    )
+        external
+        override
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 depositedAmount)
+    {
+        (address referral, bool delegateAuto) = abi.decode(
+            _data[0],
+            (address, bool)
+        );
 
         if (!delegateAuto) return _delegate(mellowVault, amount, referral);
         else return _delegateAuto(amount, referral);
@@ -93,15 +99,20 @@ contract IMellowAdapter is
     ) internal onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
-        return IEthWrapper(ethWrapper).deposit(address(_asset), amount, mellowVault, address(this), referral);
+        return
+            IEthWrapper(ethWrapper).deposit(
+                address(_asset),
+                amount,
+                mellowVault,
+                address(this),
+                referral
+            );
     }
 
-    function _delegateAuto(uint256 amount, address referral)
-        internal
-        onlyTrustee
-        whenNotPaused
-        returns (uint256 depositedAmount)
-    {
+    function _delegateAuto(
+        uint256 amount,
+        address referral
+    ) internal onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
         uint256 allocationsTotal = totalAllocations;
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
 
@@ -109,8 +120,17 @@ contract IMellowAdapter is
             uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
                 uint256 localBalance = (amount * allocation) / allocationsTotal;
-                IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), localBalance);
-                uint256 lpAmount = IEthWrapper(ethWrapper).deposit(address(_asset), localBalance, address(mellowVaults[i]), address(this), referral);
+                IERC20(_asset).safeIncreaseAllowance(
+                    address(ethWrapper),
+                    localBalance
+                );
+                uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
+                    address(_asset),
+                    localBalance,
+                    address(mellowVaults[i]),
+                    address(this),
+                    referral
+                );
                 depositedAmount += lpAmountToAmount(lpAmount, mellowVaults[i]);
             }
         }
@@ -126,24 +146,24 @@ contract IMellowAdapter is
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         uint256 balanceState = _asset.balanceOf(address(this));
-        IERC4626(_mellowVault).withdraw(amount,address(this), address(this));
-        
+        IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
+
         return (_asset.balanceOf(address(this)) - balanceState);
     }
 
     function claimPending() external returns (uint256) {
-
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            IMellowSymbioticVault(address(mellowVaults[i])).claim(address(this), address(this), type(uint256).max);
+            IMellowSymbioticVault(address(mellowVaults[i])).claim(
+                address(this),
+                address(this),
+                type(uint256).max
+            );
         }
     }
 
-    function claim(bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        returns (uint256)
-    {
+    function claim(
+        bytes[] calldata _data
+    ) external override onlyTrustee returns (uint256) {
         uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
@@ -152,10 +172,7 @@ contract IMellowAdapter is
         return amount;
     }
 
-    function addMellowVault(address mellowVault)
-        external
-        onlyOwner
-    {
+    function addMellowVault(address mellowVault) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
@@ -169,10 +186,10 @@ contract IMellowAdapter is
         emit VaultAdded(mellowVault);
     }
 
-    function changeAllocation(address mellowVault, uint256 newAllocation)
-        external
-        onlyOwner
-    {
+    function changeAllocation(
+        address mellowVault,
+        uint256 newAllocation
+    ) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
         bool exists;
@@ -190,42 +207,50 @@ contract IMellowAdapter is
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
 
-    function pendingMellowRequest(IMellowVault mellowVault)
-        public
-        view
-        override
-        returns (IMellowVault.WithdrawalRequest memory)
-    {
+    function pendingMellowRequest(
+        IMellowVault mellowVault
+    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
         return mellowVault.withdrawalRequest(address(this));
     }
 
     function claimableWithdrawalAmount() public view returns (uint256 total) {
-        
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            
-            total += IMellowSymbioticVault(address(mellowVaults[i])).claimableAssetsOf(address(this));
+            total += IMellowSymbioticVault(address(mellowVaults[i]))
+                .claimableAssetsOf(address(this));
         }
     }
 
-    function claimableWithdrawalAmount(address _mellowVault) external view returns (uint256) {
-
-        return IMellowSymbioticVault(_mellowVault).claimableAssetsOf(address(this));
+    function claimableWithdrawalAmount(
+        address _mellowVault
+    ) external view returns (uint256) {
+        return
+            IMellowSymbioticVault(_mellowVault).claimableAssetsOf(
+                address(this)
+            );
     }
 
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
-
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
+    {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-
-            total += IMellowSymbioticVault(address(mellowVaults[i])).pendingAssetsOf(address(this));
+            total += IMellowSymbioticVault(address(mellowVaults[i]))
+                .pendingAssetsOf(address(this));
         }
     }
 
-    function pendingWithdrawalAmount(address _mellowVault) external view returns (uint256) {
-
-        return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
+    function pendingWithdrawalAmountOf(
+        address _mellowVault
+    ) external view returns (uint256) {
+        return
+            IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
     }
 
-    function getDeposited(address _mellowVault) public view override returns (uint256) {
+    function getDeposited(
+        address _mellowVault
+    ) public view override returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
         if (balance == 0) {
@@ -239,14 +264,19 @@ contract IMellowAdapter is
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
             if (balance > 0) {
-                total += IERC4626(address(mellowVaults[i])).previewRedeem(balance);
+                total += IERC4626(address(mellowVaults[i])).previewRedeem(
+                    balance
+                );
             }
         }
         return total;
     }
 
     function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableWithdrawalAmount() + claimableAmount();
+        return
+            pendingWithdrawalAmount() +
+            claimableWithdrawalAmount() +
+            claimableAmount();
     }
 
     function amountToLpAmount(
@@ -265,9 +295,13 @@ contract IMellowAdapter is
 
     function setEthWrapper(address newEthWrapper) external onlyOwner {
         if (newEthWrapper == address(0)) revert ZeroAddress();
-        
+
         address oldWrapper = ethWrapper;
         ethWrapper = newEthWrapper;
         emit EthWrapperChanged(oldWrapper, newEthWrapper);
+    }
+
+    function getVersion() external pure override returns (uint256) {
+        return 3;
     }
 }

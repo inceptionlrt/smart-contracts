@@ -69,14 +69,14 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (amount > freeBalance) revert InsufficientCapacity(freeBalance);
     }
 
-    function delegate(address adapter, address vault, uint256 amount, bytes[] calldata _data) 
-        external 
-        nonReentrant 
-        whenNotPaused 
-        onlyOperator 
-    {
+    function delegate(
+        address adapter,
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external nonReentrant whenNotPaused onlyOperator {
         _beforeDeposit(amount);
-        if (adapter == address (0) || vault == address(0) || amount == 0) revert NullParams();
+        if (adapter == address(0)) revert NullParams();
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
 
         _asset.safeIncreaseAllowance(address(adapter), amount);
@@ -93,25 +93,23 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
-        amount = IIBaseAdapter(adapter).withdraw(
-            vault,
-            amount,
-            _data
-        );
+
+        amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        require(amount > 0, WithdrawalFailed());
+
         emit UndelegatedFrom(adapter, vault, amount);
-        return;
     }
 
-    function claim(address adapter, bytes[] calldata _data)
-        public
-        onlyOperator
-        whenNotPaused
-        nonReentrant
-    {   
+    function claim(
+        address adapter,
+        bytes[] calldata _data
+    ) public onlyOperator whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
-
-        uint256 withdrawnAmount = IIBaseAdapter(adapter)
-            .claim(_data);
+        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
+        require(
+            availableBalance + withdrawnAmount >= getFreeBalance(),
+            ClaimFailed()
+        );
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
 
@@ -168,7 +166,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     }
 
     function getTotalDelegated() public view returns (uint256) {
-
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
             total += IIBaseAdapter(_adapters.at(i)).getTotalDeposited();
@@ -176,11 +173,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return total;
     }
 
-    function getDelegatedTo(address adapter, address vault)
-        external
-        view
-        returns (uint256)
-    {
+    function getDelegatedTo(
+        address adapter,
+        address vault
+    ) external view returns (uint256) {
         return IIBaseAdapter(adapter).getDeposited(vault);
     }
 
@@ -191,19 +187,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     }
 
     /// @dev returns the total amount of pending withdrawals
-    function getPendingWithdrawals(address adapter)
-        public
-        view
-        returns (uint256)
-    {
+    function getPendingWithdrawals(
+        address adapter
+    ) public view returns (uint256) {
         return IIBaseAdapter(adapter).inactiveBalance();
     }
 
-    function getTotalPendingWithdrawals()
-        public
-        view
-        returns (uint256)
-    {
+    function getTotalPendingWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
             total += IIBaseAdapter(_adapters.at(i)).inactiveBalance();
@@ -226,10 +216,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ////// SET functions //////
     ////////////////////////*/
 
-    function setTargetFlashCapacity(uint256 newTargetCapacity)
-        external
-        onlyOwner
-    {
+    function setTargetFlashCapacity(
+        uint256 newTargetCapacity
+    ) external onlyOwner {
         if (newTargetCapacity == 0) revert InvalidTargetFlashCapacity();
         if (newTargetCapacity >= MAX_TARGET_PERCENT) revert MoreThanMax();
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);

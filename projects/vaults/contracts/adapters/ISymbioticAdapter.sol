@@ -21,10 +21,7 @@ import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract ISymbioticAdapter is
-    IISymbioticAdapter,
-    IBaseAdapter
-{
+contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -58,7 +55,11 @@ contract ISymbioticAdapter is
         }
     }
 
-    function delegate(address vaultAddress, uint256 amount, bytes[] calldata _data)
+    function delegate(
+        address vaultAddress,
+        uint256 amount,
+        bytes[] calldata _data
+    )
         external
         override
         onlyTrustee
@@ -68,17 +69,18 @@ contract ISymbioticAdapter is
         require(_vaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-        (depositedAmount, ) = IVault(vaultAddress).deposit(address(this), amount);
+        (depositedAmount, ) = IVault(vaultAddress).deposit(
+            address(this),
+            amount
+        );
         return depositedAmount;
     }
 
-    function withdraw(address vaultAddress, uint256 amount, bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256)
-    {
+    function withdraw(
+        address vaultAddress,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
 
@@ -89,14 +91,13 @@ contract ISymbioticAdapter is
         return mintedShares;
     }
 
-    function claim(bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256)
-    {
-        (address vaultAddress, uint256 sEpoch) = abi.decode(_data[0], (address, uint256));
+    function claim(
+        bytes[] calldata _data
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
+        (address vaultAddress, uint256 sEpoch) = abi.decode(
+            _data[0],
+            (address, uint256)
+        );
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] != 0, NothingToClaim());
 
@@ -113,15 +114,15 @@ contract ISymbioticAdapter is
      * @notice Checks whether a vault is supported by the Protocol or not.
      * @param vaultAddress vault address to check
      */
-    function isVaultSupported(address vaultAddress)
-        external
-        view
-        returns (bool)
-    {
+    function isVaultSupported(
+        address vaultAddress
+    ) external view returns (bool) {
         return _vaults.contains(vaultAddress);
     }
 
-    function getDeposited(address vaultAddress) public view override returns (uint256) {
+    function getDeposited(
+        address vaultAddress
+    ) public view override returns (uint256) {
         return IVault(vaultAddress).activeBalanceOf(address(this));
     }
 
@@ -132,7 +133,12 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
+    {
         for (uint256 i = 0; i < _vaults.length(); i++)
             if (withdrawals[_vaults.at(i)] != 0)
                 total += IVault(_vaults.at(i)).withdrawalsOf(
@@ -143,7 +149,12 @@ contract ISymbioticAdapter is
         return total;
     }
 
-    function claimableAmount() public view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
+    function claimableAmount()
+        public
+        pure
+        override(IBaseAdapter, IIBaseAdapter)
+        returns (uint256)
+    {
         return 0;
     }
 

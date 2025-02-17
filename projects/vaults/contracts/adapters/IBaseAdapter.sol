@@ -9,6 +9,12 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 
+/**
+ * @title The IBaseAdapter Contract
+ * @author The InceptionLRT team
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ */
 abstract contract IBaseAdapter is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -30,10 +36,10 @@ abstract contract IBaseAdapter is
         _;
     }
 
-    function __IBaseAdapter_init(IERC20 asset, address trusteeManager)
-        public
-        initializer
-    {
+    function __IBaseAdapter_init(
+        IERC20 asset,
+        address trusteeManager
+    ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
