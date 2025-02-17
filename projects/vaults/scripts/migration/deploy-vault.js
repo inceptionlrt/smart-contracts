@@ -1,7 +1,7 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const ADAPTER_ADDRESS = "";
+const RESTAKER_ADDRESS = "";
 
 const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const [deployer] = await ethers.getSigners();
@@ -10,7 +10,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
-  console.log(`InceptionAdapter address: ${ADAPTER_ADDRESS}`);
+  console.log(`InceptionRestaker address: ${RESTAKER_ADDRESS}`);
 
   // 1. Inception token
   const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
@@ -96,13 +96,13 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress, assetAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { unsafeAllowLinkedLibraries: true },
     );
   } else if (vaultFactory === "InVault_E1" || vaultFactory === "InVault_E2") {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { unsafeAllowLinkedLibraries: true },
     );
   } else {
     console.error("Wrong iVaultFactory: ", vaultFactory);
@@ -122,8 +122,8 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
   tx = await iVault.setDelegationManager(addresses.DelegationManager);
   await tx.wait();
 
-  // 5. set the IAdapter Impl
-  tx = await iVault.upgradeTo(ADAPTER_ADDRESS);
+  // 5. set the IRestaker Impl
+  tx = await iVault.upgradeTo(RESTAKER_ADDRESS);
   await tx.wait();
 
   // 6. set RatioFeed
@@ -151,7 +151,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     //    iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    AdapterImpl: ADAPTER_ADDRESS,
+    RestakerImpl: RESTAKER_ADDRESS,
   };
 
   const json_addresses = JSON.stringify(iAddresses);
@@ -161,3 +161,4 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
 module.exports = {
   deployVault,
 };
+
