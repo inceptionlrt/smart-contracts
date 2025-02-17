@@ -12,8 +12,6 @@ import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 /**
  * @title The IBaseAdapter Contract
  * @author The InceptionLRT team
- * @dev Handles delegation and withdrawal requests within the Mellow protocol.
- * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 abstract contract IBaseAdapter is
     PausableUpgradeable,
