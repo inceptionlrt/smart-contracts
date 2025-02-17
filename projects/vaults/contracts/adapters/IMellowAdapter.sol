@@ -47,10 +47,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         IERC20 asset,
         address trusteeManager
     ) public initializer {
-        __Pausable_init();
-        __ReentrancyGuard_init();
-        __Ownable_init();
-        __ERC165_init();
         __IBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < _mellowVault.length; i++) {

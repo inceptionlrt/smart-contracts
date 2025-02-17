@@ -25,19 +25,13 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    EnumerableSet.AddressSet internal _vaults;
+    EnumerableSet.AddressSet internal _symbioticVaults;
 
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
 
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
-
-    modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager)
-            revert NotVaultOrTrusteeManager();
-        _;
-    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -46,7 +40,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function initialize(
         address[] memory vaults,
-        address vault,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
@@ -68,7 +61,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     function delegate(
         address vaultAddress,
         uint256 amount,
-        bytes[] calldata _data
+        bytes[] calldata /* _data */
     )
         external
         override
@@ -76,7 +69,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         whenNotPaused
         returns (uint256 depositedAmount)
     {
-        require(_vaults.contains(vaultAddress), InvalidVault());
+        require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
         (depositedAmount, ) = IVault(vaultAddress).deposit(
@@ -88,11 +81,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function withdraw(
         address vaultAddress,
-        uint256 amount
+        uint256 amount,
+        bytes[] calldata /*_data */
     ) external onlyTrustee whenNotPaused returns (uint256) {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
-
         IVault vault = IVault(vaultAddress);
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (
@@ -109,11 +100,19 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     function claim(
-        address vaultAddress,
-        uint256 sEpoch
-    ) external onlyTrustee whenNotPaused returns (uint256) {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] != 0, NothingToClaim());
+        bytes[] calldata _data
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
+        (address vaultAddress, uint256 sEpoch) = abi.decode(
+            _data[0],
+            (address, uint256)
+        );
+
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch())
+            revert InvalidEpoch();
+        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender))
+            revert AlreadyClaimed();
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
@@ -131,7 +130,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     function isVaultSupported(
         address vaultAddress
     ) external view returns (bool) {
-        return _vaults.contains(vaultAddress);
+        return _symbioticVaults.contains(vaultAddress);
     }
 
     function getDeposited(
@@ -141,8 +140,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     function getTotalDeposited() public view override returns (uint256 total) {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            total += IVault(_vaults.at(i)).activeBalanceOf(address(this));
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            total += IVault(_symbioticVaults.at(i)).activeBalanceOf(
+                address(this)
+            );
 
         return total;
     }
@@ -153,10 +154,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         override
         returns (uint256 total)
     {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            if (withdrawals[_vaults.at(i)] != 0)
-                total += IVault(_vaults.at(i)).withdrawalsOf(
-                    withdrawals[_vaults.at(i)],
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            if (withdrawals[_symbioticVaults.at(i)] != 0)
+                total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
+                    withdrawals[_symbioticVaults.at(i)],
                     address(this)
                 );
 

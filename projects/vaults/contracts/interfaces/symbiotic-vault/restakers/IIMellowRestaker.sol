@@ -44,6 +44,7 @@ interface IIMellowRestaker is IIBaseRestaker {
     ) external returns (uint256);
 
     function claimMellowWithdrawalCallback() external returns (uint256);
+
     function claimableWithdrawalAmount() external view returns (uint256);
 
     function pendingMellowRequest(

@@ -14,7 +14,7 @@ import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/I
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-import {IIEigenLayerAdapter} from "../../interfaces/adapters/IIEigenLayerAdapter.sol";
+import {IInceptionEigenRestaker} from "../../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 import {Convert} from "../../lib/Convert.sol";
@@ -63,8 +63,8 @@ contract InceptionVaultStorage_EL is
     uint256 public redeemReservedAmount;
 
     /// @dev Maps EigenLayer operators to Inception stakers.
-    mapping(address => address) internal _operatorAdapters;
-    address[] public adapters;
+    mapping(address => address) internal _operatorRestakers;
+    address[] public restakers;
 
     uint256 public depositBonusAmount;
 
@@ -122,10 +122,9 @@ contract InceptionVaultStorage_EL is
      * @dev This function is called during contract deployment.
      * @param assetAddress The address of the underlying ERC20 token.
      */
-    function __InceptionVaultStorage_EL_init(IERC20 assetAddress)
-        internal
-        onlyInitializing
-    {
+    function __InceptionVaultStorage_EL_init(
+        IERC20 assetAddress
+    ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
@@ -146,14 +145,14 @@ contract InceptionVaultStorage_EL is
     }
 
     /**
-     * @notice Returns the total amount delegated to all adapters in EigenLayer.
+     * @notice Returns the total amount delegated to all restakers in EigenLayer.
      * @return total The total delegated amount.
      */
     function getTotalDelegated() public view returns (uint256 total) {
-        uint256 stakersNum = adapters.length;
+        uint256 stakersNum = restakers.length;
         for (uint256 i = 0; i < stakersNum; ++i) {
-            if (adapters[i] == address(0)) continue;
-            total += strategy.userUnderlyingView(adapters[i]);
+            if (restakers[i] == address(0)) continue;
+            total += strategy.userUnderlyingView(restakers[i]);
         }
         return total + strategy.userUnderlyingView(address(this));
     }
@@ -193,19 +192,15 @@ contract InceptionVaultStorage_EL is
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(address elOperator)
-        external
-        view
-        returns (uint256)
-    {
-        return strategy.userUnderlyingView(_operatorAdapters[elOperator]);
+    function getDelegatedTo(
+        address elOperator
+    ) external view returns (uint256) {
+        return strategy.userUnderlyingView(_operatorRestakers[elOperator]);
     }
 
-    function getPendingWithdrawalOf(address claimer)
-        external
-        view
-        returns (uint256)
-    {
+    function getPendingWithdrawalOf(
+        address claimer
+    ) external view returns (uint256) {
         return _claimerWithdrawals[claimer].amount;
     }
 
@@ -215,11 +210,9 @@ contract InceptionVaultStorage_EL is
      * @return able Indicates whether the claimer can redeem withdrawals.
      * @return availableWithdrawals The array of indices where the claimer has available withdrawals.
      */
-    function isAbleToRedeem(address claimer)
-        public
-        view
-        returns (bool able, uint256[] memory)
-    {
+    function isAbleToRedeem(
+        address claimer
+    ) public view returns (bool able, uint256[] memory) {
         // get the general request
         uint256 index;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
@@ -278,11 +271,9 @@ contract InceptionVaultStorage_EL is
         return _convertToShares(assets);
     }
 
-    function _convertToShares(uint256 assets)
-        internal
-        view
-        returns (uint256 shares)
-    {
+    function _convertToShares(
+        uint256 assets
+    ) internal view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
@@ -293,11 +284,9 @@ contract InceptionVaultStorage_EL is
         return _convertToAssets(shares);
     }
 
-    function _convertToAssets(uint256 iShares)
-        internal
-        view
-        returns (uint256 assets)
-    {
+    function _convertToAssets(
+        uint256 iShares
+    ) internal view returns (uint256 assets) {
         return Convert.multiplyAndDivideFloor(iShares, 1e18, ratio());
     }
 
@@ -375,11 +364,9 @@ contract InceptionVaultStorage_EL is
      * @dev This function allows users to simulate the effects of their redemption at the current block.
      * @dev See {IERC4626-previewRedeem}
      */
-    function previewRedeem(uint256 shares)
-        public
-        view
-        returns (uint256 assets)
-    {
+    function previewRedeem(
+        uint256 shares
+    ) public view returns (uint256 assets) {
         return
             _convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));
@@ -398,11 +385,9 @@ contract InceptionVaultStorage_EL is
     }
 
     /// @notice Function to calculate deposit bonus based on the utilization rate
-    function calculateDepositBonus(uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function calculateDepositBonus(
+        uint256 amount
+    ) public view returns (uint256) {
         return
             InceptionLibrary.calculateDepositBonus(
                 amount,
@@ -415,11 +400,9 @@ contract InceptionVaultStorage_EL is
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
-    function calculateFlashWithdrawFee(uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function calculateFlashWithdrawFee(
+        uint256 amount
+    ) public view returns (uint256) {
         uint256 capacity = getFlashCapacity();
         if (amount > capacity) revert InsufficientCapacity(capacity);
         return
@@ -510,11 +493,9 @@ contract InceptionVaultStorage_EL is
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
     }
 
-    function _getSelectorToTarget(bytes4 sig)
-        internal
-        view
-        returns (address, FuncAccess)
-    {
+    function _getSelectorToTarget(
+        bytes4 sig
+    ) internal view returns (address, FuncAccess) {
         _requireNotPaused();
         FuncData memory target = _selectorToTarget[sig];
         if (
@@ -548,10 +529,10 @@ contract InceptionVaultStorage_EL is
      * @param amount The amount to transfer.
      * @return The actual amount transferred.
      */
-    function _transferAssetFrom(address staker, uint256 amount)
-        internal
-        returns (uint256)
-    {
+    function _transferAssetFrom(
+        address staker,
+        uint256 amount
+    ) internal returns (uint256) {
         uint256 depositedBefore = _asset.balanceOf(address(this));
 
         if (!_asset.transferFrom(staker, address(this), amount))

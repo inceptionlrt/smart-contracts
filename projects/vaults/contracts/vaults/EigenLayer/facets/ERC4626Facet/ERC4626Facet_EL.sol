@@ -234,11 +234,11 @@ contract ERC4626Facet_EL is InceptionVaultStorage_EL {
     }
 
     function _verifyDelegated() internal view returns (bool) {
-        for (uint256 i = 0; i < adapters.length; i++) {
-            if (adapters[i] == address(0)) {
+        for (uint256 i = 0; i < restakers.length; i++) {
+            if (restakers[i] == address(0)) {
                 continue;
             }
-            if (!delegationManager.isDelegated(adapters[i])) return false;
+            if (!delegationManager.isDelegated(restakers[i])) return false;
         }
 
         if (

@@ -40,11 +40,6 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address asset,
         address trusteeManager
     ) public initializer {
-        __Pausable_init();
-        __ReentrancyGuard_init();
-        __Ownable_init();
-        // Ensure compatibility with future versions of ERC165Upgradeable
-        __ERC165_init();
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);

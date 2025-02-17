@@ -52,7 +52,7 @@ abstract contract IBaseAdapter is
     }
 
     function setInceptionVault(address inceptionVault) external onlyOwner {
-        emit VaultSet(_inceptionVault, inceptionVault);
+        emit InceptionVaultSet(_inceptionVault, inceptionVault);
         _inceptionVault = inceptionVault;
     }
 
