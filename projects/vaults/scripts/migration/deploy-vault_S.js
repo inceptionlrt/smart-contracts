@@ -1,7 +1,16 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, ratioFeed) => {
+const deployVault = async (
+  addresses,
+  vaultName,
+  tokenName,
+  tokenSymbol,
+  mellowWrappers,
+  mellowVaults,
+  asset,
+  ratioFeed,
+) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -17,12 +26,16 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
-  // 2. Mellow adapter
-  const mellowAdapterFactory = await hre.ethers.getContractFactory("IMellowAdapter");
-  const mr = await upgrades.deployProxy(mellowAdapterFactory, [mellowWrappers, mellowVaults, asset, addresses.Operator], { kind: "transparent" });
+  // 2. Mellow Restaker
+  const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
+  const mr = await upgrades.deployProxy(
+    mellowRestakerFactory,
+    [mellowWrappers, mellowVaults, asset, addresses.Operator],
+    { kind: "transparent" },
+  );
   await mr.waitForDeployment();
   const mrAddress = await mr.getAddress();
-  console.log(`MellowAdapter address: ${mrAddress}`);
+  console.log(`MellowRestaker address: ${mrAddress}`);
 
   const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
 
@@ -40,20 +53,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
   const libAddress = await lib.getAddress();
   console.log("InceptionLibrary address:", libAddress);
 
-  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, 
-    {
+  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, {
     libraries: {
-      InceptionLibrary: libAddress
+      InceptionLibrary: libAddress,
     },
-  }
-);
+  });
   const iVault = await upgrades.deployProxy(
     InceptionVaultFactory,
     [vaultName, addresses.Operator, asset, iTokenAddress, mrAddress],
-    { kind: "transparent" , 
-      unsafeAllowLinkedLibraries: true,
-      unsafeSkipStorageCheck: true,
-    }
+    { kind: "transparent", unsafeAllowLinkedLibraries: true, unsafeSkipStorageCheck: true },
   );
   await iVault.waitForDeployment();
   const iVaultAddress = await iVault.getAddress();
@@ -65,8 +73,8 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
     iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    Adapter: mrAddress,
-    AdapterImpl: mrImpAddress,
+    Restaker: mrAddress,
+    RestakerImpl: mrImpAddress,
   };
 
   const json_addresses = JSON.stringify(iAddresses);
@@ -79,7 +87,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   tx = await mr.setVault(await iVault.getAddress());
   await tx.wait();
-  console.log("adapter vault set");
+  console.log("restaker vault set");
 
   tx = await iVault.setTargetFlashCapacity("5000000000000000000"); // 5%
   await tx.wait();
@@ -96,3 +104,4 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 module.exports = {
   deployVault,
 };
+

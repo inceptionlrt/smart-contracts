@@ -8,6 +8,11 @@ interface IMellowHandler {
         uint256 indexed actualAmounts
     );
 
+    event StartSymbioticWithdrawal(
+        address indexed stakerAddress,
+        uint256 indexed mintedShares
+    );
+
     event StartEmergencyMellowWithdrawal(
         address indexed stakerAddress,
         uint256 indexed actualAmounts
@@ -41,7 +46,7 @@ interface IAdapterHandler is IMellowHandler {
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 
     event SymbioticAdapterAdded(address indexed newValue);
-    
+
     event AdapterAdded(address);
 
     event AdapterRemoved(address);

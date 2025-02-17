@@ -21,14 +21,11 @@ import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract ISymbioticAdapter is
-    IISymbioticAdapter,
-    IBaseAdapter
-{
+contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    EnumerableSet.AddressSet internal _vaults;
+    EnumerableSet.AddressSet internal _symbioticVaults;
 
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
@@ -53,52 +50,69 @@ contract ISymbioticAdapter is
         __IBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
-            _vaults.add(vaults[i]);
+            if (IVault(vaults[i]).collateral() != address(asset))
+                revert InvalidCollateral();
+            if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
+            _symbioticVaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
     }
 
-    function delegate(address vaultAddress, uint256 amount, bytes[] calldata _data)
+    function delegate(
+        address vaultAddress,
+        uint256 amount,
+        bytes[] calldata /* _data */
+    )
         external
         override
         onlyTrustee
         whenNotPaused
         returns (uint256 depositedAmount)
     {
-        require(_vaults.contains(vaultAddress), InvalidVault());
+        require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-        (depositedAmount, ) = IVault(vaultAddress).deposit(address(this), amount);
+        (depositedAmount, ) = IVault(vaultAddress).deposit(
+            address(this),
+            amount
+        );
         return depositedAmount;
     }
 
-    function withdraw(address vaultAddress, uint256 amount, bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256)
-    {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
-
+    function withdraw(
+        address vaultAddress,
+        uint256 amount,
+        bytes[] calldata /*_data */
+    ) external onlyTrustee whenNotPaused returns (uint256) {
         IVault vault = IVault(vaultAddress);
-        (, uint256 mintedShares) = vault.withdraw(address(this), amount);
-        withdrawals[vaultAddress] = vault.currentEpoch() + 1;
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (
+            withdrawals[vaultAddress] != vault.currentEpoch() + 1 &&
+            withdrawals[vaultAddress] > 0
+        ) revert WithdrawalInProgress();
 
-        return mintedShares;
+        vault.withdraw(address(this), amount);
+
+        uint256 epoch = vault.currentEpoch() + 1;
+        withdrawals[vaultAddress] = epoch;
+
+        return amount;
     }
 
-    function claim(bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256)
-    {
-        (address vaultAddress, uint256 sEpoch) = abi.decode(_data[0], (address, uint256));
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] != 0, NothingToClaim());
+    function claim(
+        bytes[] calldata _data
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
+        (address vaultAddress, uint256 sEpoch) = abi.decode(
+            _data[0],
+            (address, uint256)
+        );
+
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch())
+            revert InvalidEpoch();
+        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender))
+            revert AlreadyClaimed();
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
@@ -113,38 +127,41 @@ contract ISymbioticAdapter is
      * @notice Checks whether a vault is supported by the Protocol or not.
      * @param vaultAddress vault address to check
      */
-    function isVaultSupported(address vaultAddress)
-        external
-        view
-        returns (bool)
-    {
-        return _vaults.contains(vaultAddress);
+    function isVaultSupported(
+        address vaultAddress
+    ) external view returns (bool) {
+        return _symbioticVaults.contains(vaultAddress);
     }
 
-    function getDeposited(address vaultAddress) public view override returns (uint256) {
+    function getDeposited(
+        address vaultAddress
+    ) public view override returns (uint256) {
         return IVault(vaultAddress).activeBalanceOf(address(this));
     }
 
     function getTotalDeposited() public view override returns (uint256 total) {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            total += IVault(_vaults.at(i)).activeBalanceOf(address(this));
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            total += IVault(_symbioticVaults.at(i)).activeBalanceOf(
+                address(this)
+            );
 
         return total;
     }
 
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            if (withdrawals[_vaults.at(i)] != 0)
-                total += IVault(_vaults.at(i)).withdrawalsOf(
-                    withdrawals[_vaults.at(i)],
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
+    {
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            if (withdrawals[_symbioticVaults.at(i)] != 0)
+                total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
+                    withdrawals[_symbioticVaults.at(i)],
                     address(this)
                 );
 
         return total;
-    }
-
-    function claimableAmount() public view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
-        return 0;
     }
 
     function inactiveBalance() public view override returns (uint256) {
@@ -155,9 +172,11 @@ contract ISymbioticAdapter is
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
 
-        if (_vaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (_symbioticVaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (IVault(vaultAddress).collateral() != address(_asset))
+            revert InvalidCollateral();
 
-        _vaults.add(vaultAddress);
+        _symbioticVaults.add(vaultAddress);
 
         emit VaultAdded(vaultAddress);
     }

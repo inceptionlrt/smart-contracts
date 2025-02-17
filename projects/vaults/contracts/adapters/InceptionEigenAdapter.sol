@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IWStethInterface} from "../interfaces/common/IStEth.sol";
 import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
@@ -16,15 +13,12 @@ import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRe
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
 
 /**
- * @title The InceptionEigenAdapter Contract
+ * @title The InceptionEigenAdapterWrap Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapter is
-    IIEigenLayerAdapter,
-    IBaseAdapter
-{
+contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;
@@ -46,11 +40,6 @@ contract InceptionEigenAdapter is
         address asset,
         address trusteeManager
     ) public initializer {
-        __Pausable_init();
-        __ReentrancyGuard_init();
-        __Ownable_init();
-        // Ensure compatibility with future versions of ERC165Upgradeable
-        __ERC165_init();
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
@@ -61,6 +50,10 @@ contract InceptionEigenAdapter is
 
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
+        IWStethInterface(address(_asset)).stETH().approve(
+            strategyManager,
+            type(uint256).max
+        );
     }
 
     function delegate(
@@ -68,13 +61,18 @@ contract InceptionEigenAdapter is
         uint256 amount,
         bytes[] calldata _data
     ) external override onlyTrustee returns (uint256) {
-        /// 1. delegate or depositIntoStrategy
+        /// depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(_inceptionVault, address(this), amount);
+            IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
             return
-                _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
+                _strategyManager.depositIntoStrategy(
+                    _strategy,
+                    IWStethInterface(address(_asset)).stETH(),
+                    amount
+                );
         }
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(4, _data.length));
@@ -94,7 +92,7 @@ contract InceptionEigenAdapter is
     }
 
     function withdraw(
-        address, /*vault*/
+        address /*operator*/,
         uint256 shares,
         bytes[] calldata _data
     ) external override onlyTrustee returns (uint256) {
@@ -105,6 +103,7 @@ contract InceptionEigenAdapter is
 
         strategies[0] = _strategy;
         sharesToWithdraw[0] = shares;
+        address withdrawer = address(this);
 
         IDelegationManager.QueuedWithdrawalParams[]
             memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
@@ -113,23 +112,32 @@ contract InceptionEigenAdapter is
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: address(this)
+            withdrawer: withdrawer
         });
 
         _delegationManager.queueWithdrawals(withdrawals);
+
+        emit StartWithdrawal(
+            withdrawer,
+            _strategy,
+            shares,
+            uint32(block.number),
+            _delegationManager.delegatedTo(withdrawer),
+            _delegationManager.cumulativeWithdrawalsQueued(withdrawer)
+        );
+
+        return _strategy.sharesToUnderlying(shares);
     }
 
-    function claim(bytes[] calldata _data)
-        external
-        override
-        onlyTrustee
-        returns (uint256)
-    {
-        uint256 balanceBefore = _asset.balanceOf(address(this));
+    function claim(
+        bytes[] calldata _data
+    ) external override onlyTrustee returns (uint256) {
+        IERC20 backedAsset = IWStethInterface(address(_asset)).stETH();
+        uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
-        IDelegationManager.Withdrawal[] memory withdrawals = abi.decode(
+        IDelegationManager.Withdrawal memory withdrawals = abi.decode(
             _data[0],
-            (IDelegationManager.Withdrawal[])
+            (IDelegationManager.Withdrawal)
         );
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         uint256[] memory middlewareTimesIndexes = abi.decode(
@@ -138,27 +146,34 @@ contract InceptionEigenAdapter is
         );
         bool[] memory receiveAsTokens = abi.decode(_data[3], (bool[]));
 
-        _delegationManager.completeQueuedWithdrawals(
+        _delegationManager.completeQueuedWithdrawal(
             withdrawals,
-            tokens,
-            middlewareTimesIndexes,
-            receiveAsTokens
+            tokens[0],
+            middlewareTimesIndexes[0],
+            receiveAsTokens[0]
         );
 
-        // send tokens to the vault
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) -
+        uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) -
             balanceBefore;
 
-        _asset.safeTransfer(_inceptionVault, withdrawnAmount);
+        backedAsset.approve(address(_asset), withdrawnAmount);
+        IWStethInterface(address(_asset)).wrap(withdrawnAmount);
+
+        // send tokens to the vault
+        _asset.safeTransfer(
+            _inceptionVault,
+            IWStethInterface(address(_asset)).getWstETHByStETH(withdrawnAmount)
+        );
 
         return withdrawnAmount;
     }
 
-    function claimableAmount() public view override(IBaseAdapter, IIBaseAdapter) returns (uint256) {
-        return 0;
-    }
-
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
+    function pendingWithdrawalAmount()
+        public
+        pure
+        override
+        returns (uint256 total)
+    {
         return 0;
     }
 
@@ -170,6 +185,10 @@ contract InceptionEigenAdapter is
         address /*operatorAddress*/
     ) external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
+    }
+
+    function getDepositedShares() external view returns (uint256) {
+        return _strategyManager.stakerStrategyShares(address(this), _strategy);
     }
 
     function getTotalDeposited() external view override returns (uint256) {
@@ -184,10 +203,9 @@ contract InceptionEigenAdapter is
         return 3;
     }
 
-    function setRewardsCoordinator(address newRewardsCoordinator)
-        external
-        onlyOwner
-    {
+    function setRewardsCoordinator(
+        address newRewardsCoordinator
+    ) external onlyOwner {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 

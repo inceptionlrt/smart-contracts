@@ -40,62 +40,57 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
 
         _beforeDepositAssetIntoStrategy(amount);
 
-        // try to find a adapter for the specific EL operator
-        address adapter = _operatorAdapters[elOperator];
-        if (adapter == address(0)) revert OperatorNotRegistered();
+        // try to find a restaker for the specific EL operator
+        address restaker = _operatorRestakers[elOperator];
+        if (restaker == address(0)) revert OperatorNotRegistered();
 
         bool delegate = false;
-        if (adapter == _MOCK_ADDRESS) {
+        if (restaker == _MOCK_ADDRESS) {
             delegate = true;
-            // deploy a new adapter
-            adapter = _deployNewStub();
-            _operatorAdapters[elOperator] = adapter;
-            adapters.push(adapter);
+            // deploy a new restaker
+            restaker = _deployNewStub();
+            _operatorRestakers[elOperator] = restaker;
+            restakers.push(restaker);
         }
 
-        _depositAssetIntoStrategy(adapter, amount);
+        _depositAssetIntoStrategy(restaker, amount);
 
         if (delegate)
             _delegateToOperator(
-                adapter,
+                restaker,
                 elOperator,
                 approverSalt,
                 approverSignatureAndExpiry
             );
 
-        emit DelegatedTo(adapter, elOperator, amount);
+        emit DelegatedTo(restaker, elOperator, amount);
     }
 
     /**
      * @dev delegates assets held in the strategy to the EL operator.
      */
     function _delegateToOperator(
-        address adapter,
+        address restaker,
         address elOperator,
         bytes32 approverSalt,
         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
     ) internal {
-        bytes[] memory _data = new bytes[](2);
-        // Encode the bytes32 value.
-        _data[0] = abi.encode(approverSalt);
-        // Encode the struct.
-        _data[1] = abi.encode(approverSignatureAndExpiry);
-
-        IIEigenLayerAdapter(adapter).delegate(elOperator, 0, _data);
+        IInceptionEigenRestaker(restaker).delegateToOperator(
+            elOperator,
+            approverSalt,
+            approverSignatureAndExpiry
+        );
     }
 
     /// @dev deposits asset to the corresponding strategy
-    function _depositAssetIntoStrategy(address adapter, uint256 amount)
-        internal
-    {
-        _asset.approve(adapter, amount);
-        IIEigenLayerAdapter(adapter).delegate(
-            address(0),
-            amount,
-            new bytes[](0)
-        );
+    function _depositAssetIntoStrategy(
+        address restaker,
+        uint256 amount
+    ) internal {
+        _asset.approve(restaker, amount);
+        IInceptionEigenRestaker(restaker).depositAssetIntoStrategy(amount);
 
-        emit DepositedToEL(adapter, amount);
+        emit DepositedToEL(restaker, amount);
     }
 
     /**
@@ -128,25 +123,23 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
      * @dev performs creating a withdrawal request from EigenLayer
      * @dev requires a specific amount to withdraw
      */
-    function undelegateFrom(address elOperatorAddress, uint256 amount)
-        external
-        nonReentrant
-    {
-        address staker = _operatorAdapters[elOperatorAddress];
+    function undelegateFrom(
+        address elOperatorAddress,
+        uint256 amount
+    ) external nonReentrant {
+        address staker = _operatorRestakers[elOperatorAddress];
         if (staker == address(0)) revert OperatorNotRegistered();
         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-        IIEigenLayerAdapter(staker).withdraw(
-            address(0),
-            _undelegate(amount, staker),
-            new bytes[](0)
+        IInceptionEigenRestaker(staker).withdrawFromEL(
+            _undelegate(amount, staker)
         );
     }
 
-    function _undelegate(uint256 amount, address staker)
-        internal
-        returns (uint256)
-    {
+    function _undelegate(
+        uint256 amount,
+        address staker
+    ) internal returns (uint256) {
         uint256 nonce = delegationManager.cumulativeWithdrawalsQueued(staker);
         uint256 totalAssetSharesInEL = strategyManager.stakerStrategyShares(
             staker,
@@ -175,7 +168,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
      * @dev claims completed withdrawals from EigenLayer, if they exist
      */
     function claimCompletedWithdrawals(
-        address adapter,
+        address restaker,
         IDelegationManager.Withdrawal[] calldata withdrawals
     ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
@@ -192,7 +185,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         uint256 availableBalance = getFreeBalance();
 
         uint256 withdrawnAmount;
-        if (adapter == address(this)) {
+        if (restaker == address(this)) {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
@@ -200,16 +193,14 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
                 receiveAsTokens
             );
         } else {
-            if (!_adapterExists(adapter)) revert AdapterNotRegistered();
-            bytes[] memory _data = new bytes[](4);
-            // Encode the bytes32 value.
-            _data[0] = abi.encode(withdrawals);
-            // Encode the struct.
-            _data[1] = abi.encode(tokens);
-            _data[2] = abi.encode(middlewareTimesIndexes);
-            _data[3] = abi.encode(receiveAsTokens);
-
-            withdrawnAmount = IIEigenLayerAdapter(adapter).claim(_data);
+            if (!_restakerExists(restaker)) revert RestakerNotRegistered();
+            withdrawnAmount = IInceptionEigenRestaker(restaker)
+                .claimWithdrawals(
+                    withdrawals,
+                    tokens,
+                    middlewareTimesIndexes,
+                    receiveAsTokens
+                );
         }
 
         emit WithdrawalClaimed(withdrawnAmount);
@@ -251,14 +242,12 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         _updateEpoch(getFreeBalance());
     }
 
-    function _adapterExists(address adapterAddress)
-        internal
-        view
-        returns (bool)
-    {
-        uint256 numOfAdapters = adapters.length;
-        for (uint256 i = 0; i < numOfAdapters; ++i) {
-            if (adapterAddress == adapters[i]) return true;
+    function _restakerExists(
+        address restakerAddress
+    ) internal view returns (bool) {
+        uint256 numOfRestakers = restakers.length;
+        for (uint256 i = 0; i < numOfRestakers; ++i) {
+            if (restakerAddress == restakers[i]) return true;
         }
         return false;
     }
@@ -279,16 +268,17 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         }
     }
 
-    function forceUndelegateRecovery(uint256 amount, address adapter)
-        external
-    {
-        if (adapter == address(0)) revert NullParams();
-        for (uint256 i = 0; i < adapters.length; ++i) {
+    function forceUndelegateRecovery(
+        uint256 amount,
+        address restaker
+    ) external {
+        if (restaker == address(0)) revert NullParams();
+        for (uint256 i = 0; i < restakers.length; ++i) {
             if (
-                adapters[i] == adapter &&
-                !delegationManager.isDelegated(adapters[i])
+                restakers[i] == restaker &&
+                !delegationManager.isDelegated(restakers[i])
             ) {
-                adapters[i] == _MOCK_ADDRESS;
+                restakers[i] == _MOCK_ADDRESS;
                 break;
             }
         }
@@ -313,7 +303,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         IOwnable asOwnable = IOwnable(deployedAddress);
         asOwnable.transferOwnership(owner());
 
-        emit AdapterDeployed(deployedAddress);
+        emit RestakerDeployed(deployedAddress);
         return deployedAddress;
     }
 
@@ -335,9 +325,9 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         emit RewardsAdded(amount, startTimeline);
     }
 
-    function setPendingWithdrawalAmount(uint256 newPendingWithdrawalAmount)
-        external
-    {
+    function setPendingWithdrawalAmount(
+        uint256 newPendingWithdrawalAmount
+    ) external {
         _pendingWithdrawalAmount = newPendingWithdrawalAmount;
     }
 }

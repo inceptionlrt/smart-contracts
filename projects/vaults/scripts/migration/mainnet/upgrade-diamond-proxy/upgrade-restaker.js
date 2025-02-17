@@ -7,10 +7,10 @@ async function main() {
   const initBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", initBalance.toString());
 
-  const BeaconProxyPatternV2 = await ethers.getContractFactory("InceptionEigenAdapter");
+  const BeaconProxyPatternV2 = await ethers.getContractFactory("InceptionEigenRestaker");
   const beaconImpl = await BeaconProxyPatternV2.deploy();
   await beaconImpl.deployed();
-  console.log(`-------- Adapter has been deployed at the address: ${beaconImpl.address}`);
+  console.log(`-------- Restaker has been deployed at the address: ${beaconImpl.address}`);
 }
 
 main()

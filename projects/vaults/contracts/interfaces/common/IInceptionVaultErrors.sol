@@ -32,7 +32,7 @@ interface IInceptionVaultErrors {
 
     error OperatorNotRegistered();
 
-    error AdapterNotRegistered();
+    error RestakerNotRegistered();
 
     error ImplementationNotSet();
 
@@ -65,10 +65,14 @@ interface IInceptionVaultErrors {
     error InvalidAddress();
 
     error MoreThanMax();
-    
+
     error ValueZero();
 
     error AdapterAlreadyAdded();
 
     error AdapterNotFound();
+
+    error ClaimFailed();
+
+    error WithdrawalFailed();
 }
