@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -78,7 +79,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         address mellowVault,
         uint256 amount,
         address referral
-    ) internal onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
+    ) internal returns (uint256 depositedAmount) {
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
         return
@@ -94,7 +95,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     function _delegateAuto(
         uint256 amount,
         address referral
-    ) internal onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
+    ) internal returns (uint256 depositedAmount) {
         uint256 allocationsTotal = totalAllocations;
         _asset.safeTransferFrom(_inceptionVault, address(this), amount);
 
@@ -118,7 +119,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         }
 
         uint256 left = _asset.balanceOf(address(this));
-
         if (left != 0) _asset.safeTransfer(_inceptionVault, left);
     }
 
@@ -158,9 +158,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         if (mellowVault == address(0)) revert ZeroAddress();
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) {
-                revert AlreadyAdded();
-            }
+            if (mellowVault == address(mellowVaults[i])) revert AlreadyAdded();
         }
 
         mellowVaults.push(IMellowVault(mellowVault));
@@ -176,9 +174,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) {
-                exists = true;
-            }
+            if (mellowVault == address(mellowVaults[i])) exists = true;
         }
         if (!exists) revert InvalidVault();
         uint256 oldAllocation = allocations[mellowVault];
@@ -235,9 +231,8 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     ) public view override returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
-        if (balance == 0) {
-            return 0;
-        }
+        if (balance == 0) return 0;
+
         return IERC4626(address(mellowVault)).previewRedeem(balance);
     }
 
@@ -245,11 +240,10 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
-            if (balance > 0) {
+            if (balance > 0)
                 total += IERC4626(address(mellowVaults[i])).previewRedeem(
                     balance
                 );
-            }
         }
         return total;
     }
@@ -276,6 +270,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     function setEthWrapper(address newEthWrapper) external onlyOwner {
+        if (!Address.isContract(newEthWrapper)) revert NotContract();
         if (newEthWrapper == address(0)) revert ZeroAddress();
 
         address oldWrapper = ethWrapper;

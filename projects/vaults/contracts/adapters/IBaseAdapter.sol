@@ -6,6 +6,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 
@@ -37,7 +38,7 @@ abstract contract IBaseAdapter is
     function __IBaseAdapter_init(
         IERC20 asset,
         address trusteeManager
-    ) public initializer {
+    ) internal initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
@@ -52,6 +53,7 @@ abstract contract IBaseAdapter is
     }
 
     function setInceptionVault(address inceptionVault) external onlyOwner {
+        if (!Address.isContract(inceptionVault)) revert NotContract();
         emit InceptionVaultSet(_inceptionVault, inceptionVault);
         _inceptionVault = inceptionVault;
     }

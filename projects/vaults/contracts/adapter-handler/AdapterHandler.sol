@@ -108,7 +108,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 availableBalance = getFreeBalance();
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
         require(
-            availableBalance + withdrawnAmount >= getFreeBalance(),
+            _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
+                getFreeBalance(),
             ClaimFailed()
         );
 
@@ -227,12 +228,14 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     }
 
     function addAdapter(address adapter) external onlyOwner {
+        if (!Address.isContract(adapter)) revert NotContract();
         if (_adapters.contains(adapter)) revert AdapterAlreadyAdded();
         emit AdapterAdded(adapter);
         _adapters.add(adapter);
     }
 
     function removeAdapter(address adapter) external onlyOwner {
+        if (!Address.isContract(adapter)) revert NotContract();
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
