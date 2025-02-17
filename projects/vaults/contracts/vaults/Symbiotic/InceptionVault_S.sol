@@ -25,6 +25,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
+    /// @custom:oz-renamed-from minAmount
     uint256 public withdrawMinAmount;
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
@@ -306,7 +307,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
-        if (fee == 0) revert ZeroFlashWithdrawFee();
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
 
         amount -= fee;
@@ -404,7 +404,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxDeposit}. */
     function maxDeposit(address receiver) public view returns (uint256) {
-        return !paused() ? IERC20(asset()).balanceOf(receiver) : 0;
+        return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
     /** @dev See {IERC4626-maxMint}. */
@@ -482,6 +482,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalBonusRate);
         if (newDepositUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newDepositUtilizationKink);
+        if (newOptimalBonusRate > newMaxBonusRate) revert InconsistentData();
 
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
@@ -505,6 +506,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalWithdrawalRate);
         if (newWithdrawUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+        if (newOptimalWithdrawalRate > newMaxFlashFeeRate)
+            revert InconsistentData();
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;

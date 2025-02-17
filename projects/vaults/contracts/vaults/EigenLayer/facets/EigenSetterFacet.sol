@@ -71,9 +71,9 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
         emit ELOperatorAdded(newELOperator);
     }
 
-    function setDelegationManager(IDelegationManager newDelegationManager)
-        external
-    {
+    function setDelegationManager(
+        IDelegationManager newDelegationManager
+    ) external {
         if (address(delegationManager) != address(0))
             revert DelegationManagerImmutable();
 

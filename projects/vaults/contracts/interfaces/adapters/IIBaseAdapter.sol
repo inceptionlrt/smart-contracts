@@ -28,7 +28,9 @@ interface IIBaseAdapter {
 
     error NotContract();
 
-    error InvalidDataLength(uint256 expected, uint256 received);
+    error NotAdded();
+
+    error InvalidCollateral();
 
     /************************************
      ************** Events **************
@@ -51,9 +53,17 @@ interface IIBaseAdapter {
 
     function inactiveBalance() external view returns (uint256);
 
-    function delegate(address vault, uint256 amount, bytes[] calldata _data) external returns (uint256 depositedAmount);
+    function delegate(
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external returns (uint256 depositedAmount);
 
-    function withdraw(address vault, uint256 shares, bytes[] calldata _data) external returns (uint256);
+    function withdraw(
+        address vault,
+        uint256 shares,
+        bytes[] calldata _data
+    ) external returns (uint256);
 
     function claim(bytes[] calldata _data) external returns (uint256);
 }

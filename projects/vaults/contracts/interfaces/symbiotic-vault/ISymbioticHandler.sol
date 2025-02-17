@@ -8,6 +8,11 @@ interface IMellowHandler {
         uint256 indexed actualAmounts
     );
 
+    event StartSymbioticWithdrawal(
+        address indexed stakerAddress,
+        uint256 indexed mintedShares
+    );
+
     event StartEmergencyMellowWithdrawal(
         address indexed stakerAddress,
         uint256 indexed actualAmounts

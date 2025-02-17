@@ -33,6 +33,12 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
 
+    modifier onlyTrustee() {
+        if (msg.sender != _vault && msg.sender != _trusteeManager)
+            revert NotVaultOrTrusteeManager();
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -40,6 +46,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function initialize(
         address[] memory vaults,
+        address vault,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
@@ -50,7 +57,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         __IBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
-            _vaults.add(vaults[i]);
+            if (IVault(vaults[i]).collateral() != address(asset))
+                revert InvalidCollateral();
+            if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
+            _symbioticVaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
     }
@@ -78,26 +88,30 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function withdraw(
         address vaultAddress,
-        uint256 amount,
-        bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
+        uint256 amount
+    ) external onlyTrustee whenNotPaused returns (uint256) {
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
 
         IVault vault = IVault(vaultAddress);
-        (, uint256 mintedShares) = vault.withdraw(address(this), amount);
-        withdrawals[vaultAddress] = vault.currentEpoch() + 1;
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (
+            withdrawals[vaultAddress] != vault.currentEpoch() + 1 &&
+            withdrawals[vaultAddress] > 0
+        ) revert WithdrawalInProgress();
 
-        return mintedShares;
+        vault.withdraw(address(this), amount);
+
+        uint256 epoch = vault.currentEpoch() + 1;
+        withdrawals[vaultAddress] = epoch;
+
+        return amount;
     }
 
     function claim(
-        bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
-        (address vaultAddress, uint256 sEpoch) = abi.decode(
-            _data[0],
-            (address, uint256)
-        );
+        address vaultAddress,
+        uint256 sEpoch
+    ) external onlyTrustee whenNotPaused returns (uint256) {
         require(_vaults.contains(vaultAddress), InvalidVault());
         require(withdrawals[vaultAddress] != 0, NothingToClaim());
 
@@ -157,9 +171,11 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
 
-        if (_vaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (_symbioticVaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (IVault(vaultAddress).collateral() != address(_asset))
+            revert InvalidCollateral();
 
-        _vaults.add(vaultAddress);
+        _symbioticVaults.add(vaultAddress);
 
         emit VaultAdded(vaultAddress);
     }
