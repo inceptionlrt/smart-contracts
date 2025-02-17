@@ -66,7 +66,8 @@ contract IMellowRestaker is
         IMellowDepositWrapper[] memory _mellowDepositWrapper,
         IMellowVault[] memory _mellowVault,
         IERC20 asset,
-        address trusteeManager
+        address trusteeManager,
+        address vault
     ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -88,6 +89,7 @@ contract IMellowRestaker is
         }
         _asset = asset;
         _trusteeManager = trusteeManager;
+        _vault = vault;
 
         requestDeadline = 90 days;
         depositSlippage = 1500; // 15%
@@ -103,9 +105,9 @@ contract IMellowRestaker is
         if (address(wrapper) == address(0)) revert InactiveWrapper();
         uint256 balanceState = _asset.balanceOf(address(this));
         // transfer from the vault
-        _asset.safeTransferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
         // deposit the asset to the appropriate strategy
-        IERC20(_asset).safeIncreaseAllowance(address(wrapper), amount);
+        _asset.safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = amountToLpAmount(amount, IMellowVault(mellowVault));
         minAmount = (minAmount * (10000 - depositSlippage)) / 10000;
         lpAmount =
@@ -117,7 +119,7 @@ contract IMellowRestaker is
                 block.timestamp + deadline
             );
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
-        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) _asset.safeTransfer(_vault, returned);
     }
 
     function delegate(uint256 amount, uint256 deadline)
@@ -128,7 +130,7 @@ contract IMellowRestaker is
     {
         uint256 allocationsTotal = totalAllocations;
         uint256 balanceState = _asset.balanceOf(address(this));
-        _asset.safeTransferFrom(_vault, address(this), amount);
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];
@@ -138,7 +140,7 @@ contract IMellowRestaker is
                     address(mellowVaults[i])
                 ];
                 if (address(wrapper) == address(0)) continue;
-                IERC20(_asset).safeIncreaseAllowance(
+                _asset.safeIncreaseAllowance(
                     address(wrapper),
                     localBalance
                 );
@@ -155,7 +157,7 @@ contract IMellowRestaker is
         }
         uint256 returned = _asset.balanceOf(address(this)) - balanceState;
         tokenAmount = amount - returned;
-        if (returned != 0) IERC20(_asset).safeTransfer(_vault, returned);
+        if (returned != 0) _asset.safeTransfer(_vault, returned);
     }
 
     function withdrawMellow(
@@ -296,11 +298,13 @@ contract IMellowRestaker is
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) {
+            if (mellowVault == address(mellowVaults[i]) && address(mellowDepositWrappers[address(mellowVaults[i])]) != address(0)) {
                 exists = true;
             }
         }
+
         if (!exists) revert InvalidVault();
+
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
 
@@ -360,6 +364,7 @@ contract IMellowRestaker is
     {
 
         if (amount == 0) return 0;
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
         
         (address[] memory tokens, uint256[] memory totalAmounts) = mellowVault
             .underlyingTvl();
@@ -427,6 +432,7 @@ contract IMellowRestaker is
         returns (uint256)
     {
         if (lpAmount == 0) return 0;
+        if (address(mellowDepositWrappers[address(mellowVault)]) == address(0)) revert NoWrapperExists();
 
         IMellowVault.ProcessWithdrawalsStack memory s = mellowVault
             .calculateStack();

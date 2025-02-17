@@ -11,7 +11,6 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
 import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
-import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 /**
  * @title The ISymbioticRestaker Contract
@@ -33,7 +32,7 @@ contract ISymbioticRestaker is
     address internal _trusteeManager;
     address internal _vault;
 
-    EnumerableSet.AddressSet internal _vaults;
+    EnumerableSet.AddressSet internal _symbioticVaults;
 
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
@@ -42,10 +41,7 @@ contract ISymbioticRestaker is
     // IStakerRewards public stakerRewards;
 
     modifier onlyTrustee() {
-        require(
-            msg.sender == _vault || msg.sender == _trusteeManager,
-            NotVaultOrTrusteeManager()
-        );
+        if (msg.sender != _vault && msg.sender != _trusteeManager) revert NotVaultOrTrusteeManager();
         _;
     }
 
@@ -56,6 +52,7 @@ contract ISymbioticRestaker is
 
     function initialize(
         address[] memory vaults,
+        address vault,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
@@ -65,11 +62,14 @@ contract ISymbioticRestaker is
         __ERC165_init();
 
         for (uint256 i = 0; i < vaults.length; i++) {
-            _vaults.add(vaults[i]);
+            if (IVault(vaults[i]).collateral() != address(asset)) revert InvalidCollateral();
+            if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
+            _symbioticVaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
 
         _asset = asset;
+        _vault = vault;
 
         _trusteeManager = trusteeManager;
     }
@@ -80,9 +80,9 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256 depositedAmount, uint256 mintedShares)
     {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        _asset.safeTransferFrom(_vault, address(this), amount);
-        IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
+        _asset.safeIncreaseAllowance(vaultAddress, amount);
         return IVault(vaultAddress).deposit(address(this), amount);
     }
 
@@ -92,14 +92,16 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256)
     {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] == 0, WithdrawalInProgress());
-
         IVault vault = IVault(vaultAddress);
-        (, uint256 mintedShares) = vault.withdraw(address(this), amount);
-        withdrawals[vaultAddress] = vault.currentEpoch() + 1;
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (withdrawals[vaultAddress] != vault.currentEpoch() + 1 && withdrawals[vaultAddress] > 0) revert WithdrawalInProgress();
 
-        return mintedShares;
+        vault.withdraw(address(this), amount);
+
+        uint256 epoch = vault.currentEpoch() + 1;
+        withdrawals[vaultAddress] = epoch;
+
+        return amount;
     }
 
     function claim(address vaultAddress, uint256 sEpoch)
@@ -108,8 +110,11 @@ contract ISymbioticRestaker is
         whenNotPaused
         returns (uint256)
     {
-        require(_vaults.contains(vaultAddress), InvalidVault());
-        require(withdrawals[vaultAddress] != 0, NothingToClaim());
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch()) revert InvalidEpoch();
+        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender)) revert AlreadyClaimed();
+        
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_vault, sEpoch);
@@ -129,25 +134,26 @@ contract ISymbioticRestaker is
         view
         returns (bool)
     {
-        return _vaults.contains(vaultAddress);
+        return _symbioticVaults.contains(vaultAddress);
     }
 
     function getDeposited(address vaultAddress) public view returns (uint256) {
+        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         return IVault(vaultAddress).activeBalanceOf(address(this));
     }
 
     function getTotalDeposited() public view returns (uint256 total) {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            total += IVault(_vaults.at(i)).activeBalanceOf(address(this));
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            total += IVault(_symbioticVaults.at(i)).activeBalanceOf(address(this));
 
         return total;
     }
 
     function pendingWithdrawalAmount() external view returns (uint256 total) {
-        for (uint256 i = 0; i < _vaults.length(); i++)
-            if (withdrawals[_vaults.at(i)] != 0)
-                total += IVault(_vaults.at(i)).withdrawalsOf(
-                    withdrawals[_vaults.at(i)],
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            if (withdrawals[_symbioticVaults.at(i)] != 0)
+                total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
+                    withdrawals[_symbioticVaults.at(i)],
                     address(this)
                 );
 
@@ -162,11 +168,23 @@ contract ISymbioticRestaker is
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
 
-        if (_vaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (_symbioticVaults.contains(vaultAddress)) revert AlreadyAdded();
+        if (IVault(vaultAddress).collateral() != address(_asset)) revert InvalidCollateral();
 
-        _vaults.add(vaultAddress);
+        _symbioticVaults.add(vaultAddress);
 
         emit VaultAdded(vaultAddress);
+    }
+
+    function removeVault(address vaultAddress) external onlyOwner {
+        if (vaultAddress == address(0)) revert ZeroAddress();
+        if (!Address.isContract(vaultAddress)) revert NotContract();
+
+        if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
+
+        _symbioticVaults.remove(vaultAddress);
+
+        emit VaultRemoved(vaultAddress);
     }
 
     function setVault(address iVault) external onlyOwner {

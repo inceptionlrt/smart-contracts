@@ -10,7 +10,13 @@ interface IISymbioticRestaker is IIBaseRestaker {
 
     error NothingToClaim();
 
+    error InvalidEpoch();
+
+    error AlreadyClaimed();
+
     event VaultAdded(address indexed vault);
+
+    event VaultRemoved(address indexed vault);
 
     function delegate(address vaultAddress, uint256 amount)
         external
