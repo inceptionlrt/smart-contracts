@@ -17,7 +17,6 @@ const {
   day,
 } = require("./helpers/utils.js");
 const { applyProviderWrappers } = require("hardhat/internal/core/providers/construction");
-const { ZeroAddress } = require("ethers");
 BigInt.prototype.format = function () {
   return this.toLocaleString("de-DE");
 };
@@ -38,6 +37,8 @@ assets = [
     withdrawalDelayBlocks: 400,
     ratioErr: 2n,
     transactErr: 5n,
+    blockNumber: 2680454,
+    url: "https://rpc.ankr.com/eth_holesky",
     impersonateStaker: async (staker, iVault, asset, assetPool) => {
       const donor = await impersonateWithEth("0x570EDBd50826eb9e048aA758D4d78BAFa75F14AD", toWei(1));
       await asset.connect(donor).transfer(staker.address, toWei(1000));
@@ -1676,12 +1677,6 @@ assets.forEach(function (a) {
 
     describe("InceptionEigenRestaker", function () {
       let restaker, iVaultMock, trusteeManager;
-      const coder = new ethers.AbiCoder();
-      const encodedSignatureWithExpiry = coder.encode(
-        ["tuple(uint256 expiry, bytes signature)"],
-        [{ expiry: 0, signature: ethers.ZeroHash }],
-      );
-      const delegateData = [ethers.ZeroHash, encodedSignatureWithExpiry];
 
       beforeEach(async function () {
         await snapshot.restore();
@@ -1702,9 +1697,10 @@ assets.forEach(function (a) {
       it("depositAssetIntoStrategy: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await expect(
-          restaker.connect(staker).delegate(ZeroAddress, amount, delegateData),
-        ).to.be.revertedWithCustomError(restaker, "NotVaultOrTrusteeManager");
+        await expect(restaker.connect(staker).depositAssetIntoStrategy(amount)).to.be.revertedWithCustomError(
+          restaker,
+          "OnlyTrusteeAllowed",
+        );
       });
 
       it("getOperatorAddress: equals 0 address before any delegation", async function () {
@@ -1714,56 +1710,62 @@ assets.forEach(function (a) {
       it("getOperatorAddress: equals operator after delegation", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
-        await restaker.connect(trusteeManager).delegate(nodeOperators[0], 0n, delegateData);
+        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
+        await restaker
+          .connect(trusteeManager)
+          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
         expect(await restaker.getOperatorAddress()).to.be.eq(nodeOperators[0]);
       });
 
       it("delegateToOperator: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
+        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
 
         await expect(
-          restaker.connect(staker).delegate(nodeOperators[0], 0n, delegateData),
-        ).to.be.revertedWithCustomError(restaker, "NotVaultOrTrusteeManager");
+          restaker.connect(staker).delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]),
+        ).to.be.revertedWithCustomError(restaker, "OnlyTrusteeAllowed");
       });
 
       it("delegateToOperator: reverts when delegates to 0 address", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, []);
+        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
 
         await expect(
-          restaker.connect(trusteeManager).delegate(ethers.ZeroAddress, 0n, delegateData),
+          restaker
+            .connect(trusteeManager)
+            .delegateToOperator(ethers.ZeroAddress, ethers.ZeroHash, [ethers.ZeroHash, 0]),
         ).to.be.revertedWithCustomError(restaker, "NullParams");
       });
 
       it("delegateToOperator: reverts when delegates unknown operator", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
+        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
 
         const unknownOperator = ethers.Wallet.createRandom().address;
-        await expect(restaker.connect(trusteeManager).delegate(unknownOperator, 0n, delegateData)).to.be.revertedWith(
-          "DelegationManager._delegate: operator is not registered in EigenLayer",
-        );
+        await expect(
+          restaker.connect(trusteeManager).delegateToOperator(unknownOperator, ethers.ZeroHash, [ethers.ZeroHash, 0]),
+        ).to.be.revertedWith("DelegationManager._delegate: operator is not registered in EigenLayer");
       });
 
       it("withdrawFromEL: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
         await asset.connect(iVaultMock).approve(await restaker.getAddress(), amount);
-        await restaker.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
-        await restaker.connect(trusteeManager).delegate(nodeOperators[0], 0n, delegateData);
+        await restaker.connect(trusteeManager).depositAssetIntoStrategy(amount);
+        await restaker
+          .connect(trusteeManager)
+          .delegateToOperator(nodeOperators[0], ethers.ZeroHash, [ethers.ZeroHash, 0]);
 
-        await expect(restaker.connect(staker).withdraw(ZeroAddress, amount / 2n, [])).to.be.revertedWithCustomError(
+        await expect(restaker.connect(staker).withdrawFromEL(amount / 2n)).to.be.revertedWithCustomError(
           restaker,
-          "NotVaultOrTrusteeManager",
+          "OnlyTrusteeAllowed",
         );
       });
 
-      it("getVersion: equals 3", async function () {
-        expect(await restaker.getVersion()).to.be.eq(3);
+      it("getVersion: equals 2", async function () {
+        expect(await restaker.getVersion()).to.be.eq(2);
       });
 
       it("pause(): only owner can", async function () {
@@ -4718,4 +4720,3 @@ assets.forEach(function (a) {
     });
   });
 });
-
