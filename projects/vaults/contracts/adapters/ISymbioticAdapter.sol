@@ -70,7 +70,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         returns (uint256 depositedAmount)
     {
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
-        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
         (depositedAmount, ) = IVault(vaultAddress).deposit(
             address(this),
@@ -179,5 +179,15 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         _symbioticVaults.add(vaultAddress);
 
         emit VaultAdded(vaultAddress);
+    }
+
+    function removeVault(address vaultAddress) external onlyOwner {
+        if (vaultAddress == address(0)) revert ZeroAddress();
+        if (!Address.isContract(vaultAddress)) revert NotContract();
+        if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
+
+        _symbioticVaults.remove(vaultAddress);
+
+        emit VaultRemoved(vaultAddress);
     }
 }

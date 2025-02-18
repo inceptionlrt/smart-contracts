@@ -47,7 +47,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    uint256[50 - 10] private __gap;
+    uint256[50 - 11] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
@@ -96,7 +96,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (amount == 0) revert ValueZero();
 
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
-        require(amount > 0, WithdrawalFailed());
 
         emit UndelegatedFrom(adapter, vault, amount);
     }

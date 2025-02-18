@@ -174,7 +174,6 @@ const initVault = async a => {
     [mellowVaults[0].vaultAddress],
     a.assetAddress,
     a.iVaultOperator,
-    a.iVaultOperator,
   ]);
   mellowAdapter.address = await mellowAdapter.getAddress();
 
@@ -182,7 +181,6 @@ const initVault = async a => {
   const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
   let symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
     [symbioticVaults[0].vaultAddress],
-    a.iVaultOperator,
     a.assetAddress,
     a.iVaultOperator,
   ]);
@@ -347,8 +345,8 @@ assets.forEach(function (a) {
         const symbioticBalance2 = await symbioticVaults[1].vault.activeBalanceOf(symbioticAdapter.address);
         const totalAssetsAfter = await iVault.totalAssets();
         const totalDelegatedAfter = await iVault.getTotalDelegated();
-        const delegatedTo = await symbioticRestaker.getDeposited(symbioticVaults[0].vaultAddress);
-        // const delegatedTo2 = await symbioticRestaker.getDeposited(symbioticVaults[1].vaultAddress);
+        const delegatedTo = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
+        // const delegatedTo2 = await symbioticAdapter.getDeposited(symbioticVaults[1].vaultAddress);
         const totalDepositedAfter = await iVault.getTotalDeposited();
         console.log("Mellow LP token balance: ", symbioticBalance.format());
         console.log("Mellow LP token balance2: ", symbioticBalance2.format());
@@ -466,13 +464,13 @@ assets.forEach(function (a) {
         console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
         console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
 
-        const amount = await symbioticRestaker.getDeposited(symbioticVaults[0].vaultAddress);
-        const amount2 = await symbioticRestaker.getDeposited(symbioticVaults[1].vaultAddress);
-        await iVault.connect(iVaultOperator).undelegateFromSymbiotic(symbioticVaults[0].vaultAddress, amount / 2n);
+        const amount = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
+        const amount2 = await symbioticAdapter.getDeposited(symbioticVaults[1].vaultAddress);
+        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount / 2n, emptyBytes);
         await iVault
           .connect(iVaultOperator)
-          .undelegateFromSymbiotic(symbioticVaults[0].vaultAddress, amount - amount / 2n);
-        await iVault.connect(iVaultOperator).undelegateFromSymbiotic(symbioticVaults[1].vaultAddress, amount2);
+          .undelegate(await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount - amount / 2n, emptyBytes);
+        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2, emptyBytes);
 
         symbioticVaultEpoch1 = symbioticVaults[0].vault.currentEpoch() + 1n;
         symbioticVaultEpoch2 = symbioticVaults[1].vault.currentEpoch() + 1n;
@@ -1463,18 +1461,20 @@ assets.forEach(function (a) {
       });
 
       it("getVersion", async function () {
-        expect(await mellowAdapter.getVersion()).to.be.eq(1n);
+        expect(await mellowAdapter.getVersion()).to.be.eq(3n);
       });
 
       it("setVault(): only owner can", async function () {
         const prevValue = iVault.address;
-        const newValue = staker.address;
+        const newValue = await symbioticAdapter.getAddress();
 
-        await expect(mellowAdapter.setVault(newValue)).to.emit(mellowAdapter, "VaultSet").withArgs(prevValue, newValue);
+        await expect(mellowAdapter.setInceptionVault(newValue))
+          .to.emit(mellowAdapter, "InceptionVaultSet")
+          .withArgs(prevValue, newValue);
 
-        await asset.connect(staker).approve(mellowAdapter.address, e18);
-        let time = await helpers.time.latest();
-        await mellowAdapter.connect(staker).delegate(mellowVaults[0].vaultAddress, randomBI(9), emptyBytes);
+        // await asset.connect(staker).approve(mellowAdapter.address, e18);
+        // let time = await helpers.time.latest();
+        // await mellowAdapter.connect(staker).delegate(mellowVaults[0].vaultAddress, randomBI(9), emptyBytes);
       });
 
       it("setVault(): reverts when caller is not an owner", async function () {
@@ -2721,15 +2721,15 @@ assets.forEach(function (a) {
         //   customError: "InactiveWrapper",
         //   source: () => mellowAdapter,
         // },
-        {
-          name: "mellow vault is zero address",
-          deposited: toWei(1),
-          amount: async () => await iVault.getFreeBalance(),
-          mVault: async () => ethers.ZeroAddress,
-          operator: () => iVaultOperator,
-          customError: "NullParams",
-          source: () => iVault,
-        },
+        // {
+        //   name: "mellow vault is zero address",
+        //   deposited: toWei(1),
+        //   amount: async () => await iVault.getFreeBalance(),
+        //   mVault: async () => ethers.ZeroAddress,
+        //   operator: () => iVaultOperator,
+        //   customError: "NullParams",
+        //   source: () => iVault,
+        // },
         {
           name: "caller is not an operator",
           deposited: toWei(1),

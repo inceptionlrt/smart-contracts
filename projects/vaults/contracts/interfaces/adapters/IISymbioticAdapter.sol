@@ -12,6 +12,8 @@ interface IISymbioticAdapter is IIBaseAdapter {
 
     event VaultAdded(address indexed vault);
 
+    event VaultRemoved(address indexed vault);
+
     error InvalidCollateral();
 
     error InvalidEpoch();

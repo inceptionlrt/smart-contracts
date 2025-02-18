@@ -80,7 +80,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 amount,
         address referral
     ) internal returns (uint256 depositedAmount) {
-        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
         return
             IEthWrapper(ethWrapper).deposit(
@@ -97,7 +97,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         address referral
     ) internal returns (uint256 depositedAmount) {
         uint256 allocationsTotal = totalAllocations;
-        _asset.safeTransferFrom(_inceptionVault, address(this), amount);
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];
@@ -219,7 +219,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         }
     }
 
-    function pendingWithdrawalAmountOf(
+    function pendingWithdrawalAmount(
         address _mellowVault
     ) external view returns (uint256) {
         return
