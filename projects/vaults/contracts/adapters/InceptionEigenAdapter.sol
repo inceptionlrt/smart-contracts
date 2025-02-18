@@ -64,7 +64,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         /// depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
-            _asset.safeTransferFrom(_inceptionVault, address(this), amount);
+            _asset.safeTransferFrom(msg.sender, address(this), amount);
             IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
             return
@@ -75,7 +75,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
                 );
         }
         require(operator != address(0), NullParams());
-        require(_data.length == 2, InvalidDataLength(4, _data.length));
+        require(_data.length == 2, InvalidDataLength(2, _data.length));
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
             memory approverSignatureAndExpiry = abi.decode(
@@ -157,15 +157,12 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             balanceBefore;
 
         backedAsset.approve(address(_asset), withdrawnAmount);
-        IWStethInterface(address(_asset)).wrap(withdrawnAmount);
+        uint256 wrapped = IWStethInterface(address(_asset)).wrap(withdrawnAmount);
 
         // send tokens to the vault
-        _asset.safeTransfer(
-            _inceptionVault,
-            IWStethInterface(address(_asset)).getWstETHByStETH(withdrawnAmount)
-        );
+        _asset.safeTransfer(_inceptionVault, wrapped);
 
-        return withdrawnAmount;
+        return wrapped;
     }
 
     function pendingWithdrawalAmount()

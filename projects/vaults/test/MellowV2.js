@@ -276,6 +276,11 @@ describe('------------------', function () {
             let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
             console.log("3==== All mellowvaults are using mellowv2");
+            console.log("Setting ethWrapper");
+            let adapter = await ethers.getContractAt("IMellowAdapter", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
+            await adapter.connect(owner).setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
+            await vault.connect(owner).addAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
+
             console.log("Our contracts are upgraded");
             console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
@@ -285,7 +290,6 @@ describe('------------------', function () {
             console.log("FlashCapacity  : " + await vault.getFlashCapacity());
             console.log("PendingWithdraw: " + await vault.getPendingWithdrawals("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"));
 
-            let adapter = await ethers.getContractAt("IMellowAdapter", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
             console.log("CONVERSIONS");
             console.log("Vault 1: " + await adapter.amountToLpAmount(1000000000000000000n, "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
             console.log("Vault 1: " + await adapter.lpAmountToAmount(1000000000000000000n, "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -305,13 +309,8 @@ describe('------------------', function () {
             console.log("Vault 6: " + await adapter.amountToLpAmount(1000000000000000000n, "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"));
             console.log("Vault 6: " + await adapter.lpAmountToAmount(1000000000000000000n, "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"));
 
-            console.log("Setting ethWrapper");
-            await adapter.connect(owner).setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
-
             console.log("Depositing 20 wstETH to all vaults");
 
-            await vault.connect(owner).addAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
-            
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);

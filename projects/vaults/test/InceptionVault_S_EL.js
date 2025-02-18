@@ -197,7 +197,7 @@ const initVault = async a => {
 
   console.log("- EigenLayer Adapter");
   let [deployer] = await ethers.getSigners();
-  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
   let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
     await deployer.getAddress(),
     a.rewardsCoordinator,
@@ -327,18 +327,18 @@ assets.forEach(function (a) {
         const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
         await wstEth.connect(iVaultMock).unwrap(toWei(10));
         await wstEth.connect(trusteeManager).unwrap(toWei(10));
-        asset = stEth;
+        asset = wstEth;
         console.log(`iVaultMock balance of asset after: ${await asset.balanceOf(iVaultMock.address)}`);
         console.log(`trusteeManager balance of asset after: ${await asset.balanceOf(trusteeManager.address)}`);
 
-        const InceptionEigenAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter", iVaultMock);
+        const InceptionEigenAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap", iVaultMock);
         adapter = await upgrades.deployProxy(InceptionEigenAdapterFactory, [
           await deployer.getAddress(),
           a.rewardsCoordinator,
           a.delegationManager,
           a.strategyManager,
           a.assetStrategy,
-          "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+          await wstEth.getAddress(),
           trusteeManager.address,
         ]);
       });
@@ -360,7 +360,7 @@ assets.forEach(function (a) {
       it("getOperatorAddress: equals operator after delegation", async function () {
         const amount = toWei(1);
         console.log(`asset address: ${await asset.balanceOf(trusteeManager.address)}`);
-        await asset.connect(iVaultMock).approve(await adapter.getAddress(), amount);
+        await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, []);
         // await adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], 0n, delegateData);
         // expect(await adapter.getOperatorAddress()).to.be.eq(eigenLayerVaults[0]);
@@ -368,7 +368,7 @@ assets.forEach(function (a) {
 
       it("delegateToOperator: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
-        await asset.connect(iVaultMock).approve(await adapter.getAddress(), amount);
+        await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, []);
 
         await expect(
@@ -378,7 +378,7 @@ assets.forEach(function (a) {
 
       it("delegateToOperator: reverts when delegates to 0 address", async function () {
         const amount = toWei(1);
-        await asset.connect(iVaultMock).approve(await adapter.getAddress(), amount);
+        await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, []);
 
         await expect(
@@ -388,7 +388,7 @@ assets.forEach(function (a) {
 
       it("delegateToOperator: reverts when delegates unknown operator", async function () {
         const amount = toWei(1);
-        await asset.connect(iVaultMock).approve(await adapter.getAddress(), amount);
+        await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
 
         const unknownOperator = ethers.Wallet.createRandom().address;
@@ -399,7 +399,7 @@ assets.forEach(function (a) {
 
       it("withdrawFromEL: reverts when called by not a trustee", async function () {
         const amount = toWei(1);
-        await asset.connect(iVaultMock).approve(await adapter.getAddress(), amount);
+        await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
         await adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], 0n, delegateData);
 
@@ -611,6 +611,7 @@ assets.forEach(function (a) {
       });
 
       it("Undelegate from EigenLayer", async function () {
+
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -644,7 +645,7 @@ assets.forEach(function (a) {
       it("Claim from EigenLayer", async function () {
         const receipt = await tx.wait();
 
-        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
         let withdrawalQueuedEvent;
         receipt.logs.forEach(log => {
           try {
@@ -685,6 +686,7 @@ assets.forEach(function (a) {
 
 
         await mineBlocks(100000);
+
         await iVault.connect(iVaultOperator).claim(eigenLayerAdapter.address, _data);
 
         // const w1data = await withdrawDataFromTx(tx, eigenLayerVaults[0], eigenLayerAdapter.address);
@@ -708,7 +710,7 @@ assets.forEach(function (a) {
         //   );
         //   await asset.connect(staker3).transfer(iVault.address, 1000n);
         //   extra += 1000n;
-        //   await iVaultEL.connect(staker3).updateEpoch();
+        // await iVault.connect(iVaultOperator).updateEpoch();
         // }
 
         // const totalAssetsAfter = await iVault.totalAssets();
@@ -746,7 +748,7 @@ assets.forEach(function (a) {
         if (diff > 0n) {
           expect(diff).to.be.lte(transactErr * 2n);
           await asset.connect(staker3).transfer(iVault.address, diff + 1n);
-          await iVault.connect(staker3).updateEpoch();
+          await iVault.connect(iVaultOperator).updateEpoch();
         }
 
         console.log("Redeem reserve after", await iVault.redeemReservedAmount());

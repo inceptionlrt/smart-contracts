@@ -28,6 +28,8 @@ interface IIBaseAdapter {
 
     error NotContract();
 
+    error NotAdded();
+
     error InvalidDataLength(uint256 expected, uint256 received);
 
     /************************************
