@@ -69,4 +69,6 @@ interface IInceptionVaultErrors {
     error MoreThanMax();
     
     error ValueZero();
+
+    error MaxGapReached();
 }

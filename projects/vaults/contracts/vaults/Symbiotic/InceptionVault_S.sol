@@ -56,6 +56,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     mapping(address => uint256) public withdrawals;
     mapping(address => uint256) public recentEpoch;
 
+    uint256 public MAX_GAP_BETWEEN_EPOCH;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -88,6 +90,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
+
+        MAX_GAP_BETWEEN_EPOCH = 20;
     }
 
     /*//////////////////////////////
@@ -190,7 +194,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     {
         if (vault == address(0) || amount == 0) revert NullParams();
 
-        /// TODO
          _beforeDeposit(amount);
         _depositAssetIntoSymbiotic(amount, vault);
 
@@ -262,6 +265,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
+
+        if (recentEpoch[receiver] - genRequest.epoch > MAX_GAP_BETWEEN_EPOCH) revert MaxGapReached();
 
         uint256 queueLength = claimerWithdrawalsQueue.length;
         if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
@@ -649,6 +654,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
+    }
+
+    function setMaxGap(uint256 newGap) external onlyOwner {
+        if (newGap == 0) revert NullParams();
+        emit MaxGapSet(MAX_GAP_BETWEEN_EPOCH, newGap);
+        MAX_GAP_BETWEEN_EPOCH = newGap;
     }
 
     function setName(string memory newVaultName) external onlyOwner {

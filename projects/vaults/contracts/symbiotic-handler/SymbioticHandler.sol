@@ -42,7 +42,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     IISymbioticRestaker public symbioticRestaker;
 
-    /// TODO
     uint256[50 - 9] private __gap;
 
     modifier onlyOperator() {
@@ -121,7 +120,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         if (amount == 0) revert ValueZero();
         amount = symbioticRestaker.withdraw(vault, amount);
 
-        /// TODO
         emit StartSymbioticWithdrawal(address(symbioticRestaker), amount);
         return;
     }

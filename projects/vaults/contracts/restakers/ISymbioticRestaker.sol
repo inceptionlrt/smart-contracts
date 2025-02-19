@@ -37,9 +37,6 @@ contract ISymbioticRestaker is
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
 
-    // /// @dev Symbiotic DefaultStakerRewards.sol
-    // IStakerRewards public stakerRewards;
-
     modifier onlyTrustee() {
         if (msg.sender != _vault && msg.sender != _trusteeManager) revert NotVaultOrTrusteeManager();
         _;
@@ -119,11 +116,6 @@ contract ISymbioticRestaker is
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_vault, sEpoch);
     }
-
-    // /// TODO
-    // function pendingRewards() external view returns (uint256) {
-    //     return stakerRewards.claimable(address(_asset), address(this), "");
-    // }
 
     /**
      * @notice Checks whether a vault is supported by the Protocol or not.
