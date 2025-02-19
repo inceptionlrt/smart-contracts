@@ -33,6 +33,8 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     // /// @dev Symbiotic DefaultStakerRewards.sol
     // IStakerRewards public stakerRewards;
 
+    mapping(uint256 => uint256) private adapterNonceToClaimAmount;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -83,7 +85,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         address vaultAddress,
         uint256 amount,
         bytes[] calldata /*_data */
-    ) external onlyTrustee whenNotPaused returns (uint256) {
+    ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (
@@ -96,12 +98,12 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         uint256 epoch = vault.currentEpoch() + 1;
         withdrawals[vaultAddress] = epoch;
 
-        return amount;
+        return (amount, epoch);
     }
 
     function claim(
         bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256, uint256, uint256) {
         (address vaultAddress, uint256 sEpoch) = abi.decode(
             _data[0],
             (address, uint256)
@@ -115,7 +117,11 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             revert AlreadyClaimed();
 
         delete withdrawals[vaultAddress];
-        return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
+
+        uint256 amount = IVault(vaultAddress).claim(_inceptionVault, sEpoch);
+        uint256 slashed = amount - adapterNonceToClaimAmount[sEpoch];
+
+        return (amount, slashed, sEpoch);
     }
 
     // /// TODO

@@ -206,6 +206,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
+        withdrawalAmountToUndelegate += genRequest.amount;
 
         uint256 queueLength = claimerWithdrawalsQueue.length;
         if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
@@ -214,7 +215,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             Withdrawal({
                 epoch: queueLength,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount)
+                amount: _getAssetReceivedAmount(amount),
+                nonce: withdrawalNonce
             })
         );
 
@@ -258,6 +260,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
+
+            // apply slash
+            uint256[2] memory slashed = slashedWithdrawals[genRequest.nonce];
+            if (slashed[0] > 0) {
+                amount -= amount.calcSlashedAmount(slashed[0], slashed[1]);
+            }
+
             redeemedAmount += amount;
             withdrawals[receiver]--;
 

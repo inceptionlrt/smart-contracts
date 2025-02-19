@@ -130,7 +130,10 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 balanceState = _asset.balanceOf(address(this));
         IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
 
-        return (_asset.balanceOf(address(this)) - balanceState);
+        IWithdrawalQueue withdrawalQueue = IMellowSymbioticVault(_mellowVault).withdrawalQueue();
+        uint256 adapterNonce = withdrawalQueue.getCurrentEpoch() + 1;
+
+        return ((_asset.balanceOf(address(this)) - balanceState), adapterNonce);
     }
 
     function claimPending() external returns (uint256) {

@@ -49,6 +49,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     uint256[50 - 11] private __gap;
 
+    uint256 private withdrawalNonce;
+    uint256 private withdrawalAmountToUndelegate;
+    mapping(address => mapping(uint256 => uint256)) private withdrawalNonceToAdapterNonce;
+    mapping(address => mapping(uint256 => uint256)) private adapterNonceToWithdrawalNonce;
+    mapping(address => mapping(uint256 => uint256[2])) private slashedWithdrawals;
+    mapping(address => mapping(uint256 => uint256)) private adapterNonceToClaimAmount;
+
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
         _;
@@ -95,7 +102,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
 
-        amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        (uint256 amount, uint256 adapterNonce) = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+
+        adapterNonceToClaimAmount[adapter][adapterNonce] = withdrawalAmountToUndelegate;
+        withdrawalNonceToAdapterNonce[adapter][withdrawalNonce] = adapter;
+        adapterNonceToWithdrawalNonce[adapter][adapterNonce] = withdrawalNonce;
+        withdrawalAmountToUndelegate = 0;
+        withdrawalNonce++;
 
         emit UndelegatedFrom(adapter, vault, amount);
     }
@@ -105,7 +118,12 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
-        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
+
+        (uint256 withdrawnAmount, uint256 slashedAmount, uint256 adapterNonce) = IIBaseAdapter(adapter).claim(_data);
+        if (slashedAmount > 0) {
+            slashedWithdrawals[adapterNonceToWithdrawalNonce[adapterNonce]] = slashedAmount;
+        }
+
         require(
             _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
                 getFreeBalance(),
@@ -114,7 +132,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
 
-        _updateEpoch(availableBalance + withdrawnAmount);
+        _updateEpoch(availableBalance + withdrawnAmount + slashedAmount);
     }
 
     function updateEpoch() external onlyOperator whenNotPaused {
