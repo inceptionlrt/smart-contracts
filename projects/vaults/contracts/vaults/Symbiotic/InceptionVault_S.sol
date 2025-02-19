@@ -53,6 +53,9 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) public withdrawals;
+    mapping(address => uint256) public recentEpoch;
+
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -112,7 +115,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         whenNotPaused
         returns (uint256)
     {
-        return _deposit(amount, msg.sender, receiver, true);
+        return _deposit(amount, msg.sender, receiver);
     }
 
     /// @notice The deposit function but with a referral code
@@ -122,14 +125,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
-        return _deposit(amount, msg.sender, receiver, true);
+        return _deposit(amount, msg.sender, receiver);
     }
 
     function _deposit(
         uint256 amount,
         address sender,
-        address receiver,
-        bool calculate
+        address receiver
     ) internal returns (uint256) {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
@@ -138,7 +140,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
-        if (availableBonusAmount > 0 && calculate) {
+        if (availableBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
             if (depositBonus > availableBonusAmount) {
                 depositBonus = availableBonusAmount;
@@ -170,7 +172,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver, false);
+        _deposit(assetsAmount, msg.sender, receiver);
 
         return assetsAmount;
     }
@@ -262,14 +264,14 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         genRequest.amount += _getAssetReceivedAmount(amount);
 
         uint256 queueLength = claimerWithdrawalsQueue.length;
-        if (genRequest.withdrawals == 0) genRequest.epoch = queueLength;
-        genRequest.withdrawals++;
+        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
+        withdrawals[receiver]++;
+        recentEpoch[receiver] = queueLength;
         claimerWithdrawalsQueue.push(
             Withdrawal({
                 epoch: queueLength,
                 receiver: receiver,
-                amount: _getAssetReceivedAmount(amount),
-                withdrawals: 1
+                amount: _getAssetReceivedAmount(amount)
             })
         );
 
@@ -314,7 +316,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            genRequest.withdrawals--;
+            withdrawals[receiver]--;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
@@ -431,10 +433,14 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (genRequest.amount == 0) return (false, availableWithdrawals);
 
         availableWithdrawals = new uint256[](
-            genRequest.withdrawals
+            withdrawals[claimer]
         );
 
-        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
+        uint256 rEpoch = recentEpoch[claimer];
+        if (rEpoch < epoch) rEpoch++;
+        if (rEpoch < genRequest.epoch) revert EpochsMismatch();
+
+        for (uint256 i = genRequest.epoch; i < rEpoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
