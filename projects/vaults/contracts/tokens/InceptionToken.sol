@@ -6,11 +6,11 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IInceptionToken} from "../interfaces/common/IInceptionToken.sol";
 import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
 
-import "../lib/Convert.sol";
-
-/// @author The InceptionLRT team
-/// @title The InceptionToken contract
-/// @dev Specifically, this includes pausable functions and minting from the vault
+/**
+ * @author The InceptionLRT team
+ * @title The InceptionToken contract
+ * @dev Specifically, this includes pausable functions and minting from the vault
+ */
 contract InceptionToken is
     OwnableUpgradeable,
     ERC20Upgradeable,
@@ -24,7 +24,7 @@ contract InceptionToken is
 
     modifier onlyMinter() {
         require(
-            msg.sender == address(vault) ||  msg.sender == rebalancer,
+            msg.sender == address(vault) || msg.sender == rebalancer,
             "InceptionToken: only minter allowed"
         );
         _;
@@ -62,11 +62,17 @@ contract InceptionToken is
         require(!paused(), "InceptionToken: token transfer while paused");
     }
 
-    function burn(address account, uint256 amount) external override onlyMinter {
+    function burn(
+        address account,
+        uint256 amount
+    ) external override onlyMinter {
         _burn(account, amount);
     }
 
-    function mint(address account, uint256 amount) external override onlyMinter {
+    function mint(
+        address account,
+        uint256 amount
+    ) external override onlyMinter {
         _mint(account, amount);
     }
 
