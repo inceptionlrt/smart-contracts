@@ -3103,6 +3103,7 @@ assets.forEach(function (a) {
         console.log(`Ratio before:\t${ratioBefore.format()}`);
 
         const count = 100;
+        await iVault.setMaxGap(100);
         const amount = await iVault.withdrawMinAmount();
         for (let i = 0; i < count; i++) {
           await iVault.connect(staker).withdraw(amount, staker.address);
