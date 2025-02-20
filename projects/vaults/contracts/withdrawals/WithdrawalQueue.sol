@@ -37,7 +37,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
     }
 
     function undelegate(address adapter, uint256 undelegateAmount) external returns (uint256) {
-        uint256 currentEpoch = epoch;
+        uint256 undelegatedEpoch = epoch;
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
@@ -49,7 +49,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
             epoch++;
         }
 
-        return currentEpoch;
+        return undelegatedEpoch;
     }
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
