@@ -204,7 +204,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         inceptionToken.burn(claimer, iShares);
 
         // update global state and claimer's state
-        totalAmountToWithdraw += amount;
+//        totalAmountToWithdraw += amount;
 //        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
 //        genRequest.amount += _getAssetReceivedAmount(amount);
 
@@ -245,7 +245,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function redeem(address receiver) external whenNotPaused nonReentrant {
         uint256 amount = withdrawalQueue.redeem(receiver);
 
-        totalAmountToWithdraw -= amount;
+//        totalAmountToWithdraw -= amount;
 //        redeemReservedAmount -= amount;
 
         _transferAssetTo(receiver, amount);
@@ -338,34 +338,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
-
-//    function isAbleToRedeem(
-//        address claimer
-//    ) public view returns (bool able, uint256[] memory) {
-//        // get the general request
-//        uint256 index;
-//
-//        uint256[] memory availableWithdrawals;
-//        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
-//        if (genRequest.amount == 0) return (false, availableWithdrawals);
-//
-//        availableWithdrawals = new uint256[](withdrawals[claimer]);
-//
-//        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
-//            if (claimerWithdrawalsQueue[i].receiver == claimer) {
-//                able = true;
-//                availableWithdrawals[index] = i;
-//                ++index;
-//            }
-//        }
-//        // decrease arrays
-//        if (availableWithdrawals.length - index > 0)
-//            assembly {
-//                mstore(availableWithdrawals, index)
-//            }
-//
-//        return (able, availableWithdrawals);
-//    }
 
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
@@ -558,32 +530,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         withdrawalQueue = _withdrawalQueue;
         emit WithdrawalQueueChanged(address(withdrawalQueue));
     }
-
-//    /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
-//    function adjustWithdrawals() external onlyOwner {
-//        uint256 queueLength = claimerWithdrawalsQueue.length;
-//
-//        // Duplicate queue
-//        address[] memory queue = new address[](queueLength);
-//
-//        // Copy Address to new Array
-//        for (uint256 i = 0; i < queueLength; i++) {
-//            queue[i] = claimerWithdrawalsQueue[i].receiver;
-//        }
-//
-//        // Traverse through the addresses
-//        for (uint256 i = 0; i < queue.length; i++) {
-//            // Skip if address(0), means fulfilled
-//            if (queue[i] == address(0)) continue;
-//
-//            uint256 numWithdrawal;
-//            for (uint256 j = 0; j < queue.length; j++) {
-//                if (queue[i] == queue[j]) numWithdrawal++;
-//            }
-//
-//            withdrawals[queue[i]] = numWithdrawal;
-//        }
-//    }
 
     /*///////////////////////////////
     ////// Pausable functions //////

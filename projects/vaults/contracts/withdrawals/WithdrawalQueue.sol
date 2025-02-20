@@ -41,10 +41,10 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
         withdrawal.totalUndelegatedAmount += undelegateAmount;
 
-        require(
-            withdrawal.totalUndelegatedAmount + withdrawal.totalSlashedAmount <= withdrawal.totalAmountToClaim,
-            "undelegated amount exceed requested"
-        );
+//        require(
+//            withdrawal.totalUndelegatedAmount <= withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount,
+//            "undelegated amount exceed requested"
+//        );
 
         if (withdrawal.totalUndelegatedAmount == withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount) {
             epoch++;
@@ -92,6 +92,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         totalAmountRedeem -= amount;
         totalAmountToWithdraw -= amount;
+
         return amount;
     }
 
@@ -105,5 +106,30 @@ contract WithdrawalQueue is IWithdrawalQueue {
             withdrawal.totalAmountToClaim,
             Math.Rounding.Up
         );
+    }
+
+    function slashCurrentQueue(uint256 delegated, uint256 delegatedAfterSlash) external {
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        if (withdrawal.totalAmountToClaim == 0) {
+            return;
+        }
+
+        uint256 slashed = withdrawal.totalAmountToClaim.mulDiv(
+            delegated - delegatedAfterSlash,
+            delegated,
+            Math.Rounding.Up
+        );
+
+        withdrawals[epoch].totalSlashedAmount = slashed;
+//        withdrawals[epoch].totalAmountToClaim -= slashed;
+        totalAmountToWithdraw -= slashed;
+    }
+
+    function getWithdrawalUndelegateAmount(uint256 epochNum) external view returns (uint256) {
+        return withdrawals[epochNum].totalAmountToClaim - withdrawals[epochNum].totalSlashedAmount;
+    }
+
+    function getTotalAmountToWithdraw() external view returns (uint256) {
+        return totalAmountToWithdraw;
     }
 }

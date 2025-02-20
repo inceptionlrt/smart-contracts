@@ -12,6 +12,8 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
@@ -50,6 +52,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     IWithdrawalQueue withdrawalQueue;
 
     uint256[50 - 11] private __gap;
+
+    uint256 totalExpectedDelegatedAmount;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
@@ -97,10 +101,17 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
 
+        // check to slash & sync queue state
+        if(syncStateIfSlashed()) {
+            // emit some event that we were slashed
+            return;
+        }
+
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
         uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
-
         emit UndelegatedFrom(adapter, vault, amount, epoch);
+
+        totalExpectedDelegatedAmount -= amount;
     }
 
     function claim(
@@ -108,54 +119,27 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         address adapter,
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
-//        uint256 availableBalance = getFreeBalance();
-//        require(
-//            _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
-//                getFreeBalance(),
-//            ClaimFailed()
-//        );
-
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
         withdrawalQueue.claim(adapter, epochNum, withdrawnAmount);
-
         emit WithdrawalClaimed(adapter, withdrawnAmount);
     }
 
-//    function updateEpoch() external onlyOperator whenNotPaused {
-//        _updateEpoch(getFreeBalance());
-//    }
+    function syncStateIfSlashed() private returns (bool) {
+        uint256 totalDelegated = getTotalDelegated();
+        if (totalExpectedDelegatedAmount == totalDelegated) {
+            return false;
+        }
 
-    /**
-     * @dev let's calculate how many withdrawals we can cover with the withdrawnAmount
-     * @dev #init state:
-     * - balance of the vault: X
-     * - epoch: means that the vault can handle the withdrawal queue up to the epoch index
-     * withdrawalQueue[... : epoch];
-     *
-     * @dev #new state:
-     * - balance of the vault: X + withdrawnAmount
-     * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
-     * withdrawalQueue[epoch : new_epoch];
-     */
-//    function _updateEpoch(uint256 availableBalance) internal {
-//        uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-//        uint256 redeemReservedBuffer;
-//        uint256 epochBuffer;
-//        for (uint256 i = epoch; i < withdrawalsNum; ) {
-//            uint256 amount = claimerWithdrawalsQueue[i].amount;
-//            unchecked {
-//                if (amount > availableBalance) {
-//                    break;
-//                }
-//                redeemReservedBuffer += amount;
-//                availableBalance -= amount;
-//                ++epochBuffer;
-//                ++i;
-//            }
-//        }
-//        redeemReservedAmount += redeemReservedBuffer;
-//        epoch += epochBuffer;
-//    }
+        if (totalExpectedDelegatedAmount == 0 || totalExpectedDelegatedAmount < totalDelegated) {
+            totalExpectedDelegatedAmount = totalDelegated;
+            return false;
+        }
+
+        withdrawalQueue.slashCurrentQueue(totalExpectedDelegatedAmount, totalDelegated);
+        totalExpectedDelegatedAmount = totalDelegated;
+
+        return true;
+    }
 
     /*//////////////////////////
     ////// GET functions //////
@@ -215,6 +199,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     function _getTargetCapacity() internal view returns (uint256) {
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
+    }
+
+    function getTotalAmountToWithdraw() public view returns (uint256) {
+        return withdrawalQueue.getTotalAmountToWithdraw();
     }
 
     /*//////////////////////////

@@ -25,4 +25,10 @@ interface IWithdrawalQueue {
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external;
 
     function redeem(address receiver) external returns (uint256 amount);
+
+    function slashCurrentQueue(uint256 delegated, uint256 delegatedAfterSlash) external;
+
+    function getWithdrawalUndelegateAmount(uint256 epochNum) external view returns (uint256);
+
+    function getTotalAmountToWithdraw() external view returns (uint256);
 }
