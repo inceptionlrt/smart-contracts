@@ -8,9 +8,9 @@ interface IWithdrawalQueue {
         bool ableRedeem;
 
         uint256 amountToClaim;
-        uint256 undelegatedAmount;
-        uint256 claimedAmount;
-        uint256 slashedAmount;
+        uint256 totalUndelegatedAmount;
+        uint256 totalClaimedAmount;
+        uint256 totalSlashedAmount;
 
         mapping(address => uint256) adapterUndelegated;
         mapping(address => uint256) userClaimAmount;

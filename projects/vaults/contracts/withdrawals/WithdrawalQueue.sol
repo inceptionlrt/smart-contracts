@@ -41,11 +41,11 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
-        withdrawal.undelegatedAmount += undelegateAmount;
+        withdrawal.totalUndelegatedAmount += undelegateAmount;
 
         totalAmountUndelegated += undelegateAmount;
 
-        if (withdrawal.undelegatedAmount == withdrawal.amountToClaim) {
+        if (withdrawal.totalUndelegatedAmount == withdrawal.amountToClaim) {
             epoch++;
         }
 
@@ -57,11 +57,11 @@ contract WithdrawalQueue is IWithdrawalQueue {
         require(withdrawal.adapterUndelegated[adapter] > 0, "unknown adapter claim");
 
         if (withdrawal.adapterUndelegated[adapter] > claimedAmount) {
-            withdrawal.slashedAmount += withdrawal.adapterUndelegated[adapter] - claimedAmount;
+            withdrawal.totalSlashedAmount += withdrawal.adapterUndelegated[adapter] - claimedAmount;
         }
 
-        withdrawal.claimedAmount += claimedAmount;
-        if (withdrawal.claimedAmount + withdrawal.slashedAmount == withdrawal.amountToClaim) {
+        withdrawal.totalClaimedAmount += claimedAmount;
+        if (withdrawal.totalClaimedAmount + withdrawal.totalSlashedAmount == withdrawal.amountToClaim) {
             withdrawal.ableRedeem = true;
         }
 
@@ -85,12 +85,12 @@ contract WithdrawalQueue is IWithdrawalQueue {
     }
 
     function _getRedeemAmount(WithdrawalEpoch storage withdrawal, address receiver) private view returns (uint256) {
-        if (withdrawal.slashedAmount == 0) {
+        if (withdrawal.totalSlashedAmount == 0) {
             return withdrawal.userClaimAmount[receiver];
         }
 
         return withdrawal.userClaimAmount[receiver].mulDiv(
-            withdrawal.amountToClaim - withdrawal.slashedAmount,
+            withdrawal.amountToClaim - withdrawal.totalSlashedAmount,
             withdrawal.amountToClaim,
             Math.Rounding.Up
         );
