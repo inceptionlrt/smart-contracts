@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
+import "hardhat/console.sol";
 
 contract WithdrawalQueue is IWithdrawalQueue {
     using Math for uint256;
@@ -43,12 +44,11 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
         withdrawal.totalUndelegatedAmount += undelegateAmount;
 
-        totalAmountUndelegated += undelegateAmount;
-
         if (withdrawal.totalUndelegatedAmount == withdrawal.amountToClaim) {
             epoch++;
         }
 
+        totalAmountUndelegated += undelegateAmount;
         return undelegatedEpoch;
     }
 
