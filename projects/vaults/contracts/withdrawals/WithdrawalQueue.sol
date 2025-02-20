@@ -23,13 +23,13 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         totalAmountToWithdraw += amount;
 
-        addUserEpoch(receiver);
+        addUserEpoch(receiver, epoch);
     }
 
-    function addUserEpoch(address receiver) private {
+    function addUserEpoch(address receiver, uint256 epochNum) private {
         uint256[] storage receiverEpochs = userEpoch[receiver];
-        if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
-            receiverEpochs.push(epoch);
+        if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epochNum) {
+            receiverEpochs.push(epochNum);
         }
     }
 
