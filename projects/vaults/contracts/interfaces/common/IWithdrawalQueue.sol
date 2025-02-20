@@ -13,6 +13,7 @@ interface IWithdrawalQueue {
         uint256 totalSlashedAmount;
 
         mapping(address => uint256) adapterUndelegated;
+        mapping(address => uint256) adapterClaimed;
         mapping(address => uint256) userClaimAmount;
         mapping(address => bool) userRedeemed;
     }

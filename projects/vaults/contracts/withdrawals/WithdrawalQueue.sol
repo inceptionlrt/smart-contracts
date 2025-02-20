@@ -62,7 +62,6 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adapterClaimed[adapter] += claimedAmount;
-
         require(withdrawal.adapterClaimed[adapter] <= withdrawal.adapterUndelegated[adapter], "adapter claimed amount exceed");
 
         if (withdrawal.totalClaimedAmount + withdrawal.totalSlashedAmount == withdrawal.amountToClaim) {
