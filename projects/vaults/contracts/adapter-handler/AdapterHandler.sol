@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
-import {IAdapterHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
-import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../withdrawals/WithdrawalQueue.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IAdapterHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
+import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
+import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
 /**
  * @title The AdapterHandler contract
@@ -19,8 +21,6 @@ import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    uint256 public epoch;
 
     /// @dev inception operator
     address internal _operator;
@@ -46,6 +46,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     IISymbioticAdapter public symbioticAdapter;
 
     EnumerableSet.AddressSet internal _adapters;
+
+    IWithdrawalQueue withdrawalQueue;
 
     uint256[50 - 11] private __gap;
 
@@ -96,30 +98,32 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (amount == 0) revert ValueZero();
 
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
 
-        emit UndelegatedFrom(adapter, vault, amount);
+        emit UndelegatedFrom(adapter, vault, amount, epoch);
     }
 
     function claim(
+        uint256 epochNum,
         address adapter,
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
-        uint256 availableBalance = getFreeBalance();
+//        uint256 availableBalance = getFreeBalance();
+//        require(
+//            _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
+//                getFreeBalance(),
+//            ClaimFailed()
+//        );
+
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
-        require(
-            _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
-                getFreeBalance(),
-            ClaimFailed()
-        );
+        withdrawalQueue.claim(adapter, epochNum, withdrawnAmount);
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
-
-        _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    function updateEpoch() external onlyOperator whenNotPaused {
-        _updateEpoch(getFreeBalance());
-    }
+//    function updateEpoch() external onlyOperator whenNotPaused {
+//        _updateEpoch(getFreeBalance());
+//    }
 
     /**
      * @dev let's calculate how many withdrawals we can cover with the withdrawnAmount
@@ -133,25 +137,25 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * - we need to recalculate a new value for epoch, new_epoch, to cover withdrawals:
      * withdrawalQueue[epoch : new_epoch];
      */
-    function _updateEpoch(uint256 availableBalance) internal {
-        uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
-        uint256 redeemReservedBuffer;
-        uint256 epochBuffer;
-        for (uint256 i = epoch; i < withdrawalsNum; ) {
-            uint256 amount = claimerWithdrawalsQueue[i].amount;
-            unchecked {
-                if (amount > availableBalance) {
-                    break;
-                }
-                redeemReservedBuffer += amount;
-                availableBalance -= amount;
-                ++epochBuffer;
-                ++i;
-            }
-        }
-        redeemReservedAmount += redeemReservedBuffer;
-        epoch += epochBuffer;
-    }
+//    function _updateEpoch(uint256 availableBalance) internal {
+//        uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
+//        uint256 redeemReservedBuffer;
+//        uint256 epochBuffer;
+//        for (uint256 i = epoch; i < withdrawalsNum; ) {
+//            uint256 amount = claimerWithdrawalsQueue[i].amount;
+//            unchecked {
+//                if (amount > availableBalance) {
+//                    break;
+//                }
+//                redeemReservedBuffer += amount;
+//                availableBalance -= amount;
+//                ++epochBuffer;
+//                ++i;
+//            }
+//        }
+//        redeemReservedAmount += redeemReservedBuffer;
+//        epoch += epochBuffer;
+//    }
 
     /*//////////////////////////
     ////// GET functions //////

@@ -76,6 +76,8 @@ interface IInceptionVault_S {
 
     event WithdrawalFee(uint256 indexed fee);
 
+    event WithdrawalQueueChanged(address queue);
+
     function inceptionToken() external view returns (IInceptionToken);
 
     function ratio() external view returns (uint256);

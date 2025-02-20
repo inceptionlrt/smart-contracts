@@ -5,7 +5,8 @@ interface IMellowHandler {
     event UndelegatedFrom(
         address indexed adapter,
         address indexed vault,
-        uint256 indexed actualAmounts
+        uint256 indexed actualAmounts,
+        uint256 epoch
     );
 
     event StartSymbioticWithdrawal(

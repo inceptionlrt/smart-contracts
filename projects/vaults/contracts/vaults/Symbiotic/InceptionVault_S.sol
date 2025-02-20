@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../../interfaces/common/IWithdrawalQueue.sol";
 
 import {AdapterHandler, IERC20} from "../../adapter-handler/AdapterHandler.sol";
-import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
-import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
-import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
-import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
+import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
+import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
+import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @author The InceptionLRT team
@@ -204,19 +205,21 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         // update global state and claimer's state
         totalAmountToWithdraw += amount;
-        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
-        genRequest.amount += _getAssetReceivedAmount(amount);
+//        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
+//        genRequest.amount += _getAssetReceivedAmount(amount);
 
-        uint256 queueLength = claimerWithdrawalsQueue.length;
-        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
-        withdrawals[receiver]++;
-        claimerWithdrawalsQueue.push(
-            Withdrawal({
-                epoch: queueLength,
-                receiver: receiver,
-                amount: _getAssetReceivedAmount(amount)
-            })
-        );
+//        uint256 queueLength = claimerWithdrawalsQueue.length;
+//        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
+//        withdrawals[receiver]++;
+//        claimerWithdrawalsQueue.push(
+//            Withdrawal({
+//                epoch: queueLength,
+//                receiver: receiver,
+//                amount: _getAssetReceivedAmount(amount)
+//            })
+//        );
+
+        withdrawalQueue.request(receiver, _getAssetReceivedAmount(amount));
 
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }
@@ -240,37 +243,14 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     }
 
     function redeem(address receiver) external whenNotPaused nonReentrant {
-        (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
-            receiver
-        );
-        if (!isAble) revert IsNotAbleToRedeem();
+        uint256 amount = withdrawalQueue.redeem(receiver);
 
-        uint256 numOfWithdrawals = availableWithdrawals.length;
+        totalAmountToWithdraw -= amount;
+//        redeemReservedAmount -= amount;
 
-        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
-        uint256 redeemedAmount;
-        for (uint256 i = 0; i < numOfWithdrawals; ++i) {
-            uint256 withdrawalNum = availableWithdrawals[i];
-            Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
-            uint256 amount = request.amount;
-            // update the genRequest and the global state
-            genRequest.amount -= amount;
+        _transferAssetTo(receiver, amount);
 
-            totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
-            redeemReservedAmount -= amount;
-            redeemedAmount += amount;
-            withdrawals[receiver]--;
-
-            delete claimerWithdrawalsQueue[availableWithdrawals[i]];
-        }
-
-        // let's update the lowest epoch associated with the claimer
-        genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
-
-        _transferAssetTo(receiver, redeemedAmount);
-
-        emit RedeemedRequests(availableWithdrawals);
-        emit Redeem(msg.sender, receiver, redeemedAmount);
+        emit Redeem(msg.sender, receiver, amount);
     }
 
     /*/////////////////////////////////////////////
@@ -328,13 +308,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
-                amount,
-                getFlashCapacity(),
-                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
-                optimalBonusRate,
-                maxBonusRate,
-                targetCapacity
-            );
+            amount,
+            getFlashCapacity(),
+            (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+            optimalBonusRate,
+            maxBonusRate,
+            targetCapacity
+        );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
@@ -346,46 +326,46 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
-                amount,
-                capacity,
-                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-                optimalWithdrawalRate,
-                maxFlashFeeRate,
-                targetCapacity
-            );
+            amount,
+            capacity,
+            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+            optimalWithdrawalRate,
+            maxFlashFeeRate,
+            targetCapacity
+        );
     }
 
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
 
-    function isAbleToRedeem(
-        address claimer
-    ) public view returns (bool able, uint256[] memory) {
-        // get the general request
-        uint256 index;
-
-        uint256[] memory availableWithdrawals;
-        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
-        if (genRequest.amount == 0) return (false, availableWithdrawals);
-
-        availableWithdrawals = new uint256[](withdrawals[claimer]);
-
-        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
-            if (claimerWithdrawalsQueue[i].receiver == claimer) {
-                able = true;
-                availableWithdrawals[index] = i;
-                ++index;
-            }
-        }
-        // decrease arrays
-        if (availableWithdrawals.length - index > 0)
-            assembly {
-                mstore(availableWithdrawals, index)
-            }
-
-        return (able, availableWithdrawals);
-    }
+//    function isAbleToRedeem(
+//        address claimer
+//    ) public view returns (bool able, uint256[] memory) {
+//        // get the general request
+//        uint256 index;
+//
+//        uint256[] memory availableWithdrawals;
+//        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+//        if (genRequest.amount == 0) return (false, availableWithdrawals);
+//
+//        availableWithdrawals = new uint256[](withdrawals[claimer]);
+//
+//        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
+//            if (claimerWithdrawalsQueue[i].receiver == claimer) {
+//                able = true;
+//                availableWithdrawals[index] = i;
+//                ++index;
+//            }
+//        }
+//        // decrease arrays
+//        if (availableWithdrawals.length - index > 0)
+//            assembly {
+//                mstore(availableWithdrawals, index)
+//            }
+//
+//        return (able, availableWithdrawals);
+//    }
 
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
@@ -411,8 +391,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function maxMint(address receiver) public view returns (uint256) {
         return
             !paused()
-                ? convertToShares(IERC20(asset()).balanceOf(receiver))
-                : 0;
+            ? convertToShares(IERC20(asset()).balanceOf(receiver))
+            : 0;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -574,31 +554,36 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         name = newVaultName;
     }
 
-    /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
-    function adjustWithdrawals() external onlyOwner {
-        uint256 queueLength = claimerWithdrawalsQueue.length;
-
-        // Duplicate queue
-        address[] memory queue = new address[](queueLength);
-
-        // Copy Address to new Array
-        for (uint256 i = 0; i < queueLength; i++) {
-            queue[i] = claimerWithdrawalsQueue[i].receiver;
-        }
-
-        // Traverse through the addresses
-        for (uint256 i = 0; i < queue.length; i++) {
-            // Skip if address(0), means fulfilled
-            if (queue[i] == address(0)) continue;
-
-            uint256 numWithdrawal;
-            for (uint256 j = 0; j < queue.length; j++) {
-                if (queue[i] == queue[j]) numWithdrawal++;
-            }
-
-            withdrawals[queue[i]] = numWithdrawal;
-        }
+    function setWithdrawalQueue(IWithdrawalQueue _withdrawalQueue) external onlyOwner {
+        withdrawalQueue = _withdrawalQueue;
+        emit WithdrawalQueueChanged(address(withdrawalQueue));
     }
+
+//    /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
+//    function adjustWithdrawals() external onlyOwner {
+//        uint256 queueLength = claimerWithdrawalsQueue.length;
+//
+//        // Duplicate queue
+//        address[] memory queue = new address[](queueLength);
+//
+//        // Copy Address to new Array
+//        for (uint256 i = 0; i < queueLength; i++) {
+//            queue[i] = claimerWithdrawalsQueue[i].receiver;
+//        }
+//
+//        // Traverse through the addresses
+//        for (uint256 i = 0; i < queue.length; i++) {
+//            // Skip if address(0), means fulfilled
+//            if (queue[i] == address(0)) continue;
+//
+//            uint256 numWithdrawal;
+//            for (uint256 j = 0; j < queue.length; j++) {
+//                if (queue[i] == queue[j]) numWithdrawal++;
+//            }
+//
+//            withdrawals[queue[i]] = numWithdrawal;
+//        }
+//    }
 
     /*///////////////////////////////
     ////// Pausable functions //////
