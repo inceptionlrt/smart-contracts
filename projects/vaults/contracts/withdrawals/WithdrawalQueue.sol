@@ -17,7 +17,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     function request(address receiver, uint256 amount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.amountToClaim += amount;
+        withdrawal.totalAmountToClaim += amount;
         withdrawal.userClaimAmount[receiver] += amount;
 
         totalAmountToWithdraw += amount;
@@ -44,7 +44,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
         withdrawal.totalUndelegatedAmount += undelegateAmount;
 
-        if (withdrawal.totalUndelegatedAmount == withdrawal.amountToClaim) {
+        if (withdrawal.totalUndelegatedAmount == withdrawal.totalAmountToClaim) {
             epoch++;
         }
 
@@ -64,7 +64,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.adapterClaimed[adapter] += claimedAmount;
         require(withdrawal.adapterClaimed[adapter] <= withdrawal.adapterUndelegated[adapter], "adapter claimed amount exceed");
 
-        if (withdrawal.totalClaimedAmount + withdrawal.totalSlashedAmount == withdrawal.amountToClaim) {
+        if (withdrawal.totalClaimedAmount + withdrawal.totalSlashedAmount == withdrawal.totalAmountToClaim) {
             withdrawal.ableRedeem = true;
         }
 
@@ -93,8 +93,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
 
         return withdrawal.userClaimAmount[receiver].mulDiv(
-            withdrawal.amountToClaim - withdrawal.totalSlashedAmount,
-            withdrawal.amountToClaim,
+            withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount,
+            withdrawal.totalAmountToClaim,
             Math.Rounding.Up
         );
     }

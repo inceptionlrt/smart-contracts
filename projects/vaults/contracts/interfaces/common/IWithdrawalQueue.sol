@@ -7,7 +7,7 @@ interface IWithdrawalQueue {
     struct WithdrawalEpoch {
         bool ableRedeem;
 
-        uint256 amountToClaim;
+        uint256 totalAmountToClaim;
         uint256 totalUndelegatedAmount;
         uint256 totalClaimedAmount;
         uint256 totalSlashedAmount;
