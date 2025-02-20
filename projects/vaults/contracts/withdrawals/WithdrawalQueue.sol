@@ -41,7 +41,12 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.adapterUndelegated[adapter] += undelegateAmount;
         withdrawal.totalUndelegatedAmount += undelegateAmount;
 
-        if (withdrawal.totalUndelegatedAmount == withdrawal.totalAmountToClaim) {
+        require(
+            withdrawal.totalUndelegatedAmount + withdrawal.totalSlashedAmount <= withdrawal.totalAmountToClaim,
+            "undelegated amount exceed requested"
+        );
+
+        if (withdrawal.totalUndelegatedAmount == withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount) {
             epoch++;
         }
 
@@ -76,7 +81,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
     function redeem(address receiver) external returns (uint256 amount) {
         for (uint256 i = 0; i < userEpoch[receiver].length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[userEpoch[receiver][i]];
-            if (!withdrawal.ableRedeem && withdrawal.userRedeemed[receiver]) {
+            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
                 continue;
             }
 
