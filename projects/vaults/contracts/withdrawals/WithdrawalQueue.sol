@@ -10,6 +10,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     mapping(uint256 => WithdrawalEpoch) internal withdrawals;
     mapping(address => uint256[]) internal userEpoch;
+
     uint256 internal epoch;
 
     uint256 internal totalAmountToWithdraw;
@@ -27,13 +28,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     function addUserEpoch(address receiver) private {
         uint256[] storage receiverEpochs = userEpoch[receiver];
-        if (receiverEpochs.length == 0) {
+        if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
             receiverEpochs.push(epoch);
-            return;
-        }
-
-        if (receiverEpochs[receiverEpochs.length - 1] != epoch) {
-            receiverEpochs[receiverEpochs.length - 1] = epoch;
         }
     }
 
