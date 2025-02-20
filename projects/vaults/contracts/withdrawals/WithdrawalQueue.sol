@@ -15,6 +15,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     uint256 internal totalAmountToWithdraw;
     uint256 internal totalAmountUndelegated;
+    uint256 internal totalAmountRedeem;
 
     function request(address receiver, uint256 amount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
@@ -51,9 +52,12 @@ contract WithdrawalQueue is IWithdrawalQueue {
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
         require(withdrawal.adapterUndelegated[adapter] > 0, "unknown adapter claim");
+        require(withdrawal.adapterClaimed[adapter] == 0, "adapter already claimed for given epoch");
 
+        uint256 slashedAmount;
         if (withdrawal.adapterUndelegated[adapter] > claimedAmount) {
-            withdrawal.totalSlashedAmount += withdrawal.adapterUndelegated[adapter] - claimedAmount;
+            slashedAmount = withdrawal.adapterUndelegated[adapter] - claimedAmount;
+            withdrawal.totalSlashedAmount += slashedAmount;
         }
 
         withdrawal.totalClaimedAmount += claimedAmount;
@@ -64,6 +68,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
             withdrawal.ableRedeem = true;
         }
 
+        totalAmountToWithdraw -= slashedAmount;
+        totalAmountRedeem += claimedAmount;
         totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter];
     }
 
@@ -79,6 +85,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
             amount += _getRedeemAmount(withdrawal, receiver);
         }
 
+        totalAmountRedeem -= amount;
         totalAmountToWithdraw -= amount;
         return amount;
     }
