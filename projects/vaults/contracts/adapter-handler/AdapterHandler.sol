@@ -98,7 +98,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ) external whenNotPaused nonReentrant onlyOperator {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
-        if (shares == 0) revert ValueZero();
+        if (amount == 0) revert ValueZero();
 
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
         uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
