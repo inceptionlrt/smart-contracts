@@ -17,12 +17,10 @@ contract WithdrawalQueue is IWithdrawalQueue {
     uint256 internal totalAmountUndelegated;
     uint256 internal totalAmountRedeem;
 
-    function request(address receiver, uint256 amount) external {
+    function request(address receiver, uint256 shares) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.totalAmountToClaim += amount;
-        withdrawal.userClaimAmount[receiver] += amount;
-
-        totalAmountToWithdraw += amount;
+        withdrawal.totalRequestedShares += shares;
+        withdrawal.userShares[receiver] += shares;
 
         addUserEpoch(receiver, epoch);
     }
@@ -34,48 +32,38 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function undelegate(address adapter, uint256 undelegateAmount) external returns (uint256) {
+    function undelegate(address adapter, uint256 amount, uint256 shares) external returns (uint256) {
         uint256 undelegatedEpoch = epoch;
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.adapterUndelegated[adapter] += undelegateAmount;
-        withdrawal.totalUndelegatedAmount += undelegateAmount;
+        withdrawal.adapterUndelegated[adapter] += amount;
+        withdrawal.totalUndelegatedAmount += amount;
+        withdrawal.totalUndelegatedShares += shares;
+        withdrawal.adaptersUndelegatedCounter++;
 
-//        require(
-//            withdrawal.totalUndelegatedAmount <= withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount,
-//            "undelegated amount exceed requested"
-//        );
+        totalAmountUndelegated += amount;
+        totalAmountToWithdraw += amount;
 
-        if (withdrawal.totalUndelegatedAmount == withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount) {
+        if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) {
             epoch++;
         }
 
-        totalAmountUndelegated += undelegateAmount;
         return undelegatedEpoch;
     }
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
         require(withdrawal.adapterUndelegated[adapter] > 0, "unknown adapter claim");
-        require(withdrawal.adapterClaimed[adapter] == 0, "adapter already claimed for given epoch");
-
-        uint256 slashedAmount;
-        if (withdrawal.adapterUndelegated[adapter] > claimedAmount) {
-            slashedAmount = withdrawal.adapterUndelegated[adapter] - claimedAmount;
-            withdrawal.totalSlashedAmount += slashedAmount;
-        }
 
         withdrawal.totalClaimedAmount += claimedAmount;
-        withdrawal.adapterClaimed[adapter] += claimedAmount;
-        require(withdrawal.adapterClaimed[adapter] <= withdrawal.adapterUndelegated[adapter], "adapter claimed amount exceed");
+        withdrawal.adaptersClaimedCounter++;
 
-        if (withdrawal.totalClaimedAmount + withdrawal.totalSlashedAmount == withdrawal.totalAmountToClaim) {
+        totalAmountToWithdraw -= claimedAmount;
+        totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter];
+
+        if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) {
             withdrawal.ableRedeem = true;
         }
-
-        totalAmountToWithdraw -= slashedAmount;
-        totalAmountRedeem += claimedAmount;
-        totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter];
     }
 
     function redeem(address receiver) external returns (uint256 amount) {
@@ -97,39 +85,10 @@ contract WithdrawalQueue is IWithdrawalQueue {
     }
 
     function _getRedeemAmount(WithdrawalEpoch storage withdrawal, address receiver) private view returns (uint256) {
-        if (withdrawal.totalSlashedAmount == 0) {
-            return withdrawal.userClaimAmount[receiver];
-        }
-
-        return withdrawal.userClaimAmount[receiver].mulDiv(
-            withdrawal.totalAmountToClaim - withdrawal.totalSlashedAmount,
-            withdrawal.totalAmountToClaim,
+        return withdrawal.totalClaimedAmount.mulDiv(
+            withdrawal.userShares[receiver],
+            withdrawal.totalRequestedShares,
             Math.Rounding.Up
         );
-    }
-
-    function slashCurrentQueue(uint256 delegated, uint256 delegatedAfterSlash) external {
-        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        if (withdrawal.totalAmountToClaim == 0) {
-            return;
-        }
-
-        uint256 slashed = withdrawal.totalAmountToClaim.mulDiv(
-            delegated - delegatedAfterSlash,
-            delegated,
-            Math.Rounding.Up
-        );
-
-        withdrawals[epoch].totalSlashedAmount = slashed;
-//        withdrawals[epoch].totalAmountToClaim -= slashed;
-        totalAmountToWithdraw -= slashed;
-    }
-
-    function getWithdrawalUndelegateAmount(uint256 epochNum) external view returns (uint256) {
-        return withdrawals[epochNum].totalAmountToClaim - withdrawals[epochNum].totalSlashedAmount;
-    }
-
-    function getTotalAmountToWithdraw() external view returns (uint256) {
-        return totalAmountToWithdraw;
     }
 }

@@ -202,24 +202,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
-
-        // update global state and claimer's state
-//        totalAmountToWithdraw += amount;
-//        Withdrawal storage genRequest = _claimerWithdrawals[receiver];
-//        genRequest.amount += _getAssetReceivedAmount(amount);
-
-//        uint256 queueLength = claimerWithdrawalsQueue.length;
-//        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
-//        withdrawals[receiver]++;
-//        claimerWithdrawalsQueue.push(
-//            Withdrawal({
-//                epoch: queueLength,
-//                receiver: receiver,
-//                amount: _getAssetReceivedAmount(amount)
-//            })
-//        );
-
-        withdrawalQueue.request(receiver, _getAssetReceivedAmount(amount));
+        // add withdrawal request
+        withdrawalQueue.request(receiver, iShares);
 
         emit Withdraw(claimer, receiver, claimer, amount, iShares);
     }

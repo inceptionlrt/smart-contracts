@@ -53,8 +53,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     uint256[50 - 11] private __gap;
 
-    uint256 totalExpectedDelegatedAmount;
-
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
         _;
@@ -94,24 +92,18 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function undelegate(
         address adapter,
         address vault,
-        uint256 amount,
+        uint256 shares,
         bytes[] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
-        if (amount == 0) revert ValueZero();
+        if (shares == 0) revert ValueZero();
 
-        // check to slash & sync queue state
-        if(syncStateIfSlashed()) {
-            // emit some event that we were slashed
-            return;
-        }
-
+        uint256 amount = shares; // todo: convert shares
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
         uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
-        emit UndelegatedFrom(adapter, vault, amount, epoch);
 
-        totalExpectedDelegatedAmount -= amount;
+        emit UndelegatedFrom(adapter, vault, amount, epoch);
     }
 
     function claim(
@@ -122,23 +114,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
         withdrawalQueue.claim(adapter, epochNum, withdrawnAmount);
         emit WithdrawalClaimed(adapter, withdrawnAmount);
-    }
-
-    function syncStateIfSlashed() private returns (bool) {
-        uint256 totalDelegated = getTotalDelegated();
-        if (totalExpectedDelegatedAmount == totalDelegated) {
-            return false;
-        }
-
-        if (totalExpectedDelegatedAmount == 0 || totalExpectedDelegatedAmount < totalDelegated) {
-            totalExpectedDelegatedAmount = totalDelegated;
-            return false;
-        }
-
-        withdrawalQueue.slashCurrentQueue(totalExpectedDelegatedAmount, totalDelegated);
-        totalExpectedDelegatedAmount = totalDelegated;
-
-        return true;
     }
 
     /*//////////////////////////
