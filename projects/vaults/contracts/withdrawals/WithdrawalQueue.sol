@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import "hardhat/console.sol";
 
@@ -32,15 +34,20 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function undelegate(address adapter, uint256 amount, uint256 shares) external returns (uint256) {
+    function undelegate(address adapter, uint256 amount) external returns (uint256) {
         uint256 undelegatedEpoch = epoch;
 
+        // update withdrawal data
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         withdrawal.adapterUndelegated[adapter] += amount;
         withdrawal.totalUndelegatedAmount += amount;
-        withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
+        // update shares
+        uint256 shares = IERC4626(address(this)).convertToShares(amount);
+        withdrawal.totalUndelegatedShares += shares;
+
+        // update global data
         totalAmountUndelegated += amount;
         totalAmountToWithdraw += amount;
 

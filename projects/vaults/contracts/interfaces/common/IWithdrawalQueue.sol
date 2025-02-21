@@ -23,7 +23,7 @@ interface IWithdrawalQueue {
 
     function request(address receiver, uint256 shares) external;
 
-    function undelegate(address adapter, uint256 amount, uint256 shares) external returns (uint256);
+    function undelegate(address adapter, uint256 amount) external returns (uint256);
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external;
 

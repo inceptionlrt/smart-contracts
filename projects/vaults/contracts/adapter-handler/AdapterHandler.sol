@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "../withdrawals/WithdrawalQueue.sol";
+
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAdapterHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
@@ -92,14 +93,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function undelegate(
         address adapter,
         address vault,
-        uint256 shares,
+        uint256 amount,
         bytes[] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
         if (shares == 0) revert ValueZero();
 
-        uint256 amount = shares; // todo: convert shares
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
         uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
 
