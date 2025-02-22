@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
-import "hardhat/console.sol";
 
 contract WithdrawalQueue is IWithdrawalQueue {
     using Math for uint256;
@@ -14,7 +12,6 @@ contract WithdrawalQueue is IWithdrawalQueue {
     mapping(address => uint256[]) internal userEpoch;
 
     uint256 public epoch;
-
     uint256 public totalAmountToWithdraw;
     uint256 public totalAmountUndelegated;
     uint256 public totalAmountRedeem;
@@ -53,17 +50,21 @@ contract WithdrawalQueue is IWithdrawalQueue {
         totalAmountUndelegated += undelegatedAmount;
         totalAmountToWithdraw += undelegatedAmount;
 
-        if(claimedAmount > 0) {
+        if (claimedAmount > 0) {
             withdrawal.totalClaimedAmount += claimedAmount;
             totalAmountRedeem += claimedAmount;
             totalAmountToWithdraw += claimedAmount;
         }
 
+        _afterUndelegate(withdrawal);
+
+        return undelegatedEpoch;
+    }
+
+    function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
         if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) {
             epoch++;
         }
-
-        return undelegatedEpoch;
     }
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
@@ -77,9 +78,13 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         // update global state
         totalAmountRedeem += claimedAmount;
-        totalAmountToWithdraw -= withdrawal.adapterUndelegated[adapter] - claimedAmount;
+        totalAmountToWithdraw -= withdrawal.adapterUndelegated[adapter] - claimedAmount; // difference means slash
         totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter];
 
+        _afterClaim(withdrawal);
+    }
+
+    function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
         if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) {
             withdrawal.ableRedeem = true;
         }
