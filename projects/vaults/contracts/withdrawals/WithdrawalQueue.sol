@@ -46,6 +46,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
+        require(withdrawal.totalUndelegatedShares <= withdrawal.totalRequestedShares, "undelegates shares exceed requested");
+
         // update global data
         totalAmountUndelegated += undelegatedAmount;
         totalAmountToWithdraw += undelegatedAmount;
