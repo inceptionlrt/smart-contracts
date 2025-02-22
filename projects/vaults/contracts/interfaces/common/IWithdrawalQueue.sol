@@ -4,6 +4,10 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IWithdrawalQueue {
+    error UndelegateExceedRequested();
+    error ClaimUnknownAdapter();
+    error AdapterAlreadyClaimed();
+
     struct WithdrawalEpoch {
         bool ableRedeem;
 

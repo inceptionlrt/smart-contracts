@@ -46,7 +46,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
-        require(withdrawal.totalUndelegatedShares <= withdrawal.totalRequestedShares, "undelegates shares exceed requested");
+        require(withdrawal.totalUndelegatedShares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
 
         // update global data
         totalAmountUndelegated += undelegatedAmount;
@@ -71,8 +71,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
-        require(withdrawal.adapterUndelegated[adapter] > 0, "unknown adapter claim");
-        require(withdrawal.adapterClaimed[adapter] == 0, "adapter already claimed");
+        require(withdrawal.adapterUndelegated[adapter] > 0, ClaimUnknownAdapter());
+        require(withdrawal.adapterClaimed[adapter] == 0, AdapterAlreadyClaimed());
 
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
