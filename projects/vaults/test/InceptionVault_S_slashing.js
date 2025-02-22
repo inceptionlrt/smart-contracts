@@ -245,6 +245,12 @@ const initVault = async a => {
   return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue];
 };
 
+async function skipEpoch(symbioticVault) {
+  let epochDuration = await symbioticVault.vault.epochDuration();
+  let nextEpochStart = await symbioticVault.vault.nextEpochStart();
+  await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+}
+
 assets.forEach(function(a) {
   describe(`Inception Symbiotic Vault ${a.assetName}`, function() {
     this.timeout(150000);
@@ -334,9 +340,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // claim
-        let epochDuration = await symbioticVaults[0].vault.epochDuration();
-        let nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
@@ -391,9 +395,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // claim
-        let epochDuration = await symbioticVaults[0].vault.epochDuration();
-        let nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
@@ -436,9 +438,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // claim
-        epochDuration = await symbioticVaults[0].vault.epochDuration();
-        nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
@@ -497,9 +497,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // claim
-        let epochDuration = await symbioticVaults[0].vault.epochDuration();
-        let nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
@@ -536,9 +534,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // claim
-        epochDuration = await symbioticVaults[0].vault.epochDuration();
-        nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
@@ -634,9 +630,7 @@ assets.forEach(function(a) {
 
 
         // claim
-        let epochDuration = await symbioticVaults[0].vault.epochDuration();
-        let nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
-        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+        await skipEpoch(symbioticVaults[0]);
 
         params = abi.encode(
           ["address", "uint256"],
