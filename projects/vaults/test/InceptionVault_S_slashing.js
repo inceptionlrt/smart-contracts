@@ -20,6 +20,8 @@ BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
 
+const abi = ethers.AbiCoder.defaultAbiCoder();
+
 const assets = [
   {
     assetName: "stETH",
@@ -251,6 +253,13 @@ async function skipEpoch(symbioticVault) {
   await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
 }
 
+async function symbioticClaimParams(symbioticVault) {
+  return abi.encode(
+    ["address", "uint256"],
+    [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+  );
+}
+
 assets.forEach(function(a) {
   describe(`Inception Symbiotic Vault ${a.assetName}`, function() {
     this.timeout(150000);
@@ -259,8 +268,6 @@ assets.forEach(function(a) {
     let ratioErr, transactErr;
     let snapshot;
     let params;
-
-    const abi = ethers.AbiCoder.defaultAbiCoder();
 
     before(async function() {
       if (process.env.ASSETS) {
@@ -341,12 +348,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        let params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
@@ -396,12 +398,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        let params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
@@ -439,12 +436,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
@@ -498,12 +490,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        let params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
         // ----------------
@@ -535,12 +522,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
@@ -631,12 +613,7 @@ assets.forEach(function(a) {
 
         // claim
         await skipEpoch(symbioticVaults[0]);
-
-        params = abi.encode(
-          ["address", "uint256"],
-          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
-        );
-
+        let params = await symbioticClaimParams(symbioticVaults[0]);
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
