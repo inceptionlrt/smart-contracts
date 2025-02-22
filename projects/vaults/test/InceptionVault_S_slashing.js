@@ -67,7 +67,7 @@ const assets = [
       await helpers.setStorageAt(
         await symbioticVault.getAddress(),
         slasherAddressStorageIndex,
-        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address])
+        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address]),
       );
 
       await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
@@ -317,18 +317,20 @@ assets.forEach(function(a) {
         let shares = await iToken.balanceOf(staker.address);
         tx = await iVault.connect(staker).withdraw(shares, staker.address);
         await tx.wait();
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
         // ----------------
 
         // undelegate
-        let undelegateAmount = await withdrawalQueue.getWithdrawalUndelegateAmount(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
         tx = await iVault.connect(iVaultOperator)
-          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, undelegateAmount, emptyBytes);
+          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, withdrawalEpoch[1], emptyBytes);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
         expect(events[0].args["adapter"]).to.be.eq(symbioticAdapter.address);
-        expect(events[0].args["actualAmounts"]).to.be.eq(toWei(10)-2n);
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
+        expect(events[0].args["actualAmounts"]).to.be.eq(toWei(10));
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
         // ----------------
 
         // claim
@@ -344,7 +346,7 @@ assets.forEach(function(a) {
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
         // ----------------
 
         // redeem
@@ -353,7 +355,7 @@ assets.forEach(function(a) {
         events = receipt.logs?.filter(e => e.eventName === "Redeem");
 
         expect(events[0].args["amount"]).to.be.closeTo(toWei(10), transactErr);
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
         // ----------------
       });
 
@@ -375,11 +377,121 @@ assets.forEach(function(a) {
         // one withdraw
         tx = await iVault.connect(staker).withdraw(toWei(2), staker.address);
         await tx.wait();
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
         // ----------------
 
         // undelegate
         tx = await iVault.connect(iVaultOperator)
-          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(2) - 2n, emptyBytes);
+          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(2), emptyBytes);
+        let receipt = await tx.wait();
+        let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
+        // ----------------
+
+        // claim
+        let epochDuration = await symbioticVaults[0].vault.epochDuration();
+        let nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
+        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+
+        params = abi.encode(
+          ["address", "uint256"],
+          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        );
+
+        tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
+        await tx.wait();
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
+        // ----------------
+
+        // second withdraw
+        tx = await iVault.connect(staker2).withdraw(toWei(2), staker2.address);
+        await tx.wait();
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
+        // ----------------
+
+        // apply slash
+        let totalStake = await symbioticVaults[0].vault.totalStake();
+        await a.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+
+        let ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+        expect(ratio).to.be.closeTo(1111111111111111111n, ratioErr);
+        // ----------------
+
+        // update ratio
+        await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
+        // ----------------
+
+        // undelegate
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(1);
+        tx = await iVault.connect(iVaultOperator)
+          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, withdrawalEpoch[1], emptyBytes);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
+        // ----------------
+
+        // claim
+        epochDuration = await symbioticVaults[0].vault.epochDuration();
+        nextEpochStart = await symbioticVaults[0].vault.nextEpochStart();
+        await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+
+        params = abi.encode(
+          ["address", "uint256"],
+          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        );
+
+        tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
+        await tx.wait();
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker).redeem(staker.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(2), transactErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker2).redeem(staker2.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(1.8), transactErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
+        // ----------------
+      });
+
+      it("2 withdraw & slash after undelegate", async function() {
+        // deposit
+        let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
+        await tx.wait();
+
+        tx = await iVault.connect(staker2).deposit(toWei(5), staker2.address);
+        await tx.wait();
+        // ----------------
+
+        // delegate
+        tx = await iVault.connect(iVaultOperator)
+          .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(10), emptyBytes);
+        await tx.wait();
+        // ----------------
+
+        // one withdraw
+        tx = await iVault.connect(staker).withdraw(toWei(2), staker.address);
+        await tx.wait();
+        // ----------------
+
+        // undelegate
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        tx = await iVault.connect(iVaultOperator)
+          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, withdrawalEpoch[1], emptyBytes);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         // ----------------
@@ -403,27 +515,24 @@ assets.forEach(function(a) {
         await tx.wait();
         // ----------------
 
+        // undelegate
+        withdrawalEpoch = await withdrawalQueue.withdrawals(1);
+        tx = await iVault.connect(iVaultOperator)
+          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, withdrawalEpoch[1], emptyBytes);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+        // ----------------
+
         // apply slash
         let totalStake = await symbioticVaults[0].vault.totalStake();
         await a.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+
+        let ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+        expect(ratio).to.be.closeTo(1111111111111111111n, ratioErr);
         // ----------------
 
-        // undelegate failed
-        tx = await iVault.connect(iVaultOperator)
-          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(2), emptyBytes);
-        await tx.wait();
-
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(1111111111111111111n);
-        // ----------------
-
-        // undelegate
-        let undelegateAmount = await withdrawalQueue.getWithdrawalUndelegateAmount(1);
-        tx = await iVault.connect(iVaultOperator)
-          .undelegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, undelegateAmount, emptyBytes);
-        receipt = await tx.wait();
-        events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
-
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(1111111111111111111n);
+        // update ratio
+        await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
         // ----------------
 
         // claim
@@ -439,7 +548,7 @@ assets.forEach(function(a) {
         tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], symbioticAdapter.address, [params]);
         await tx.wait();
 
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(1111111111111111111n);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
         // ----------------
 
         // redeem
@@ -447,7 +556,7 @@ assets.forEach(function(a) {
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "Redeem");
         expect(events[0].args["amount"]).to.be.closeTo(toWei(2), transactErr);
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(1111111111111111111n);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
         // ----------------
 
         // redeem
@@ -455,7 +564,7 @@ assets.forEach(function(a) {
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "Redeem");
         expect(events[0].args["amount"]).to.be.closeTo(toWei(1.8), transactErr);
-        expect(await calculateRatio(iVault, iToken)).to.be.eq(1111111111111111111n);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1111111111111111111n, ratioErr);
         // ----------------
       });
     });
