@@ -87,6 +87,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         _asset.safeIncreaseAllowance(address(adapter), amount);
         IIBaseAdapter(adapter).delegate(vault, amount, _data);
+
         emit DelegatedTo(adapter, vault, amount);
     }
 
@@ -115,6 +116,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ) public onlyOperator whenNotPaused nonReentrant {
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
         withdrawalQueue.claim(adapter, epochNum, withdrawnAmount);
+
         emit WithdrawalClaimed(adapter, withdrawnAmount);
     }
 

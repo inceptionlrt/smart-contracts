@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-
 interface IWithdrawalQueue {
     error UndelegateExceedRequested();
     error ClaimUnknownAdapter();
@@ -37,4 +35,14 @@ interface IWithdrawalQueue {
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external;
 
     function redeem(address receiver) external returns (uint256 amount);
+
+    /*//////////////////////////
+    ////// GET functions //////
+    ////////////////////////*/
+
+    function totalAmountToWithdraw() external view returns (uint256);
+
+    function totalAmountUndelegated() external view returns (uint256);
+
+    function totalAmountRedeem() external view returns (uint256);
 }

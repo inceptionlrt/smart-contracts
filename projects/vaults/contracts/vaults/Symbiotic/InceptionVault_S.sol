@@ -183,7 +183,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert NullParams();
         if (receiver == address(0)) revert NullParams();
-
         if (targetCapacity == 0) revert InceptionOnPause();
     }
 
@@ -227,11 +226,9 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     }
 
     function redeem(address receiver) external whenNotPaused nonReentrant {
+        // redeem available withdrawals
         uint256 amount = withdrawalQueue.redeem(receiver);
-
-//        totalAmountToWithdraw -= amount;
-//        redeemReservedAmount -= amount;
-
+        // transfer to receiver
         _transferAssetTo(receiver, amount);
 
         emit Redeem(msg.sender, receiver, amount);
