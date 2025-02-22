@@ -55,6 +55,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
         if(claimedAmount > 0) {
             withdrawal.totalClaimedAmount += claimedAmount;
+            totalAmountRedeem += claimedAmount;
             totalAmountToWithdraw += claimedAmount;
         }
 
