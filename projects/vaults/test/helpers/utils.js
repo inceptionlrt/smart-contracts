@@ -33,10 +33,17 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   // await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
-const calculateRatio = async (vault, token) => {
-  const totalSupply = await token.totalSupply();
-  const totalDeposited = await vault.getTotalDeposited();
-  const totalAmountToWithdraw = await vault.totalAmountToWithdraw();
+const calculateRatio = async (vault, token, queue) => {
+  const totalDelegated = await vault.getTotalDelegated();
+  const totalAssets = await vault.totalAssets();
+  const depositBonusAmount = await vault.depositBonusAmount();
+  const pendingWithdrawals = await queue.totalAmountUndelegated();
+  const totalDeposited = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount;
+  const totalAmountToWithdraw = await queue.totalAmountToWithdraw();
+
+  let totalSupply = await token.totalSupply();
+  const withdrawalEpoch = await queue.withdrawals(await queue.epoch());
+  totalSupply += withdrawalEpoch[1];
 
   let denominator;
   if (totalDeposited < totalAmountToWithdraw) {

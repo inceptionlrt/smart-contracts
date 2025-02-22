@@ -50,7 +50,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    IWithdrawalQueue withdrawalQueue;
+    IWithdrawalQueue public withdrawalQueue;
 
     uint256[50 - 11] private __gap;
 
@@ -93,15 +93,16 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function undelegate(
         address adapter,
         address vault,
-        uint256 amount,
+        uint256 shares,
         bytes[] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
-        if (amount == 0) revert ValueZero();
+        if (shares == 0) revert ValueZero();
 
+        uint256 amount = IERC4626(address(this)).convertToAssets(shares);
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
-        uint256 epoch = withdrawalQueue.undelegate(adapter, amount);
+        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, amount);
 
         emit UndelegatedFrom(adapter, vault, amount, epoch);
     }
@@ -174,10 +175,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     function _getTargetCapacity() internal view returns (uint256) {
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
-    }
-
-    function getTotalAmountToWithdraw() public view returns (uint256) {
-        return withdrawalQueue.getTotalAmountToWithdraw();
     }
 
     /*//////////////////////////

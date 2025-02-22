@@ -10,14 +10,14 @@ import "hardhat/console.sol";
 contract WithdrawalQueue is IWithdrawalQueue {
     using Math for uint256;
 
-    mapping(uint256 => WithdrawalEpoch) internal withdrawals;
+    mapping(uint256 => WithdrawalEpoch) public withdrawals;
     mapping(address => uint256[]) internal userEpoch;
 
-    uint256 internal epoch;
+    uint256 public epoch;
 
-    uint256 internal totalAmountToWithdraw;
-    uint256 internal totalAmountUndelegated;
-    uint256 internal totalAmountRedeem;
+    uint256 public totalAmountToWithdraw;
+    uint256 public totalAmountUndelegated;
+    uint256 public totalAmountRedeem;
 
     function request(address receiver, uint256 shares) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
@@ -34,18 +34,15 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function undelegate(address adapter, uint256 amount) external returns (uint256) {
+    function undelegate(address adapter, uint256 shares, uint256 amount) external returns (uint256) {
         uint256 undelegatedEpoch = epoch;
 
         // update withdrawal data
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         withdrawal.adapterUndelegated[adapter] += amount;
         withdrawal.totalUndelegatedAmount += amount;
-        withdrawal.adaptersUndelegatedCounter++;
-
-        // update shares
-        uint256 shares = IERC4626(address(this)).convertToShares(amount);
         withdrawal.totalUndelegatedShares += shares;
+        withdrawal.adaptersUndelegatedCounter++;
 
         // update global data
         totalAmountUndelegated += amount;
@@ -61,11 +58,15 @@ contract WithdrawalQueue is IWithdrawalQueue {
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
         require(withdrawal.adapterUndelegated[adapter] > 0, "unknown adapter claim");
+        require(withdrawal.adapterClaimed[adapter] == 0, "adapter already claimed");
 
+        // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adaptersClaimedCounter++;
 
-        totalAmountToWithdraw -= claimedAmount;
+        // update global state
+        totalAmountRedeem += claimedAmount;
+        totalAmountToWithdraw -= withdrawal.adapterUndelegated[adapter] - claimedAmount;
         totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter];
 
         if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) {
