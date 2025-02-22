@@ -108,7 +108,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         return amount;
     }
 
-    function _getRedeemAmount(WithdrawalEpoch storage withdrawal, address receiver) private view returns (uint256) {
+    function _getRedeemAmount(WithdrawalEpoch storage withdrawal, address receiver) internal view returns (uint256) {
         return withdrawal.totalClaimedAmount.mulDiv(
             withdrawal.userShares[receiver],
             withdrawal.totalRequestedShares,
