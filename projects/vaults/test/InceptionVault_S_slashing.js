@@ -722,7 +722,7 @@ assets.forEach(function(a) {
         tx = await iVault.connect(staker).redeem(staker.address);
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "Redeem");
-        expect(events[0].args["amount"]).to.be.closeTo(1614954516503730780, transactErr);
+        expect(events[0].args["amount"]).to.be.closeTo(1614954516503730780n, transactErr);
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1238424970834390498n, ratioErr);
         // ----------------
 
@@ -730,7 +730,7 @@ assets.forEach(function(a) {
         tx = await iVault.connect(staker2).redeem(staker2.address);
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "Redeem");
-        expect(events[0].args["amount"]).to.be.closeTo(1614954516503730780, transactErr);
+        expect(events[0].args["amount"]).to.be.closeTo(1614954516503730780n, transactErr);
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1238424970834390498n, ratioErr);
         // ----------------
       });
