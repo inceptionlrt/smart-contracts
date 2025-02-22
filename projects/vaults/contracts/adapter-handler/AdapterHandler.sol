@@ -102,7 +102,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         uint256 amount = IERC4626(address(this)).convertToAssets(shares);
         amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
-        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, amount);
+        // todo: fix claimed amount
+        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, amount, 0);
 
         emit UndelegatedFrom(adapter, vault, amount, epoch);
     }

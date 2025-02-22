@@ -34,19 +34,29 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function undelegate(address adapter, uint256 shares, uint256 amount) external returns (uint256) {
+    function undelegate(
+        address adapter,
+        uint256 shares,
+        uint256 undelegatedAmount,
+        uint256 claimedAmount
+    ) external returns (uint256) {
         uint256 undelegatedEpoch = epoch;
 
         // update withdrawal data
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.adapterUndelegated[adapter] += amount;
-        withdrawal.totalUndelegatedAmount += amount;
+        withdrawal.adapterUndelegated[adapter] += undelegatedAmount;
+        withdrawal.totalUndelegatedAmount += undelegatedAmount;
         withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
         // update global data
-        totalAmountUndelegated += amount;
-        totalAmountToWithdraw += amount;
+        totalAmountUndelegated += undelegatedAmount;
+        totalAmountToWithdraw += undelegatedAmount;
+
+        if(claimedAmount > 0) {
+            withdrawal.totalClaimedAmount += claimedAmount;
+            totalAmountToWithdraw += claimedAmount;
+        }
 
         if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) {
             epoch++;
