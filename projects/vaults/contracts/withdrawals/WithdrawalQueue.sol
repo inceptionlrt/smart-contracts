@@ -17,6 +17,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
     uint256 public totalAmountRedeem;
 
     function request(address receiver, uint256 shares) external {
+        require(shares > 0, ValueZero());
+
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         withdrawal.userShares[receiver] += shares;
         withdrawal.totalRequestedShares += shares;
