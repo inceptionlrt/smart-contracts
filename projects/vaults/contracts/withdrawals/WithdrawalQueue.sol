@@ -37,6 +37,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
         uint256 undelegatedAmount,
         uint256 claimedAmount
     ) external returns (uint256) {
+        require(shares > 0, ValueZero());
+
         uint256 undelegatedEpoch = epoch;
 
         // update withdrawal data
@@ -73,8 +75,10 @@ contract WithdrawalQueue is IWithdrawalQueue {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
         require(withdrawal.adapterUndelegated[adapter] > 0, ClaimUnknownAdapter());
         require(withdrawal.adapterClaimed[adapter] == 0, AdapterAlreadyClaimed());
+        require(withdrawal.adapterUndelegated[adapter] >= claimedAmount, ClaimedExceedUndelegated());
 
         // update withdrawal state
+        withdrawal.adapterClaimed[adapter] += claimedAmount;
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adaptersClaimedCounter++;
 

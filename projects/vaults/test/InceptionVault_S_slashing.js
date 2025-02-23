@@ -191,6 +191,15 @@ const initVault = async a => {
   ]);
   symbioticAdapter.address = await symbioticAdapter.getAddress();
 
+  // console.log("- EigenLayer Adapter");
+  // const eigenLayerAdapterFactory = await ethers.getContractFactory("IIEigenLayerAdapter");
+  // let eigenlayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+  //   [symbioticVaults[0].vaultAddress],
+  //   a.assetAddress,
+  //   a.iVaultOperator,
+  // ]);
+  // eigenlayerAdapter.address = await eigenlayerAdapter.getAddress();
+
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
@@ -792,8 +801,8 @@ assets.forEach(function(a) {
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
         // ----------------
       });
-    });
 
+    });
   });
 });
 

@@ -5,6 +5,8 @@ interface IWithdrawalQueue {
     error UndelegateExceedRequested();
     error ClaimUnknownAdapter();
     error AdapterAlreadyClaimed();
+    error ClaimedExceedUndelegated();
+    error ValueZero();
 
     struct WithdrawalEpoch {
         bool ableRedeem;
