@@ -225,7 +225,7 @@ const initVault = async a => {
 
   console.log("- Withdrawal Queue");
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory);
+  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
 

@@ -3,10 +3,15 @@ pragma solidity ^0.8.28;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-contract WithdrawalQueue is IWithdrawalQueue {
+contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGuardUpgradeable, Ownable2StepUpgradeable {
     using Math for uint256;
+
+    address public vault;
 
     mapping(uint256 => WithdrawalEpoch) public withdrawals;
     mapping(address => uint256[]) internal userEpoch;
@@ -16,7 +21,17 @@ contract WithdrawalQueue is IWithdrawalQueue {
     uint256 public totalAmountUndelegated;
     uint256 public totalAmountRedeem;
 
-    function request(address receiver, uint256 shares) external {
+    function initialize(address _vault) external initializer {
+        require(_vault != address(0), ValueZero());
+        vault = _vault;
+    }
+
+    modifier onlyVault() {
+        require(msg.sender == vault, OnlyVaultAllowed());
+        _;
+    }
+
+    function request(address receiver, uint256 shares) external onlyVault {
         require(shares > 0, ValueZero());
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
@@ -38,7 +53,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         uint256 shares,
         uint256 undelegatedAmount,
         uint256 claimedAmount
-    ) external returns (uint256) {
+    ) external onlyVault returns (uint256) {
         require(shares > 0, ValueZero());
 
         uint256 undelegatedEpoch = epoch;
@@ -73,7 +88,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external {
+    function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external onlyVault {
         WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
         require(withdrawal.adapterUndelegated[adapter] > 0, ClaimUnknownAdapter());
         require(withdrawal.adapterClaimed[adapter] == 0, AdapterAlreadyClaimed());
@@ -98,7 +113,7 @@ contract WithdrawalQueue is IWithdrawalQueue {
         }
     }
 
-    function redeem(address receiver) external returns (uint256 amount) {
+    function redeem(address receiver) external onlyVault returns (uint256 amount) {
         for (uint256 i = 0; i < userEpoch[receiver].length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[userEpoch[receiver][i]];
             if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
