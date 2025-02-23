@@ -18,8 +18,8 @@ contract WithdrawalQueue is IWithdrawalQueue {
 
     function request(address receiver, uint256 shares) external {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.totalRequestedShares += shares;
         withdrawal.userShares[receiver] += shares;
+        withdrawal.totalRequestedShares += shares;
 
         addUserEpoch(receiver, epoch);
     }
