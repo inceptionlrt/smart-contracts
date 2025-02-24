@@ -83,7 +83,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         address vaultAddress,
         uint256 amount,
         bytes[] calldata /*_data */
-    ) external onlyTrustee whenNotPaused returns (uint256) {
+    ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (
@@ -96,7 +96,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         uint256 epoch = vault.currentEpoch() + 1;
         withdrawals[vaultAddress] = epoch;
 
-        return amount;
+        return (amount, 0);
     }
 
     function claim(

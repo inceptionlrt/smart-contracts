@@ -63,7 +63,7 @@ interface IIBaseAdapter {
         address vault,
         uint256 shares,
         bytes[] calldata _data
-    ) external returns (uint256);
+    ) external returns (uint256 undelegated, uint256 claimed);
 
     function claim(bytes[] calldata _data) external returns (uint256);
 }

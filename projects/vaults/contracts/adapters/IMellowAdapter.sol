@@ -126,11 +126,12 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         address _mellowVault,
         uint256 amount,
         bytes[] calldata /*_data */
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         uint256 balanceState = _asset.balanceOf(address(this));
         IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
+        uint256 claimed = (_asset.balanceOf(address(this)) - balanceState);
 
-        return (_asset.balanceOf(address(this)) - balanceState);
+        return (amount - claimed, claimed);
     }
 
     function claimPending() external returns (uint256) {

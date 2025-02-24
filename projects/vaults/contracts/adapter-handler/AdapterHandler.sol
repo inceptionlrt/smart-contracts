@@ -13,8 +13,6 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
@@ -102,10 +100,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (shares == 0) revert ValueZero();
 
         uint256 amount = IERC4626(address(this)).convertToAssets(shares);
-        // todo: withdraw from adapter should return undelegated and claim amounts
-        amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
-        // todo: fix claimed amount
-        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, amount, 0);
+        // undelegate adapter
+        (uint256 undelegatedAmount, uint256 claimedAmount) = IIBaseAdapter(adapter).
+            withdraw(vault, amount, _data);
+        // undelegate from queue
+        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, undelegatedAmount, claimedAmount);
 
         emit UndelegatedFrom(adapter, vault, amount, epoch);
     }
