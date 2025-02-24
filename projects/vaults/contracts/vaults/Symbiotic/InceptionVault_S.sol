@@ -228,10 +228,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function redeem(address receiver) external whenNotPaused nonReentrant {
         // redeem available withdrawals
         uint256 amount = withdrawalQueue.redeem(receiver);
-        // transfer to receiver
-        _transferAssetTo(receiver, amount);
-
-        emit Redeem(msg.sender, receiver, amount);
+        if (amount > 0) {
+            // transfer to receiver
+            _transferAssetTo(receiver, amount);
+            emit Redeem(msg.sender, receiver, amount);
+        }
     }
 
     /*/////////////////////////////////////////////
