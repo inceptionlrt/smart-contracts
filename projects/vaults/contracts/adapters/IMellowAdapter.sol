@@ -134,19 +134,19 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return (amount - claimed, claimed);
     }
 
-    function claimPending() external returns (uint256) {
-        for (uint256 i = 0; i < mellowVaults.length; i++) {
-            IMellowSymbioticVault(address(mellowVaults[i])).claim(
-                address(this),
-                address(this),
-                type(uint256).max
-            );
-        }
-    }
-
     function claim(
-        bytes[] calldata /*_data */
+        bytes[] calldata _data
     ) external override onlyTrustee returns (uint256) {
+        require(_data.length > 0, ValueZero());
+
+        (address _mellowVault) = abi.decode(_data[0], (address));
+
+        IMellowSymbioticVault(_mellowVault).claim(
+            address(this),
+            address(this),
+            type(uint256).max
+        );
+
         uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
 
