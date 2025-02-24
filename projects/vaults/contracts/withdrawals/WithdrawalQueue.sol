@@ -83,9 +83,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     }
 
     function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
-        if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) {
-            epoch++;
-        }
+        if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) epoch++;
     }
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external onlyVault {
@@ -108,9 +106,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     }
 
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) {
-            withdrawal.ableRedeem = true;
-        }
+        if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) withdrawal.ableRedeem = true;
     }
 
     function redeem(address receiver) external onlyVault returns (uint256 amount) {
