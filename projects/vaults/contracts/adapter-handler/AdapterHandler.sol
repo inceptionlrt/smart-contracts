@@ -90,23 +90,34 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     }
 
     function undelegate(
-        address adapter,
-        address vault,
-        uint256 shares,
-        bytes[] calldata _data
+        address[] calldata adapters,
+        address[] calldata vaults,
+        uint256[] calldata shares,
+        bytes[][] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        if (vault == address(0)) revert InvalidAddress();
-        if (shares == 0) revert ValueZero();
+        require(
+            adapters.length == vaults.length &&
+            vaults.length == shares.length &&
+            shares.length == _data.length,
+            ValueZero()
+        );
 
-        uint256 amount = IERC4626(address(this)).convertToAssets(shares);
-        // undelegate adapter
-        (uint256 undelegatedAmount, uint256 claimedAmount) = IIBaseAdapter(adapter).
-            withdraw(vault, amount, _data);
-        // undelegate from queue
-        uint256 epoch = withdrawalQueue.undelegate(adapter, shares, undelegatedAmount, claimedAmount);
+        for (uint256 i = 0; i < adapters.length; i++) {
+            if (!_adapters.contains(adapters[i])) revert AdapterNotFound();
+            if (vaults[i] == address(0)) revert InvalidAddress();
+            if (shares[i] == 0) revert ValueZero();
 
-        emit UndelegatedFrom(adapter, vault, amount, epoch);
+            uint256 amount = IERC4626(address(this)).convertToAssets(shares[i]);
+            // undelegate adapter
+            (uint256 undelegatedAmount, uint256 claimedAmount) = IIBaseAdapter(adapters[i]).
+                withdraw(vaults[i], amount, _data[i]);
+            // undelegate from queue
+            uint256 epoch = withdrawalQueue.undelegate(
+                adapters[i], shares[i], undelegatedAmount, claimedAmount
+            );
+
+            emit UndelegatedFrom(adapters[i], vaults[i], amount, epoch);
+        }
     }
 
     function claim(
