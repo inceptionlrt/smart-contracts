@@ -60,12 +60,13 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
 
         // update withdrawal data
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        require(withdrawal.adapterUndelegated[adapter] == 0, AdapterAlreadyUndelegated());
+        require(withdrawal.totalUndelegatedShares + shares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
+
         withdrawal.adapterUndelegated[adapter] += undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
         withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
-
-        require(withdrawal.totalUndelegatedShares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
 
         // update global data
         totalAmountUndelegated += undelegatedAmount;
