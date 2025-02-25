@@ -1298,6 +1298,77 @@ assets.forEach(function(a) {
         // ----------------
       });
     });
+
+    describe("Withdrawal queue: negative cases", async function() {
+      let customVault, withdrawalQueue;
+
+      beforeEach(async function() {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+
+        [customVault] = await ethers.getSigners();
+        const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+        withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [customVault.address]);
+        withdrawalQueue.address = await withdrawalQueue.getAddress();
+      });
+
+      it("only vault", async function() {
+        await expect(withdrawalQueue.connect(staker).request(iVault.address, toWei(1))).to.be.revertedWithCustomError(
+          withdrawalQueue, "OnlyVaultAllowed");
+
+        await expect(withdrawalQueue.connect(staker).undelegate([iVault.address], [1n], [1n], [0n])).to.be.revertedWithCustomError(
+          withdrawalQueue, "OnlyVaultAllowed");
+
+        await expect(withdrawalQueue.connect(staker).claim(iVault.address, 1, 1n)).to.be.revertedWithCustomError(
+          withdrawalQueue, "OnlyVaultAllowed");
+
+        await expect(withdrawalQueue.connect(staker).redeem(iVault.address)).to.be.revertedWithCustomError(
+          withdrawalQueue, "OnlyVaultAllowed");
+      });
+
+      it("zero value", async function() {
+        await expect(withdrawalQueue.connect(customVault).request(iVault.address, 0)).to.be.revertedWithCustomError(
+          withdrawalQueue, "ValueZero");
+
+        await expect(withdrawalQueue.connect(customVault).undelegate([iVault.address], [0], [0], [0n])).to.be.revertedWithCustomError(
+          withdrawalQueue, "ValueZero");
+      });
+
+      it("undelegate failed", async function() {
+        await expect(withdrawalQueue.connect(customVault).undelegate([iVault.address], [1n], [0], [0n])).to.be.revertedWithCustomError(
+          withdrawalQueue, "UndelegateExceedRequested");
+
+        await withdrawalQueue.connect(customVault).request(iVault.address, toWei(5));
+
+        await expect(withdrawalQueue.connect(customVault).undelegate([iVault.address], [1n], [0], [0n])).to.be.revertedWithCustomError(
+          withdrawalQueue, "UndelegateNotCompleted");
+      });
+
+      it("claim failed", async function() {
+        await expect(withdrawalQueue.connect(customVault).claim(mellowAdapter.address, 1, 1n)).to.be.revertedWithCustomError(
+          withdrawalQueue, "ClaimUnknownAdapter");
+
+        await withdrawalQueue.connect(customVault).request(staker.address, toWei(5));
+        await withdrawalQueue.connect(customVault).undelegate([mellowAdapter.address], [toWei(5)], [toWei(5)], [0n]);
+
+        await expect(withdrawalQueue.connect(customVault).claim(mellowAdapter.address, 0, toWei(6))).to.be.revertedWithCustomError(
+          withdrawalQueue, "ClaimedExceedUndelegated");
+
+        await withdrawalQueue.connect(customVault).claim(mellowAdapter.address, 0, toWei(5));
+
+        await expect(withdrawalQueue.connect(customVault).claim(mellowAdapter.address, 0, toWei(5))).to.be.revertedWithCustomError(
+          withdrawalQueue, "AdapterAlreadyClaimed");
+      });
+
+      it("initialize", async function() {
+        const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+        await expect(upgrades.deployProxy(withdrawalQueueFactory, ["0x0000000000000000000000000000000000000000"]))
+          .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
+
+        await expect(withdrawalQueue.initialize(iVault.address))
+          .to.be.revertedWith("Initializable: contract is already initialized");
+      });
+    });
   });
 });
 
