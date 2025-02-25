@@ -96,28 +96,47 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         bytes[][] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         require(
+            adapters.length > 0 &&
             adapters.length == vaults.length &&
             vaults.length == shares.length &&
             shares.length == _data.length,
             ValueZero()
         );
 
-        for (uint256 i = 0; i < adapters.length; i++) {
-            if (!_adapters.contains(adapters[i])) revert AdapterNotFound();
-            if (vaults[i] == address(0)) revert InvalidAddress();
-            if (shares[i] == 0) revert ValueZero();
+        uint256 undelegatedEpoch = withdrawalQueue.currentEpoch();
+        uint256[] memory undelegatedAmounts = new uint256[](adapters.length);
+        uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
-            uint256 amount = IERC4626(address(this)).convertToAssets(shares[i]);
-            // undelegate adapter
-            (uint256 undelegatedAmount, uint256 claimedAmount) = IIBaseAdapter(adapters[i]).
-                withdraw(vaults[i], amount, _data[i]);
-            // undelegate from queue
-            uint256 epoch = withdrawalQueue.undelegate(
-                adapters[i], shares[i], undelegatedAmount, claimedAmount
+        for (uint256 i = 0; i < adapters.length; i++) {
+            (uint256 undelegated, uint256 claimed) = _undelegate(
+                adapters[i], vaults[i], shares[i], _data[i]
             );
 
-            emit UndelegatedFrom(adapters[i], vaults[i], amount, epoch);
+            claimedAmounts[i] = claimed;
+            undelegatedAmounts[i] = undelegated;
+
+            emit UndelegatedFrom(adapters[i], vaults[i], undelegated, undelegatedEpoch);
         }
+
+        // undelegate from queue
+        withdrawalQueue.undelegate(
+            adapters, shares, undelegatedAmounts, claimedAmounts
+        );
+    }
+
+    function _undelegate(
+        address adapter,
+        address vault,
+        uint256 shares,
+        bytes[] calldata _data
+    ) internal returns (uint256 undelegated, uint256 claimed) {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        if (vault == address(0)) revert InvalidAddress();
+        if (shares == 0) revert ValueZero();
+
+        uint256 amount = IERC4626(address(this)).convertToAssets(shares);
+        // undelegate adapter
+        return IIBaseAdapter(adapter).withdraw(vault, amount, _data);
     }
 
     function claim(

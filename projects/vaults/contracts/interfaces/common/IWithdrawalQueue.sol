@@ -7,6 +7,7 @@ interface IWithdrawalQueue {
     error AdapterAlreadyUndelegated();
     error AdapterAlreadyClaimed();
     error ClaimedExceedUndelegated();
+    error UndelegateNotCompleted();
     error ValueZero();
     error OnlyVaultAllowed();
 
@@ -30,11 +31,11 @@ interface IWithdrawalQueue {
     function request(address receiver, uint256 shares) external;
 
     function undelegate(
-        address adapter,
-        uint256 shares,
-        uint256 undelegatedAmount,
-        uint256 claimedAmount
-    ) external returns (uint256);
+        address[] calldata adapter,
+        uint256[] calldata shares,
+        uint256[] calldata undelegatedAmounts,
+        uint256[] calldata claimedAmounts
+    ) external;
 
     function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external;
 
@@ -43,6 +44,8 @@ interface IWithdrawalQueue {
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
+
+    function currentEpoch() external view returns (uint256);
 
     function totalAmountToWithdraw() external view returns (uint256);
 

@@ -16,7 +16,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     mapping(uint256 => WithdrawalEpoch) public withdrawals;
     mapping(address => uint256[]) internal userEpoch;
 
-    uint256 public epoch;
+    uint256 public currentEpoch;
     uint256 public totalAmountToWithdraw;
     uint256 public totalAmountUndelegated;
     uint256 public totalAmountRedeem;
@@ -34,35 +34,53 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     function request(address receiver, uint256 shares) external onlyVault {
         require(shares > 0, ValueZero());
 
-        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        WithdrawalEpoch storage withdrawal = withdrawals[currentEpoch];
         withdrawal.userShares[receiver] += shares;
         withdrawal.totalRequestedShares += shares;
 
-        addUserEpoch(receiver, epoch);
+        addUserEpoch(receiver, currentEpoch);
     }
 
-    function addUserEpoch(address receiver, uint256 epochNum) private {
+    function addUserEpoch(address receiver, uint256 epoch) private {
         uint256[] storage receiverEpochs = userEpoch[receiver];
-        if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epochNum) {
-            receiverEpochs.push(epochNum);
+        if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
+            receiverEpochs.push(epoch);
         }
     }
 
     function undelegate(
+        address[] calldata adapters,
+        uint256[] calldata shares,
+        uint256[] calldata undelegatedAmounts,
+        uint256[] calldata claimedAmounts
+    ) external onlyVault {
+        WithdrawalEpoch storage withdrawal = withdrawals[currentEpoch];
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            _undelegate(
+                withdrawal,
+                adapters[i],
+                shares[i],
+                undelegatedAmounts[i],
+                claimedAmounts[i]
+            );
+        }
+
+        _afterUndelegate(withdrawal);
+    }
+
+    function _undelegate(
+        WithdrawalEpoch storage withdrawal,
         address adapter,
         uint256 shares,
         uint256 undelegatedAmount,
         uint256 claimedAmount
-    ) external onlyVault returns (uint256) {
+    ) internal {
         require(shares > 0, ValueZero());
-
-        uint256 undelegatedEpoch = epoch;
-
-        // update withdrawal data
-        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(withdrawal.adapterUndelegated[adapter] == 0, AdapterAlreadyUndelegated());
         require(withdrawal.totalUndelegatedShares + shares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
 
+        // update withdrawal data
         withdrawal.adapterUndelegated[adapter] += undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
         withdrawal.totalUndelegatedShares += shares;
@@ -77,18 +95,15 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
             totalAmountRedeem += claimedAmount;
             totalAmountToWithdraw += claimedAmount;
         }
-
-        _afterUndelegate(withdrawal);
-
-        return undelegatedEpoch;
     }
 
     function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
-        if (withdrawal.totalUndelegatedShares == withdrawal.totalRequestedShares) epoch++;
+        require(withdrawal.totalRequestedShares == withdrawal.totalUndelegatedShares, UndelegateNotCompleted());
+        currentEpoch++;
     }
 
-    function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external onlyVault {
-        WithdrawalEpoch storage withdrawal = withdrawals[epochNum];
+    function claim(address adapter, uint256 epoch, uint256 claimedAmount) external onlyVault {
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(withdrawal.adapterUndelegated[adapter] > 0, ClaimUnknownAdapter());
         require(withdrawal.adapterClaimed[adapter] == 0, AdapterAlreadyClaimed());
         require(withdrawal.adapterUndelegated[adapter] >= claimedAmount, ClaimedExceedUndelegated());
@@ -117,7 +132,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
                 continue;
             }
 
-            // todo: delete epoch from userEpoch ?
+            // todo: delete currentEpoch from userEpoch ?
             withdrawal.userRedeemed[receiver] = true;
             amount += _getRedeemAmount(withdrawal, receiver);
         }
