@@ -131,6 +131,10 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
         uint256 claimed = (_asset.balanceOf(address(this)) - balanceState);
 
+        if (claimed > 0) {
+            _asset.safeTransfer(_inceptionVault, claimed);
+        }
+
         return (amount - claimed, claimed);
     }
 
