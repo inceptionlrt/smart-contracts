@@ -77,7 +77,6 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         uint256 claimedAmount
     ) internal {
         require(shares > 0, ValueZero());
-        require(withdrawal.adapterUndelegated[adapter] == 0, AdapterAlreadyUndelegated());
         require(withdrawal.totalUndelegatedShares + shares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
 
         // update withdrawal data

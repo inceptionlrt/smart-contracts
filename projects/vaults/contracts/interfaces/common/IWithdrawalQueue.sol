@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 interface IWithdrawalQueue {
     error UndelegateExceedRequested();
     error ClaimUnknownAdapter();
-    error AdapterAlreadyUndelegated();
     error AdapterAlreadyClaimed();
     error ClaimedExceedUndelegated();
     error UndelegateNotCompleted();
