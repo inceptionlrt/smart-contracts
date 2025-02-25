@@ -328,7 +328,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function getPendingWithdrawalOf(
         address claimer
     ) external view returns (uint256) {
-        return _claimerWithdrawals[claimer].amount;
+        return withdrawalQueue.getPendingWithdrawalOf(claimer);
     }
 
     /** @dev See {IERC20Metadata-decimals}. */

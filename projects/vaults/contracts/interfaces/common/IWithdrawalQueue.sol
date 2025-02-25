@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 interface IWithdrawalQueue {
     error UndelegateExceedRequested();
     error ClaimUnknownAdapter();
+    error AdapterVaultAlreadyUndelegated();
     error AdapterAlreadyClaimed();
     error ClaimedExceedUndelegated();
     error UndelegateNotCompleted();
@@ -20,8 +21,8 @@ interface IWithdrawalQueue {
 
         mapping(address => bool) userRedeemed;
         mapping(address => uint256) userShares;
-        mapping(address => uint256) adapterUndelegated;
-        mapping(address => uint256) adapterClaimed;
+        mapping(address => mapping(address => uint256)) adapterUndelegated;
+        mapping(address => mapping(address => uint256)) adapterClaimed;
 
         uint256 adaptersUndelegatedCounter;
         uint256 adaptersClaimedCounter;
@@ -30,13 +31,14 @@ interface IWithdrawalQueue {
     function request(address receiver, uint256 shares) external;
 
     function undelegate(
-        address[] calldata adapter,
+        address[] calldata adapters,
+        address[] calldata vaults,
         uint256[] calldata shares,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external;
 
-    function claim(address adapter, uint256 epochNum, uint256 claimedAmount) external;
+    function claim(uint256 epochNum, address adapter, address vault, uint256 claimedAmount) external;
 
     function redeem(address receiver) external returns (uint256 amount);
 
@@ -51,4 +53,6 @@ interface IWithdrawalQueue {
     function totalAmountUndelegated() external view returns (uint256);
 
     function totalAmountRedeem() external view returns (uint256);
+
+    function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount);
 }

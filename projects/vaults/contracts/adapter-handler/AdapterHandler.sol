@@ -120,7 +120,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         // undelegate from queue
         withdrawalQueue.undelegate(
-            adapters, shares, undelegatedAmounts, claimedAmounts
+            adapters, vaults, shares, undelegatedAmounts, claimedAmounts
         );
     }
 
@@ -142,10 +142,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function claim(
         uint256 epochNum,
         address adapter,
+        address vault,
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
-        withdrawalQueue.claim(adapter, epochNum, withdrawnAmount);
+        withdrawalQueue.claim(epochNum, adapter, vault, withdrawnAmount);
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
     }
