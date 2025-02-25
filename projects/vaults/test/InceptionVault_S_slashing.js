@@ -356,7 +356,6 @@ assets.forEach(function(a) {
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
-
         expect(events[0].args["adapter"]).to.be.eq(symbioticAdapter.address);
         expect(events[0].args["actualAmounts"]).to.be.eq(toWei(10));
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.eq(toWei(1));
