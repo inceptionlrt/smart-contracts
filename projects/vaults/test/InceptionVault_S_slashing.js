@@ -1245,6 +1245,58 @@ assets.forEach(function(a) {
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1053370378591850307n, ratioErr);
         // ----------------
       });
+
+      it("partially undelegate from mellow", async function() {
+        // deposit
+        let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
+        await tx.wait();
+        // ----------------
+
+        // delegate
+        tx = await iVault.connect(iVaultOperator)
+          .delegate(mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(10), emptyBytes);
+        await tx.wait();
+        // ----------------
+
+        // one withdraw
+        tx = await iVault.connect(staker).withdraw(toWei(5), staker.address);
+        await tx.wait();
+        // ----------------
+
+        await a.addRewardsMellowVault(toWei(5), mellowVaults[0].vaultAddress);
+
+        // undelegate
+        tx = await iVault.connect(iVaultOperator)
+          .undelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)], [emptyBytes]);
+        let receipt = await tx.wait();
+        let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+        expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(4187799577779380601n);
+        expect(await withdrawalQueue.totalAmountToWithdraw()).to.be.eq(toWei(5));
+        expect(events[0].args["actualAmounts"]).to.be.eq(812200422220619399n);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999644904143841353n, ratioErr);
+        // ----------------
+
+        // claim
+        await skipEpoch(symbioticVaults[0]);
+        params = await mellowClaimParams(mellowVaults[0]);
+        tx = await iVault.connect(iVaultOperator).claim(events[0].args["epoch"], mellowAdapter.address, [params]);
+        await tx.wait();
+
+        expect(await withdrawalQueue.totalAmountRedeem()).to.be.closeTo(toWei(5), transactErr);
+        expect(await withdrawalQueue.totalAmountToWithdraw()).to.be.closeTo(toWei(5), transactErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999644904143841353n, ratioErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker).redeem(staker.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(5), transactErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999644904143841353n, ratioErr);
+        // ----------------
+      });
     });
   });
 });
