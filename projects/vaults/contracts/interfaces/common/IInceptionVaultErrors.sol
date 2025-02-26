@@ -44,8 +44,6 @@ interface IInceptionVaultErrors {
 
     error IsNotAbleToRedeem();
 
-    error EpochsMismatch();
-
     error LowerMinAmount(uint256 minAmount);
 
     error ZeroFlashWithdrawFee();

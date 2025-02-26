@@ -51,9 +51,8 @@ contract IMellowRestaker is
     uint256 public depositSlippage; // BasisPoints 10,000 = 100%
     uint256 public withdrawSlippage;
 
-    modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager)
-            revert NotVaultOrTrusteeManager();
+    modifier onlyVault() {
+        if (msg.sender != _vault) revert NotVault();
         _;
     }
 
@@ -66,7 +65,6 @@ contract IMellowRestaker is
         IMellowDepositWrapper[] memory _mellowDepositWrapper,
         IMellowVault[] memory _mellowVault,
         IERC20 asset,
-        address trusteeManager,
         address vault
     ) public initializer {
         __Pausable_init();
@@ -88,7 +86,6 @@ contract IMellowRestaker is
             mellowVaults.push(_mellowVault[i]);
         }
         _asset = asset;
-        _trusteeManager = trusteeManager;
         _vault = vault;
 
         requestDeadline = 90 days;
@@ -100,12 +97,12 @@ contract IMellowRestaker is
         uint256 amount,
         uint256 deadline,
         address mellowVault
-    ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
+    ) external onlyVault whenNotPaused returns (uint256 lpAmount) {
         IMellowDepositWrapper wrapper = mellowDepositWrappers[mellowVault];
         if (address(wrapper) == address(0)) revert InactiveWrapper();
         uint256 balanceState = _asset.balanceOf(address(this));
         // transfer from the vault
-        _asset.safeTransferFrom(msg.sender, address(this), amount);
+        _asset.safeTransferFrom(_vault, address(this), amount);
         // deposit the asset to the appropriate strategy
         _asset.safeIncreaseAllowance(address(wrapper), amount);
         uint256 minAmount = amountToLpAmount(amount, IMellowVault(mellowVault));
@@ -124,13 +121,13 @@ contract IMellowRestaker is
 
     function delegate(uint256 amount, uint256 deadline)
         external
-        onlyTrustee
+        onlyVault
         whenNotPaused
         returns (uint256 tokenAmount, uint256 lpAmount)
     {
         uint256 allocationsTotal = totalAllocations;
         uint256 balanceState = _asset.balanceOf(address(this));
-        _asset.safeTransferFrom(msg.sender, address(this), amount);
+        _asset.safeTransferFrom(_vault, address(this), amount);
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             uint256 allocation = allocations[address(mellowVaults[i])];
@@ -165,7 +162,7 @@ contract IMellowRestaker is
         uint256 amount,
         uint256 deadline,
         bool closePrevious
-    ) external override onlyTrustee whenNotPaused returns (uint256) {
+    ) external override onlyVault whenNotPaused returns (uint256) {
         if (address(mellowDepositWrappers[_mellowVault]) == address(0))
             revert InvalidVault();
         IMellowVault mellowVault = IMellowVault(_mellowVault);
@@ -227,7 +224,7 @@ contract IMellowRestaker is
 
     function claimMellowWithdrawalCallback()
         external
-        onlyTrustee
+        onlyVault
         returns (uint256)
     {
         uint256 amount = _asset.balanceOf(address(this));
@@ -295,15 +292,7 @@ contract IMellowRestaker is
         onlyOwner
     {
         if (mellowVault == address(0)) revert ZeroAddress();
-
-        bool exists;
-        for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i]) && address(mellowDepositWrappers[address(mellowVaults[i])]) != address(0)) {
-                exists = true;
-            }
-        }
-
-        if (!exists) revert InvalidVault();
+        if (address(mellowDepositWrappers[mellowVault]) == address(0)) revert InvalidVault();
 
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
@@ -468,11 +457,6 @@ contract IMellowRestaker is
         depositSlippage = _depositSlippage;
         withdrawSlippage = _withdrawSlippage;
         emit NewSlippages(_depositSlippage, _withdrawSlippage);
-    }
-
-    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-        _trusteeManager = _newTrusteeManager;
     }
 
     function pause() external onlyOwner {

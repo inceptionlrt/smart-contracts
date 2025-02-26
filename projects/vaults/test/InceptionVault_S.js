@@ -172,7 +172,6 @@ const initVault = async a => {
     [mellowVaults[0].vaultAddress],
     a.assetAddress,
     a.iVaultOperator,
-    a.iVaultOperator,
   ]);
   mellowRestaker.address = await mellowRestaker.getAddress();
 
@@ -182,7 +181,6 @@ const initVault = async a => {
     [symbioticVaults[0].vaultAddress],
     a.iVaultOperator,
     a.assetAddress,
-    a.iVaultOperator,
   ]);
   symbioticRestaker.address = await symbioticRestaker.getAddress();
 
@@ -1348,7 +1346,7 @@ assets.forEach(function (a) {
         let time = await helpers.time.latest();
         await expect(
           mellowRestaker.connect(staker).delegateMellow(randomBI(9), time + 1, mellowVaults[0].vaultAddress),
-        ).to.revertedWithCustomError(mellowRestaker, "NotVaultOrTrusteeManager");
+        ).to.revertedWithCustomError(mellowRestaker, "NotVault");
       });
 
       it("delegateMellow reverts when called by not a trustee", async function () {
@@ -1357,7 +1355,7 @@ assets.forEach(function (a) {
         let time = await helpers.time.latest();
         await expect(
           mellowRestaker.connect(staker).delegateMellow(randomBI(9), time + 1, mellowVaults[0].vaultAddress),
-        ).to.revertedWithCustomError(mellowRestaker, "NotVaultOrTrusteeManager");
+        ).to.revertedWithCustomError(mellowRestaker, "NotVault");
       });
 
       it("delegate reverts when called by not a trustee", async function () {
@@ -1368,7 +1366,7 @@ assets.forEach(function (a) {
         let time = await helpers.time.latest();
         await expect(
           mellowRestaker.connect(staker).delegate(await iVault.getFreeBalance(), time + 1000),
-        ).to.revertedWithCustomError(mellowRestaker, "NotVaultOrTrusteeManager");
+        ).to.revertedWithCustomError(mellowRestaker, "NotVault");
       });
 
       it("withdrawMellow reverts when called by not a trustee", async function () {
@@ -1379,7 +1377,7 @@ assets.forEach(function (a) {
 
         await expect(
           mellowRestaker.connect(staker).withdrawMellow(mellowVaults[0].vaultAddress, delegated, 1296000, true),
-        ).to.revertedWithCustomError(mellowRestaker, "NotVaultOrTrusteeManager");
+        ).to.revertedWithCustomError(mellowRestaker, "NotVault");
       });
 
       it("claimMellowWithdrawalCallback reverts when called by not a trustee", async function () {
@@ -1387,7 +1385,7 @@ assets.forEach(function (a) {
 
         await expect(mellowRestaker.connect(staker).claimMellowWithdrawalCallback()).to.revertedWithCustomError(
           mellowRestaker,
-          "NotVaultOrTrusteeManager",
+          "NotVault",
         );
       });
 
@@ -1470,27 +1468,27 @@ assets.forEach(function (a) {
         );
       });
 
-      it("setTrusteeManager(): only owner can", async function () {
-        const prevValue = iVaultOperator.address;
-        const newValue = staker.address;
+      // it("setTrusteeManager(): only owner can", async function () {
+      //   const prevValue = iVaultOperator.address;
+      //   const newValue = staker.address;
 
-        await expect(mellowRestaker.setTrusteeManager(newValue))
-          .to.emit(mellowRestaker, "TrusteeManagerSet")
-          .withArgs(prevValue, newValue);
+      //   await expect(mellowRestaker.setTrusteeManager(newValue))
+      //     .to.emit(mellowRestaker, "TrusteeManagerSet")
+      //     .withArgs(prevValue, newValue);
 
-        await iVault.setTargetFlashCapacity(1n);
-        await iVault.connect(staker).deposit(randomBI(19), staker.address);
-        const delegated = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, delegated, 1296000);
+      //   await iVault.setTargetFlashCapacity(1n);
+      //   await iVault.connect(staker).deposit(randomBI(19), staker.address);
+      //   const delegated = await iVault.getFreeBalance();
+      //   await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, delegated, 1296000);
 
-        await mellowRestaker.connect(staker).withdrawMellow(mellowVaults[0].vaultAddress, delegated, 1296000, true);
-      });
+      //   await mellowRestaker.connect(staker).withdrawMellow(mellowVaults[0].vaultAddress, delegated, 1296000, true);
+      // });
 
-      it("setTrusteeManager(): reverts when caller is not an owner", async function () {
-        await expect(mellowRestaker.connect(staker).setTrusteeManager(staker.address)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
-        );
-      });
+      // it("setTrusteeManager(): reverts when caller is not an owner", async function () {
+      //   await expect(mellowRestaker.connect(staker).setTrusteeManager(staker.address)).to.be.revertedWith(
+      //     "Ownable: caller is not the owner",
+      //   );
+      // });
 
       it("pause(): reverts when caller is not an owner", async function () {
         await expect(mellowRestaker.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");

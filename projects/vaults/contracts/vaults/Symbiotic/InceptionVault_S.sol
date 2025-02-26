@@ -311,6 +311,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
+        uint256 withdrawalsBuffer;
         for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
             Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
@@ -321,10 +322,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            withdrawals[receiver]--;
+            withdrawalsBuffer++;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
+
+        withdrawals[receiver] -= withdrawalsBuffer;
 
         // let's update the lowest epoch associated with the claimer
         genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
@@ -432,18 +435,18 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     {
         // get the general request
         uint256 index;
+        uint256 rEpoch = recentEpoch[claimer];
 
         uint256[] memory availableWithdrawals;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
         if (genRequest.amount == 0) return (false, availableWithdrawals);
+        if (rEpoch < genRequest.epoch) return (false, availableWithdrawals);
 
         availableWithdrawals = new uint256[](
             withdrawals[claimer]
         );
-
-        uint256 rEpoch = recentEpoch[claimer];
-        if (rEpoch < epoch) rEpoch++;
-        if (rEpoch < genRequest.epoch) revert EpochsMismatch();
+        
+        rEpoch = rEpoch >= epoch ? epoch : ++rEpoch;
 
         for (uint256 i = genRequest.epoch; i < rEpoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {

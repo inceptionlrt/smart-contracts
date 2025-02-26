@@ -16,6 +16,8 @@ interface IIBaseRestaker {
 
     error NullParams();
 
+    error NotVault();
+
     error NotVaultOrTrusteeManager();
 
     error LengthMismatch();

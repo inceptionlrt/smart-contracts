@@ -37,8 +37,8 @@ contract ISymbioticRestaker is
     /// @dev symbioticVault => withdrawal epoch
     mapping(address => uint256) public withdrawals;
 
-    modifier onlyTrustee() {
-        if (msg.sender != _vault && msg.sender != _trusteeManager) revert NotVaultOrTrusteeManager();
+    modifier onlyVault() {
+        if (msg.sender != _vault && msg.sender != owner()) revert NotVault();
         _;
     }
 
@@ -50,8 +50,7 @@ contract ISymbioticRestaker is
     function initialize(
         address[] memory vaults,
         address vault,
-        IERC20 asset,
-        address trusteeManager
+        IERC20 asset
     ) public initializer {
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -67,25 +66,23 @@ contract ISymbioticRestaker is
 
         _asset = asset;
         _vault = vault;
-
-        _trusteeManager = trusteeManager;
     }
 
     function delegate(address vaultAddress, uint256 amount)
         external
-        onlyTrustee
+        onlyVault
         whenNotPaused
         returns (uint256 depositedAmount, uint256 mintedShares)
     {
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
-        _asset.safeTransferFrom(msg.sender, address(this), amount);
+        _asset.safeTransferFrom(_vault, address(this), amount);
         _asset.safeIncreaseAllowance(vaultAddress, amount);
         return IVault(vaultAddress).deposit(address(this), amount);
     }
 
     function withdraw(address vaultAddress, uint256 amount)
         external
-        onlyTrustee
+        onlyVault
         whenNotPaused
         returns (uint256)
     {
@@ -103,7 +100,7 @@ contract ISymbioticRestaker is
 
     function claim(address vaultAddress, uint256 sEpoch)
         external
-        onlyTrustee
+        onlyVault
         whenNotPaused
         returns (uint256)
     {
@@ -184,12 +181,6 @@ contract ISymbioticRestaker is
         if (!Address.isContract(iVault)) revert NotContract();
         emit VaultSet(_vault, iVault);
         _vault = iVault;
-    }
-
-    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
-        if (_newTrusteeManager == address(0)) revert ZeroAddress();
-        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
-        _trusteeManager = _newTrusteeManager;
     }
 
     function pause() external onlyOwner {
