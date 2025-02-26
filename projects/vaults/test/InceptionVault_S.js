@@ -302,6 +302,8 @@ assets.forEach(function (a) {
         expect(await iVault.getTotalDelegated()).to.be.eq(0n);
         expect(await iVault.getFlashCapacity()).to.be.eq(0n);
         expect(await iVault.getFreeBalance()).to.be.eq(0n);
+        expect((await symbioticAdapter.getAllVaults())[0]).to.be.eq(symbioticVaults[0].vaultAddress);
+        expect(await symbioticAdapter.isVaultSupported(symbioticVaults[0].vaultAddress)).to.be.eq(true);
       });
 
       it("User can deposit to iVault", async function () {
@@ -363,15 +365,22 @@ assets.forEach(function (a) {
       });
 
       it("Add new symbioticVault", async function () {
+        await expect(symbioticAdapter.addVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
+        await expect(symbioticAdapter.addVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
         await expect(symbioticAdapter.addVault(symbioticVaults[1].vaultAddress))
           .to.emit(symbioticAdapter, "VaultAdded")
           .withArgs(symbioticVaults[1].vaultAddress);
+        await expect(symbioticAdapter.addVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(symbioticAdapter, "AlreadyAdded");
       });
 
       it("Delegate all to symbioticVault#2", async function () {
         const amount = await iVault.getFreeBalance();
         expect(amount).to.be.gt(0n);
         const totalAssetsBefore = await iVault.totalAssets();
+
+        await expect(iVault
+        .connect(iVaultOperator)
+        .delegate(await symbioticAdapter.getAddress(), await iVaultOperator.getAddress(), amount, emptyBytes)).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
 
         await iVault
           .connect(iVaultOperator)
@@ -456,6 +465,9 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).eq(calculatedRatio);
       });
 
+      let symbioticVaultEpoch1;
+      let symbioticVaultEpoch2;
+
       it("Undelegate from Symbiotic", async function () {
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
@@ -470,10 +482,11 @@ assets.forEach(function (a) {
         await iVault
           .connect(iVaultOperator)
           .undelegate(await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount - amount / 2n, emptyBytes);
-        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2, emptyBytes);
+        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2 / 2n, emptyBytes);
+        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2 - (amount2 / 2n), emptyBytes);
 
-        symbioticVaultEpoch1 = symbioticVaults[0].vault.currentEpoch() + 1n;
-        symbioticVaultEpoch2 = symbioticVaults[1].vault.currentEpoch() + 1n;
+        symbioticVaultEpoch1 = await symbioticVaults[0].vault.currentEpoch() + 1n;
+        symbioticVaultEpoch2 = await symbioticVaults[1].vault.currentEpoch() + 1n;
 
         const totalAssetsAfter = await iVault.totalAssets();
         const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -509,7 +522,12 @@ assets.forEach(function (a) {
 
         console.log(`maxNextEpochStart: ${maxNextEpochStart}`);
 
+        expect(await symbioticAdapter.withdrawals(symbioticVaults[0].vaultAddress)).to.be.eq(symbioticVaultEpoch1);
+        expect(await symbioticAdapter.withdrawals(symbioticVaults[1].vaultAddress)).to.be.eq(symbioticVaultEpoch2);
+
         await setBlockTimestamp(Number(maxNextEpochStart + maxEpochDuration + 1n));
+
+        await expect(iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, 1n, emptyBytes)).to.be.revertedWithCustomError(symbioticAdapter, "WithdrawalInProgress");
 
         console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
 
@@ -536,8 +554,28 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
         const adapterBalanceBefore = await asset.balanceOf(symbioticAdapter.address);
 
-        // filledBytes = "0x000000000000000000000000" + symbioticVaults[0].vaultAddress +
+        // Vault 1
+        params = abi.encode(
+          ["address", "uint256"],
+          [await iVaultOperator.getAddress(), (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        );
 
+        await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
+        
+        params = abi.encode(
+          ["address", "uint256"],
+          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch())],
+        );
+
+        await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "InvalidEpoch");
+        
+        // params = abi.encode(
+        //   ["address", "uint256"],
+        //   [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 2n],
+        // );
+
+        // await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "AlreadyClaimed");
+        
         params = abi.encode(
           ["address", "uint256"],
           [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
@@ -545,6 +583,14 @@ assets.forEach(function (a) {
 
         await iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params]);
 
+        params = abi.encode(
+          ["address", "uint256"],
+          [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        );
+
+        await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "NothingToClaim");
+        
+        // Vault 2
         params = abi.encode(
           ["address", "uint256"],
           [symbioticVaults[1].vaultAddress, (await symbioticVaults[1].vault.currentEpoch()) - 1n],
@@ -557,6 +603,15 @@ assets.forEach(function (a) {
 
         expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsSymbiotic, transactErr);
         expect(adapterBalanceBefore).to.be.closeTo(adapterBalanceAfter, transactErr);
+      });
+
+      it("Remove symbioticVault", async function () {
+        await expect(symbioticAdapter.removeVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
+        await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
+        await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+          .to.emit(symbioticAdapter, "VaultRemoved")
+          .withArgs(symbioticVaults[1].vaultAddress);
+        await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(symbioticAdapter, "NotAdded");
       });
 
       it("Staker is able to redeem", async function () {

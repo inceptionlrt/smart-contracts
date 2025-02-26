@@ -25,6 +25,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
+    uint256 internal _pendingShares;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -61,11 +62,11 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         uint256 amount,
         bytes[] calldata _data
     ) external override onlyTrustee returns (uint256) {
-        /// depositIntoStrategy
+        // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
-            IWStethInterface(address(_asset)).unwrap(amount);
+            amount = IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
             return
                 _strategyManager.depositIntoStrategy(
@@ -126,7 +127,9 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             _delegationManager.cumulativeWithdrawalsQueued(withdrawer)
         );
 
-        return _strategy.sharesToUnderlying(shares);
+        _pendingShares += shares;
+
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.sharesToUnderlying(shares));
     }
 
     function claim(
@@ -162,16 +165,18 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         // send tokens to the vault
         _asset.safeTransfer(_inceptionVault, wrapped);
 
+        _pendingShares -= withdrawals.shares[0];
+
         return wrapped;
     }
 
     function pendingWithdrawalAmount()
         public
-        pure
+        view
         override
         returns (uint256 total)
     {
-        return 0;
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
     }
 
     function inactiveBalance() public view override returns (uint256) {
@@ -181,7 +186,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     function getDeposited(
         address /*operatorAddress*/
     ) external view override returns (uint256) {
-        return _strategy.userUnderlyingView(address(this));
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
     }
 
     function getDepositedShares() external view returns (uint256) {
@@ -189,7 +194,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     function getTotalDeposited() external view override returns (uint256) {
-        return _strategy.userUnderlyingView(address(this));
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
     }
 
     function getOperatorAddress() public view returns (address) {
