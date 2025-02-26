@@ -159,13 +159,37 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         uint256[] memory epochs = userEpoch[receiver];
         for (uint256 i = 0; i < epochs.length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (withdrawal.ableRedeem && withdrawal.userRedeemed[receiver]) {
+            if (withdrawal.userRedeemed[receiver]) {
                 continue;
             }
 
-            amount += _getRedeemAmount(withdrawal, receiver);
+            if (withdrawal.ableRedeem) {
+                amount += _getRedeemAmount(withdrawal, receiver);
+            } else {
+                amount += IERC4626(vault).convertToAssets(withdrawal.userShares[receiver]);
+            }
         }
 
         return amount;
+    }
+
+    function ableToRedeem(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes) {
+        uint256 index;
+
+        uint256[] memory epochs = userEpoch[claimer];
+        withdrawalIndexes = new uint256[](epochs.length);
+
+        for (uint256 i = 0; i < epochs.length; i++) {
+            WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
+            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[claimer]) {
+                continue;
+            }
+
+            able = true;
+            withdrawalIndexes[index] = i;
+            ++index;
+        }
+
+        return (able, withdrawalIndexes);
     }
 }

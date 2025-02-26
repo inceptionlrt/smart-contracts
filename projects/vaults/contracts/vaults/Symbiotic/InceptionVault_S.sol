@@ -321,6 +321,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ////// Factory functions //////
     ////////////////////////////*/
 
+    function isAbleToRedeem(
+        address claimer
+    ) public view returns (bool, uint256[] memory) {
+        return withdrawalQueue.ableToRedeem(claimer);
+    }
+
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }

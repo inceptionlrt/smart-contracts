@@ -30,12 +30,12 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /// @dev represents the pending amount to be redeemed by claimers,
     /// @notice + amount to undelegate from Mellow
-    uint256 public totalAmountToWithdraw;
+    uint256 public __deprecated_totalAmountToWithdraw;
 
-    Withdrawal[] public claimerWithdrawalsQueue;
+    Withdrawal[] public __deprecated_claimerWithdrawalsQueue;
 
     /// @dev heap reserved for the claimers
-    uint256 public redeemReservedAmount;
+    uint256 public __deprecated_redeemReservedAmount;
 
     uint256 public depositBonusAmount;
 
@@ -202,13 +202,21 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 _assets = totalAssets();
-        uint256 _sum = redeemReservedAmount + depositBonusAmount;
+        uint256 _sum = withdrawalQueue.totalAmountRedeem() + depositBonusAmount;
         if (_sum > _assets) return 0;
         else return _assets - _sum;
     }
 
     function _getTargetCapacity() internal view returns (uint256) {
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
+    }
+
+    function totalAmountToWithdraw() public view returns (uint256) {
+        return withdrawalQueue.totalAmountToWithdraw();
+    }
+
+    function redeemReservedAmount() public view returns (uint256) {
+        return withdrawalQueue.totalAmountRedeem();
     }
 
     /*//////////////////////////
