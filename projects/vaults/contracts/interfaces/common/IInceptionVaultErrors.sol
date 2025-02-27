@@ -44,7 +44,11 @@ interface IInceptionVaultErrors {
 
     error IsNotAbleToRedeem();
 
+    error LowerThanMinOut(uint256 minOut);
+
     error LowerMinAmount(uint256 minAmount);
+
+    error MaxGapReached();
 
     error ZeroFlashWithdrawFee();
 
