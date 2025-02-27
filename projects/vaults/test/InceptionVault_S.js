@@ -3220,6 +3220,7 @@ assets.forEach(function (a) {
         const ratioBefore = await iVault.ratio();
         console.log(`Ratio before:\t${ratioBefore.format()}`);
 
+        await iVault.setMaxGap(100);
         const count = 100;
         const amount = await iVault.withdrawMinAmount();
         for (let i = 0; i < count; i++) {
