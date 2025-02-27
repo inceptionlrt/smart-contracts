@@ -190,4 +190,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
         emit VaultRemoved(vaultAddress);
     }
+
+    function getAllVaults() external view returns (address[] memory vaults) {
+        vaults = new address[](_symbioticVaults.length());
+        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
+            vaults[i] = _symbioticVaults.at(i);
+    }
 }
