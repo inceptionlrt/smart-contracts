@@ -239,7 +239,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         __beforeWithdraw(receiver, shares);
         assets = convertToAssets(shares);
         uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+        (assets, fee) = _flashWithdraw(shares, receiver, owner, 0);
 
         emit Withdraw(owner, receiver, owner, assets, shares);
         emit WithdrawalFee(fee);
@@ -293,14 +293,16 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @param iShares is measured in Inception token(shares)
     function flashWithdraw(
         uint256 iShares,
-        address receiver
+        address receiver,
+        uint256 minOut
     ) external whenNotPaused nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
             iShares,
             receiver,
-            claimer
+            claimer,
+            minOut
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
@@ -308,7 +310,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function _flashWithdraw(
         uint256 iShares,
         address receiver,
-        address owner
+        address owner,
+        uint256 minOut
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
@@ -326,6 +329,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
