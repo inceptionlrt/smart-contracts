@@ -13,7 +13,7 @@ import "hardhat/console.sol";
 contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGuardUpgradeable, Ownable2StepUpgradeable {
     using Math for uint256;
 
-    address public vault;
+    address public vaultOwner;
 
     mapping(uint256 => WithdrawalEpoch) public withdrawals;
     mapping(address => uint256[]) internal userEpoch;
@@ -23,13 +23,15 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     uint256 public totalAmountUndelegated;
     uint256 public totalAmountRedeem;
 
-    function initialize(address _vault) external initializer {
+    function initialize(
+        address _vault
+    ) external initializer {
         require(_vault != address(0), ValueZero());
-        vault = _vault;
+        vaultOwner = _vault;
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, OnlyVaultAllowed());
+        require(msg.sender == vaultOwner, OnlyVaultAllowed());
         _;
     }
 
@@ -51,13 +53,15 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     }
 
     function undelegate(
+        uint256 epoch,
         address[] calldata adapters,
         address[] calldata vaults,
         uint256[] calldata shares,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
-        WithdrawalEpoch storage withdrawal = withdrawals[currentEpoch];
+        require(epoch == currentEpoch);
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
 
         for (uint256 i = 0; i < adapters.length; i++) {
             _undelegate(
@@ -71,6 +75,15 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         }
 
         _afterUndelegate(withdrawal);
+    }
+
+    function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external onlyVault {
+        totalAmountToWithdraw += undelegatedAmount;
+        totalAmountUndelegated += undelegatedAmount;
+
+        if (claimedAmount > 0) {
+            totalAmountToWithdraw += claimedAmount;
+        }
     }
 
     function _undelegate(
@@ -126,6 +139,10 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         _afterClaim(withdrawal);
     }
 
+    function claim(uint256 claimedAmount) external onlyVault {
+        totalAmountUndelegated -= claimedAmount;
+    }
+
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
         if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) withdrawal.ableRedeem = true;
     }
@@ -166,7 +183,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
             if (withdrawal.ableRedeem) {
                 amount += _getRedeemAmount(withdrawal, receiver);
             } else {
-                amount += IERC4626(vault).convertToAssets(withdrawal.userShares[receiver]);
+                amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
             }
         }
 

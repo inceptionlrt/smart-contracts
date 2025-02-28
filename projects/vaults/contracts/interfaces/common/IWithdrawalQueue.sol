@@ -31,6 +31,7 @@ interface IWithdrawalQueue {
     function request(address receiver, uint256 shares) external;
 
     function undelegate(
+        uint256 epoch,
         address[] calldata adapters,
         address[] calldata vaults,
         uint256[] calldata shares,
@@ -38,7 +39,11 @@ interface IWithdrawalQueue {
         uint256[] calldata claimedAmounts
     ) external;
 
+    function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external;
+
     function claim(uint256 epochNum, address adapter, address vault, uint256 claimedAmount) external;
+
+    function claim(uint256 claimedAmount) external;
 
     function redeem(address receiver) external returns (uint256 amount);
 

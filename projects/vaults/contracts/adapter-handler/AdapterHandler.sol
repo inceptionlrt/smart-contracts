@@ -13,6 +13,8 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
@@ -120,8 +122,23 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         // undelegate from queue
         withdrawalQueue.undelegate(
-            adapters, vaults, shares, undelegatedAmounts, claimedAmounts
+            undelegatedEpoch, adapters, vaults, shares, undelegatedAmounts, claimedAmounts
         );
+    }
+
+    function undelegateVault(
+        address adapter,
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external whenNotPaused nonReentrant onlyOperator {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        if (vault == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ValueZero();
+        // undelegate adapter
+        (uint256 undelegated, uint256 claimed) = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        // undelegate from queue
+        withdrawalQueue.undelegate(undelegated, claimed);
     }
 
     function _undelegate(
@@ -145,8 +162,22 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         address vault,
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
         withdrawalQueue.claim(epochNum, adapter, vault, withdrawnAmount);
+
+        emit WithdrawalClaimed(adapter, withdrawnAmount);
+    }
+
+    function claim(
+        address adapter,
+        bytes[] calldata _data
+    ) public onlyOperator whenNotPaused nonReentrant {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+
+        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
+        withdrawalQueue.claim(withdrawnAmount);
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
     }
