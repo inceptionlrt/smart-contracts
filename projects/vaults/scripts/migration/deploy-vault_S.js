@@ -30,14 +30,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, asset, 
   // console.log(`InceptionToken address: ${iTokenAddress}`);
 
   // const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress); console.log(iTokenImplAddress);
-  let iface = new ethers.Interface(["function initialize(string name, string symbol)"]);
-  let token = await ProxyFactory.deploy("0xdcf8F9Db2A95e2A57E79cF9a6fCBf73d82637D91", "0x2A089327A9B17AEcb75132CF015f556F2046739c", iface.encodeFunctionData(
-    "initialize",
-    [
-      tokenName, tokenSymbol
-    ]
-  ));
-  console.log("Token: " + await token.getAddress());
+  // let iface = new ethers.Interface(["function initialize(string name, string symbol)"]);
+  // let token = await ProxyFactory.deploy("0xdcf8F9Db2A95e2A57E79cF9a6fCBf73d82637D91", "0x2A089327A9B17AEcb75132CF015f556F2046739c", iface.encodeFunctionData(
+  //   "initialize",
+  //   [
+  //     tokenName, tokenSymbol
+  //   ]
+  // ));
+  // console.log("Token: " + await token.getAddress());
+  let token = await ethers.getContractAt("0xBdf1C9FfA7524A7281cA5D460f7d6F4786F4cB45", "InceptionToken");
 
   // 2. Mellow restaker
   // const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
@@ -47,14 +48,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, asset, 
   // console.log(`MellowRestaker address: ${mrAddress}`);
 
   // const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress); console.log(mrImpAddress);
-  iface = new ethers.Interface(["function initialize(address[] _mellowVault, address asset, address trusteeManager,address vault)"]);
-  let mellowRestaker = await ProxyFactory.deploy("0xdd3A088D314020AF5f3C92a0681eD0B9Daa356C4", "0xAb31156bcDD9C280Bb7b0d8062EFeD26e5c725AF", iface.encodeFunctionData(
-    "initialize",
-    [
-      [], asset, addresses.Operator, ethers.ZeroAddress
-    ]
-  ));
-  console.log("MellowResatker: " + await mellowRestaker.getAddress());
+  // iface = new ethers.Interface(["function initialize(address[] _mellowVault, address asset, address trusteeManager,address vault)"]);
+  // let mellowRestaker = await ProxyFactory.deploy("0xdd3A088D314020AF5f3C92a0681eD0B9Daa356C4", "0xAb31156bcDD9C280Bb7b0d8062EFeD26e5c725AF", iface.encodeFunctionData(
+  //   "initialize",
+  //   [
+  //     [], asset, addresses.Operator, ethers.ZeroAddress
+  //   ]
+  // ));
+  // console.log("MellowResatker: " + await mellowRestaker.getAddress());
+  let mellowRestaker = await ethers.getContractAt("0x69Bd17DA89AcDf311246268D446E53CBA2Dc6b55", "IMellowRestaker");
 
   // 3. Symbiotic restaker
   // const symbioticRestakerFactory = await hre.ethers.getContractFactory("ISymbioticRestaker");
@@ -71,6 +73,7 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, asset, 
       ["0xEa0F2EA61998346aD39dddeF7513ae90915AFb3c"], ethers.ZeroAddress, asset, addresses.Operator
     ]
   ));
+  await symbioticRestaker.waitForDeployment();
   console.log("SymbioticRestaker: " + await symbioticRestaker.getAddress());
 
   let vaultFactory = "InVault_S_E2";
@@ -106,14 +109,17 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, asset, 
 //   const iVaultAddress = await iVault.getAddress();
 //   console.log(`InceptionVault address: ${iVaultAddress}`);
 //   const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);console.log(iVaultImplAddress);
+  let vaultv1 = await ethers.deployContract("InceptionVault_S"); await vaultv1.waitForDeployment();
   iface = new ethers.Interface(["function initialize(string vaultName, address operatorAddress, address assetAddress, address _inceptionToken, address _mellowRestaker, address _symbioticRestaker)"]);
-  let vault = await ProxyFactory.deploy("0x24Ee753885Eb18D60794815caAF63402915BfA50", "0xC40F099e73aDB9b78a6c1AB22c520D635fFb4D53", iface.encodeFunctionData(
+  let vault = await ProxyFactory.deploy(await vaultv1.getAddress(), "0xC40F099e73aDB9b78a6c1AB22c520D635fFb4D53", iface.encodeFunctionData(
     "initialize",
     [
       vaultName, addresses.Operator, asset, await token.getAddress(), await mellowRestaker.getAddress(), await symbioticRestaker.getAddress()
     ]
   ));
+  await vault.waitForDeployment();
   console.log("Vault: " + await vault.getAddress());
+  console.log("VaultIMP:" + await vaultv1.getAddress());
 
   const iAddresses = {
     InceptionToken: await token.getAddress(),
