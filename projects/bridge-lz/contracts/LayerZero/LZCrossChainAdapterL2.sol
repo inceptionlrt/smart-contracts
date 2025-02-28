@@ -87,4 +87,11 @@ contract LZCrossChainAdapterL2 is
             _handleCrossChainEth(chainId);
         }
     }
+
+    function setDelegateToCurrentOwner() external onlyOwnerRestricted {
+        address delegate = owner();
+        endpoint.setDelegate(delegate);
+        emit LZDelegateSet(delegate);
+    }
+
 }

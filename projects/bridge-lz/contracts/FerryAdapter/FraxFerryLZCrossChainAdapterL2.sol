@@ -144,4 +144,10 @@ contract FraxFerryLZCrossChainAdapterL2 is
     {
         revert NotAllowedInThisAdapterType();
     }
+
+    function setDelegateToCurrentOwner() external onlyOwnerRestricted {
+        address delegate = owner();
+        endpoint.setDelegate(delegate);
+        emit LZDelegateSet(delegate);
+    }
 }

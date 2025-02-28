@@ -21,6 +21,7 @@ interface IAdapter {
         bytes data,
         uint256 fee
     );
+    event LZDelegateSet(address indexed delegate);
 
     error TargetReceiverNotSet();
     error TransferToTargetReceiverFailed();
