@@ -1,16 +1,14 @@
 const { addresses } = require("../config-addresses");
 const { deployVault } = require("../../deploy-vault_S");
 
-const VaultName = "inwstETHVault_S",
-  TokenName = "Inception Symbiotic Restaked wstETH",
-  TokenSymbol = "inwstETHs",
-  mellowWrappers = ["0xdC1741f9bD33DD791942CC9435A90B0983DE8665"],
-  mellowVaults = ["0x5fD13359Ba15A84B76f7F87568309040176167cd"],
-  asset = "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+const VaultName = "inLsETHVault_S",
+  TokenName = "Inception Symbiotic Restaked LsETH",
+  TokenSymbol = "inLsETHs",
+  asset = "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
   ratioFeed = "0xFd73Be536503B5Aa80Bf99D1Fd65b1306c69B191";
 
 async function main() {
-  await deployVault(addresses, VaultName, TokenName, TokenSymbol, mellowWrappers, mellowVaults, asset, ratioFeed);
+  await deployVault(addresses, VaultName, TokenName, TokenSymbol, asset, ratioFeed);
 }
 
 main()
