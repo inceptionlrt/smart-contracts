@@ -1171,7 +1171,7 @@ assets.forEach(function (a) {
       });
 
       it("Default epoch", async function () {
-        expect(await iVault.epoch()).to.be.eq(0n);
+        expect(await withdrawalQueue.currentEpoch()).to.be.eq(0n);
       });
 
       it("setTreasuryAddress(): only owner can", async function () {
@@ -1266,11 +1266,6 @@ assets.forEach(function (a) {
 
       it("setName(): another address can not", async function () {
         await expect(iVault.connect(staker).setName("New name")).to.be.revertedWith("Ownable: caller is not the owner");
-      });
-
-      it("updateEpoch(): reverts when iVault is paused", async function () {
-        await iVault.pause();
-        await expect(iVault.connect(iVaultOperator).updateEpoch()).to.be.revertedWith("Pausable: paused");
       });
 
       it("pause(): only owner can", async function () {
