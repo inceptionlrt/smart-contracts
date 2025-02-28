@@ -152,6 +152,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         );
 
         uint256 amount = _asset.balanceOf(address(this));
+        if (amount == 0) revert ValueZero();
 
         _asset.safeTransfer(_inceptionVault, amount);
 
