@@ -112,6 +112,8 @@ const symbioticVaults = [
   },
 ];
 
+const abi = ethers.AbiCoder.defaultAbiCoder();
+
 const initVault = async a => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -214,17 +216,22 @@ const initVault = async a => {
   MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
   console.log("... iVault initialization completed ....");
 
-  iVault.withdrawFromMellowAndClaim = async function (mellowVaultAddress, amount) {
-    await this.connect(iVaultOperator).undelegate(
+  iVault.withdrawFromMellowAndClaim = async function (withdrawalQueue, mellowVaultAddress, amount) {
+    const tx = await this.connect(iVaultOperator).undelegateVault(
       await mellowAdapter.getAddress(),
       mellowVaultAddress,
       amount,
       emptyBytes,
     );
+
+    const receipt = tx.wait();
+    let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
     // await mellowVaults[0].curator.processWithdrawals([mellowAdapter.address]);
     await helpers.time.increase(1209900);
-    await mellowAdapter.claimPending();
-    await this.connect(iVaultOperator).claim(await mellowAdapter.getAddress(), emptyBytes);
+
+    const params = abi.encode(["address"], [mellowVaultAddress]);
+    await this.connect(iVaultOperator).claim(await mellowAdapter.getAddress(), [params]);
   };
 
   return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue];
@@ -238,8 +245,6 @@ assets.forEach(function (a) {
     let ratioErr, transactErr;
     let snapshot;
     let params;
-
-    const abi = ethers.AbiCoder.defaultAbiCoder();
 
     before(async function () {
       if (process.env.ASSETS) {
@@ -3267,8 +3272,7 @@ assets.forEach(function (a) {
           //Undelegate from Mellow
           const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
           const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
-          await iVault.withdrawFromMellowAndClaim(mellowVaults[0].vaultAddress, undelegateAmount);
-
+          await iVault.withdrawFromMellowAndClaim(withdrawalQueue, mellowVaults[0].vaultAddress, undelegateAmount);
           //flashWithdraw
           const ratioBefore = await iVault.ratio();
           console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
@@ -3288,6 +3292,9 @@ assets.forEach(function (a) {
           const receiver = await arg.receiver();
           const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
           console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
+          console.log("Shares", shares);
+          console.log(receiver.address);
+          console.log("-----");
 
           let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address);
           const receipt = await tx.wait();
@@ -3325,7 +3332,7 @@ assets.forEach(function (a) {
           //Undelegate from Mellow
           const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
           const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
-          await iVault.withdrawFromMellowAndClaim(mellowVaults[0].vaultAddress, undelegateAmount);
+          await iVault.withdrawFromMellowAndClaim(withdrawalQueue, mellowVaults[0].vaultAddress, undelegateAmount);
 
           //flashWithdraw
           const ratioBefore = await iVault.ratio();
