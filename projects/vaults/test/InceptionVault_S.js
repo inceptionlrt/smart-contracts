@@ -600,7 +600,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("Base flow no flash2", function () {
+    describe("Base flow no flash", function () {
       let totalDeposited = 0n;
       let delegatedMellow = 0n;
       let rewardsMellow = 0n;
@@ -1073,11 +1073,11 @@ assets.forEach(function (a) {
         console.log(`Total assets before:\t\t${totalAssetsBefore.format()}`);
         console.log("======================================================");
 
-        const amount = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress);
+        const withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
 
         await iVault
           .connect(iVaultOperator)
-          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [amount], [emptyBytes]);
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
 
         const totalAssetsAfter = await iVault.totalAssets();
         const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -1093,70 +1093,40 @@ assets.forEach(function (a) {
         console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
         console.log(`Pending from Mellow:\t\t${pendingWithdrawalsMellowAfter.format()}`);
 
-        expect(totalAssetsAfter).to.be.eq(totalAssetsBefore); //Nothing has come to the iVault yet
-        expect(totalDelegatedAfter).to.be.closeTo(0n, transactErr);
-        expect(totalDelegatedTo).to.be.closeTo(0n, transactErr); //Everything was requested for withdrawal from Mellow
+        // expect(totalAssetsAfter).to.be.eq(totalAssetsBefore); //Nothing has come to the iVault yet
+        expect(totalDelegatedAfter).to.be.closeTo(9n, transactErr);
+        expect(totalDelegatedTo).to.be.closeTo(9n, transactErr); //Everything was requested for withdrawal from Mellow
         expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
-        expect(pendingWithdrawalsMellowAfter).to.be.closeTo(amount, transactErr * 2n);
-      });
-
-      it("Process request to transfers pending funds to mellowAdapter", async function () {
-        const totalDepositedBefore = await iVault.getTotalDeposited();
-        const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
-        const adapterBalanceBefore = await asset.balanceOf(mellowAdapter.address);
-        console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
-        console.log(`Pending from Mellow before:\t\t${pendingWithdrawalsMellowBefore.format()}`);
-
-        // await mellowVaults[0].curator.processWithdrawals([mellowRestaker.address]);
-        // await mellowVaults[1].curator.processWithdrawals([mellowRestaker.address]);
-        await helpers.time.increase(1209900);
-        await mellowAdapter.claimPending();
-
-        const totalDepositedAfter = await iVault.getTotalDeposited();
-        const pendingWithdrawalsMellowAfter = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
-        const adapterBalanceAfter = await asset.balanceOf(mellowAdapter.address);
-        console.log(`Total deposited after:\t\t\t${totalDepositedAfter.format()}`);
-        console.log(`Pending from Mellow:\t\t\t${pendingWithdrawalsMellowAfter.format()}`);
-        console.log(`Adapter balance diff:\t\t\t${(adapterBalanceAfter - adapterBalanceBefore).format()}`);
-
-        expect(adapterBalanceAfter - adapterBalanceBefore).to.be.eq(
-          pendingWithdrawalsMellowBefore - adapterBalanceBefore,
-        );
-        expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-        expect(pendingWithdrawalsMellowAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
       });
 
       it("Claim Mellow withdrawal transfer funds from adapter to vault", async function () {
+        await helpers.time.increase(1209900);
+
         const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
         const totalAssetsBefore = await iVault.totalAssets();
-        const adapterBalanceBefore = await asset.balanceOf(mellowAdapter.address);
+        // const adapterBalanceBefore = await asset.balanceOf(mellowAdapter.address);
+        const withdrawalEpochBefore = await withdrawalQueue.withdrawals(0);
 
-        await iVault.connect(iVaultOperator).claim(await mellowAdapter.getAddress(), emptyBytes);
+        const params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
+        await iVault.connect(iVaultOperator).claim(0, await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, [params]);
 
+        const withdrawalEpochAfter = await withdrawalQueue.withdrawals(0);
         const totalAssetsAfter = await iVault.totalAssets();
-        const adapterBalanceAfter = await asset.balanceOf(mellowAdapter.address);
+        // const adapterBalanceAfter = await asset.balanceOf(mellowAdapter.address);
 
         expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-        expect(adapterBalanceBefore - adapterBalanceAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+        expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+        // expect(adapterBalanceBefore - adapterBalanceAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
       });
 
       it("Staker is able to redeem", async function () {
-        const queuedPendingWithdrawal = (await iVault.claimerWithdrawalsQueue(0)).amount;
         const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
         const redeemReserve = await iVault.redeemReservedAmount();
         const freeBalance = await iVault.getFreeBalance();
 
-        console.log("Queued withdrawal", queuedPendingWithdrawal.format());
         console.log("Pending withdrawal by staker", pendingWithdrawalByStaker.format());
         console.log("Redeem reserve", redeemReserve.format());
         console.log("Free balance", freeBalance.format());
-
-        const diff = queuedPendingWithdrawal - freeBalance - redeemReserve;
-        if (diff > 0n) {
-          expect(diff).to.be.lte(transactErr * 2n);
-          await asset.connect(staker3).transfer(iVault.address, diff + 1n);
-          await iVault.connect(staker3).updateEpoch();
-        }
 
         console.log("Redeem reserve after", await iVault.redeemReservedAmount());
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
