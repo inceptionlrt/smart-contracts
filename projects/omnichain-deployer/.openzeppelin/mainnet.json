@@ -2,20 +2,20 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x7EEd6897D9F032AbccffD2f6AAFCfb59b24BD58E",
-      "txHash": "0x84e80c96fd6b32f2732dcb3f7d8265532d0878fac2aec302f89815e6af872bef",
+      "address": "0x53207e057E8cc72312F6981a889FC286fAFa59Dc",
+      "txHash": "0xe05dd4f39f18bf2972debf36262f4d9188fa8fe6910e72a7969b909cbfb97ea7",
       "kind": "transparent"
     },
     {
-      "address": "0xA45EA1D6fB4b5596B4b5C5E69D02Be480625bB44",
-      "txHash": "0xfd7bc22c0fbc4975ece3d8b9e62c9541da9bb8320ce0972a73ff54338b58a0a1",
+      "address": "0x203D19635E6dF0263a431C4d9b8E654dEc723f62",
+      "txHash": "0xc2c2d69c3a50e09e988790216d7dd25dc9d3d5154913c905138f34578a0e41b5",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "8816a9090bfb233ffb3ddd3d2b815b5c0d1f31502be8778c9d4c5a61dd85f40a": {
-      "address": "0xcCE156D274B08d1fF08A5493D0E7B22EC934B708",
-      "txHash": "0xac0dd5c3dbe682fb0784b952ab837495073271f15d23a4981febe94cfd364402",
+    "282e0124b49f383e0311a1370ee13b2c4aaba3a36e709eba7be4b029e36dda6e": {
+      "address": "0xA25cd75108334E5Ae6cf3a1b69b4880878B4FE83",
+      "txHash": "0xd83d46b9b84ca07f95b3563445d85d1922b5dc84dea9d3983339b244e9866189",
       "layout": {
         "solcVersion": "0.8.27",
         "storage": [
@@ -60,33 +60,9 @@
             "src": "contracts/bridge-lz/abstract/AbstractCrossChainAdapter.sol:21"
           },
           {
-            "label": "ferry",
-            "offset": 0,
-            "slot": "5",
-            "type": "t_contract(IFraxFerry)16734",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:20"
-          },
-          {
-            "label": "token",
-            "offset": 0,
-            "slot": "6",
-            "type": "t_contract(IERC20)8697",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:21"
-          },
-          {
-            "label": "erc20DestinationChain",
-            "offset": 0,
-            "slot": "7",
-            "type": "t_address",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:22"
-          },
-          {
             "label": "_initialized",
             "offset": 20,
-            "slot": "7",
+            "slot": "4",
             "type": "t_uint8",
             "contract": "Initializable",
             "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
@@ -95,7 +71,7 @@
           {
             "label": "_initializing",
             "offset": 21,
-            "slot": "7",
+            "slot": "4",
             "type": "t_bool",
             "contract": "Initializable",
             "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
@@ -103,7 +79,7 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "8",
+            "slot": "5",
             "type": "t_array(t_uint256)50_storage",
             "contract": "ContextUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
@@ -111,7 +87,7 @@
           {
             "label": "_owner",
             "offset": 0,
-            "slot": "58",
+            "slot": "55",
             "type": "t_address",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
@@ -119,7 +95,7 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "59",
+            "slot": "56",
             "type": "t_array(t_uint256)49_storage",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
@@ -127,7 +103,7 @@
           {
             "label": "_pendingOwner",
             "offset": 0,
-            "slot": "108",
+            "slot": "105",
             "type": "t_address",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:21"
@@ -135,18 +111,10 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "109",
+            "slot": "106",
             "type": "t_array(t_uint256)49_storage",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:70"
-          },
-          {
-            "label": "_l1ChainId",
-            "offset": 0,
-            "slot": "158",
-            "type": "t_uint32",
-            "contract": "FraxFerryLZCrossChainAdapterL2",
-            "src": "contracts/bridge-lz/FerryAdapter/FraxFerryLZCrossChainAdapterL2.sol:30"
           }
         ],
         "types": {
@@ -169,14 +137,6 @@
           "t_bytes32": {
             "label": "bytes32",
             "numberOfBytes": "32"
-          },
-          "t_contract(IERC20)8697": {
-            "label": "contract IERC20",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IFraxFerry)16734": {
-            "label": "contract IFraxFerry",
-            "numberOfBytes": "20"
           },
           "t_contract(ILayerZeroEndpointV2)2638": {
             "label": "contract ILayerZeroEndpointV2",
@@ -210,9 +170,9 @@
         "namespaces": {}
       }
     },
-    "67d885a84ce8f8a447d7ccbcd015335b7f5c0180379566a1e6d6005fc0ca12d5": {
-      "address": "0x9495fF28510F00eB9D3F6Ead0fEab7B01c24d35b",
-      "txHash": "0xb318d561304990c8adeaa4fd3bc9c3d4a8adeddaa5add66e067228dbfc5fa028",
+    "17334431a718242e313d37c1d88535868bc4c2ff9e2a3ac23d60acfa380c47da": {
+      "address": "0x8842C3642F6f2a561c1b3428E7f64000e494Cd30",
+      "txHash": "0x73ac86cce2ecf2266b372abf6e9089759e37803040a6b47d1c2ecd2591ccafbc",
       "layout": {
         "solcVersion": "0.8.27",
         "storage": [
@@ -242,41 +202,9 @@
             "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
           },
           {
-            "label": "_paused",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_bool",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "PausableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
-          },
-          {
-            "label": "_status",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_uint256",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "102",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
-          },
-          {
             "label": "_owner",
             "offset": 0,
-            "slot": "151",
+            "slot": "51",
             "type": "t_address",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
@@ -284,7 +212,7 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "152",
+            "slot": "52",
             "type": "t_array(t_uint256)49_storage",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
@@ -292,7 +220,7 @@
           {
             "label": "_pendingOwner",
             "offset": 0,
-            "slot": "201",
+            "slot": "101",
             "type": "t_address",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:21"
@@ -300,160 +228,104 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "202",
+            "slot": "102",
             "type": "t_array(t_uint256)49_storage",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:70"
           },
           {
-            "label": "_asset",
+            "label": "underlyingAsset",
             "offset": 0,
-            "slot": "251",
-            "type": "t_contract(IERC20)1080",
-            "contract": "InceptionERC20OmniAssetsHandler",
-            "src": "contracts/vaults/assets-handler/InceptionERC20OmniAssetsHandler.sol:24"
-          },
-          {
-            "label": "__reserver",
-            "offset": 0,
-            "slot": "252",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "InceptionERC20OmniAssetsHandler",
-            "src": "contracts/vaults/assets-handler/InceptionERC20OmniAssetsHandler.sol:26"
+            "slot": "151",
+            "type": "t_contract(IERC20)995",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:24"
           },
           {
             "label": "inceptionToken",
             "offset": 0,
-            "slot": "301",
-            "type": "t_contract(IInceptionToken)2562",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:24"
+            "slot": "152",
+            "type": "t_contract(IInceptionToken)2166",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:25"
           },
           {
-            "label": "minAmount",
+            "label": "lockBox",
             "offset": 0,
-            "slot": "302",
-            "type": "t_uint256",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:27"
+            "slot": "153",
+            "type": "t_address",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:26"
           },
           {
-            "label": "name",
+            "label": "inceptionVault",
             "offset": 0,
-            "slot": "303",
-            "type": "t_string_storage",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:30"
+            "slot": "154",
+            "type": "t_contract(IInceptionVault)1911",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:27"
           },
           {
             "label": "operator",
             "offset": 0,
-            "slot": "304",
+            "slot": "155",
             "type": "t_address",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:32"
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:29"
           },
           {
-            "label": "ratioFeed",
+            "label": "lastTx",
             "offset": 0,
-            "slot": "305",
-            "type": "t_contract(IInceptionRatioFeed)2525",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:34"
+            "slot": "156",
+            "type": "t_struct(Transaction)1920_storage",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:31"
           },
           {
-            "label": "crossChainAdapterERC20",
+            "label": "defaultAdapter",
             "offset": 0,
-            "slot": "306",
-            "type": "t_contract(IERC20CrossChainBridge)2104",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:36"
+            "slot": "159",
+            "type": "t_address_payable",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:33"
           },
           {
-            "label": "depositBonusAmount",
+            "label": "defaultChainId",
             "offset": 0,
-            "slot": "307",
+            "slot": "160",
             "type": "t_uint256",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:45"
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:34"
           },
           {
-            "label": "targetCapacity",
+            "label": "assetInfoTxMaxDelay",
             "offset": 0,
-            "slot": "308",
+            "slot": "161",
             "type": "t_uint256",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:46"
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:35"
           },
           {
-            "label": "treasuryAddress",
+            "label": "__gap",
             "offset": 0,
-            "slot": "309",
-            "type": "t_address",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:48"
-          },
-          {
-            "label": "protocolFee",
-            "offset": 20,
-            "slot": "309",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:49"
-          },
-          {
-            "label": "maxBonusRate",
-            "offset": 0,
-            "slot": "310",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:52"
-          },
-          {
-            "label": "optimalBonusRate",
-            "offset": 8,
-            "slot": "310",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:53"
-          },
-          {
-            "label": "depositUtilizationKink",
-            "offset": 16,
-            "slot": "310",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:54"
-          },
-          {
-            "label": "maxFlashFeeRate",
-            "offset": 24,
-            "slot": "310",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:57"
-          },
-          {
-            "label": "optimalWithdrawalRate",
-            "offset": 0,
-            "slot": "311",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:58"
-          },
-          {
-            "label": "withdrawUtilizationKink",
-            "offset": 8,
-            "slot": "311",
-            "type": "t_uint64",
-            "contract": "InceptionERC20OmniVault",
-            "src": "contracts/vaults/vaults/InceptionERC20OmniVault.sol:59"
+            "slot": "162",
+            "type": "t_array(t_uint256)41_storage",
+            "contract": "ERC20RebalancerStorage",
+            "src": "contracts/vaults/rebalancer/ERC20RebalancerStorage.sol:37"
           }
         ],
         "types": {
           "t_address": {
             "label": "address",
             "numberOfBytes": "20"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)41_storage": {
+            "label": "uint256[41]",
+            "numberOfBytes": "1312"
           },
           "t_array(t_uint256)49_storage": {
             "label": "uint256[49]",
@@ -467,33 +339,45 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IERC20)1080": {
+          "t_contract(IERC20)995": {
             "label": "contract IERC20",
             "numberOfBytes": "20"
           },
-          "t_contract(IERC20CrossChainBridge)2104": {
-            "label": "contract IERC20CrossChainBridge",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IInceptionRatioFeed)2525": {
-            "label": "contract IInceptionRatioFeed",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IInceptionToken)2562": {
+          "t_contract(IInceptionToken)2166": {
             "label": "contract IInceptionToken",
             "numberOfBytes": "20"
           },
-          "t_string_storage": {
-            "label": "string",
-            "numberOfBytes": "32"
+          "t_contract(IInceptionVault)1911": {
+            "label": "contract IInceptionVault",
+            "numberOfBytes": "20"
+          },
+          "t_struct(Transaction)1920_storage": {
+            "label": "struct IRebalancer.Transaction",
+            "members": [
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "underlyingBalance",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "inceptionTokenSupply",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
           },
           "t_uint256": {
             "label": "uint256",
             "numberOfBytes": "32"
-          },
-          "t_uint64": {
-            "label": "uint64",
-            "numberOfBytes": "8"
           },
           "t_uint8": {
             "label": "uint8",
@@ -503,9 +387,9 @@
         "namespaces": {}
       }
     },
-    "58a103b05e18746b42ea967d907be8a056bd8d6d1b8002aef00b6151f03042e2": {
-      "address": "0x5115fFCb0d676511d111867fD2b9Fcb692a68491",
-      "txHash": "0xb22a7a846b2fa985114f9e72ba120f65e2544ff9e7c81896603b8172cd0fb917",
+    "f8a7080f80c8e4805c2fe533906180797ecf37ffdbea180f2daf74a566689fa0": {
+      "address": "0xC18c5025615b26bCdF66128715C031fDa082F6ef",
+      "txHash": "0xd2acd10481e6efc8696d3c39a77b373d0cc738bf7bc536528f594cea61a0137d",
       "layout": {
         "solcVersion": "0.8.27",
         "storage": [
@@ -550,33 +434,9 @@
             "src": "contracts/bridge-lz/abstract/AbstractCrossChainAdapter.sol:21"
           },
           {
-            "label": "ferry",
-            "offset": 0,
-            "slot": "5",
-            "type": "t_contract(IFraxFerry)9099",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:20"
-          },
-          {
-            "label": "token",
-            "offset": 0,
-            "slot": "6",
-            "type": "t_contract(IERC20)3714",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:21"
-          },
-          {
-            "label": "erc20DestinationChain",
-            "offset": 0,
-            "slot": "7",
-            "type": "t_address",
-            "contract": "AbstractFraxFerryERC20Adapter",
-            "src": "contracts/bridge-lz/abstract/AbstractFraxFerryERC20Adapter.sol:22"
-          },
-          {
             "label": "_initialized",
             "offset": 20,
-            "slot": "7",
+            "slot": "4",
             "type": "t_uint8",
             "contract": "Initializable",
             "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
@@ -585,7 +445,7 @@
           {
             "label": "_initializing",
             "offset": 21,
-            "slot": "7",
+            "slot": "4",
             "type": "t_bool",
             "contract": "Initializable",
             "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
@@ -593,7 +453,7 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "8",
+            "slot": "5",
             "type": "t_array(t_uint256)50_storage",
             "contract": "ContextUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
@@ -601,7 +461,7 @@
           {
             "label": "_owner",
             "offset": 0,
-            "slot": "58",
+            "slot": "55",
             "type": "t_address",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
@@ -609,7 +469,7 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "59",
+            "slot": "56",
             "type": "t_array(t_uint256)49_storage",
             "contract": "OwnableUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
@@ -617,7 +477,7 @@
           {
             "label": "_pendingOwner",
             "offset": 0,
-            "slot": "108",
+            "slot": "105",
             "type": "t_address",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:21"
@@ -625,18 +485,10 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "109",
+            "slot": "106",
             "type": "t_array(t_uint256)49_storage",
             "contract": "Ownable2StepUpgradeable",
             "src": "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol:70"
-          },
-          {
-            "label": "_l1ChainId",
-            "offset": 0,
-            "slot": "158",
-            "type": "t_uint32",
-            "contract": "FraxFerryLZCrossChainAdapterL2",
-            "src": "contracts/bridge-lz/FerryAdapter/FraxFerryLZCrossChainAdapterL2.sol:30"
           }
         ],
         "types": {
@@ -659,14 +511,6 @@
           "t_bytes32": {
             "label": "bytes32",
             "numberOfBytes": "32"
-          },
-          "t_contract(IERC20)3714": {
-            "label": "contract IERC20",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IFraxFerry)9099": {
-            "label": "contract IFraxFerry",
-            "numberOfBytes": "20"
           },
           "t_contract(ILayerZeroEndpointV2)677": {
             "label": "contract ILayerZeroEndpointV2",
