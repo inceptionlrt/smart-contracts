@@ -1328,7 +1328,7 @@ assets.forEach(function(a) {
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
         await expect(withdrawalQueue.connect(staker)
-          .undelegate([iVault.address], [iVault.address], [1n], [1n], [0n]))
+          .undelegate(0, [iVault.address], [iVault.address], [1n], [1n], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
         await expect(withdrawalQueue.connect(staker)
@@ -1344,19 +1344,19 @@ assets.forEach(function(a) {
           withdrawalQueue, "ValueZero");
 
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate([iVault.address], [iVault.address], [0], [0], [0n]))
+          .undelegate(0, [iVault.address], [iVault.address], [0], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
       });
 
       it("undelegate failed", async function() {
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate([iVault.address], [iVault.address], [1n], [0], [0n]))
+          .undelegate(0, [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateExceedRequested");
 
         await withdrawalQueue.connect(customVault).request(iVault.address, toWei(5));
 
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate([iVault.address], [iVault.address], [1n], [0], [0n]))
+          .undelegate(0, [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateNotCompleted");
       });
 
@@ -1366,7 +1366,7 @@ assets.forEach(function(a) {
 
         await withdrawalQueue.connect(customVault).request(staker.address, toWei(5));
         await withdrawalQueue.connect(customVault)
-          .undelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)], [toWei(5)], [0n]);
+          .undelegate(0, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)], [toWei(5)], [0n]);
 
         await expect(withdrawalQueue.connect(customVault).claim(0, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(6)))
           .to.be.revertedWithCustomError(withdrawalQueue, "ClaimedExceedUndelegated");
