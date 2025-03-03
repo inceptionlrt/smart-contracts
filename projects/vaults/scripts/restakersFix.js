@@ -27,7 +27,7 @@ async function main() {
   );
   let vault = await ethers.getContractAt("InVault_S_E1", InVault_S);
 //   let proxyAdmin = await ethers.getContractAt(["function upgradeAndCall(address,address,bytes) external"], "0x6bA42F28991C912A7A386EE9650Cfc5aF5A40E6A");
-  await upgrades.forceImport(InVault_S, InceptionVaultFactory);
+//   await upgrades.forceImport(InVault_S, InceptionVaultFactory);
 
   // ProxyAdmin and Upgrade
 //   let newVault = await InceptionVaultFactory.deploy();
