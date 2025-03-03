@@ -112,6 +112,11 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
             withdrawal.totalClaimedAmount += claimedAmount;
             totalAmountRedeem += claimedAmount;
             totalAmountToWithdraw += claimedAmount;
+
+            // todo: check
+            if (undelegatedAmount == 0) {
+                withdrawal.ableRedeem = true;
+            }
         }
     }
 
@@ -168,7 +173,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         return withdrawal.totalClaimedAmount.mulDiv(
             withdrawal.userShares[receiver],
             withdrawal.totalRequestedShares,
-            Math.Rounding.Up
+            Math.Rounding.Down
         );
     }
 
