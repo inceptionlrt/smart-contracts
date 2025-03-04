@@ -254,4 +254,14 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         symbioticRestaker = IISymbioticRestaker(newSymbioticRestaker);
         emit SymbioticRestakerAdded(newSymbioticRestaker);
     }
+
+    function setMellowRestaker(
+        address newMellowRestaker
+    ) external onlyOwner {
+        require(newMellowRestaker != address(0), InvalidAddress());
+        require(Address.isContract(newMellowRestaker), NotContract());
+
+        mellowRestaker = IIMellowRestaker(newMellowRestaker);
+        emit MellowRestakerAdded(newMellowRestaker);
+    }
 }
