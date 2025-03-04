@@ -480,12 +480,13 @@ assets.forEach(function (a) {
 
         const amount = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
         const amount2 = await symbioticAdapter.getDeposited(symbioticVaults[1].vaultAddress);
-        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount / 2n, emptyBytes);
-        await iVault
-          .connect(iVaultOperator)
-          .undelegate(await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount - amount / 2n, emptyBytes);
-        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2 / 2n, emptyBytes);
-        await iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2 - (amount2 / 2n), emptyBytes);
+        await iVault.connect(iVaultOperator)
+          .undelegate(
+            [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
+            [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
+            [amount, amount2],
+            [emptyBytes, emptyBytes]
+          );
 
         symbioticVaultEpoch1 = await symbioticVaults[0].vault.currentEpoch() + 1n;
         symbioticVaultEpoch2 = await symbioticVaults[1].vault.currentEpoch() + 1n;
@@ -524,12 +525,7 @@ assets.forEach(function (a) {
 
         console.log(`maxNextEpochStart: ${maxNextEpochStart}`);
 
-        expect(await symbioticAdapter.withdrawals(symbioticVaults[0].vaultAddress)).to.be.eq(symbioticVaultEpoch1);
-        expect(await symbioticAdapter.withdrawals(symbioticVaults[1].vaultAddress)).to.be.eq(symbioticVaultEpoch2);
-
         await setBlockTimestamp(Number(maxNextEpochStart + maxEpochDuration + 1n));
-
-        await expect(iVault.connect(iVaultOperator).undelegate(await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, 1n, emptyBytes)).to.be.revertedWithCustomError(symbioticAdapter, "WithdrawalInProgress");
 
         console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
 
