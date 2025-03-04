@@ -1,6 +1,6 @@
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, network } = require("hardhat");
-BigInt.prototype.format = function () {
+BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
 
@@ -43,6 +43,17 @@ const calculateRatio = async (vault, token, queue) => {
 
   let totalSupply = await token.totalSupply();
   const withdrawalEpoch = await queue.withdrawals(await queue.currentEpoch());
+
+  console.log("ratio{");
+  console.log("totalSupply", totalSupply);
+  console.log("epochShares", withdrawalEpoch[1]);
+  console.log("totalDelegated", totalDelegated);
+  console.log("totalAssets", totalAssets);
+  console.log("pendingWithdrawals", pendingWithdrawals);
+  console.log("totalDeposited", totalDeposited);
+  console.log("totalAmountToWithdraw", totalAmountToWithdraw);
+  console.log("}");
+
   totalSupply += withdrawalEpoch[1];
 
   let denominator;
@@ -72,7 +83,7 @@ const withdrawDataFromTx = async (tx, operatorAddress, adapter) => {
     console.log(receipt.logs);
   }
 
-  console.log(receipt.logs[receipt.logs.length-2]);
+  console.log(receipt.logs[receipt.logs.length - 2]);
   const WithdrawalQueuedEvent = receipt.logs?.find((e) => e.eventName === "StartWithdrawal").args;
   return [
     WithdrawalQueuedEvent["stakerAddress"],
@@ -152,6 +163,7 @@ const randomBIMax = (max) => {
 async function sleep(msec) {
   return new Promise((resolve) => setTimeout(resolve, msec));
 }
+
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 

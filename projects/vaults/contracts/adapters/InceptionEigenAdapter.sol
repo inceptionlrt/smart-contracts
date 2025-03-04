@@ -94,13 +94,17 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
 
     function withdraw(
         address /*operator*/,
-        uint256 shares,
+        uint256 amount,
         bytes[] calldata _data
     ) external override onlyTrustee returns (uint256, uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
+
+        uint256 shares = IWStethInterface(address(_asset)).getStETHByWstETH(
+            _strategy.underlyingToShares(amount)
+        );
 
         strategies[0] = _strategy;
         sharesToWithdraw[0] = shares;
