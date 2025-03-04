@@ -42,7 +42,7 @@ const calculateRatio = async (vault, token, queue) => {
   const totalAmountToWithdraw = await queue.totalAmountToWithdraw();
 
   let totalSupply = await token.totalSupply();
-  const withdrawalEpoch = await queue.withdrawals(await queue.epoch());
+  const withdrawalEpoch = await queue.withdrawals(await queue.currentEpoch());
   totalSupply += withdrawalEpoch[1];
 
   let denominator;
