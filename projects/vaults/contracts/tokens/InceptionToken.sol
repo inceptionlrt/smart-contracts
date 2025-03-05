@@ -6,11 +6,9 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IInceptionToken} from "../interfaces/common/IInceptionToken.sol";
 import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
 
-/**
- * @author The InceptionLRT team
- * @title The InceptionToken contract
- * @dev Specifically, this includes pausable functions and minting from the vault
- */
+/// @author The InceptionLRT team
+/// @title The InceptionToken contract
+/// @dev Specifically, this includes pausable functions and minting from the vault
 contract InceptionToken is
     OwnableUpgradeable,
     ERC20Upgradeable,

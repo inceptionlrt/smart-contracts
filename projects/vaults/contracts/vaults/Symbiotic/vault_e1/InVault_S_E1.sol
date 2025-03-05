@@ -6,7 +6,7 @@ import {IIMellowRestaker} from "../../../interfaces/symbiotic-vault/restakers/II
 import {IISymbioticRestaker} from "../../../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
 
 /// @author The InceptionLRT team
-contract InVault_S_E2 is InceptionVault_S {
+contract InVault_S_E1 is InceptionVault_S {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -30,21 +30,15 @@ contract InVault_S_E2 is InceptionVault_S {
         );
     }
 
-    function _getAssetWithdrawAmount(uint256 amount)
-        internal
-        pure
-        override
-        returns (uint256)
-    {
-        return amount + 2;
+    function _getAssetWithdrawAmount(
+        uint256 amount
+    ) internal pure override returns (uint256) {
+        return amount + 1;
     }
 
-    function _getAssetReceivedAmount(uint256 amount)
-        internal
-        pure
-        override
-        returns (uint256)
-    {
-        return amount - 2;
+    function _getAssetReceivedAmount(
+        uint256 amount
+    ) internal pure override returns (uint256) {
+        return amount - 1;
     }
 }

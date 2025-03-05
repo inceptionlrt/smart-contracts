@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {MellowHandler, IIMellowRestaker, IERC20} from "../../mellow-handler/MellowHandler.sol";
+import {SymbioticHandler, IIMellowRestaker, IISymbioticRestaker, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
@@ -13,14 +13,15 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of Mellow asset.
-contract InceptionVault_S is MellowHandler, IInceptionVault_S {
+/// @notice Aims to maximize the profit of asset.
+contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 
     /// @dev Reduces rounding issues
+    /// @custom:oz-renamed-from minAmount
     uint256 public withdrawMinAmount;
 
     mapping(address => Withdrawal) private _claimerWithdrawals;
@@ -58,10 +59,15 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         address operatorAddress,
         IERC20 assetAddress,
         IInceptionToken _inceptionToken,
-        IIMellowRestaker _mellowRestaker
+        IIMellowRestaker _mellowRestaker,
+        IISymbioticRestaker _symbioticRestaker
     ) internal {
         __Ownable2Step_init();
-        __MellowHandler_init(assetAddress, _mellowRestaker);
+        __SymbioticHandler_init(
+            assetAddress,
+            _mellowRestaker,
+            _symbioticRestaker
+        );
 
         name = vaultName;
         _operator = operatorAddress;
@@ -173,31 +179,44 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
+    /// @dev Sends underlying to a single symbiotic vault
+    function delegateToSymbioticVault(
+        address vault,
+        uint256 amount
+    ) external nonReentrant whenNotPaused onlyOperator {
+        if (vault == address(0) || amount == 0) revert NullParams();
+
+        _beforeDeposit(amount);
+        _depositAssetIntoSymbiotic(amount, vault);
+
+        emit DelegatedTo(address(symbioticRestaker), vault, amount);
+        return;
+    }
+
     /// @dev Sends underlying to a single mellow vault
     function delegateToMellowVault(
         address mellowVault,
         uint256 amount,
-        uint256 deadline
+        address referral
     ) external nonReentrant whenNotPaused onlyOperator {
         if (mellowVault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, deadline);
+        _depositAssetIntoMellow(amount, mellowVault, referral);
 
         emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
         return;
     }
 
     /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAuto(uint256 deadline) external nonReentrant whenNotPaused onlyOperator {
+    function delegateAutoMellow(
+        address referral
+    ) external nonReentrant whenNotPaused onlyOperator {
         uint256 balance = getFreeBalance();
         _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        (uint256 amount, uint256 lpAmount) = mellowRestaker.delegate(
-            balance,
-            deadline
-        );
+        uint256 lpAmount = mellowRestaker.delegate(balance, referral);
 
-        emit Delegated(address(mellowRestaker), amount, lpAmount);
+        emit Delegated(address(mellowRestaker), balance, lpAmount);
     }
 
     /*///////////////////////////////////////
@@ -209,7 +228,6 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         if (receiver == address(0)) revert NullParams();
 
         if (targetCapacity == 0) revert InceptionOnPause();
-        if (treasury == address(0)) revert InceptionOnPause();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -222,7 +240,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         uint256 amount = convertToAssets(iShares);
-        if (amount < withdrawMinAmount) revert LowerMinAmount(withdrawMinAmount);
+        if (amount < withdrawMinAmount)
+            revert LowerMinAmount(withdrawMinAmount);
 
         // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
@@ -231,6 +250,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
+
         claimerWithdrawalsQueue.push(
             Withdrawal({
                 epoch: claimerWithdrawalsQueue.length,
@@ -329,14 +349,14 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
-        if (fee == 0) revert ZeroFlashWithdrawFee();
         uint256 protocolWithdrawalFee = (fee * protocolFee) / MAX_PERCENT;
 
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
         /// @notice instant transfer fee to the treasury
-        _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (protocolWithdrawalFee != 0)
+            _transferAssetTo(treasury, protocolWithdrawalFee);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -412,10 +432,16 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedTo(
-        address mellowVault
+    function getDelegatedToMellow(
+        address vault
     ) external view returns (uint256) {
-        return mellowRestaker.getDeposited(mellowVault);
+        return mellowRestaker.getDeposited(vault);
+    }
+
+    function getDelegatedToSymbiotic(
+        address vault
+    ) external view returns (uint256) {
+        return symbioticRestaker.getDeposited(vault);
     }
 
     function getPendingWithdrawalOf(
@@ -431,13 +457,12 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxDeposit}. */
     function maxDeposit(address receiver) public view returns (uint256) {
-        return !paused() ? IERC20(asset()).balanceOf(receiver) : 0;
+        return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
-        return
-            !paused() ? previewDeposit(IERC20(asset()).balanceOf(receiver)) : 0;
+        return !paused() ? convertToShares(_asset.balanceOf(receiver)) : 0;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -507,6 +532,7 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalBonusRate);
         if (newDepositUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newDepositUtilizationKink);
+        if (newOptimalBonusRate > newMaxBonusRate) revert InconsistentData();
 
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
@@ -530,6 +556,8 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newOptimalWithdrawalRate);
         if (newWithdrawUtilizationKink > MAX_PERCENT)
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
+        if (newOptimalWithdrawalRate > newMaxFlashFeeRate)
+            revert InconsistentData();
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
@@ -572,16 +600,19 @@ contract InceptionVault_S is MellowHandler, IInceptionVault_S {
     }
 
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
-    function setFlashMinAmont(uint256 newMinAmount) external onlyOwner {
+    function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
+        if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }

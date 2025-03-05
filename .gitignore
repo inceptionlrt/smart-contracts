@@ -16,3 +16,4 @@ artifacts
 /projects/tests/omnivault-rebalancer/contracts/
 /projects/omnichain-deployer/contracts/
 
+projects/vaults/.solhint.json

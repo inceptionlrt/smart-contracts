@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity 0.8.27;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -95,9 +95,11 @@ abstract contract IMellowVault is IERC20 {
     /// @notice Returns the withdrawal request of a given user.
     /// @param user The address of the user.
     /// @return request The withdrawal request associated with the user.
-    function withdrawalRequest(
-        address user
-    ) external view virtual returns (WithdrawalRequest memory request);
+    function withdrawalRequest(address user)
+        external
+        view
+        virtual
+        returns (WithdrawalRequest memory request);
 
     /// @return count The number of users with pending withdrawal requests.
     function pendingWithdrawersCount()
@@ -118,10 +120,11 @@ abstract contract IMellowVault is IERC20 {
     /// @param limit The maximum number of users to return.
     /// @param offset The number of users to skip before returning.
     /// @return users An array of addresses with pending withdrawal requests.
-    function pendingWithdrawers(
-        uint256 limit,
-        uint256 offset
-    ) external view virtual returns (address[] memory users);
+    function pendingWithdrawers(uint256 limit, uint256 offset)
+        external
+        view
+        virtual
+        returns (address[] memory users);
 
     /// @notice Returns an array of underlying tokens of the vault.
     /// @return underlyinigTokens_ An array of underlying token addresses.
@@ -133,9 +136,11 @@ abstract contract IMellowVault is IERC20 {
 
     /// @notice Checks if a token is an underlying token of the vault.
     /// @return isUnderlyingToken_ true if the token is an underlying token of the vault.
-    function isUnderlyingToken(
-        address token
-    ) external view virtual returns (bool isUnderlyingToken_);
+    function isUnderlyingToken(address token)
+        external
+        view
+        virtual
+        returns (bool isUnderlyingToken_);
 
     /// @notice Returns an array of addresses of all TVL modules.
     /// @return tvlModules_ An array of TVL module addresses.
@@ -190,10 +195,10 @@ abstract contract IMellowVault is IERC20 {
     /// @return success Indicates if the call was successful.
     /// @return response The response data from the external call.
     /// @dev Checks permissions using the validator from the configurator.
-    function externalCall(
-        address to,
-        bytes calldata data
-    ) external virtual returns (bool success, bytes memory response);
+    function externalCall(address to, bytes calldata data)
+        external
+        virtual
+        returns (bool success, bytes memory response);
 
     /// @notice Executes a delegate call to a specified address with given data.
     /// @dev Only operators or admins should call this function. Checks access permissions.
@@ -202,10 +207,10 @@ abstract contract IMellowVault is IERC20 {
     /// @return success Indicates if the delegate call was successful.
     /// @return response The response data from the delegate call.
     /// @dev Checks permissions using the validator from the configurator.
-    function delegateCall(
-        address to,
-        bytes calldata data
-    ) external virtual returns (bool success, bytes memory response);
+    function delegateCall(address to, bytes calldata data)
+        external
+        virtual
+        returns (bool success, bytes memory response);
 
     /// @notice Deposits specified amounts of tokens into the vault in exchange for LP tokens.
     /// @dev Only accessible when deposits are unlocked.
@@ -230,10 +235,10 @@ abstract contract IMellowVault is IERC20 {
     /// @param minAmounts An array of minimum amounts expected for each underlying token.
     /// @param deadline The time before which the operation must be completed.
     /// @return actualAmounts The actual amounts withdrawn for each token.
-    function emergencyWithdraw(
-        uint256[] memory minAmounts,
-        uint256 deadline
-    ) external virtual returns (uint256[] memory actualAmounts);
+    function emergencyWithdraw(uint256[] memory minAmounts, uint256 deadline)
+        external
+        virtual
+        returns (uint256[] memory actualAmounts);
 
     /// @notice Cancels a pending withdrawal request.
     function cancelWithdrawalRequest() external virtual;
@@ -284,9 +289,10 @@ abstract contract IMellowVault is IERC20 {
     /// @notice Processes multiple withdrawal requests by fulfilling eligible withdrawals.
     /// @param users An array of user addresses whose withdrawal requests should be processed.
     /// @return statuses An array indicating the status of each user's withdrawal request.
-    function processWithdrawals(
-        address[] memory users
-    ) external virtual returns (bool[] memory statuses);
+    function processWithdrawals(address[] memory users)
+        external
+        virtual
+        returns (bool[] memory statuses);
 
     /**
      * @notice Emitted when a token is added to the vault.
