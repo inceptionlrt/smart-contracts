@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IWithdrawalQueue {
+interface IWithdrawalQueueErrors {
     error UndelegateExceedRequested();
     error UndelegateEpochMismatch();
     error ClaimUnknownAdapter();
@@ -11,7 +11,9 @@ interface IWithdrawalQueue {
     error UndelegateNotCompleted();
     error ValueZero();
     error OnlyVaultAllowed();
+}
 
+interface IWithdrawalQueue is IWithdrawalQueueErrors {
     struct WithdrawalEpoch {
         bool ableRedeem;
 
