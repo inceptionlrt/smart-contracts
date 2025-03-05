@@ -10,6 +10,7 @@ export const CONFIG = {
     mainnet: {
       url: process.env.MAINNET_RPC || "https://rpc.ankr.com/eth",
       chainId: 1,
+      eid: 30101,
       gas: 8000000,
       gasPrice,
       accounts,
@@ -24,6 +25,34 @@ export const CONFIG = {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY,
           apiUrl: "https://api-holesky.etherscan.io",
+        },
+      },
+    },
+    fraxtal: {
+      url: process.env.RPC_URL_FRAX_HOLESKY || "https://rpc.frax.com",
+      chainId: 252,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      eid: 30255,
+      verify: {
+        etherscan: {
+          apiKey: process.env.FRAXSCAN_API_KEY,
+          apiUrl: "https://api.fraxscan.com/api",
+        },
+      },
+    },
+    fraxHolesky: {
+      url: process.env.RPC_URL_FRAX_HOLESKY || "https://rpc.testnet.frax.com",
+      chainId: 2522,
+      gas: 8000000,
+      gasPrice,
+      accounts,
+      eid: 40255,
+      verify: {
+        etherscan: {
+          apiKey: process.env.FRAXSCAN_API_KEY,
+          apiUrl: "https://api-holesky.fraxscan.com/api",
         },
       },
     },
@@ -84,6 +113,8 @@ export const CONFIG = {
   etherscan: {
     apiKey: {
       holesky: "PP5CDPZBG6AF6FBGE9CJNYGCRYXYN549M1",
+      fraxHolesky: process.env.FRAXSCAN_API_KEY,
+      fraxtal: process.env.FRAXSCAN_API_KEY,
       mainnet: process.env.ETHERSCAN_API_KEY,
     },
     customChains: [
@@ -93,6 +124,22 @@ export const CONFIG = {
         urls: {
           apiURL: "https://api-holesky.etherscan.io/api",
           browserURL: "https://holesky.etherscan.io",
+        },
+      },
+      {
+        network: "fraxHolesky",
+        chainId: 2522,
+        urls: {
+          apiURL: "https://api-holesky.fraxscan.com/api",
+          browserURL: "https://holesky.fraxscan.com",
+        },
+      },
+      {
+        network: "fraxtal",
+        chainId: 252,
+        urls: {
+          apiURL: "https://api.fraxscan.com/api",
+          browserURL: "https://fraxscan.com",
         },
       },
     ],

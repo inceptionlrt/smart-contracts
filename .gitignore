@@ -8,5 +8,12 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-projects/vaults/storageLayout
+*.bin
+*.abi
+
+# Inception LRT custom ignore
+*.tgz
+/projects/tests/omnivault-rebalancer/contracts/
+/projects/omnichain-deployer/contracts/
+
 projects/vaults/.solhint.json

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 interface IInceptionToken {
     event VaultChanged(address prevValue, address newValue);
+    event RebalancerChanged(address prevValue, address newValue);
 
     event Paused(address account);
     event Unpaused(address account);

@@ -2,14 +2,18 @@ const { ethers, upgrades } = require("hardhat");
 const { BatchBuilder } = require("../../gnosis-safe/gnosis-safe");
 
 const InstETHAddress = "0x7FA768E035F956c41d6aeaa3Bd857e7E5141CAd5",
-  InrETHAddress = "0x80d69e79258FE9D056c822461c4eb0B4ca8802E2";
+  InrETHAddress = "0x80d69e79258FE9D056c822461c4eb0B4ca8802E2",
+  InsfrxETHAddress = "0x668308d77be3533c909a692302Cb4D135Bf8041C";
 
 async function main() {
   // IstETH
-  await upgradeInceptionToken("pausable", InstETHAddress);
+//  await upgradeInceptionToken("pausable", InstETHAddress);
 
   // InrETH
-  await upgradeInceptionToken("pausable", InrETHAddress);
+ // await upgradeInceptionToken("pausable", InrETHAddress);
+
+  // InsfrxETH
+  await upgradeInceptionToken("pausable", InsfrxETHAddress);
 }
 
 const upgradeInceptionToken = async (upgradeName, address) => {
@@ -23,7 +27,7 @@ const upgradeInceptionToken = async (upgradeName, address) => {
 
   const proxyAdmin = await upgrades.erc1967.getAdminAddress(address);
   const provider = await deployer.provider.getNetwork();
-  new BatchBuilder("", `${upgradeName}_${address}`, "added pausable functions", provider).addOzUpgrade(proxyAdmin, address, impl).save();
+  new BatchBuilder("", `${upgradeName}_${address}`, "added rebalancer minting", provider).addOzUpgrade(proxyAdmin, address, impl).save();
 };
 
 main()
