@@ -24,15 +24,41 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     uint256 public totalAmountRedeem;
 
     function initialize(
-        address _vault
+        address _vault,
+        address[] calldata legacyWithdrawalAddresses,
+        uint256[] calldata legacyWithdrawalAmounts,
+        uint256 legacyClaimedAmount
     ) external initializer {
         require(_vault != address(0), ValueZero());
         vaultOwner = _vault;
+        _initLegacyWithdrawals(legacyWithdrawalAddresses, legacyWithdrawalAmounts, legacyClaimedAmount);
     }
 
     modifier onlyVault() {
         require(msg.sender == vaultOwner, OnlyVaultAllowed());
         _;
+    }
+
+    function _initLegacyWithdrawals(
+        address[] calldata legacyWithdrawalAddresses,
+        uint256[] calldata legacyWithdrawalAmounts,
+        uint256 legacyClaimedAmount
+    ) internal initializer {
+        require(legacyWithdrawalAddresses.length == legacyWithdrawalAmounts.length, ValueZero());
+        if(legacyWithdrawalAddresses.length == 0) {
+            return;
+        }
+
+        WithdrawalEpoch storage epoch = withdrawals[currentEpoch];
+        epoch.totalClaimedAmount = legacyClaimedAmount;
+        epoch.totalRequestedShares = legacyClaimedAmount;
+        epoch.ableRedeem = true;
+
+        for (uint256 i = 0; i < legacyWithdrawalAddresses.length; i++) {
+            epoch.userShares[legacyWithdrawalAddresses[i]] = legacyWithdrawalAmounts[i];
+        }
+
+        currentEpoch++;
     }
 
     function request(address receiver, uint256 shares) external onlyVault {

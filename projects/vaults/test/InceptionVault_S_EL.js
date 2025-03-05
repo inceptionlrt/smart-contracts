@@ -223,7 +223,7 @@ const initVault = async a => {
 
   console.log("- Withdrawal Queue");
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address]);
+  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
   await iVault.setRatioFeed(ratioFeed.address);

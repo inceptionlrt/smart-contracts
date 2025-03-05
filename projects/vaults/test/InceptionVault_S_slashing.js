@@ -225,7 +225,7 @@ const initVault = async a => {
 
   console.log("- Withdrawal Queue");
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address]);
+  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
 
@@ -1319,7 +1319,7 @@ assets.forEach(function(a) {
 
         [customVault] = await ethers.getSigners();
         const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-        withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [customVault.address]);
+        withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [customVault.address, [], [], 0]);
         withdrawalQueue.address = await withdrawalQueue.getAddress();
       });
 
@@ -1379,10 +1379,10 @@ assets.forEach(function(a) {
 
       it("initialize", async function() {
         const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-        await expect(upgrades.deployProxy(withdrawalQueueFactory, ["0x0000000000000000000000000000000000000000"]))
+        await expect(upgrades.deployProxy(withdrawalQueueFactory, ["0x0000000000000000000000000000000000000000", [], [], 0]))
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
 
-        await expect(withdrawalQueue.initialize(iVault.address))
+        await expect(withdrawalQueue.initialize(iVault.address, [], [], 0))
           .to.be.revertedWith("Initializable: contract is already initialized");
       });
     });
