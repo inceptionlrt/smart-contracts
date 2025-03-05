@@ -30,12 +30,12 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /// @dev represents the pending amount to be redeemed by claimers,
     /// @notice + amount to undelegate from Mellow
-    uint256 public __deprecated_totalAmountToWithdraw;
+    uint256 private __deprecated_totalAmountToWithdraw;
 
-    Withdrawal[] public __deprecated_claimerWithdrawalsQueue;
+    Withdrawal[] private __deprecated_claimerWithdrawalsQueue;
 
     /// @dev heap reserved for the claimers
-    uint256 public __deprecated_redeemReservedAmount;
+    uint256 private __deprecated_redeemReservedAmount;
 
     uint256 public depositBonusAmount;
 
