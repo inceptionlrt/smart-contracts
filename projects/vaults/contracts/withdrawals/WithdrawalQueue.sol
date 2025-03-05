@@ -43,7 +43,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         uint256 legacyClaimedAmount
     ) internal initializer {
         require(legacyWithdrawalAddresses.length == legacyWithdrawalAmounts.length, ValueZero());
-        if(legacyWithdrawalAddresses.length == 0) {
+        if (legacyWithdrawalAddresses.length == 0) {
             return;
         }
 
@@ -177,8 +177,9 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
     }
 
     function redeem(address receiver) external onlyVault returns (uint256 amount) {
-        for (uint256 i = 0; i < userEpoch[receiver].length; i++) {
-            WithdrawalEpoch storage withdrawal = withdrawals[userEpoch[receiver][i]];
+        uint256[] storage epochs = userEpoch[receiver];
+        for (uint256 i = 0; i < epochs.length; i++) {
+            WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
             if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
                 continue;
             }
@@ -201,6 +202,10 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         );
     }
 
+    /*//////////////////////
+    //// View functions ////
+    ////////////////////*/
+
     function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount) {
         uint256[] memory epochs = userEpoch[receiver];
         for (uint256 i = 0; i < epochs.length; i++) {
@@ -219,7 +224,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         return amount;
     }
 
-    function ableToRedeem(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes) {
+    function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes) {
         uint256 index;
 
         uint256[] memory epochs = userEpoch[claimer];

@@ -526,9 +526,13 @@ assets.forEach(function(a) {
         events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         // ----------------
 
+        console.log("pending withdrawals", await iVault.getTotalPendingWithdrawals());
+
         // apply slash
         let totalStake = await symbioticVaults[0].vault.totalStake();
         await a.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+
+        console.log("pending withdrawals", await iVault.getTotalPendingWithdrawals());
 
         let ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
         expect(ratio).to.be.closeTo(1111111111111111111n, ratioErr);
@@ -1211,6 +1215,7 @@ assets.forEach(function(a) {
 
         console.log("before", await symbioticVaults[0].vault.totalStake());
         console.log("before totalDelegated", await iVault.getTotalDelegated());
+        console.log("pending withdrawals", await iVault.getTotalPendingWithdrawals());
 
         // apply slash
         let totalStake = await symbioticVaults[0].vault.totalStake();

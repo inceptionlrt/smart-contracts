@@ -324,7 +324,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool, uint256[] memory) {
-        return withdrawalQueue.ableToRedeem(claimer);
+        return withdrawalQueue.isRedeemable(claimer);
     }
 
     function ratio() public view returns (uint256) {

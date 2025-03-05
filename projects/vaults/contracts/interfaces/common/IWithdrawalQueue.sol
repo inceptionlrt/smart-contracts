@@ -61,5 +61,5 @@ interface IWithdrawalQueue {
 
     function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount);
 
-    function ableToRedeem(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes);
+    function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes);
 }
