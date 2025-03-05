@@ -54,7 +54,11 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
 
         for (uint256 i = 0; i < legacyWithdrawalAddresses.length; i++) {
             epoch.userShares[legacyWithdrawalAddresses[i]] = legacyWithdrawalAmounts[i];
+            addUserEpoch(legacyWithdrawalAddresses[i], currentEpoch);
         }
+
+        totalAmountToWithdraw += legacyClaimedAmount;
+        totalAmountRedeem += legacyClaimedAmount;
 
         currentEpoch++;
     }
@@ -84,7 +88,7 @@ contract WithdrawalQueue is IWithdrawalQueue, PausableUpgradeable, ReentrancyGua
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
-        require(epoch == currentEpoch);
+        require(epoch == currentEpoch, UndelegateEpochMismatch());
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
 
         for (uint256 i = 0; i < adapters.length; i++) {

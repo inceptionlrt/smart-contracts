@@ -1340,6 +1340,14 @@ assets.forEach(function(a) {
           .claim(1, iVault.address, iVault.address, 1n))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
+        await expect(withdrawalQueue.connect(staker)
+          .undelegate(1n, 1n))
+          .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+
+        await expect(withdrawalQueue.connect(staker)
+          .claim(1n))
+          .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+
         await expect(withdrawalQueue.connect(staker).redeem(iVault.address))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
       });
@@ -1363,6 +1371,10 @@ assets.forEach(function(a) {
         await expect(withdrawalQueue.connect(customVault)
           .undelegate(0, [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateNotCompleted");
+
+        await expect(withdrawalQueue.connect(customVault)
+          .undelegate(1, [iVault.address], [iVault.address], [1n], [0], [0n]))
+          .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateEpochMismatch()");
       });
 
       it("claim failed", async function() {
@@ -1387,8 +1399,64 @@ assets.forEach(function(a) {
         await expect(upgrades.deployProxy(withdrawalQueueFactory, ["0x0000000000000000000000000000000000000000", [], [], 0]))
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
 
+        await expect(upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [staker.address], [], 0]))
+          .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
+
         await expect(withdrawalQueue.initialize(iVault.address, [], [], 0))
           .to.be.revertedWith("Initializable: contract is already initialized");
+      });
+    });
+
+    describe("Withdrawal queue: legacy", async function() {
+      it("Redeem", async function() {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+
+        // deposit
+        let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
+        await tx.wait();
+        // ----------------
+
+        const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+        const legacyWithdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory,
+          [
+            iVault.address,
+            [staker.address, staker2.address, staker3.address],
+            [toWei(1), toWei(2.5), toWei(1.5)],
+            toWei(5),
+          ],
+        );
+
+        legacyWithdrawalQueue.address = await legacyWithdrawalQueue.getAddress();
+        await iVault.setWithdrawalQueue(legacyWithdrawalQueue);
+
+        expect(await legacyWithdrawalQueue.currentEpoch()).to.be.eq(1);
+        expect(await legacyWithdrawalQueue.totalAmountToWithdraw()).to.be.eq(toWei(5));
+        expect(await legacyWithdrawalQueue.totalAmountRedeem()).to.be.eq(toWei(5));
+        expect(await legacyWithdrawalQueue.getPendingWithdrawalOf(staker.address)).to.be.eq(toWei(1));
+        expect(await legacyWithdrawalQueue.getPendingWithdrawalOf(staker2.address)).to.be.eq(toWei(2.5));
+        expect(await legacyWithdrawalQueue.getPendingWithdrawalOf(staker3.address)).to.be.eq(toWei(1.5));
+
+        // redeem
+        tx = await iVault.connect(staker).redeem(staker.address);
+        let receipt = await tx.wait();
+        let events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(1), transactErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker2).redeem(staker2.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(2.5), transactErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker3).redeem(staker3.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events[0].args["amount"]).to.be.closeTo(toWei(1.5), transactErr);
+        // ----------------
       });
     });
   });
