@@ -29,8 +29,18 @@ interface IWithdrawalQueue {
         uint256 adaptersClaimedCounter;
     }
 
+    /// @notice Requests a withdrawal for a receiver in the current epoch
+    /// @param receiver The address requesting the withdrawal
+    /// @param shares The number of shares to request for withdrawal
     function request(address receiver, uint256 shares) external;
 
+    /// @notice Processes undelegation for multiple adapters and vaults in a given epoch
+    /// @param epoch The epoch to undelegate from (must match current epoch)
+    /// @param adapters Array of adapter addresses
+    /// @param vaults Array of vault addresses
+    /// @param shares Array of share amounts to undelegate
+    /// @param undelegatedAmounts Array of undelegated amounts
+    /// @param claimedAmounts Array of claimed amounts
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
@@ -40,27 +50,55 @@ interface IWithdrawalQueue {
         uint256[] calldata claimedAmounts
     ) external;
 
+    /// @notice Make undelegation without epoch
+    /// @param undelegatedAmount The amount to add to undelegated totals
+    /// @param claimedAmount The amount to add to withdrawal totals if claimed
     function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external;
 
-    function claim(uint256 epochNum, address adapter, address vault, uint256 claimedAmount) external;
+    /// @notice Claims an amount for a specific adapter and vault in an epoch
+    /// @param epoch The epoch to claim from
+    /// @param adapter The adapter address
+    /// @param vault The vault address
+    /// @param claimedAmount The amount to claim
+    function claim(uint256 epoch, address adapter, address vault, uint256 claimedAmount) external;
 
+    /// @notice Reduces the total undelegated amount by a claimed amount
+    /// @param claimedAmount The amount to subtract from undelegated totals
     function claim(uint256 claimedAmount) external;
 
+    /// @notice Redeems available amounts for a receiver across their epochs
+    /// @param receiver The address to redeem for
+    /// @return amount The total amount redeemed
     function redeem(address receiver) external returns (uint256 amount);
 
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
 
+    /// @notice Returns the current epoch number
+    /// @return The current epoch number
     function currentEpoch() external view returns (uint256);
 
+    /// @notice Returns the total amount queued for withdrawal
+    /// @return The total amount to withdraw
     function totalAmountToWithdraw() external view returns (uint256);
 
+    /// @notice Returns the total amount that has been undelegated
+    /// @return The total undelegated amount
     function totalAmountUndelegated() external view returns (uint256);
 
+    /// @notice Returns the total amount that has been redeemed
+    /// @return The total redeemed amount
     function totalAmountRedeem() external view returns (uint256);
 
+    /// @notice Returns the total pending withdrawal amount for a receiver
+    /// @param receiver The address to check
+    /// @return amount The total pending withdrawal amount
     function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount);
 
+    /// @notice Checks if a claimer has redeemable withdrawals and their epoch indexes
+    /// @param claimer The address to check
+    /// @return able Whether there are redeemable withdrawals
+    /// @return withdrawalIndexes Array of epoch indexes with redeemable withdrawals
     function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes);
 }
