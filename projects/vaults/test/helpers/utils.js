@@ -43,17 +43,6 @@ const calculateRatio = async (vault, token, queue) => {
 
   let totalSupply = await token.totalSupply();
   const withdrawalEpoch = await queue.withdrawals(await queue.currentEpoch());
-
-  console.log("ratio{");
-  console.log("totalSupply", totalSupply);
-  console.log("epochShares", withdrawalEpoch[1]);
-  console.log("totalDelegated", totalDelegated);
-  console.log("totalAssets", totalAssets);
-  console.log("pendingWithdrawals", pendingWithdrawals);
-  console.log("totalDeposited", totalDeposited);
-  console.log("totalAmountToWithdraw", totalAmountToWithdraw);
-  console.log("}");
-
   totalSupply += withdrawalEpoch[1];
 
   let denominator;
