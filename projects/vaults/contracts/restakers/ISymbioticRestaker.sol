@@ -38,7 +38,7 @@ contract ISymbioticRestaker is
     mapping(address => uint256) public withdrawals;
 
     modifier onlyVault() {
-        if (msg.sender != _vault && msg.sender != owner()) revert NotVault();
+        if (msg.sender != _vault) revert NotVault();
         _;
     }
 
