@@ -1378,6 +1378,13 @@ assets.forEach(function (a) {
         );
       });
 
+      it("setTargetFlashCapacity(): reverts when set to 0", async function () {
+        await expect(iVault.connect(deployer).setTargetFlashCapacity(MAX_TARGET_PERCENT + 1n)).to.revertedWithCustomError(
+          iVault,
+          "MoreThanMax",
+        );
+      });
+
       it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
         const prevValue = await iVault.protocolFee();
         const newValue = randomBI(10);
@@ -4550,7 +4557,7 @@ assets.forEach(function (a) {
       });
     });
 
-    describe("Adapter negative cases", function() {
+    describe("AdapterHandler negative cases", function() {
       it("null adapter delegation", async function() {
         await expect(iVault.connect(iVaultOperator)
           .delegate("0x0000000000000000000000000000000000000000", symbioticVaults[0].vaultAddress, 0, emptyBytes)
@@ -4605,6 +4612,10 @@ assets.forEach(function (a) {
         await expect(iVault.connect(iVaultOperator)
           .undelegateVault(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "ValueZero");
+
+        await expect(iVault.connect(staker)
+          .undelegateVault(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
       });
 
       it("claim input args", async function() {
@@ -4615,6 +4626,14 @@ assets.forEach(function (a) {
         await expect(iVault.connect(staker)
           .claim(staker.address, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+
+        await expect(iVault.connect(staker)
+          .claim(0, mellowAdapter.address, mellowVaults[0].vaultAddress, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+
+        await expect(iVault.connect(iVaultOperator)
+          .claim(0, staker.address, mellowVaults[0].vaultAddress, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
       });
 
       it("addAdapter input args", async function() {
@@ -4623,6 +4642,9 @@ assets.forEach(function (a) {
 
         await expect(iVault.addAdapter(mellowAdapter.address))
           .to.be.revertedWithCustomError(iVault, "AdapterAlreadyAdded");
+
+        await expect(iVault.connect(iVaultOperator).addAdapter(mellowAdapter.address))
+          .to.be.revertedWith("Ownable: caller is not the owner");
       });
 
       it("removeAdapter input args", async function() {
@@ -4631,7 +4653,29 @@ assets.forEach(function (a) {
 
         await expect(iVault.removeAdapter(iToken.address))
           .to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+        await expect(iVault.connect(staker)
+          .removeAdapter(mellowAdapter.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await iVault.removeAdapter(mellowAdapter.address);
       });
+    });
+
+    describe("SymbioticAdapter input args", function() {
+      it("withdraw input args", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([await symbioticAdapter.getAddress()], [staker.address], [1n], [emptyBytes])
+        ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
+
+        await expect(symbioticAdapter.connect(iVaultOperator)
+          .addVault(staker.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await expect(symbioticAdapter.connect(iVaultOperator)
+          .removeVault(symbioticVaults[0].vaultAddress)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      })
     });
   });
 });
