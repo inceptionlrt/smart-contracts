@@ -131,7 +131,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external onlyVault {
         totalAmountToWithdraw += undelegatedAmount;
         totalAmountUndelegated += undelegatedAmount;
-
         if (claimedAmount > 0) {
             totalAmountToWithdraw += claimedAmount;
         }
@@ -171,9 +170,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             totalAmountRedeem += claimedAmount;
             totalAmountToWithdraw += claimedAmount;
 
-            // todo: check
             if (undelegatedAmount == 0) {
-                withdrawal.ableRedeem = true;
+                withdrawal.adaptersClaimedCounter++;
             }
         }
     }
@@ -183,6 +181,10 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
         require(withdrawal.totalRequestedShares == withdrawal.totalUndelegatedShares, UndelegateNotCompleted());
         currentEpoch++;
+
+        if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
+            withdrawal.ableRedeem = true;
+        }
     }
 
     /// @notice Claims an amount for a specific adapter and vault in an epoch
