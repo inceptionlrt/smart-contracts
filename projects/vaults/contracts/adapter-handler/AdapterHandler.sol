@@ -23,6 +23,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    uint256 private __deprecated_epoch;
+
     /// @dev inception operator
     address internal _operator;
 
@@ -48,9 +50,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    IWithdrawalQueue public withdrawalQueue;
-
     uint256[50 - 11] private __gap;
+
+    IWithdrawalQueue public withdrawalQueue;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
