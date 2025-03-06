@@ -4667,7 +4667,9 @@ assets.forEach(function (a) {
         await expect(iVault.connect(iVaultOperator)
           .undelegate([await symbioticAdapter.getAddress()], [staker.address], [1n], [emptyBytes])
         ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
+      });
 
+      it("add & remove vaults input args", async function() {
         await expect(symbioticAdapter.connect(iVaultOperator)
           .addVault(staker.address)
         ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -4676,6 +4678,25 @@ assets.forEach(function (a) {
           .removeVault(symbioticVaults[0].vaultAddress)
         ).to.be.revertedWith("Ownable: caller is not the owner");
       })
+
+    });
+
+    describe("MellowAdapter input args", function() {
+      it("claim input args", async function() {
+        await expect(mellowAdapter.connect(iVaultOperator)
+          .claim([])
+        ).to.be.revertedWithCustomError(mellowAdapter, "ValueZero");
+      });
+
+      it("setEthWrapper input args", async function() {
+        await expect(mellowAdapter.connect(iVaultOperator)
+          .setEthWrapper(staker.address)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await expect(
+          mellowAdapter.setEthWrapper(staker.address)
+        ).to.be.revertedWithCustomError(mellowAdapter, "NotContract");
+      });
     });
   });
 });

@@ -1,9 +1,9 @@
-const { ethers, network } = require('hardhat');
+const { ethers, network, upgrades } = require('hardhat');
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 describe('------------------', function () {
 
-    let deployer, signer, vlad;
+    let deployer, signer, vlad, withdrawalQueue;
 
     beforeEach(async function () {
 
@@ -37,8 +37,8 @@ describe('------------------', function () {
               "0x10000000000000000000",
           ]);
         operator = await ethers.getSigner("0xd87D15b80445EC4251e33dBe0668C335624e54b7")
-        
     });
+
     describe('', function () {
 
         before(async function () {
@@ -219,6 +219,10 @@ describe('------------------', function () {
             let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
             let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
+            const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+            let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
+            await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
+
             console.log("2==== 21717996 - First block where MEV is now using mellowv2");
             console.log("Our contracts are upgraded");
             // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
@@ -281,6 +285,10 @@ describe('------------------', function () {
             await adapter.connect(owner).setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
             await vault.connect(owner).addAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
 
+            const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+            let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
+            await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
+
             console.log("Our contracts are upgraded");
             console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
@@ -311,6 +319,7 @@ describe('------------------', function () {
 
             console.log("Depositing 20 wstETH to all vaults");
 
+            console.log("operator addr", await operator.getAddress());
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
