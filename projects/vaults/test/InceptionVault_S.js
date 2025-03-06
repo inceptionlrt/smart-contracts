@@ -4549,6 +4549,90 @@ assets.forEach(function (a) {
         console.log(`Total deposited: ${await iVault.getTotalDeposited()}`);
       });
     });
+
+    describe("Adapter negative cases", function() {
+      it("null adapter delegation", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .delegate("0x0000000000000000000000000000000000000000", symbioticVaults[0].vaultAddress, 0, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "NullParams");
+      });
+
+      it("adapter not exists", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .delegate(staker.address, symbioticVaults[0].vaultAddress, 0, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+      });
+
+      it("undelegate input args", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [], [emptyBytes])
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([], [mellowVaults[0].vaultAddress], [1n], [emptyBytes])
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [], [1n], [emptyBytes])
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [1n], [])
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate(["0x0000000000000000000000000000000000000000"], [mellowVaults[0].vaultAddress], [1n], [emptyBytes])
+        ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [0n], [emptyBytes])
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+      });
+
+      it("undelegateVault input args", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .undelegateVault("0x0000000000000000000000000000000000000000", mellowVaults[0].vaultAddress, 1n, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegateVault(staker.address, mellowVaults[0].vaultAddress, 1n, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegateVault(mellowAdapter.address, "0x0000000000000000000000000000000000000000", 1n, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
+
+        await expect(iVault.connect(iVaultOperator)
+          .undelegateVault(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "ValueZero");
+      });
+
+      it("claim input args", async function() {
+        await expect(iVault.connect(iVaultOperator)
+          .claim(staker.address, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+        await expect(iVault.connect(staker)
+          .claim(staker.address, emptyBytes)
+        ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+      });
+
+      it("addAdapter input args", async function() {
+        await expect(iVault.addAdapter(staker.address))
+          .to.be.revertedWithCustomError(iVault, "NotContract");
+
+        await expect(iVault.addAdapter(mellowAdapter.address))
+          .to.be.revertedWithCustomError(iVault, "AdapterAlreadyAdded");
+      });
+
+      it("removeAdapter input args", async function() {
+        await expect(iVault.removeAdapter(staker.address))
+          .to.be.revertedWithCustomError(iVault, "NotContract");
+
+        await expect(iVault.removeAdapter(iToken.address))
+          .to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+      });
+    });
   });
 });
 

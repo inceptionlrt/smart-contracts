@@ -130,6 +130,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 amount,
         bytes[] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
+        if (adapter == address(0)) revert InvalidAddress();
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
