@@ -383,6 +383,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         uint256[] memory availableWithdrawals;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+        if (claimer == address(0)) return (false, availableWithdrawals);
         if (genRequest.amount == 0) return (false, availableWithdrawals);
         if (rEpoch < genRequest.epoch) return (false, availableWithdrawals);
 
