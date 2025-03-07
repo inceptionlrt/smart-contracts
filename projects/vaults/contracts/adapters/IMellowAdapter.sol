@@ -80,6 +80,17 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 amount,
         address referral
     ) internal returns (uint256 depositedAmount) {
+
+        bool exists;
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                exists = true;
+                break;
+            }
+        }
+
+        if (!exists) revert NotAdded();
+
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
 
