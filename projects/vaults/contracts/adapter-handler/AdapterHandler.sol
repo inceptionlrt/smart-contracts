@@ -50,9 +50,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     EnumerableSet.AddressSet internal _adapters;
 
-    uint256[50 - 11] private __gap;
-
     IWithdrawalQueue public withdrawalQueue;
+
+    uint256[50 - 12] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());

@@ -219,6 +219,9 @@ describe('------------------', function () {
             let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
             let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
+
+            console.log("inc token", await vault.inceptionToken());
+
             const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
             let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
             await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
@@ -356,12 +359,30 @@ describe('------------------', function () {
 
             console.log("Withdrawing 20 wstETH from all vaults");
             console.log("MellowV2 gives portion on withdrawal, portion is in pending state which will become in claimable state after some epoch");
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "10000000000000000000", ["0x"]);
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "15000000000000000000", ["0x"]);
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "10000000000000000000", ["0x"]);
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x49cd586dd9BA227Be9654C735A659a1dB08232a9", "15000000000000000000", ["0x"]);
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xd6E09a5e6D719d1c881579C9C8670a210437931b", "10000000000000000000", ["0x"]);
-            await vault.connect(operator).undelegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "15000000000000000000", ["0x"]);
+
+            let tx = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "10000000000000000000", ["0x"]);
+            let receipt = await tx.wait();
+            let events1 = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+            let tx2 = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "15000000000000000000", ["0x"]);
+            let receipt2 = await tx2.wait();
+            let events2 = receipt2.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+            let tx3 = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "10000000000000000000", ["0x"]);
+            let receipt3 = await tx3.wait();
+            let events3 = receipt3.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+            let tx4 = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x49cd586dd9BA227Be9654C735A659a1dB08232a9", "15000000000000000000", ["0x"]);
+            let receipt4 = await tx4.wait();
+            let events4 = receipt4.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+            let tx5 = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xd6E09a5e6D719d1c881579C9C8670a210437931b", "10000000000000000000", ["0x"]);
+            let receipt5 = await tx5.wait();
+            let events5 = receipt5.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+            let tx6 = await vault.connect(operator).undelegateVault("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "15000000000000000000", ["0x"]);
+            let receipt6 = await tx6.wait();
+            let events6 = receipt6.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
             console.log("AFTER WITHDRAWS");
             console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
@@ -397,14 +418,32 @@ describe('------------------', function () {
             console.log("Increasing epoch");
             await helpers.time.increase(1209900);
 
-            console.log("After claiming Pending");
-            await adapter.claimPending();
-            console.log("PendingWithdrawalAmountInMellow  : " + await adapter.pendingWithdrawalAmount());
-            console.log("ClaimableWithdrawalAmountInMellow: " + await adapter.claimableWithdrawalAmount());
-            console.log("PortionsGivenBackOnWithdrawTX    : " + await adapter.claimableAmount())
-
             console.log("ClaimMellowWithdrawCallback");
-            await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", ["0x"]);
+            const abi = ethers.AbiCoder.defaultAbiCoder();
+
+            if (events1[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0x5fD13359Ba15A84B76f7F87568309040176167cd"])]);
+            }
+
+            if (events2[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"])]);
+            }
+
+            if (events3[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"])]);
+            }
+
+            if (events4[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"])]);
+            }
+
+            if (events5[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"])]);
+            }
+
+            if (events6[0].args["actualAmounts"] > 0) {
+                await vault.connect(operator).claim("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", [abi.encode(["address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"])]);
+            }
 
             console.log("AFTER ClaimMellowWithdrawCallback");
             console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
