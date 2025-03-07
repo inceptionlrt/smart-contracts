@@ -144,7 +144,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
         return amount;
     }
-    function _claimPending() private returns (uint256) {
+    function _claimPending() private {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             IMellowSymbioticVault(address(mellowVaults[i])).claim(
                 address(this),
