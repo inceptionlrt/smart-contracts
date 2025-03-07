@@ -77,6 +77,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         }
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
+        require(amount == 0, AmountIsNotUsed());
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
             memory approverSignatureAndExpiry = abi.decode(
