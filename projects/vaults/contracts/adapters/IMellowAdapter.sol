@@ -82,14 +82,16 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     ) internal returns (uint256 depositedAmount) {
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
-        return
-            IEthWrapper(ethWrapper).deposit(
+
+        uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
                 address(_asset),
                 amount,
                 mellowVault,
                 address(this),
                 referral
             );
+
+        depositedAmount = lpAmountToAmount(lpAmount, IMellowVault(mellowVault));
     }
 
     function _delegateAuto(
