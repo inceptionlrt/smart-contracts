@@ -116,7 +116,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             withdrawer: withdrawer
         });
 
-        _delegationManager.queueWithdrawals(withdrawals);
+        bytes32[] memory hashes = _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
             withdrawer,
@@ -126,6 +126,8 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             _delegationManager.delegatedTo(withdrawer),
             _delegationManager.cumulativeWithdrawalsQueued(withdrawer)
         );
+
+        emit ReturnedHashes(hashes);
 
         return _strategy.sharesToUnderlying(shares);
     }

@@ -14,6 +14,10 @@ interface IISymbioticAdapter is IIBaseAdapter {
 
     event VaultRemoved(address indexed vault);
 
+    event MintedShares(uint256 mintedShares);
+
+    event BurnedAndMintedShares(uint256 burnedShares, uint256 mintedShares);
+    
     error InvalidCollateral();
 
     error InvalidEpoch();
