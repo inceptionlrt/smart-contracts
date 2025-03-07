@@ -72,10 +72,14 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-        (depositedAmount, ) = IVault(vaultAddress).deposit(
+
+        uint256 mintedShares;
+        (depositedAmount, mintedShares) = IVault(vaultAddress).deposit(
             address(this),
             amount
         );
+
+        emit MintedShares(mintedShares);
         return depositedAmount;
     }
 
@@ -91,10 +95,14 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             withdrawals[vaultAddress] > 0
         ) revert WithdrawalInProgress();
 
-        vault.withdraw(address(this), amount);
+        uint256 burnedShares;
+        uint256 mintedShares;
+        (burnedShares, mintedShares) = vault.withdraw(address(this), amount);
 
         uint256 epoch = vault.currentEpoch() + 1;
         withdrawals[vaultAddress] = epoch;
+
+        emit BurnedAndMintedShares(burnedShares, mintedShares);
 
         return amount;
     }
@@ -102,6 +110,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     function claim(
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
+
+        if (_data.length > 1) revert InvalidDataLength(1, _data.length);
+
         (address vaultAddress, uint256 sEpoch) = abi.decode(
             _data[0],
             (address, uint256)
@@ -109,10 +120,8 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
-        if (sEpoch >= IVault(vaultAddress).currentEpoch())
-            revert InvalidEpoch();
-        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender))
-            revert AlreadyClaimed();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch()) revert InvalidEpoch();
+        if (sEpoch != withdrawals[vaultAddress]) revert WrongEpoch();
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);

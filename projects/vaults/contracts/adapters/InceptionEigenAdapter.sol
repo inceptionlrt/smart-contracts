@@ -38,18 +38,19 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address strategyManager,
         address strategy,
         address asset,
-        address trusteeManager
+        address trusteeManager,
+        address inceptionVault
     ) public initializer {
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _inceptionVault = msg.sender;
+        _inceptionVault = inceptionVault;
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
-        _asset.approve(strategyManager, type(uint256).max);
+        _asset.safeApprove(strategyManager, type(uint256).max);
         IWStethInterface(address(_asset)).stETH().approve(
             strategyManager,
             type(uint256).max
@@ -60,7 +61,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address operator,
         uint256 amount,
         bytes[] calldata _data
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         /// depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
@@ -76,6 +77,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         }
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
+        require(amount == 0, AmountIsNotUsed());
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
             memory approverSignatureAndExpiry = abi.decode(
@@ -95,7 +97,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address /*operator*/,
         uint256 shares,
         bytes[] calldata _data
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
@@ -115,7 +117,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             withdrawer: withdrawer
         });
 
-        _delegationManager.queueWithdrawals(withdrawals);
+        bytes32[] memory hashes = _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
             withdrawer,
@@ -126,12 +128,14 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             _delegationManager.cumulativeWithdrawalsQueued(withdrawer)
         );
 
+        emit ReturnedHashes(hashes);
+
         return _strategy.sharesToUnderlying(shares);
     }
 
     function claim(
         bytes[] calldata _data
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         IERC20 backedAsset = IWStethInterface(address(_asset)).stETH();
         uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
@@ -156,7 +160,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) -
             balanceBefore;
 
-        backedAsset.approve(address(_asset), withdrawnAmount);
+        backedAsset.safeApprove(address(_asset), withdrawnAmount);
         uint256 wrapped = IWStethInterface(address(_asset)).wrap(withdrawnAmount);
 
         // send tokens to the vault
