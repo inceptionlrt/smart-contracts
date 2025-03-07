@@ -133,7 +133,18 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return (_asset.balanceOf(address(this)) - balanceState);
     }
 
-    function claimPending() external returns (uint256) {
+    function claim(
+        bytes[] calldata /*_data */
+    ) external override onlyTrustee returns (uint256) {
+        _claimPending();
+        uint256 amount = _asset.balanceOf(address(this));
+        if (amount == 0) revert ValueZero();
+
+        _asset.safeTransfer(_inceptionVault, amount);
+
+        return amount;
+    }
+    function _claimPending() private returns (uint256) {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             IMellowSymbioticVault(address(mellowVaults[i])).claim(
                 address(this),
@@ -141,17 +152,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                 type(uint256).max
             );
         }
-    }
-
-    function claim(
-        bytes[] calldata /*_data */
-    ) external override onlyTrustee returns (uint256) {
-        uint256 amount = _asset.balanceOf(address(this));
-        if (amount == 0) revert ValueZero();
-
-        _asset.safeTransfer(_inceptionVault, amount);
-
-        return amount;
     }
 
     function addMellowVault(address mellowVault) external onlyOwner {
