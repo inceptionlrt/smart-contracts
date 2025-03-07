@@ -231,14 +231,24 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @return amount The total amount redeemed
     function redeem(address receiver) external onlyVault returns (uint256 amount) {
         uint256[] storage epochs = userEpoch[receiver];
-        for (uint256 i = 0; i < epochs.length; i++) {
+        uint256 i = 0;
+
+        while (i < epochs.length) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
             if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
+                i++;
                 continue;
             }
 
             withdrawal.userRedeemed[receiver] = true;
             amount += _getRedeemAmount(withdrawal, receiver);
+
+            epochs[i] = epochs[epochs.length - 1];
+            epochs.pop();
+        }
+
+        if(epochs.length == 0) {
+            delete userEpoch[receiver];
         }
 
         totalAmountRedeem -= amount;
