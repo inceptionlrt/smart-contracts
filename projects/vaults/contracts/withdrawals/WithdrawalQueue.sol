@@ -236,7 +236,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         while (i < epochs.length) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
             if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
-                i++;
+                ++i;
                 continue;
             }
 
