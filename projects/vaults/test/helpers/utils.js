@@ -38,8 +38,9 @@ const calculateRatio = async (vault, token, queue) => {
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
   const pendingWithdrawals = await queue.totalAmountUndelegated();
+  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const totalDeposited = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount;
-  const totalAmountToWithdraw = await queue.totalAmountToWithdraw();
+  const totalAmountToWithdraw = await vault.totalAmountToWithdraw();
 
   let totalSupply = await token.totalSupply();
   const withdrawalEpoch = await queue.withdrawals(await queue.currentEpoch());
