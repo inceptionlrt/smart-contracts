@@ -35,7 +35,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     ) external initializer {
         require(_vault != address(0), ValueZero());
         vaultOwner = _vault;
-        _initLegacyWithdrawals(legacyWithdrawalAddresses, legacyWithdrawalAmounts, legacyClaimedAmount);
+
+        _initLegacyWithdrawals(
+            legacyWithdrawalAddresses,
+            legacyWithdrawalAmounts,
+            legacyClaimedAmount
+        );
     }
 
     modifier onlyVault() {
@@ -247,7 +252,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             epochs.pop();
         }
 
-        if(epochs.length == 0) {
+        if (epochs.length == 0) {
             delete userEpoch[receiver];
         }
 
