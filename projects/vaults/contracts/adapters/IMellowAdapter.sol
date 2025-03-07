@@ -155,7 +155,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     function claim(
         bytes[] calldata /*_data */
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         _claimPending();
         uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
