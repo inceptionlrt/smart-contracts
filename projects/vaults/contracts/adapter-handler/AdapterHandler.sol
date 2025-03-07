@@ -126,7 +126,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         );
     }
 
-    function undelegateVault(
+    function emergencyUndelegate(
         address adapter,
         address vault,
         uint256 amount,

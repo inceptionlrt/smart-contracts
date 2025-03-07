@@ -217,7 +217,7 @@ const initVault = async a => {
   console.log("... iVault initialization completed ....");
 
   iVault.withdrawFromMellowAndClaim = async function (withdrawalQueue, mellowVaultAddress, amount) {
-    const tx = await this.connect(iVaultOperator).undelegateVault(
+    const tx = await this.connect(iVaultOperator).emergencyUndelegate(
       await mellowAdapter.getAddress(),
       mellowVaultAddress,
       amount,
@@ -4598,23 +4598,23 @@ assets.forEach(function (a) {
 
       it("undelegateVault input args", async function() {
         await expect(iVault.connect(iVaultOperator)
-          .undelegateVault("0x0000000000000000000000000000000000000000", mellowVaults[0].vaultAddress, 1n, emptyBytes)
+          .emergencyUndelegate("0x0000000000000000000000000000000000000000", mellowVaults[0].vaultAddress, 1n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
 
         await expect(iVault.connect(iVaultOperator)
-          .undelegateVault(staker.address, mellowVaults[0].vaultAddress, 1n, emptyBytes)
+          .emergencyUndelegate(staker.address, mellowVaults[0].vaultAddress, 1n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
         await expect(iVault.connect(iVaultOperator)
-          .undelegateVault(mellowAdapter.address, "0x0000000000000000000000000000000000000000", 1n, emptyBytes)
+          .emergencyUndelegate(mellowAdapter.address, "0x0000000000000000000000000000000000000000", 1n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
 
         await expect(iVault.connect(iVaultOperator)
-          .undelegateVault(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
+          .emergencyUndelegate(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
         await expect(iVault.connect(staker)
-          .undelegateVault(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
+          .emergencyUndelegate(mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, emptyBytes)
         ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
       });
 
