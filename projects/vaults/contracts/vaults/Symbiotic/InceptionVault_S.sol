@@ -170,12 +170,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 shares,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(msg.sender);
+        uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
 
         return assetsAmount;
     }
@@ -429,10 +429,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
-        return
-            !paused()
-                ? convertToShares(IERC20(asset()).balanceOf(receiver))
-                : 0;
+        return type(uint256).max;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -450,6 +447,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(assets);
@@ -464,6 +462,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
+        if (shares == 0) revert NullParams();
         return
             convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));

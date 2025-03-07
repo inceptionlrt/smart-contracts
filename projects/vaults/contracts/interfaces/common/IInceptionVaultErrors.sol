@@ -16,6 +16,8 @@ interface IInceptionVaultErrors {
 
     error InvalidTargetFlashCapacity();
 
+    error MintedLess();
+
     error InceptionOnPause();
 
     error InconsistentData();
