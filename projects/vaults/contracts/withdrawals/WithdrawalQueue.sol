@@ -9,11 +9,14 @@ import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
+    /// @dev withdrawal queue owner
     address public vaultOwner;
 
+    /// @dev withdrawal epochs data
     mapping(uint256 => WithdrawalEpoch) public withdrawals;
-    mapping(address => uint256[]) internal userEpoch;
+    mapping(address => uint256[]) public userEpoch;
 
+    /// @dev global stats across all epochs
     uint256 public currentEpoch;
     uint256 public totalAmountToWithdraw;
     uint256 public totalAmountUndelegated;
