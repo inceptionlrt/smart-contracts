@@ -38,14 +38,15 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address strategyManager,
         address strategy,
         address asset,
-        address trusteeManager
+        address trusteeManager,
+        address inceptionVault
     ) public initializer {
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _inceptionVault = msg.sender;
+        _inceptionVault = inceptionVault;
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
