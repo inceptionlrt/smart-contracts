@@ -102,6 +102,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     function claim(
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
+        
+        if (_data.length > 1) revert InvalidDataLength(1, _data.length);
+
         (address vaultAddress, uint256 sEpoch) = abi.decode(
             _data[0],
             (address, uint256)
@@ -109,10 +112,8 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
-        if (sEpoch >= IVault(vaultAddress).currentEpoch())
-            revert InvalidEpoch();
-        if (IVault(vaultAddress).isWithdrawalsClaimed(sEpoch, msg.sender))
-            revert AlreadyClaimed();
+        if (sEpoch >= IVault(vaultAddress).currentEpoch()) revert InvalidEpoch();
+        if (sEpoch != withdrawals[vaultAddress]) revert WrongEpoch();
 
         delete withdrawals[vaultAddress];
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
