@@ -49,7 +49,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
 
         // approve spending by strategyManager
-        _asset.approve(strategyManager, type(uint256).max);
+        _asset.safeApprove(strategyManager, type(uint256).max);
         IWStethInterface(address(_asset)).stETH().approve(
             strategyManager,
             type(uint256).max
@@ -156,7 +156,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) -
             balanceBefore;
 
-        backedAsset.approve(address(_asset), withdrawnAmount);
+        backedAsset.safeApprove(address(_asset), withdrawnAmount);
         uint256 wrapped = IWStethInterface(address(_asset)).wrap(withdrawnAmount);
 
         // send tokens to the vault
