@@ -113,17 +113,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            (uint256 undelegated, uint256 claimed) = _undelegate(
-                adapters[i],
-                vaults[i],
-                IERC4626(address(this)).convertToAssets(shares[i]),
-                _data[i]
+            uint256 amount = IERC4626(address(this)).convertToAssets(shares[i]);
+            // undelegate adapter
+            (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
+                adapters[i], vaults[i], amount, _data[i]
             );
 
-            claimedAmounts[i] = claimed;
-            undelegatedAmounts[i] = undelegated;
-
-            emit UndelegatedFrom(adapters[i], vaults[i], undelegated, undelegatedEpoch);
+            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmounts[i], undelegatedEpoch);
         }
 
         // undelegate from queue
@@ -173,15 +169,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            (uint256 undelegated, uint256 claimed) = _undelegate(
+            (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
                 adapters[i], vaults[i], amounts[i], _data[i]
             );
 
-
-            claimedAmounts[i] = claimed;
-            undelegatedAmounts[i] = undelegated;
-
-            emit UndelegatedFrom(adapters[i], vaults[i], undelegated, undelegatedEpoch);
+            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmounts[i], undelegatedEpoch);
         }
 
         // undelegate from queue
