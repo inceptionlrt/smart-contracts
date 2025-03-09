@@ -432,6 +432,7 @@ assets.forEach(function (a) {
       let totalDeposited = 0n;
       let delegatedEL = 0n;
       let tx;
+      let undelegateEpoch;
 
       before(async function () {
         await snapshot.restore();
@@ -543,7 +544,9 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const totalDelegatedBefore = await iVault.getTotalDelegated();
-        const withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+
+        undelegateEpoch = await withdrawalQueue.currentEpoch();
+        const withdrawalEpoch = await withdrawalQueue.withdrawals(undelegateEpoch);
 
         console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
         console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
@@ -601,7 +604,7 @@ assets.forEach(function (a) {
 
         await mineBlocks(100000);
 
-        await iVault.connect(iVaultOperator).claim(0, eigenLayerAdapter.address, eigenLayerVaults[0], _data);
+        await iVault.connect(iVaultOperator).claim(undelegateEpoch, eigenLayerAdapter.address, eigenLayerVaults[0], _data);
 
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();

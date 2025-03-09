@@ -351,7 +351,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -442,7 +442,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(1);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         receipt = await tx.wait();
@@ -499,7 +499,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -519,7 +519,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        withdrawalEpoch = await withdrawalQueue.withdrawals(1);
+        withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         receipt = await tx.wait();
@@ -621,7 +621,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -722,7 +722,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -787,7 +787,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -833,7 +833,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -891,7 +891,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -942,7 +942,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -993,7 +993,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -1051,7 +1051,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -1088,7 +1088,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        withdrawalEpoch = await withdrawalQueue.withdrawals(1);
+        withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         receipt = await tx.wait();
@@ -1135,7 +1135,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(0);
+        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
         let receipt = await tx.wait();
@@ -1333,19 +1333,11 @@ assets.forEach(function(a) {
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
         await expect(withdrawalQueue.connect(staker)
-          .undelegate(0, [iVault.address], [iVault.address], [1n], [1n], [0n]))
+          .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n], [1n], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
         await expect(withdrawalQueue.connect(staker)
-          .claim(1, iVault.address, iVault.address, 1n))
-          .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
-
-        await expect(withdrawalQueue.connect(staker)
-          .undelegate(1n, 1n))
-          .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
-
-        await expect(withdrawalQueue.connect(staker)
-          .claim(1n))
+          .claim(await withdrawalQueue.currentEpoch(), iVault.address, iVault.address, 1n))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
         await expect(withdrawalQueue.connect(staker).redeem(iVault.address))
@@ -1357,23 +1349,23 @@ assets.forEach(function(a) {
           withdrawalQueue, "ValueZero");
 
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate(0, [iVault.address], [iVault.address], [0], [0], [0n]))
+          .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [0], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
       });
 
       it("undelegate failed", async function() {
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate(0, [iVault.address], [iVault.address], [1n], [0], [0n]))
+          .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateExceedRequested");
 
         await withdrawalQueue.connect(customVault).request(iVault.address, toWei(5));
 
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate(0, [iVault.address], [iVault.address], [1n], [0], [0n]))
+          .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateNotCompleted");
 
         await expect(withdrawalQueue.connect(customVault)
-          .undelegate(1, [iVault.address], [iVault.address], [1n], [0], [0n]))
+          .undelegate(2, [iVault.address], [iVault.address], [1n], [0], [0n]))
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateEpochMismatch()");
       });
 
@@ -1381,17 +1373,30 @@ assets.forEach(function(a) {
         await expect(withdrawalQueue.connect(customVault).claim(1, mellowAdapter.address, mellowVaults[0].vaultAddress, 1n))
           .to.be.revertedWithCustomError(withdrawalQueue, "ClaimUnknownAdapter");
 
+        const undelegatedEpoch = await withdrawalQueue.currentEpoch();
+
         await withdrawalQueue.connect(customVault).request(staker.address, toWei(5));
         await withdrawalQueue.connect(customVault)
-          .undelegate(0, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)], [toWei(5)], [0n]);
+          .undelegate(
+            undelegatedEpoch,
+            [mellowAdapter.address],
+            [mellowVaults[0].vaultAddress],
+            [toWei(5)],
+            [toWei(5)],
+            [0n]
+          );
 
-        await expect(withdrawalQueue.connect(customVault).claim(0, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(6)))
-          .to.be.revertedWithCustomError(withdrawalQueue, "ClaimedExceedUndelegated");
+        await expect(withdrawalQueue.connect(customVault).claim(
+          undelegatedEpoch, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(6))
+        ).to.be.revertedWithCustomError(withdrawalQueue, "ClaimedExceedUndelegated");
 
-        await withdrawalQueue.connect(customVault).claim(0, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5));
+        await withdrawalQueue.connect(customVault).claim(
+          undelegatedEpoch, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5)
+        );
 
-        await expect(withdrawalQueue.connect(customVault).claim(0, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5)))
-          .to.be.revertedWithCustomError(withdrawalQueue, "AdapterAlreadyClaimed");
+        await expect(withdrawalQueue.connect(customVault).claim(
+          undelegatedEpoch, mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5))
+        ).to.be.revertedWithCustomError(withdrawalQueue, "AdapterAlreadyClaimed");
       });
 
       it("initialize", async function() {
@@ -1430,7 +1435,7 @@ assets.forEach(function(a) {
         legacyWithdrawalQueue.address = await legacyWithdrawalQueue.getAddress();
         await iVault.setWithdrawalQueue(legacyWithdrawalQueue);
 
-        expect(await legacyWithdrawalQueue.currentEpoch()).to.be.eq(1);
+        expect(await legacyWithdrawalQueue.currentEpoch()).to.be.eq(2);
         expect(await legacyWithdrawalQueue.totalAmountToWithdraw()).to.be.eq(toWei(5));
         expect(await legacyWithdrawalQueue.totalAmountRedeem()).to.be.eq(toWei(5));
         expect(await legacyWithdrawalQueue.getPendingWithdrawalOf(staker.address)).to.be.eq(toWei(1));
