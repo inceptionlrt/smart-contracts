@@ -351,9 +351,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         expect(events[0].args["adapter"]).to.be.eq(symbioticAdapter.address);
@@ -442,9 +442,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -499,9 +499,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         // ----------------
@@ -521,7 +521,7 @@ assets.forEach(function(a) {
         // undelegate
         withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         // ----------------
@@ -621,15 +621,14 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1112752741401218766n, ratioErr);
         // ----------------
-
 
         // claim
         await skipEpoch(symbioticVaults[0]);
@@ -722,9 +721,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -787,9 +786,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -833,9 +832,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -891,9 +890,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -942,9 +941,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -993,9 +992,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -1051,9 +1050,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -1088,9 +1087,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         receipt = await tx.wait();
         events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
@@ -1135,9 +1134,9 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        let withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
-          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [withdrawalEpoch[1]], [emptyBytes]);
+          .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         let receipt = await tx.wait();
         let undelegateEvents = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
         // ----------------
