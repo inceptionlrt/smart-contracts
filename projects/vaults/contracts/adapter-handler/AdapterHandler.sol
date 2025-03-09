@@ -171,9 +171,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            (uint256 undelegated, uint256 claimed) = _undelegate(
-                adapters[i], vaults[i], amounts[i], _data[i]
-            );
+            (uint256 undelegated, uint256 claimed) = IIBaseAdapter(adapters[i])
+                .withdraw(vaults[i], amounts[i], _data[i]);
 
             claimedAmounts[i] = claimed;
             undelegatedAmounts[i] = undelegated;
