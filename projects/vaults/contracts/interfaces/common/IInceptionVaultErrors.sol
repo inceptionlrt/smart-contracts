@@ -75,4 +75,6 @@ interface IInceptionVaultErrors {
     error ClaimFailed();
 
     error WithdrawalFailed();
+
+    error InsufficientFreeBalance();
 }

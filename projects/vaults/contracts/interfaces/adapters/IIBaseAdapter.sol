@@ -61,7 +61,7 @@ interface IIBaseAdapter {
 
     function withdraw(
         address vault,
-        uint256 shares,
+        uint256 amount,
         bytes[] calldata _data
     ) external returns (uint256 undelegated, uint256 claimed);
 

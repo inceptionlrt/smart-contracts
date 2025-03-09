@@ -9,6 +9,9 @@ import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
+    /// @dev epoch for emergency undelegation and claim
+    uint64 public constant EMERGENCY_EPOCH = 0;
+
     /// @dev withdrawal queue owner
     address public vaultOwner;
 
@@ -21,6 +24,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 public totalAmountToWithdraw;
     uint256 public totalAmountUndelegated;
     uint256 public totalAmountRedeem;
+    uint256 public totalAmountRedeemFree;
 
     /// @notice Initializes the contract with a vault address and legacy withdrawal data
     /// @param _vault The address of the vault contract that will interact with this queue
@@ -35,6 +39,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     ) external initializer {
         require(_vault != address(0), ValueZero());
         vaultOwner = _vault;
+        currentEpoch = EMERGENCY_EPOCH + 1;
 
         _initLegacyWithdrawals(
             legacyWithdrawalAddresses,
@@ -116,8 +121,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
-        require(epoch == currentEpoch, UndelegateEpochMismatch());
+        require(epoch == currentEpoch || epoch == EMERGENCY_EPOCH, UndelegateEpochMismatch());
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+
+        if (epoch == EMERGENCY_EPOCH) {
+            _undelegateEmergency(withdrawal, adapters, vaults, undelegatedAmounts, claimedAmounts);
+            return;
+        }
 
         for (uint256 i = 0; i < adapters.length; i++) {
             _undelegate(
@@ -131,17 +141,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         }
 
         _afterUndelegate(withdrawal);
-    }
-
-    /// @notice Make undelegation without epoch
-    /// @param undelegatedAmount The amount to add to undelegated totals
-    /// @param claimedAmount The amount to add to withdrawal totals if claimed
-    function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external onlyVault {
-        totalAmountToWithdraw += undelegatedAmount;
-        totalAmountUndelegated += undelegatedAmount;
-        if (claimedAmount > 0) {
-            totalAmountToWithdraw += claimedAmount;
-        }
     }
 
     /// @notice Internal function to process undelegation for a specific adapter and vault
@@ -195,6 +194,40 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         }
     }
 
+    /// @notice Make emergency undelegation
+    /// @param withdrawal The storage reference to the emergency withdrawal epoch
+    /// @param adapters Array of adapter addresses
+    /// @param vaults Array of vault addresses
+    /// @param undelegatedAmounts Array of undelegated amounts
+    /// @param claimedAmounts Array of claimed amounts
+    function _undelegateEmergency(
+        WithdrawalEpoch storage withdrawal,
+        address[] calldata adapters,
+        address[] calldata vaults,
+        uint256[] calldata undelegatedAmounts,
+        uint256[] calldata claimedAmounts
+    ) internal {
+        for (uint256 i = 0; i < adapters.length; i++) {
+            (address adapter, address vault, uint256 undelegatedAmount, uint256 claimedAmount) = (
+                adapters[i], vaults[i], undelegatedAmounts[i], claimedAmounts[i]
+            );
+            require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
+
+            // update emergency epoch
+            withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
+
+            // update global data
+            totalAmountUndelegated += undelegatedAmount;
+            totalAmountToWithdraw += undelegatedAmount;
+
+            if (claimedAmount > 0) {
+                totalAmountToWithdraw += claimedAmount;
+                totalAmountRedeem += claimedAmount;
+                totalAmountRedeemFree += claimedAmount;
+            }
+        }
+    }
+
     /// @notice Claims an amount for a specific adapter and vault in an epoch
     /// @param epoch The epoch to claim from
     /// @param adapter The adapter address
@@ -205,6 +238,10 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         require(withdrawal.adapterUndelegated[adapter][vault] > 0, ClaimUnknownAdapter());
         require(withdrawal.adapterClaimed[adapter][vault] == 0, AdapterAlreadyClaimed());
         require(withdrawal.adapterUndelegated[adapter][vault] >= claimedAmount, ClaimedExceedUndelegated());
+
+        if (epoch == EMERGENCY_EPOCH) {
+            return _claimEmergency(withdrawal, adapter, vault, claimedAmount);
+        }
 
         // update withdrawal state
         withdrawal.adapterClaimed[adapter][vault] += claimedAmount;
@@ -221,14 +258,44 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
     /// @notice Reduces the total undelegated amount by a claimed amount
     /// @param claimedAmount The amount to subtract from undelegated totals
-    function claim(uint256 claimedAmount) external onlyVault {
-        totalAmountUndelegated -= claimedAmount;
+    function _claimEmergency(
+        WithdrawalEpoch storage withdrawal,
+        address adapter,
+        address vault,
+        uint256 claimedAmount
+    ) internal {
+        totalAmountRedeem += claimedAmount;
+        totalAmountRedeemFree += claimedAmount;
+        totalAmountToWithdraw -= withdrawal.adapterUndelegated[adapter][vault] - claimedAmount; // difference means slash
+        totalAmountUndelegated -= withdrawal.adapterUndelegated[adapter][vault];
+
+        withdrawal.adapterClaimed[adapter][vault] = 0;
+        withdrawal.adapterUndelegated[adapter][vault] = 0;
     }
 
     /// @notice Updates the redeemable status after a claim
     /// @param withdrawal The storage reference to the withdrawal epoch
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
         if (withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter) withdrawal.ableRedeem = true;
+    }
+
+    /// @notice Forces undelegation and claims a specified amount for the current epoch.
+    /// @param epoch The epoch number to process, must match the current epoch.
+    /// @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree.
+    function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external onlyVault {
+        require(epoch == currentEpoch, UndelegateEpochMismatch());
+        require(claimedAmount <= totalAmountRedeemFree, InsufficientFreeReservedRedeemAmount());
+
+        // update epoch state
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        withdrawal.ableRedeem = true;
+        withdrawal.totalClaimedAmount = claimedAmount;
+
+        // update global state
+        totalAmountRedeemFree -= claimedAmount;
+
+        // update epoch
+        currentEpoch++;
     }
 
     /// @notice Redeems available amounts for a receiver across their epochs
@@ -277,6 +344,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /*//////////////////////
     //// GET functions ////
     ////////////////////*/
+
+    /// @notice Retrieves the total number of requested shares for a specific epoch.
+    /// @param epoch The epoch number for which to retrieve the requested shares.
+    /// @return The total number of shares requested in the specified epoch.
+    function getRequestedShares(uint256 epoch) external view returns (uint256) {
+        return withdrawals[epoch].totalRequestedShares;
+    }
 
     /// @notice Returns the total pending withdrawal amount for a receiver
     /// @param receiver The address to check

@@ -11,6 +11,7 @@ interface IWithdrawalQueueErrors {
     error UndelegateNotCompleted();
     error ValueZero();
     error OnlyVaultAllowed();
+    error InsufficientFreeReservedRedeemAmount();
 }
 
 interface IWithdrawalQueue is IWithdrawalQueueErrors {
@@ -52,11 +53,6 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint256[] calldata claimedAmounts
     ) external;
 
-    /// @notice Make undelegation without epoch
-    /// @param undelegatedAmount The amount to add to undelegated totals
-    /// @param claimedAmount The amount to add to withdrawal totals if claimed
-    function undelegate(uint256 undelegatedAmount, uint256 claimedAmount) external;
-
     /// @notice Claims an amount for a specific adapter and vault in an epoch
     /// @param epoch The epoch to claim from
     /// @param adapter The adapter address
@@ -64,9 +60,10 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /// @param claimedAmount The amount to claim
     function claim(uint256 epoch, address adapter, address vault, uint256 claimedAmount) external;
 
-    /// @notice Reduces the total undelegated amount by a claimed amount
-    /// @param claimedAmount The amount to subtract from undelegated totals
-    function claim(uint256 claimedAmount) external;
+    /// @notice Forces undelegation and claims a specified amount for the current epoch.
+    /// @param epoch The epoch number to process, must match the current epoch.
+    /// @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree.
+    function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external;
 
     /// @notice Redeems available amounts for a receiver across their epochs
     /// @param receiver The address to redeem for
@@ -76,6 +73,10 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
+
+    /// @notice Returns the emergency epoch number
+    /// @return The emergency epoch number
+    function EMERGENCY_EPOCH() external view returns (uint64);
 
     /// @notice Returns the current epoch number
     /// @return The current epoch number
@@ -93,6 +94,10 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /// @return The total redeemed amount
     function totalAmountRedeem() external view returns (uint256);
 
+    /// @notice Returns the not reserved amount of total amount to redeem;
+    /// @return The total redeemed amount
+    function totalAmountRedeemFree() external view returns (uint256);
+
     /// @notice Returns the total pending withdrawal amount for a receiver
     /// @param receiver The address to check
     /// @return amount The total pending withdrawal amount
@@ -103,4 +108,9 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /// @return able Whether there are redeemable withdrawals
     /// @return withdrawalIndexes Array of epoch indexes with redeemable withdrawals
     function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes);
+
+    /// @notice Retrieves the total number of requested shares for a specific epoch.
+    /// @param epoch The epoch number for which to retrieve the requested shares.
+    /// @return The total number of shares requested in the specified epoch.
+    function getRequestedShares(uint256 epoch) external view returns (uint256);
 }
