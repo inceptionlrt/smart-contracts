@@ -114,7 +114,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         for (uint256 i = 0; i < adapters.length; i++) {
             (uint256 undelegated, uint256 claimed) = _undelegate(
-                adapters[i], vaults[i], shares[i], _data[i]
+                adapters[i],
+                vaults[i],
+                IERC4626(address(this)).convertToAssets(shares[i]),
+                _data[i]
             );
 
             claimedAmounts[i] = claimed;
@@ -132,14 +135,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function _undelegate(
         address adapter,
         address vault,
-        uint256 shares,
+        uint256 amount,
         bytes[] calldata _data
     ) internal returns (uint256 undelegated, uint256 claimed) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
-        if (shares == 0) revert ValueZero();
-        // undelegate adapter
-        uint256 amount = IERC4626(address(this)).convertToAssets(shares);
+        if (amount == 0) revert ValueZero();
+        // undelegate from adapter
         return IIBaseAdapter(adapter).withdraw(vault, amount, _data);
     }
 
@@ -171,8 +173,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            (uint256 undelegated, uint256 claimed) = IIBaseAdapter(adapters[i])
-                .withdraw(vaults[i], amounts[i], _data[i]);
+            (uint256 undelegated, uint256 claimed) = _undelegate(
+                adapters[i], vaults[i], amounts[i], _data[i]
+            );
+
 
             claimedAmounts[i] = claimed;
             undelegatedAmounts[i] = undelegated;
