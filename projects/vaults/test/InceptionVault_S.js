@@ -1,3 +1,6 @@
+// Tests for InceptionVault_S contract;
+// The S in name does not mean only Symbiotic; this file contains tests for Symbiotic and Mellow adapters
+
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, upgrades, network } = require("hardhat");
 const { expect } = require("chai");
