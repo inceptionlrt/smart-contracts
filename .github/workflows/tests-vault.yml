@@ -1,8 +1,5 @@
 name: Vault tests
 on:
-  push:
-    branches:
-      - master
   pull_request:
 
 jobs:
