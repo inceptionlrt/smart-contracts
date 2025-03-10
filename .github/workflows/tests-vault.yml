@@ -16,9 +16,10 @@ jobs:
           node-version: 'node'
 
       - name: Install deps
-        run: yarn
+        run: yarn && cd projects/vaults && yarn
 
       - name: Run tests
+        working-directory: projects/vaults
         run: npx hardhat test test/InceptionToken.js test/InceptionVault_S_EL.js test/InceptionVault_S_slashing.js test/InceptionVault_S.js
         # variable process.env.MAINNET_RPC
         env:
