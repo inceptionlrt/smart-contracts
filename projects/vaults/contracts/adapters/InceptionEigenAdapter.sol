@@ -147,6 +147,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             (IDelegationManager.Withdrawal)
         );
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
+        if (tokens[0][0] != IWStethInterface(address(_asset)).stETH()) revert InconsistentData();
         uint256[] memory middlewareTimesIndexes = abi.decode(
             _data[2],
             (uint256[])
