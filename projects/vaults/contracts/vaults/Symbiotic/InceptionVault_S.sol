@@ -601,6 +601,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
     function adjustWithdrawals() external onlyOwner {
+
         uint256 queueLength = claimerWithdrawalsQueue.length;
 
         // Duplicate queue
@@ -612,13 +613,20 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
 
         // Traverse through the addresses
-        for (uint256 i = 0; i < queue.length; i++) {
-            // Skip if address(0), means fulfilled
+        for (uint256 i = 0; i < queueLength; i++) {
+
+            // Means fulfilled
             if (queue[i] == address(0)) continue;
 
+            for (uint256 j = 0; j < i; j++) {
+
+                if (queue[j] == queue[i]) continue;
+            }
+
             uint256 numWithdrawal;
-            for (uint256 j = 0; j < queue.length; j++) {
-                if (queue[i] == queue[j]) numWithdrawal++;
+            for (uint256 k = i; k < queue.length; k++) {
+
+                if (queue[i] == queue[k]) numWithdrawal++;
             }
 
             withdrawals[queue[i]] = numWithdrawal;

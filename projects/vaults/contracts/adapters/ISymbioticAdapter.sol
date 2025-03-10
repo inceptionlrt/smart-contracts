@@ -43,17 +43,12 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         IERC20 asset,
         address trusteeManager
     ) public initializer {
-        __Pausable_init();
-        __ReentrancyGuard_init();
-        __Ownable_init();
-        __ERC165_init();
         __IBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
             if (IVault(vaults[i]).collateral() != address(asset))
                 revert InvalidCollateral();
-            if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
-            _symbioticVaults.add(vaults[i]);
+            if (!_symbioticVaults.add(vaults[i])) revert AlreadyAdded();
             emit VaultAdded(vaults[i]);
         }
     }
