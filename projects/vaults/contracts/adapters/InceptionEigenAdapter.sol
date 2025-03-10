@@ -68,11 +68,13 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             _asset.safeTransferFrom(msg.sender, address(this), amount);
             amount = IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
-            return _strategy.sharesToUnderlying(
-                _strategyManager.depositIntoStrategy(
-                    _strategy,
-                    IWStethInterface(address(_asset)).stETH(),
-                    amount
+            return IWStethInterface(address(_asset)).getWstETHByStETH(
+                _strategy.sharesToUnderlying(
+                    _strategyManager.depositIntoStrategy(
+                        _strategy,
+                        IWStethInterface(address(_asset)).stETH(),
+                        amount
+                    )
                 )
             );
         }
