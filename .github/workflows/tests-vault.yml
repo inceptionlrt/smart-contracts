@@ -1,6 +1,10 @@
 name: Vault tests
 on:
   pull_request:
+# cancel previous runs if a new one is triggered
+concurrency:
+  group: vault-tests-${{github.event.pull_request.number}}
+  cancel-in-progress: true
 
 jobs:
   build:
