@@ -330,6 +330,8 @@ assets.forEach(function(a) {
         await iVault.setTargetFlashCapacity(1n);
       });
 
+      // flow:
+      // success: deposit -> delegate -> withdraw -> undelegate -> claim -> redeem
       it("one withdrawal without slash", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
@@ -381,6 +383,9 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit -> delegate -> withdraw -> undelegate -> claim ->
+      // withdraw -> slash -> undelegate -> claim -> redeem -> redeem
       it("2 withdraw & slash between undelegate", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -478,6 +483,9 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> deposit #2 -> delegate -> withdraw #1 -> undelegate -> claim ->
+      // withdraw #2 -> undelegate -> slash -> claim -> redeem -> redeem
       it("2 withdraw & slash after undelegate", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -568,6 +576,9 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> deposit #2 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
+      // deposit #3 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
       it("slash between withdraw", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -656,6 +667,9 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> deposit #2 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
+      // slash -> deposit #3 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
       it("withdraw->slash->withdraw->slash", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -756,6 +770,9 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
+      // slash -> deposit #2 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
       it("withdraw all->slash->redeem all", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
@@ -814,6 +831,8 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> slash -> claim -> redeem
       it("slash after undelegate", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
@@ -872,6 +891,8 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> claim -> deposit #2 -> slash
       it("slash after deposit", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -923,6 +944,8 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> claim -> slash
       it("slash after claim", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
@@ -969,6 +992,8 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 ->  withdraw #1 -> undelegate -> slash -> claim -> redeem
       it("2 withdraw from one user in epoch", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
@@ -1032,6 +1057,8 @@ assets.forEach(function(a) {
         // ----------------
       });
 
+      // flow:
+      // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> slash -> claim -> withdraw -> undelegate -> claim -> redeem
       it("2 withdraw from one user in different epoch", async function() {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
