@@ -62,18 +62,19 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         uint256 amount,
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
-        /// depositIntoStrategy
+        // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
-            IWStethInterface(address(_asset)).unwrap(amount);
+            amount = IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
-            return
+            return _strategy.sharesToUnderlying(
                 _strategyManager.depositIntoStrategy(
                     _strategy,
                     IWStethInterface(address(_asset)).stETH(),
                     amount
-                );
+                )
+            );
         }
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
