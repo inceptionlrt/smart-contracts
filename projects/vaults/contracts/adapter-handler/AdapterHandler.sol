@@ -13,8 +13,6 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
