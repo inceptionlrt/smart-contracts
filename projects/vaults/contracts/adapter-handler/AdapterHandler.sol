@@ -13,6 +13,8 @@ import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsH
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
@@ -146,7 +148,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             withdrawalQueue.getRequestedShares(undelegatedEpoch)
         );
 
-        if (getFreeBalance() + withdrawalQueue.totalAmountRedeemFree() > requestedAmount) revert InsufficientFreeBalance();
+        if (getFreeBalance() < requestedAmount) revert InsufficientFreeBalance();
         withdrawalQueue.forceUndelegateAndClaim(undelegatedEpoch, requestedAmount);
     }
 
@@ -164,36 +166,38 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             ValueZero()
         );
 
-        uint256 undelegatedEpoch = withdrawalQueue.EMERGENCY_EPOCH();
-        uint256[] memory undelegatedAmounts = new uint256[](adapters.length);
-        uint256[] memory claimedAmounts = new uint256[](adapters.length);
-
+        uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
         for (uint256 i = 0; i < adapters.length; i++) {
-            (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
+            (uint256 undelegatedAmount,) = _undelegate(
                 adapters[i], vaults[i], amounts[i], _data[i]
             );
 
-            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmounts[i], undelegatedEpoch);
+            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmount, epoch);
         }
-
-        // undelegate from queue
-        withdrawalQueue.undelegate(
-            undelegatedEpoch, adapters, vaults, amounts, undelegatedAmounts, claimedAmounts
-        );
     }
 
     function claim(
         uint256 epochNum,
-        address adapter,
-        address vault,
-        bytes[] calldata _data
+        address[] calldata adapters,
+        address[] calldata vaults,
+        bytes[][] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        require(adapters.length > 0 && adapters.length == vaults.length && vaults.length == _data.length, ValueZero());
 
+        uint256[] memory claimedAmounts = new uint256[](adapters.length);
+        for (uint256 i = 0; i < adapters.length; i++) {
+            claimedAmounts[i] = _claim(adapters[i], vaults[i], _data[i]);
+        }
+
+        withdrawalQueue.claim(epochNum, adapters, vaults, claimedAmounts);
+    }
+
+    function _claim(address adapter, address vault, bytes[] calldata _data) internal returns (uint256) {
+        if (!_adapters.contains(adapter)) revert AdapterNotFound();
         uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
-        withdrawalQueue.claim(epochNum, adapter, vault, withdrawnAmount);
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
+        return withdrawnAmount;
     }
 
     /*//////////////////////////
@@ -247,7 +251,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 _assets = totalAssets();
-        uint256 _sum = redeemReservedAmount() - withdrawalQueue.totalAmountRedeemFree() + depositBonusAmount;
+        uint256 _sum = redeemReservedAmount() + depositBonusAmount;
         if (_sum > _assets) return 0;
         else return _assets - _sum;
     }
@@ -256,8 +260,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return (targetCapacity * getTotalDeposited()) / MAX_TARGET_PERCENT;
     }
 
-    function totalAmountToWithdraw() public view returns (uint256) {
-        return withdrawalQueue.totalAmountToWithdraw();
+    function totalSharesToWithdraw() public view returns (uint256) {
+        return withdrawalQueue.totalSharesToWithdraw();
     }
 
     function redeemReservedAmount() public view returns (uint256) {
