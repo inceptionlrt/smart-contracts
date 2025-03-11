@@ -1271,7 +1271,7 @@ assets.forEach(function(a) {
             events[0].args["epoch"],
             [mellowAdapter.address, symbioticAdapter.address],
             [mellowVaults[0].vaultAddress, symbioticVaults[0].vaultAddress],
-            [[await mellowClaimParams(mellowVaults[0])], [await symbioticClaimParams(symbioticVaults[0])]]
+            [[await mellowClaimParams(mellowVaults[0])], [await symbioticClaimParams(symbioticVaults[0])]],
           );
         await tx.wait();
 
@@ -1344,6 +1344,77 @@ assets.forEach(function(a) {
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999644904143841353n, ratioErr);
         // ----------------
       });
+
+      it("emergency undelegate", async function() {
+        // deposit
+        let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
+        await tx.wait();
+        // ----------------
+
+        // delegate
+        tx = await iVault.connect(iVaultOperator)
+          .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(10), emptyBytes);
+        await tx.wait();
+        // ----------------
+
+        // emergency undelegate
+        tx = await iVault.connect(iVaultOperator)
+          .emergencyUndelegate(
+            [symbioticAdapter.address],
+            [symbioticVaults[0].vaultAddress],
+            [toWei(5)],
+            [emptyBytes],
+          );
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
+        // ----------------
+
+        // apply slash
+        let totalStake = await symbioticVaults[0].vault.totalStake();
+        await a.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+
+        let ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+        expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
+        // ----------------
+
+        // update ratio
+        await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
+        // ----------------
+
+        await skipEpoch(symbioticVaults[0]);
+
+        // one withdraw
+        tx = await iVault.connect(staker).withdraw(toWei(2), staker.address);
+        await tx.wait();
+        // ----------------
+
+        // emergency claim
+        tx = await iVault.connect(iVaultOperator)
+          .claim(
+            await withdrawalQueue.EMERGENCY_EPOCH(),
+            [symbioticAdapter.address],
+            [symbioticVaults[0].vaultAddress],
+            [[await symbioticClaimParams(symbioticVaults[0])]],
+          );
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1112752741401218766n, ratioErr);
+        // ----------------
+
+        // undelegate and claim
+        tx = await iVault.connect(iVaultOperator).undelegate([], [], [], []);
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1112752741401218766n, ratioErr);
+        // ----------------
+
+        // redeem
+        tx = await iVault.connect(staker).redeem(staker.address);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+
+        expect(events[0].args["amount"]).to.be.closeTo(1797344482370384621n, transactErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1112752741401218766n, ratioErr);
+        // ----------------
+      });
     });
 
     describe("Withdrawal queue: negative cases", async function() {
@@ -1402,7 +1473,7 @@ assets.forEach(function(a) {
 
       it("claim failed", async function() {
         await expect(
-          withdrawalQueue.connect(customVault).claim(1, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [1n])
+          withdrawalQueue.connect(customVault).claim(1, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [1n]),
         ).to.be.revertedWithCustomError(withdrawalQueue, "ClaimUnknownAdapter");
 
         const undelegatedEpoch = await withdrawalQueue.currentEpoch();
@@ -1415,19 +1486,19 @@ assets.forEach(function(a) {
             [mellowVaults[0].vaultAddress],
             [toWei(5)],
             [toWei(5)],
-            [0n]
+            [0n],
           );
 
         await expect(withdrawalQueue.connect(customVault).claim(
-          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(6)])
+          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(6)]),
         ).to.be.revertedWithCustomError(withdrawalQueue, "ClaimedExceedUndelegated");
 
         await withdrawalQueue.connect(customVault).claim(
-          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)]
+          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)],
         );
 
         await expect(withdrawalQueue.connect(customVault).claim(
-          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)])
+          undelegatedEpoch, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)]),
         ).to.be.revertedWithCustomError(withdrawalQueue, "EpochAlreadyRedeemable");
       });
 
