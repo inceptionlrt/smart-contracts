@@ -264,6 +264,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         // update global state
         totalAmountRedeem += claimedAmount;
+        totalSharesToWithdraw -= withdrawal.totalRequestedShares;
 
         // update epoch
         currentEpoch++;
