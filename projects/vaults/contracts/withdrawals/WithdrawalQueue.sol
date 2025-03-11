@@ -208,6 +208,11 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(withdrawal.ableRedeem == false, EpochAlreadyRedeemable());
 
+        if(epoch == EMERGENCY_EPOCH) {
+            // do nothing
+            return;
+        }
+
         for (uint256 i = 0; i < adapters.length; i++) {
             _claim(withdrawal, adapters[i], vaults[i], claimedAmounts[i]);
         }
