@@ -23,18 +23,18 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
 
     /// @dev Kept only for storage slot
-    mapping(address => IMellowDepositWrapper) public mellowDepositWrappers; // mellowVault => mellowDepositWrapper
+    mapping(address => IMellowDepositWrapper) private PLACE_HOLDER_1; // mellowVault => mellowDepositWrapper
     IMellowVault[] public mellowVaults;
 
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
 
     /// @dev Kept only for storage slot
-    uint256 public requestDeadline;
+    uint256 private PLACE_HOLDER_2;
     /// @dev Kept only for storage slot
-    uint256 public depositSlippage; // BasisPoints 10,000 = 100%
+    uint256 private PLACE_HOLDER_3; // BasisPoints 10,000 = 100%
     /// @dev Kept only for storage slot
-    uint256 public withdrawSlippage;
+    uint256 private PLACE_HOLDER_4;
 
     address public ethWrapper;
 

@@ -179,7 +179,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function removeVault(address vaultAddress) external onlyOwner {
         if (vaultAddress == address(0)) revert ZeroAddress();
-        if (!Address.isContract(vaultAddress)) revert NotContract();
         if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
 
         _symbioticVaults.remove(vaultAddress);

@@ -41,5 +41,5 @@ interface IIEigenLayerAdapter is IIBaseAdapter {
 
     event ReturnedHashes(bytes32[]);
 
-    function setRewardsCoordinator(address newRewardCoordinator) external;
+    function setRewardsCoordinator(address newRewardCoordinator, address claimer) external;
 }

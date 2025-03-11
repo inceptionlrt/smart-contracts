@@ -183,10 +183,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /////////////////////////////////////*/
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
-        if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
+        if (iShares == 0) revert ValueZero();
+        if (receiver == address(0)) revert InvalidAddress();
 
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -292,7 +292,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 iShares,
         address receiver,
         uint256 minOut
-    ) external whenNotPaused nonReentrant {
+    ) external whenNotPaused nonReentrant returns (uint256) {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
@@ -302,6 +302,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             minOut
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
+        return amount;
     }
 
     function _flashWithdraw(

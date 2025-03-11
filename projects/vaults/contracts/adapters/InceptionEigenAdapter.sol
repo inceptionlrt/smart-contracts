@@ -32,7 +32,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     function initialize(
-        address ownerAddress,
+        address claimer,
         address rewardCoordinator,
         address delegationManager,
         address strategyManager,
@@ -47,7 +47,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
         _inceptionVault = inceptionVault;
-        _setRewardsCoordinator(rewardCoordinator, ownerAddress);
+        _setRewardsCoordinator(rewardCoordinator, claimer);
 
         // approve spending by strategyManager
         _asset.safeApprove(strategyManager, type(uint256).max);
@@ -139,6 +139,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     function claim(
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
+        require(_data.length == 4, InvalidDataLength(4, _data.length));
         IERC20 backedAsset = IWStethInterface(address(_asset)).stETH();
         uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
@@ -209,16 +210,17 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     function setRewardsCoordinator(
-        address newRewardsCoordinator
+        address newRewardsCoordinator,
+        address claimer
     ) external onlyOwner {
-        _setRewardsCoordinator(newRewardsCoordinator, owner());
+        _setRewardsCoordinator(newRewardsCoordinator, claimer);
     }
 
     function _setRewardsCoordinator(
         address newRewardsCoordinator,
-        address ownerAddress
+        address claimer
     ) internal {
-        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(ownerAddress);
+        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(claimer);
 
         emit RewardCoordinatorChanged(
             address(rewardsCoordinator),
