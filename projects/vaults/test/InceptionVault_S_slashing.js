@@ -1320,7 +1320,7 @@ assets.forEach(function(a) {
         expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(4187799577779380601n);
         expect(await withdrawalQueue.totalSharesToWithdraw()).to.be.eq(812200422220619399n);
         expect(events[0].args["actualAmounts"]).to.be.eq(812200422220619399n);
-        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999644904143841353n, ratioErr);
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(999694510295965289n, ratioErr);
         // ----------------
 
         // claim

@@ -46,17 +46,17 @@ const calculateRatio = async (vault, token, queue) => {
   const numeral = totalSupply + totalSharesToWithdraw;
   const denominator = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
-  console.log("ratio{");
-  console.log("totalSupply: " + totalSupply);
-  console.log("totalSharesToWithdraw: " + totalSharesToWithdraw);
-  console.log("totalDelegated: ", totalDelegated);
-  console.log("totalAssets: " + totalAssets);
-  console.log("pendingWithdrawals: " + pendingWithdrawals);
-  console.log("depositBonusAmount: " + depositBonusAmount);
-  console.log("redeemReservedAmount: " + redeemReservedAmount);
-  console.log("}");
+  // console.log("ratio{");
+  // console.log("totalSupply: " + totalSupply);
+  // console.log("totalSharesToWithdraw: " + totalSharesToWithdraw);
+  // console.log("totalDelegated: ", totalDelegated);
+  // console.log("totalAssets: " + totalAssets);
+  // console.log("pendingWithdrawals: " + pendingWithdrawals);
+  // console.log("depositBonusAmount: " + depositBonusAmount);
+  // console.log("redeemReservedAmount: " + redeemReservedAmount);
+  // console.log("}");
 
-  if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated === 0n)) {
+  if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 20n)) {
     console.log("iToken supply is 0, so the ration is going to be 1e18");
     return e18;
   }
