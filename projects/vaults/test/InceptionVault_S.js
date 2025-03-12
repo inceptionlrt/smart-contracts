@@ -999,7 +999,7 @@ assets.forEach(function(a) {
         expect(await iVault.getTotalDelegated()).to.be.eq(0n);
       });
 
-      it("Deposit to Vault", async function() {
+      it("Deposit to Vault", async function() { // made by user
         deposited = toWei(10);
         freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
         const expectedShares = (deposited * e18) / (await iVault.ratio());
@@ -1023,7 +1023,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).to.be.eq(e18);
       });
 
-      it("Delegate freeBalance", async function() {
+      it("Delegate freeBalance", async function() { // made by operator
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const expectedFlashCapacity = (deposited * targetCapacity) / MAX_TARGET_PERCENT;
 
@@ -1055,7 +1055,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).lt(e18);
       });
 
-      it("Flash withdraw all capacity", async function() {
+      it("Flash withdraw all capacity", async function() { // made by user (flash capacity tests ends on this step)
         const sharesBefore = await iToken.balanceOf(staker);
         const assetBalanceBefore = await asset.balanceOf(staker);
         const treasuryBalanceBefore = await asset.balanceOf(treasury);
@@ -1109,6 +1109,7 @@ assets.forEach(function(a) {
         expect(flashCapacityAfter).to.be.closeTo(0n, transactErr);
       });
 
+      // made by user (withdrawal of funds if something left after flash withdraw)
       it("Withdraw all", async function() {
         const ratioBefore = await iVault.ratio();
         const shares = await iToken.balanceOf(staker.address);
@@ -1138,7 +1139,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).to.be.eq(ratioBefore);
       });
 
-      it("Undelegate from Mellow", async function() {
+      it("Undelegate from Mellow", async function() { // made by operator
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -1173,6 +1174,7 @@ assets.forEach(function(a) {
         expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
       });
 
+      // made by operator
       it("Claim Mellow withdrawal transfer funds from adapter to vault", async function() {
         await helpers.time.increase(1209900);
 
@@ -1193,6 +1195,7 @@ assets.forEach(function(a) {
         // expect(adapterBalanceBefore - adapterBalanceAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
       });
 
+      // made by user
       it("Staker is able to redeem", async function() {
         const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
         const redeemReserve = await iVault.redeemReservedAmount();
@@ -1206,6 +1209,7 @@ assets.forEach(function(a) {
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
       });
 
+      // made by operator
       it("Redeem withdraw", async function() {
         const balanceBefore = await asset.balanceOf(staker2.address);
         const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
@@ -1232,6 +1236,98 @@ assets.forEach(function(a) {
         expect(balanceAfter - balanceBefore).to.be.closeTo(staker2PWBefore, transactErr);
         expect(totalDepositedAfter).to.be.closeTo(0n, transactErr * 3n);
         expect(totalAssetsAfter).to.be.closeTo(depositFees, transactErr * 3n);
+      });
+    });
+
+    describe.only("Flash withdrawal: setFlashMinAmount method", function() {
+      let targetCapacity;
+      const flashMinAmount = toWei(1);
+      const depositedAmount = toWei(2);
+
+      beforeEach(async function() {
+        await snapshot.restore();
+        targetCapacity = e18;
+        // iVault is Symbiotic
+        await iVault.setTargetFlashCapacity(targetCapacity); //1%
+
+        // deposit to vault
+        const tx = await iVault.connect(staker).deposit(depositedAmount, staker.address);
+        await tx.wait();
+
+        // set flash min amount
+        await iVault.setFlashMinAmount(flashMinAmount);
+      });
+
+      it('Flash min amount could be set', async function() {
+        expect(await iVault.flashMinAmount()).to.be.eq(flashMinAmount);
+      });
+
+      it('Event FlashMinAmountChanged is emitted', async function() {
+        // act
+        const newFlashMinAmount = 2n;
+        const tx = await iVault.setFlashMinAmount(newFlashMinAmount);
+        const receipt = await tx.wait();
+
+        // assert
+        const event = receipt.logs?.find(e => e.eventName === "FlashMinAmountChanged");
+        expect(event).to.exist;
+        expect(event.args).to.have.lengthOf(2);
+        expect(event?.args[0]).to.be.eq(flashMinAmount);
+        expect(event?.args[1]).to.be.eq(newFlashMinAmount);
+      });
+
+      it("Error when set flash min amount to 0", async function() {
+        await expect(iVault.setFlashMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
+      });
+
+      it('Flash min amount could be set only by owner', async function() {
+        await expect(iVault.connect(staker2).setFlashMinAmount(flashMinAmount)).to.be.revertedWith('Ownable: caller is not the owner');
+      });
+
+      it("Successfully withdraw MORE than min flash amount", async function() {
+        // arrange
+        const assetBalanceBefore = await asset.balanceOf(staker);
+        const withdrawalAmount = flashMinAmount + 1n;
+
+        // act
+        const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+        const receipt = await tx.wait();
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
+
+        // assert
+        const collectedFees = withdrawEvent[0].args["fee"];
+        const assetBalanceAfter = await asset.balanceOf(staker);
+        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore + withdrawalAmount - collectedFees, transactErr);
+      });
+
+      it("Successfully withdraw the amount EQUAL to min flash amount", async function() {
+        // arrange
+        const assetBalanceBefore = await asset.balanceOf(staker);
+        const withdrawalAmount = flashMinAmount;
+
+        // act
+        const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+        const receipt = await tx.wait();
+        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
+
+        // assert
+        const collectedFees = withdrawEvent[0].args["fee"];
+        const assetBalanceAfter = await asset.balanceOf(staker);
+        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore + withdrawalAmount - collectedFees, transactErr);
+      });
+
+      it("Error when withdraw the amount LESS to min flash amount", async function() {
+        // arrange
+        const assetBalanceBefore = await asset.balanceOf(staker);
+        const withdrawalAmount = flashMinAmount - 1n;
+
+        // act
+        const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+        await expect(withdrawalTx).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
+        
+        // assert
+        const assetBalanceAfter = await asset.balanceOf(staker);
+        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore, transactErr);
       });
     });
 
@@ -4705,4 +4801,3 @@ assets.forEach(function(a) {
     });
   });
 });
-
