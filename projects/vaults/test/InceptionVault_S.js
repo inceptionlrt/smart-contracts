@@ -1240,15 +1240,13 @@ assets.forEach(function(a) {
     });
 
     describe.only("Flash withdrawal: setFlashMinAmount method", function() {
-      let targetCapacity;
+      // let targetCapacity;
       const flashMinAmount = toWei(1);
       const depositedAmount = toWei(2);
 
       beforeEach(async function() {
         await snapshot.restore();
-        targetCapacity = e18;
-        // iVault is Symbiotic
-        await iVault.setTargetFlashCapacity(targetCapacity); //1%
+        await iVault.setTargetFlashCapacity(e18); //1%
 
         // deposit to vault
         const tx = await iVault.connect(staker).deposit(depositedAmount, staker.address);
