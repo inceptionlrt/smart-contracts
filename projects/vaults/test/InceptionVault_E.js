@@ -1,3 +1,5 @@
+// DEPRECATED
+
 const { ethers, upgrades, network } = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const config = require("../hardhat.config");

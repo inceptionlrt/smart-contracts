@@ -1,4 +1,4 @@
-require("dotenv").config();
+import 'dotenv/config';
 
 const accounts = process.env.DEPLOYER_PRIVATE_KEY
   ? [process.env.DEPLOYER_PRIVATE_KEY]
