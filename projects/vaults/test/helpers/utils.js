@@ -37,32 +37,35 @@ const calculateRatio = async (vault, token, queue) => {
   const totalDelegated = await vault.getTotalDelegated();
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
-  const pendingWithdrawals = await queue.totalAmountUndelegated();
-  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
+  const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const totalDeposited = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount;
-  const totalAmountToWithdraw = await vault.totalAmountToWithdraw();
+  const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
+  const redeemReservedAmount = await vault.redeemReservedAmount();
+  const totalSupply = await token.totalSupply();
 
-  let totalSupply = await token.totalSupply();
-  const withdrawalEpoch = await queue.withdrawals(await queue.currentEpoch());
-  totalSupply += withdrawalEpoch[1];
+  const numeral = totalSupply + totalSharesToWithdraw;
+  const denominator = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
-  let denominator;
-  if (totalDeposited < totalAmountToWithdraw) {
-    denominator = 0n;
-  } else {
-    denominator = totalDeposited - totalAmountToWithdraw;
-  }
+  // console.log("ratio{");
+  // console.log("totalSupply: " + totalSupply);
+  // console.log("totalSharesToWithdraw: " + totalSharesToWithdraw);
+  // console.log("totalDelegated: ", totalDelegated);
+  // console.log("totalAssets: " + totalAssets);
+  // console.log("pendingWithdrawals: " + pendingWithdrawals);
+  // console.log("depositBonusAmount: " + depositBonusAmount);
+  // console.log("redeemReservedAmount: " + redeemReservedAmount);
+  // console.log("}");
 
-  if (denominator === 0n || totalSupply === 0n) {
+  if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 20n)) {
     console.log("iToken supply is 0, so the ration is going to be 1e18");
     return e18;
   }
 
-  const ratio = (totalSupply * e18) / denominator;
-  if ((totalSupply * e18) % denominator !== 0n) {
+  const ratio = (numeral * e18) / denominator;
+  if ((numeral * e18) % denominator !== 0n) {
     return ratio + 1n;
   }
-  // console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
+
   return ratio;
 };
 

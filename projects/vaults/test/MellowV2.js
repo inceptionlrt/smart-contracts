@@ -73,7 +73,7 @@ describe('------------------', function () {
 
             console.log("1==== 21717995 - Final block where all integrated vaults are mellowv1");
             console.log("Our contracts are not upgraded");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -112,7 +112,7 @@ describe('------------------', function () {
             await oldVault.connect(operator).delegateToMellowVault("0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "20000000000000000000");
 
             console.log("AFTER DEPOSITS");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -147,7 +147,7 @@ describe('------------------', function () {
             await oldVault.connect(operator).undelegateFrom("0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "20000000000000000000");
 
             console.log("AFTER WITHDRAWS");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -228,7 +228,7 @@ describe('------------------', function () {
 
             console.log("2==== 21717996 - First block where MEV is now using mellowv2");
             console.log("Our contracts are upgraded");
-            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             // console.log("Total Deposited: " + await vault.getTotalDeposited());
             // console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -293,7 +293,6 @@ describe('------------------', function () {
             await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
 
             console.log("Our contracts are upgraded");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -331,7 +330,7 @@ describe('------------------', function () {
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
 
             console.log("AFTER DEPOSITS");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -385,7 +384,7 @@ describe('------------------', function () {
             let events6 = receipt6.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
             console.log("AFTER WITHDRAWS");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd"));
@@ -422,31 +421,55 @@ describe('------------------', function () {
             const abi = ethers.AbiCoder.defaultAbiCoder();
 
             if (events1[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", [abi.encode(["address"], ["0x5fD13359Ba15A84B76f7F87568309040176167cd"])]);
+                await vault.connect(operator).claim(0,
+                  [
+                    "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"
+                  ],
+                  [
+                    "0x5fD13359Ba15A84B76f7F87568309040176167cd",
+                    "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a",
+                    "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a",
+                    "0x49cd586dd9BA227Be9654C735A659a1dB08232a9",
+                    "0xd6E09a5e6D719d1c881579C9C8670a210437931b",
+                    "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"
+                  ],
+                  [
+                    [abi.encode(["address"], ["0x5fD13359Ba15A84B76f7F87568309040176167cd"])],
+                      [abi.encode(["address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"])],
+                      [abi.encode(["address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"])],
+                      [abi.encode(["address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"])],
+                      [abi.encode(["address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"])],
+                      [abi.encode(["address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"])]
+                  ]);
             }
 
-            if (events2[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", [abi.encode(["address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"])]);
-            }
-
-            if (events3[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", [abi.encode(["address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"])]);
-            }
-
-            if (events4[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x49cd586dd9BA227Be9654C735A659a1dB08232a9", [abi.encode(["address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"])]);
-            }
-
-            if (events5[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xd6E09a5e6D719d1c881579C9C8670a210437931b", [abi.encode(["address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"])]);
-            }
-
-            if (events6[0].args["actualAmounts"] > 0) {
-                await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", [abi.encode(["address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"])]);
-            }
+            // if (events2[0].args["actualAmounts"] > 0) {
+            //     await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", [abi.encode(["address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"])]);
+            // }
+            //
+            // if (events3[0].args["actualAmounts"] > 0) {
+            //     await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", [abi.encode(["address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"])]);
+            // }
+            //
+            // if (events4[0].args["actualAmounts"] > 0) {
+            //     await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x49cd586dd9BA227Be9654C735A659a1dB08232a9", [abi.encode(["address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"])]);
+            // }
+            //
+            // if (events5[0].args["actualAmounts"] > 0) {
+            //     await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xd6E09a5e6D719d1c881579C9C8670a210437931b", [abi.encode(["address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"])]);
+            // }
+            //
+            // if (events6[0].args["actualAmounts"] > 0) {
+            //     await vault.connect(operator).claim(0, "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", [abi.encode(["address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"])]);
+            // }
 
             console.log("AFTER ClaimMellowWithdrawCallback");
-            console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
+            // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
             console.log("Total Delegated: " + await vault.getTotalDelegated());
             console.log("Delegated (MEV): " + await vault.getDelegatedTo("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd"));

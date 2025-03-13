@@ -12,6 +12,8 @@ interface IWithdrawalQueueErrors {
     error ValueZero();
     error OnlyVaultAllowed();
     error InsufficientFreeReservedRedeemAmount();
+    error EpochAlreadyRedeemable();
+    error ClaimNotCompleted();
 }
 
 interface IWithdrawalQueue is IWithdrawalQueueErrors {
@@ -26,6 +28,7 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         mapping(address => bool) userRedeemed;
         mapping(address => uint256) userShares;
         mapping(address => mapping(address => uint256)) adapterUndelegated;
+        mapping(address => mapping(address => uint256)) adapterUndelegatedShares;
         mapping(address => mapping(address => uint256)) adapterClaimed;
 
         uint256 adaptersUndelegatedCounter;
@@ -55,10 +58,15 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
 
     /// @notice Claims an amount for a specific adapter and vault in an epoch
     /// @param epoch The epoch to claim from
-    /// @param adapter The adapter address
-    /// @param vault The vault address
-    /// @param claimedAmount The amount to claim
-    function claim(uint256 epoch, address adapter, address vault, uint256 claimedAmount) external;
+    /// @param adapters Array of adapter addresses
+    /// @param vaults Array of vault addresses
+    /// @param claimedAmounts Array of claimed amounts
+    function claim(
+        uint256 epoch,
+        address[] calldata adapters,
+        address[] calldata vaults,
+        uint256[] calldata claimedAmounts
+    ) external;
 
     /// @notice Forces undelegation and claims a specified amount for the current epoch.
     /// @param epoch The epoch number to process, must match the current epoch.
@@ -76,27 +84,19 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
 
     /// @notice Returns the emergency epoch number
     /// @return The emergency epoch number
-    function EMERGENCY_EPOCH() external view returns (uint64);
+    function EMERGENCY_EPOCH() external view returns (uint256);
 
     /// @notice Returns the current epoch number
     /// @return The current epoch number
     function currentEpoch() external view returns (uint256);
 
-    /// @notice Returns the total amount queued for withdrawal
+    /// @notice Returns the total shares queued for withdrawal
     /// @return The total amount to withdraw
-    function totalAmountToWithdraw() external view returns (uint256);
-
-    /// @notice Returns the total amount that has been undelegated
-    /// @return The total undelegated amount
-    function totalAmountUndelegated() external view returns (uint256);
+    function totalSharesToWithdraw() external view returns (uint256);
 
     /// @notice Returns the total amount that has been redeemed
     /// @return The total redeemed amount
     function totalAmountRedeem() external view returns (uint256);
-
-    /// @notice Returns the not reserved amount of total amount to redeem;
-    /// @return The total redeemed amount
-    function totalAmountRedeemFree() external view returns (uint256);
 
     /// @notice Returns the total pending withdrawal amount for a receiver
     /// @param receiver The address to check

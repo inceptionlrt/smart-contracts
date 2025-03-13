@@ -604,7 +604,7 @@ assets.forEach(function (a) {
 
         await mineBlocks(100000);
 
-        await iVault.connect(iVaultOperator).claim(undelegateEpoch, eigenLayerAdapter.address, eigenLayerVaults[0], _data);
+        await iVault.connect(iVaultOperator).claim(undelegateEpoch, [eigenLayerAdapter.address], [eigenLayerVaults[0]], [_data]);
 
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
