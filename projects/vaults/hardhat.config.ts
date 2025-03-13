@@ -4,6 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-storage-layout";
+import 'solidity-coverage';
 
 // Hardhat tasks
 import "./tasks/get-free-balances";
