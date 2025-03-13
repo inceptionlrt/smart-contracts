@@ -1239,7 +1239,7 @@ assets.forEach(function(a) {
       });
     });
 
-    describe.only("Flash withdrawal: setFlashMinAmount method", function() {
+    describe("Flash withdrawal: setFlashMinAmount method", function() {
       // let targetCapacity;
       const flashMinAmount = toWei(1);
       const depositedAmount = toWei(2);
