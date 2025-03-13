@@ -25,6 +25,6 @@ jobs:
 
       - name: Run tests
         working-directory: projects/vaults
-        run: npx hardhat test test/InceptionToken.js test/InceptionVault_S_EL.js test/InceptionVault_S_slashing.js test/InceptionVault_S.mjs
+        run: npm run test:actual
         env:
           MAINNET_RPC: https://rpc.ankr.com/eth
