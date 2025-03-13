@@ -21,7 +21,7 @@ jobs:
           node-version: 'node'
 
       - name: Install deps
-        run: yarn && cd projects/vaults && yarn
+        run: yarn install --frozen-lockfile && cd projects/vaults && yarn
 
       - name: Run tests
         working-directory: projects/vaults
