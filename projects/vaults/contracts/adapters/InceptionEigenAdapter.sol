@@ -146,17 +146,13 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             _data[0],
             (IDelegationManager.Withdrawal)
         );
+
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
-        uint256[] memory middlewareTimesIndexes = abi.decode(
-            _data[2],
-            (uint256[])
-        );
         bool[] memory receiveAsTokens = abi.decode(_data[3], (bool[]));
 
         _delegationManager.completeQueuedWithdrawal(
             withdrawals,
             tokens[0],
-            middlewareTimesIndexes[0],
             receiveAsTokens[0]
         );
 
@@ -176,16 +172,20 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
 
     function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
-        return IWStethInterface(
-            address(_asset)
-        ).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
+        return _pendingWithdrawalAmount(_getClaimer(false));
     }
 
-    function pendingWithdrawalAmountEmergency() public view override returns (uint256 total)
-    {
-        return IWStethInterface(
-            address(_asset)
-        ).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
+    function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total) {
+        (IDelegationManager.Withdrawal[] memory withdrawals,
+            uint256[][] memory shares) = _delegationManager.getQueuedWithdrawals(address(this));
+
+        for (uint256 i = 0; i < withdrawals.length; i++) {
+            if (withdrawals[i].withdrawer == claimer) {
+                total += shares[i][0];
+            }
+        }
+
+        return total;
     }
 
     function inactiveBalance() public view override returns (uint256) {
@@ -193,7 +193,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     function inactiveBalanceEmergency() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableAmount();
+        return _pendingWithdrawalAmount(_getClaimer(true)) + claimableAmount();
     }
 
     function getDeposited(

@@ -166,11 +166,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return _pendingWithdrawalAmount(_getClaimer(false));
     }
 
-    function pendingWithdrawalAmountEmergency() public view override returns (uint256 total)
-    {
-        return _pendingWithdrawalAmount(_getClaimer(true));
-    }
-
     function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total)
     {
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)

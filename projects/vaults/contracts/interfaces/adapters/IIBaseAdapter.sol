@@ -43,9 +43,9 @@ interface IIBaseAdapter {
         address indexed _newTrusteeManager
     );
 
-    function pendingWithdrawalAmount() external view returns (uint256);
+    event EmergencyClaimerSet(address indexed oldClaimer, address indexed newClaimer);
 
-    function pendingWithdrawalAmountEmergency() external view returns (uint256);
+    function pendingWithdrawalAmount() external view returns (uint256);
 
     function getDeposited(address vaultAddress) external view returns (uint256);
 

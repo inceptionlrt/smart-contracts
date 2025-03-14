@@ -69,6 +69,7 @@ IIBaseAdapter
     }
 
     function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
+        emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
         _emergencyClaimer = _newEmergencyClaimer;
     }
 
