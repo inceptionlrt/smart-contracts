@@ -26,9 +26,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    /// @notice Set of supported Symbiotic vaults
     EnumerableSet.AddressSet internal _symbioticVaults;
 
-    /// @dev symbioticVault => withdrawal epoch
+    /// @notice Mapping of vault addresses to their withdrawal epochs
     mapping(address => uint256) public withdrawals;
 
     // /// @dev Symbiotic DefaultStakerRewards.sol
@@ -39,6 +40,12 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the Symbiotic adapter with vaults and parameters
+     * @param vaults Array of vault addresses
+     * @param asset Address of the underlying asset
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         address[] memory vaults,
         IERC20 asset,
@@ -59,6 +66,14 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         }
     }
 
+    /**
+     * @notice Delegates funds to a Symbiotic vault
+     * @dev Can only be called by trustee when contract is not paused
+     * @param vaultAddress Address of the target Symbiotic vault
+     * @param amount Amount of tokens to delegate
+     * @param _data Additional data (unused)
+     * @return depositedAmount The amount successfully deposited
+     */
     function delegate(
         address vaultAddress,
         uint256 amount,
@@ -80,6 +95,15 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return depositedAmount;
     }
 
+    /**
+     * @notice Initiates withdrawal from a Symbiotic vault
+     * @dev Can only be called by trustee when contract is not paused
+     * @param vaultAddress Address of the vault to withdraw from
+     * @param amount Amount to withdraw
+     * @param _data Additional withdrawal parameters
+     * @param emergency Flag for emergency withdrawal
+     * @return Tuple of (amount requested, 0)
+     */
     function withdraw(
         address vaultAddress,
         uint256 amount,
@@ -101,8 +125,16 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return (amount, 0);
     }
 
+    /**
+     * @notice Claims withdrawn funds from a Symbiotic vault
+     * @dev Can only be called by trustee when contract is not paused
+     * @param _data Array containing vault address and epoch number
+     * @param emergency Flag for emergency claim process
+     * @return Amount of tokens claimed
+     */
     function claim(
-        bytes[] calldata _data, bool emergency
+        bytes[] calldata _data,
+        bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         (address vaultAddress, uint256 sEpoch) = abi.decode(
             _data[0],
@@ -125,6 +157,12 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
     }
 
+    /**
+     * @notice Internal function to handle emergency claims
+     * @param vaultAddress Address of the vault to claim from
+     * @param sEpoch Epoch number for the claim
+     * @return Amount claimed
+     */
     function _emergencyClaim(address vaultAddress, uint256 sEpoch) internal returns (uint256) {
         return IEmergencyClaimer(_getClaimer(true)).claimSymbiotic(
             vaultAddress, _inceptionVault, sEpoch
@@ -137,8 +175,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     // }
 
     /**
-     * @notice Checks whether a vault is supported by the Protocol or not.
-     * @param vaultAddress vault address to check
+     * @notice Checks if a vault is supported by the adapter
+     * @param vaultAddress Address of the vault to check
+     * @return bool indicating if vault is supported
      */
     function isVaultSupported(
         address vaultAddress
@@ -146,12 +185,21 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return _symbioticVaults.contains(vaultAddress);
     }
 
+    /**
+     * @notice Returns the amount deposited in a specific vault
+     * @param vaultAddress Address of the vault to check
+     * @return Amount of active balance in the vault
+     */
     function getDeposited(
         address vaultAddress
     ) public view override returns (uint256) {
         return IVault(vaultAddress).activeBalanceOf(address(this));
     }
 
+    /**
+     * @notice Returns the total amount deposited across all vaults
+     * @return total Sum of active balances in all vaults
+     */
     function getTotalDeposited() public view override returns (uint256 total) {
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
             total += IVault(_symbioticVaults.at(i)).activeBalanceOf(
@@ -161,11 +209,20 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return total;
     }
 
+    /**
+     * @notice Returns the total amount pending withdrawal
+     * @return total Amount of pending withdrawals for non-emergency claims
+     */
     function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
         return _pendingWithdrawalAmount(_getClaimer(false));
     }
 
+    /**
+     * @notice Internal function to calculate pending withdrawal amount for an address
+     * @param claimer Address to check pending withdrawals for
+     * @return total Total pending withdrawal amount
+     */
     function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total)
     {
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
@@ -178,14 +235,26 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return total;
     }
 
+    /**
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals and claimable amounts
+     */
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
     }
 
+    /**
+     * @notice Returns the total inactive balance for emergency situations
+     * @return Sum of emergency pending withdrawals and claimable amounts
+     */
     function inactiveBalanceEmergency() public view override returns (uint256) {
         return _pendingWithdrawalAmount(_getClaimer(true)) + claimableAmount(_getClaimer(true));
     }
 
+    /**
+     * @notice Adds a new vault to the adapter
+     * @param vaultAddress Address of the new vault
+     */
     function addVault(address vaultAddress) external onlyOwner {
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
@@ -199,6 +268,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         emit VaultAdded(vaultAddress);
     }
 
+    /**
+     * @notice Removes a vault from the adapter
+     * @param vaultAddress Address of the vault to remove
+     */
     function removeVault(address vaultAddress) external onlyOwner {
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
@@ -209,9 +282,19 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         emit VaultRemoved(vaultAddress);
     }
 
+    /**
+     * @notice Returns all supported vault addresses
+     * @return vaults Array of supported vault addresses
+     */
     function getAllVaults() external view returns (address[] memory vaults) {
         vaults = new address[](_symbioticVaults.length());
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
             vaults[i] = _symbioticVaults.at(i);
     }
+
+    /**
+     * @notice Returns the contract version
+     * @return Current version number
+     */
+    function getVersion()
 }

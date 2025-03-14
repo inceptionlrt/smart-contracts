@@ -36,6 +36,11 @@ IIBaseAdapter
         _;
     }
 
+    /**
+     * @notice Internal function to initialize the base adapter
+     * @param asset The ERC20 token used as the underlying asset
+     * @param trusteeManager Address of the trustee manager
+     */
     function __IBaseAdapter_init(
         IERC20 asset,
         address trusteeManager
@@ -49,42 +54,83 @@ IIBaseAdapter
         _trusteeManager = trusteeManager;
     }
 
+    /**
+     * @notice Returns the amount of tokens that can be claimed
+     * @return Amount of claimable tokens for the adapter
+     */
     function claimableAmount() public view virtual override returns (uint256) {
         return claimableAmount(address(this));
     }
 
+    /**
+     * @notice Returns the amount of tokens that can be claimed for a specific address
+     * @param claimer Address to check claimable amount for
+     * @return Amount of claimable tokens for the specified address
+     */
     function claimableAmount(address claimer) public view virtual returns (uint256) {
         return _asset.balanceOf(claimer);
     }
 
+    /**
+     * @notice Sets the inception vault address
+     * @dev Can only be called by owner
+     * @param inceptionVault New inception vault address
+     */
     function setInceptionVault(address inceptionVault) external onlyOwner {
         if (!Address.isContract(inceptionVault)) revert NotContract();
         emit InceptionVaultSet(_inceptionVault, inceptionVault);
         _inceptionVault = inceptionVault;
     }
 
+    /**
+     * @notice Sets the trustee manager address
+     * @dev Can only be called by owner
+     * @param _newTrusteeManager New trustee manager address
+     */
     function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
         emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
         _trusteeManager = _newTrusteeManager;
     }
 
+    /**
+     * @notice Sets the emergency claimer address
+     * @dev Can only be called by owner
+     * @param _newEmergencyClaimer New emergency claimer address
+     */
     function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
         emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
         _emergencyClaimer = _newEmergencyClaimer;
     }
 
+    /**
+     * @notice Pauses the contract
+     * @dev Can only be called by owner
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Unpauses the contract
+     * @dev Can only be called by owner
+     */
     function unpause() external onlyOwner {
         _unpause();
     }
 
+    /**
+     * @notice Returns the contract version
+     * @return Version number of the contract
+     */
     function getVersion() external pure virtual returns (uint256) {
         return 1;
     }
 
+    /**
+     * @notice Internal function to determine the claimer address
+     * @param emergency Whether to use emergency claimer
+     * @return Address of the claimer
+     */
     function _getClaimer(bool emergency) internal view virtual returns (address) {
         if (emergency) {
             return _emergencyClaimer;

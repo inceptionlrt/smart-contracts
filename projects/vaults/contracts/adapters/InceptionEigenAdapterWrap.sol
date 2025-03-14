@@ -33,6 +33,16 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the wrapped EigenLayer adapter
+     * @param ownerAddress Address of the contract owner
+     * @param rewardCoordinator Address of the rewards coordinator
+     * @param delegationManager Address of the delegation manager
+     * @param strategyManager Address of the strategy manager
+     * @param strategy Address of the strategy contract
+     * @param asset Address of the wrapped asset (wstETH)
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         address ownerAddress,
         address rewardCoordinator,
@@ -200,6 +210,10 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
     }
 
+    /**
+     * @notice Returns the amount of shares deposited in the strategy
+     * @return Amount of strategy shares
+     */
     function getDepositedShares() external view returns (uint256) {
         return _strategyManager.stakerStrategyShares(address(this), _strategy);
     }
@@ -208,6 +222,10 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
     }
 
+    /**
+     * @notice Returns the current operator address
+     * @return Address of the operator this adapter is delegated to
+     */
     function getOperatorAddress() public view returns (address) {
         return _delegationManager.delegatedTo(address(this));
     }
@@ -216,12 +234,21 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return 3;
     }
 
+    /**
+     * @notice Sets the rewards coordinator address
+     * @param newRewardsCoordinator Address of the new rewards coordinator
+     */
     function setRewardsCoordinator(
         address newRewardsCoordinator
     ) external onlyOwner {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 
+    /**
+     * @notice Internal function to set the rewards coordinator
+     * @param newRewardsCoordinator Address of the new rewards coordinator
+     * @param ownerAddress Address of the owner to set as claimer
+     */
     function _setRewardsCoordinator(
         address newRewardsCoordinator,
         address ownerAddress

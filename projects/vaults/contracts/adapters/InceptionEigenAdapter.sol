@@ -32,6 +32,16 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the adapter contract with required addresses and parameters
+     * @param ownerAddress Address of the contract owner
+     * @param rewardCoordinator Address of the rewards coordinator contract
+     * @param delegationManager Address of the delegation manager contract
+     * @param strategyManager Address of the strategy manager contract
+     * @param strategy Address of the strategy contract
+     * @param asset Address of the underlying asset token
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         address ownerAddress,
         address rewardCoordinator,
@@ -51,6 +61,14 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         _asset.approve(strategyManager, type(uint256).max);
     }
 
+    /**
+     * @notice Delegates funds to an operator or deposits into strategy
+     * @dev If operator is zero address and amount > 0, deposits into strategy
+     * @param operator Address of the operator to delegate to
+     * @param amount Amount of tokens to delegate/deposit
+     * @param _data Additional data required for delegation [approverSalt, approverSignatureAndExpiry]
+     * @return Returns 0 for delegation or deposit amount for strategy deposits
+     */
     function delegate(
         address operator,
         uint256 amount,
@@ -81,6 +99,15 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return 0;
     }
 
+    /**
+     * @notice Initiates withdrawal process for funds
+     * @dev Creates a queued withdrawal request in the delegation manager
+     * @param operator Operator address (unused)
+     * @param amount Amount of tokens to withdraw
+     * @param _data Additional data (must be empty)
+     * @param emergency Flag for emergency withdrawal
+     * @return Tuple of requested amount and 0
+     */
     function withdraw(
         address /*operator*/,
         uint256 amount,
@@ -122,6 +149,13 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return (amount, 0);
     }
 
+    /**
+     * @notice Completes the withdrawal process and claims tokens
+     * @dev Processes the queued withdrawal and transfers tokens to inception vault
+     * @param _data Array containing withdrawal data [withdrawal, tokens, receiveAsTokens]
+     * @param emergency Flag for emergency withdrawal
+     * @return Amount of tokens withdrawn
+     */
     function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
 
@@ -142,11 +176,21 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return withdrawnAmount;
     }
 
+    /**
+     * @notice Returns the total amount pending withdrawal
+     * @return total Total amount of non-emergency pending withdrawals
+     */
     function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
         return _pendingWithdrawalAmount(false);
     }
 
+    /**
+     * @notice Internal function to calculate pending withdrawal amount
+     * @dev Filters withdrawals based on emergency status
+     * @param emergency Flag to filter emergency withdrawals
+     * @return total Total amount of pending withdrawals matching emergency status
+     */
     function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
         (IDelegationManager.Withdrawal[] memory withdrawals,
             uint256[][] memory shares) = _delegationManager.getQueuedWithdrawals(address(this));
@@ -162,24 +206,45 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return _strategy.sharesToUnderlyingView(total);
     }
 
+    /**
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals and claimable amounts
+     */
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
     }
 
+    /**
+     * @notice Returns the total inactive balance for emergency withdrawals
+     * @return Sum of emergency pending withdrawals and claimable amounts
+     */
     function inactiveBalanceEmergency() public view override returns (uint256) {
         return _pendingWithdrawalAmount(true) + claimableAmount();
     }
 
+    /**
+     * @notice Returns the current operator address for this adapter
+     * @return Address of the operator this adapter is delegated to
+     */
     function getOperatorAddress() public view returns (address) {
         return _delegationManager.delegatedTo(address(this));
     }
 
+    /**
+     * @notice Returns the amount deposited for a specific operator
+     * @param operatorAddress Address of the operator
+     * @return Amount of underlying tokens deposited
+     */
     function getDeposited(
         address /*operatorAddress*/
     ) external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
+    /**
+     * @notice Returns the total amount deposited in the strategy
+     * @return Total amount of underlying tokens deposited
+     */
     function getTotalDeposited() external view override returns (uint256) {
         IStrategy[] memory strategies = new IStrategy[](1);
         strategies[0] = _strategy;
@@ -191,20 +256,39 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return _strategy.sharesToUnderlyingView(withdrawableShares[0]);
     }
 
+    /**
+     * @notice Returns the amount of strategy shares held
+     * @return Amount of strategy shares
+     */
     function getDepositedShares() external view returns (uint256) {
         return _strategy.underlyingToSharesView(_strategy.userUnderlyingView(address(this)));
     }
 
+    /**
+     * @notice Returns the contract version
+     * @return Current version number (3)
+     */
     function getVersion() external pure override returns (uint256) {
         return 3;
     }
 
+    /**
+     * @notice Updates the rewards coordinator address
+     * @dev Can only be called by the owner
+     * @param newRewardsCoordinator Address of the new rewards coordinator
+     */
     function setRewardsCoordinator(
         address newRewardsCoordinator
     ) external onlyOwner {
         _setRewardsCoordinator(newRewardsCoordinator, owner());
     }
 
+    /**
+     * @notice Internal function to set the rewards coordinator
+     * @dev Updates the rewards coordinator and sets the claimer
+     * @param newRewardsCoordinator Address of the new rewards coordinator
+     * @param ownerAddress Address of the owner to set as claimer
+     */
     function _setRewardsCoordinator(
         address newRewardsCoordinator,
         address ownerAddress
