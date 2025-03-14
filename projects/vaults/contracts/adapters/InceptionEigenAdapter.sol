@@ -11,6 +11,7 @@ import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrat
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
  * @title The InceptionEigenAdapterWrap Contract

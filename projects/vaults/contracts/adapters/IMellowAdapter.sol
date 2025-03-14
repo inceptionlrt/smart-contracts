@@ -10,9 +10,9 @@ import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/I
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
+import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 import {IBaseAdapter} from "./IBaseAdapter.sol";
-import {EmergencyClaimer} from "./EmergencyClaimer.sol";
 
 /**
  * @title The MellowAdapter Contract
@@ -168,7 +168,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     function _emergencyClaim(address vaultAddress) internal returns (uint256) {
-        return EmergencyClaimer(
+        return IEmergencyClaimer(
             _getClaimer(true)
         ).claimMellow(vaultAddress, _inceptionVault, type(uint256).max);
     }

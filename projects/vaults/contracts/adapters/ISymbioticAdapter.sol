@@ -14,8 +14,7 @@ import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
-
-import {EmergencyClaimer} from "./EmergencyClaimer.sol";
+import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
  * @title The ISymbioticAdapter Contract
@@ -127,7 +126,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     function _emergencyClaim(address vaultAddress, uint256 sEpoch) internal returns (uint256) {
-        return EmergencyClaimer(_getClaimer(true)).claimSymbiotic(
+        return IEmergencyClaimer(_getClaimer(true)).claimSymbiotic(
             vaultAddress, _inceptionVault, sEpoch
         );
     }
