@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IWStethInterface} from "../interfaces/common/IStEth.sol";
 import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
@@ -13,19 +14,19 @@ import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
 import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
- * @title The InceptionEigenAdapter Contract
+ * @title The InceptionEigenAdapterWrap Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
+contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;
     IStrategyManager internal _strategyManager;
     IDelegationManager internal _delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
-    mapping(uint256 => bool) internal _emergencyQueuedWithdrawals;
+    uint256 internal _pendingShares;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -49,6 +50,10 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         _setRewardsCoordinator(rewardCoordinator, ownerAddress);
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
+        IWStethInterface(address(_asset)).stETH().approve(
+            strategyManager,
+            type(uint256).max
+        );
     }
 
     function delegate(
@@ -60,24 +65,29 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
+            amount = IWStethInterface(address(_asset)).unwrap(amount);
             // deposit the asset to the appropriate strategy
             return
-                _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
+                _strategyManager.depositIntoStrategy(
+                _strategy,
+                IWStethInterface(address(_asset)).stETH(),
+                amount
+            );
         }
-
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
-
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
-        memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
+        memory approverSignatureAndExpiry = abi.decode(
+            _data[1],
+            (IDelegationManager.SignatureWithExpiry)
+        );
 
         _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
         );
-
         return 0;
     }
 
@@ -92,74 +102,88 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         uint256[] memory sharesToWithdraw = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
 
+        uint256 shares = IWStethInterface(address(_asset)).getStETHByWstETH(
+            _strategy.underlyingToShares(amount)
+        );
+
         strategies[0] = _strategy;
-        sharesToWithdraw[0] = _strategy.underlyingToShares(amount);
-
-        address staker = address(this);
-
-        uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
-        if (emergency) _emergencyQueuedWithdrawals[nonce] = true;
+        sharesToWithdraw[0] = shares;
+        address withdrawer = _getClaimer(emergency);
 
         IDelegationManager.QueuedWithdrawalParams[]
-        memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](1);
+        memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+            1
+        );
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: staker
+            withdrawer: withdrawer
         });
 
         _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
-            staker,
+            withdrawer,
             _strategy,
-            sharesToWithdraw[0],
+            shares,
             uint32(block.number),
-            _delegationManager.delegatedTo(staker),
-            nonce
+            _delegationManager.delegatedTo(withdrawer),
+            _delegationManager.cumulativeWithdrawalsQueued(withdrawer)
         );
 
-        return (amount, 0);
+        _pendingShares += shares;
+
+        return (IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.sharesToUnderlying(shares)), 0);
     }
 
     function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
-        uint256 balanceBefore = _asset.balanceOf(address(this));
+        IERC20 backedAsset = IWStethInterface(address(_asset)).stETH();
+        uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
-        IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
+        IDelegationManager.Withdrawal memory withdrawals = abi.decode(
+            _data[0],
+            (IDelegationManager.Withdrawal)
+        );
+
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
-        bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
+        bool[] memory receiveAsTokens = abi.decode(_data[3], (bool[]));
 
-        // claim from EL
-        _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
+        _delegationManager.completeQueuedWithdrawal(
+            withdrawals,
+            tokens[0],
+            receiveAsTokens[0]
+        );
 
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) - balanceBefore;
+        uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) -
+                    balanceBefore;
+
+        backedAsset.approve(address(_asset), withdrawnAmount);
+        uint256 wrapped = IWStethInterface(address(_asset)).wrap(withdrawnAmount);
+
         // send tokens to the vault
-        _asset.safeTransfer(_inceptionVault, withdrawnAmount);
+        _asset.safeTransfer(_inceptionVault, wrapped);
 
-        // update emergency withdrawal state
-        _emergencyQueuedWithdrawals[withdrawal.nonce] = false;
+        _pendingShares -= withdrawals.shares[0];
 
-        return withdrawnAmount;
+        return wrapped;
     }
 
     function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
-        return _pendingWithdrawalAmount(false);
+        return _pendingWithdrawalAmount(_getClaimer(false));
     }
 
-    function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
+    function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total) {
         (IDelegationManager.Withdrawal[] memory withdrawals,
             uint256[][] memory shares) = _delegationManager.getQueuedWithdrawals(address(this));
 
         for (uint256 i = 0; i < withdrawals.length; i++) {
-            if (emergency != _emergencyQueuedWithdrawals[withdrawals[i].nonce]) {
-                continue;
+            if (withdrawals[i].withdrawer == claimer) {
+                total += shares[i][0];
             }
-
-            total += shares[i][0];
         }
 
-        return _strategy.sharesToUnderlyingView(total);
+        return total;
     }
 
     function inactiveBalance() public view override returns (uint256) {
@@ -167,32 +191,25 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     function inactiveBalanceEmergency() public view override returns (uint256) {
-        return _pendingWithdrawalAmount(true) + claimableAmount();
-    }
-
-    function getOperatorAddress() public view returns (address) {
-        return _delegationManager.delegatedTo(address(this));
+        return _pendingWithdrawalAmount(_getClaimer(true)) + claimableAmount();
     }
 
     function getDeposited(
         address /*operatorAddress*/
     ) external view override returns (uint256) {
-        return _strategy.userUnderlyingView(address(this));
-    }
-
-    function getTotalDeposited() external view override returns (uint256) {
-        IStrategy[] memory strategies = new IStrategy[](1);
-        strategies[0] = _strategy;
-
-        (uint256[] memory withdrawableShares,) = _delegationManager.getWithdrawableShares(
-            address(this), strategies
-        );
-
-        return _strategy.sharesToUnderlyingView(withdrawableShares[0]);
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
     }
 
     function getDepositedShares() external view returns (uint256) {
-        return _strategy.underlyingToSharesView(_strategy.userUnderlyingView(address(this)));
+        return _strategyManager.stakerStrategyShares(address(this), _strategy);
+    }
+
+    function getTotalDeposited() external view override returns (uint256) {
+        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.userUnderlyingView(address(this)));
+    }
+
+    function getOperatorAddress() public view returns (address) {
+        return _delegationManager.delegatedTo(address(this));
     }
 
     function getVersion() external pure override returns (uint256) {

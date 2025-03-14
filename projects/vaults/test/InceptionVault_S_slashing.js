@@ -16,6 +16,7 @@ const {
 } = require("./helpers/utils.js");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { ZeroAddress } = require("ethers");
+const { eigenlayerVault } = require("../typechain-types/contracts/interfaces");
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -29,6 +30,10 @@ const assets = [
     vaultName: "InstEthVault",
     vaultFactory: "InVault_S_E2",
     iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
+    rewardsCoordinator: "0x7750d328b314EfFa365A0402CcfD489B80B0adda",
+    delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+    strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+    assetStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
     ratioErr: 3n,
     transactErr: 5n,
     blockNumber: 21850700, //21687985,
@@ -128,6 +133,12 @@ const symbioticVaults = [
   },
 ];
 
+const eigenLayerVaults = [
+  "0xDbEd88D83176316fc46797B43aDeE927Dc2ff2F5",
+  "0xe25480334fc57a4f38F081e87cdFeeEAF09779C9",
+  "0x1f8C8b1d78d01bCc42ebdd34Fae60181bD697662",
+];
+
 const initVault = async a => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -196,14 +207,19 @@ const initVault = async a => {
   ]);
   symbioticAdapter.address = await symbioticAdapter.getAddress();
 
-  // console.log("- EigenLayer Adapter");
-  // const eigenLayerAdapterFactory = await ethers.getContractFactory("IIEigenLayerAdapter");
-  // let eigenlayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
-  //   [symbioticVaults[0].vaultAddress],
-  //   a.assetAddress,
-  //   a.iVaultOperator,
-  // ]);
-  // eigenlayerAdapter.address = await eigenlayerAdapter.getAddress();
+  console.log("- EigenLayer Adapter");
+  let [deployer] = await ethers.getSigners();
+  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
+  let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+    await deployer.getAddress(),
+    a.rewardsCoordinator,
+    a.delegationManager,
+    a.strategyManager,
+    a.assetStrategy,
+    a.assetAddress,
+    a.iVaultOperator,
+  ]);
+  eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
 
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
@@ -238,12 +254,15 @@ const initVault = async a => {
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addAdapter(symbioticAdapter.address);
   await iVault.addAdapter(mellowAdapter.address);
+  await iVault.addAdapter(eigenLayerAdapter.address);
   await iVault.setWithdrawalQueue(withdrawalQueue.address);
   await mellowAdapter.setInceptionVault(iVault.address);
   await mellowAdapter.setEmergencyClaimer(emergencyClaimer.address);
   await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
   await symbioticAdapter.setInceptionVault(iVault.address);
   await symbioticAdapter.setEmergencyClaimer(emergencyClaimer.address);
+  await eigenLayerAdapter.setEmergencyClaimer(emergencyClaimer.address);
+  await eigenLayerAdapter.setInceptionVault(iVault.address);
   await iToken.setVault(iVault.address);
   await emergencyClaimer.approveSpender(a.assetAddress, mellowAdapter.address);
 
@@ -263,7 +282,7 @@ const initVault = async a => {
     await this.connect(iVaultOperator).claim(await mellowAdapter.getAddress(), emptyBytes);
   };
 
-  return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue];
+  return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue];
 };
 
 async function skipEpoch(symbioticVault) {
@@ -286,7 +305,7 @@ async function mellowClaimParams(mellowVault) {
 assets.forEach(function(a) {
   describe(`Inception Symbiotic Vault ${a.assetName}`, function() {
     this.timeout(150000);
-    let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue;
+    let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue;
     let iVaultOperator, deployer, staker, staker2, staker3, treasury;
     let ratioErr, transactErr;
     let snapshot;
@@ -310,7 +329,7 @@ assets.forEach(function(a) {
         },
       ]);
 
-      [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
+      [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue] =
         await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;

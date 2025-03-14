@@ -129,7 +129,6 @@ contract InceptionEigenRestaker is
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 

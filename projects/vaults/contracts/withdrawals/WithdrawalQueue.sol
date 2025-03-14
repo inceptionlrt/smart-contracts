@@ -6,13 +6,13 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-import "hardhat/console.sol";
-
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
     /// @dev emergency epoch number
     uint256 public constant EMERGENCY_EPOCH = 0;
+    /// @dev max threshold while convert shares to assets during undelegate
+    uint256 internal constant MAX_CONVERT_THRESHOLD = 50;
 
     /// @dev withdrawal queue owner
     address public vaultOwner;
@@ -156,10 +156,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
         require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
 
-        console.logString("_undelegate");
-        console.logUint(undelegatedAmount);
-        console.logUint(claimedAmount);
-
         // update withdrawal data
         withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
@@ -181,12 +177,10 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
         uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
-        console.logString("_afterUndelegate");
-        console.logUint(requested);
-        console.logUint(totalUndelegated);
-
         require(
-            requested >= totalUndelegated ? requested - totalUndelegated <= 10 : totalUndelegated - requested <= 10,
+            requested >= totalUndelegated ?
+                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
+                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
             UndelegateNotCompleted()
         );
 
