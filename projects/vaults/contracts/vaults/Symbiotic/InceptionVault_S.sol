@@ -172,7 +172,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = convertToAssets(shares);
+        uint256 assetsAmount = previewMint(shares);
         if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
 
         return assetsAmount;
@@ -454,6 +454,14 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
 
         return convertToShares(assets + depositBonus);
+    }
+
+    /** @dev See {IERC4626-previewMint}. */
+    function previewMint(uint256 shares) public view returns (uint256) {
+
+        uint256 assets = Convert.multiplyAndDivideCeil(iShares, 1e18, ratio());
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        return assets;
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
