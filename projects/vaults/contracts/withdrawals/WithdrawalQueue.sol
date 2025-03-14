@@ -6,6 +6,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
@@ -89,6 +91,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param shares The number of shares to request for withdrawal
     function request(address receiver, uint256 shares) external onlyVault {
         require(shares > 0, ValueZero());
+        require(receiver != address(0), ValueZero());
 
         WithdrawalEpoch storage withdrawal = withdrawals[currentEpoch];
         withdrawal.userShares[receiver] += shares;
@@ -229,11 +232,9 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 claimedAmount
     ) internal {
         require(withdrawal.adapterUndelegated[adapter][vault] > 0, ClaimUnknownAdapter());
-        require(withdrawal.adapterClaimed[adapter][vault] == 0, AdapterAlreadyClaimed());
         require(withdrawal.adapterUndelegated[adapter][vault] >= claimedAmount, ClaimedExceedUndelegated());
 
         // update withdrawal state
-        withdrawal.adapterClaimed[adapter][vault] += claimedAmount;
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adaptersClaimedCounter++;
 
@@ -276,13 +277,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         while (i < epochs.length) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
+            if (!withdrawal.ableRedeem || withdrawal.userShares[receiver] == 0) {
                 ++i;
                 continue;
             }
 
-            withdrawal.userRedeemed[receiver] = true;
             amount += _getRedeemAmount(withdrawal, receiver);
+            withdrawal.userShares[receiver] = 0;
 
             epochs[i] = epochs[epochs.length - 1];
             epochs.pop();
@@ -328,7 +329,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] memory epochs = userEpoch[receiver];
         for (uint256 i = 0; i < epochs.length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (withdrawal.userRedeemed[receiver]) {
+            if (withdrawal.userShares[receiver] == 0) {
                 continue;
             }
 
@@ -354,7 +355,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         for (uint256 i = 0; i < epochs.length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[claimer]) {
+            if (!withdrawal.ableRedeem || withdrawal.userShares[claimer] == 0) {
                 continue;
             }
 

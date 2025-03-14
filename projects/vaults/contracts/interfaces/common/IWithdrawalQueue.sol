@@ -24,10 +24,8 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint256 totalClaimedAmount;
         uint256 totalUndelegatedAmount;
 
-        mapping(address => bool) userRedeemed;
         mapping(address => uint256) userShares;
         mapping(address => mapping(address => uint256)) adapterUndelegated;
-        mapping(address => mapping(address => uint256)) adapterClaimed;
 
         uint256 adaptersUndelegatedCounter;
         uint256 adaptersClaimedCounter;
