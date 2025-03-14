@@ -50,6 +50,8 @@ interface IInceptionVault_S {
 
     event RatioFeedChanged(address prevValue, address newValue);
 
+    event MaxGapSet(uint256 oldGap, uint256 newGap);
+    
     event NameChanged(string prevValue, string newValue);
 
     event TreasuryChanged(address prevValue, address newValue);

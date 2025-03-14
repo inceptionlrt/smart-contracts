@@ -59,6 +59,9 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     uint256 public depositMinAmount;
 
     mapping(address => uint256) public withdrawals;
+    mapping(address => uint256) public recentEpoch;
+
+    uint256 public MAX_GAP_BETWEEN_EPOCH;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -90,6 +93,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
+
+        MAX_GAP_BETWEEN_EPOCH = 20;
     }
 
     /*//////////////////////////////
@@ -137,7 +142,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
@@ -152,7 +156,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
-        amount = totalAssets() - depositedBefore;
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
@@ -165,12 +168,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 shares,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(msg.sender);
+        uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        uint256 assetsAmount = previewMint(shares);
+        if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
 
         return assetsAmount;
     }
@@ -180,10 +183,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /////////////////////////////////////*/
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
-        if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
+        if (iShares == 0) revert ValueZero();
+        if (receiver == address(0)) revert InvalidAddress();
 
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -207,9 +210,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
 
+        if (recentEpoch[receiver] - genRequest.epoch > MAX_GAP_BETWEEN_EPOCH) revert MaxGapReached();
+
         uint256 queueLength = claimerWithdrawalsQueue.length;
         if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
         withdrawals[receiver]++;
+        recentEpoch[receiver] = queueLength;
         claimerWithdrawalsQueue.push(
             Withdrawal({
                 epoch: queueLength,
@@ -229,9 +235,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ) external nonReentrant whenNotPaused returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
-        assets = convertToAssets(shares);
         uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+        (assets, fee) = _flashWithdraw(shares, receiver, owner, 0);
 
         emit Withdraw(owner, receiver, owner, assets, shares);
         emit WithdrawalFee(fee);
@@ -249,6 +254,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
+        uint256 withdrawalsBuffer;
         for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
             Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
@@ -259,10 +265,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            withdrawals[receiver]--;
+            withdrawalsBuffer++;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
+
+        withdrawals[receiver] -= withdrawalsBuffer;
 
         // let's update the lowest epoch associated with the claimer
         genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
@@ -282,22 +290,26 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @param iShares is measured in Inception token(shares)
     function flashWithdraw(
         uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+        address receiver,
+        uint256 minOut
+    ) external whenNotPaused nonReentrant returns (uint256) {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
             iShares,
             receiver,
-            claimer
+            claimer,
+            minOut
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
+        return amount;
     }
 
     function _flashWithdraw(
         uint256 iShares,
         address receiver,
-        address owner
+        address owner,
+        uint256 minOut
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
@@ -315,6 +327,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -364,14 +377,19 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ) public view returns (bool able, uint256[] memory) {
         // get the general request
         uint256 index;
+        uint256 rEpoch = recentEpoch[claimer];
 
         uint256[] memory availableWithdrawals;
         Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+        if (claimer == address(0)) return (false, availableWithdrawals);
         if (genRequest.amount == 0) return (false, availableWithdrawals);
+        if (rEpoch < genRequest.epoch) return (false, availableWithdrawals);
 
         availableWithdrawals = new uint256[](withdrawals[claimer]);
 
-        for (uint256 i = genRequest.epoch; i < epoch; ++i) {
+        rEpoch = rEpoch >= epoch ? epoch : ++rEpoch;
+
+        for (uint256 i = genRequest.epoch; i < rEpoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
@@ -409,10 +427,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
-        return
-            !paused()
-                ? convertToShares(IERC20(asset()).balanceOf(receiver))
-                : 0;
+        return type(uint256).max;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -430,6 +445,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(assets);
@@ -440,10 +456,19 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return convertToShares(assets + depositBonus);
     }
 
+    /** @dev See {IERC4626-previewMint}. */
+    function previewMint(uint256 shares) public view returns (uint256) {
+
+        uint256 assets = Convert.multiplyAndDivideCeil(iShares, 1e18, ratio());
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        return assets;
+    }
+
     /** @dev See {IERC4626-previewRedeem}. */
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
+        if (shares == 0) revert NullParams();
         return
             convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));
@@ -567,6 +592,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         flashMinAmount = newMinAmount;
     }
 
+    function setMaxGap(uint256 newGap) external onlyOwner {
+        if (newGap == 0) revert NullParams();
+        emit MaxGapSet(MAX_GAP_BETWEEN_EPOCH, newGap);
+        MAX_GAP_BETWEEN_EPOCH = newGap;
+    }
+
     function setName(string memory newVaultName) external onlyOwner {
         if (bytes(newVaultName).length == 0) revert NullParams();
 
@@ -576,6 +607,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
     function adjustWithdrawals() external onlyOwner {
+
         uint256 queueLength = claimerWithdrawalsQueue.length;
 
         // Duplicate queue
@@ -587,13 +619,26 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
 
         // Traverse through the addresses
-        for (uint256 i = 0; i < queue.length; i++) {
-            // Skip if address(0), means fulfilled
+        for (uint256 i = 0; i < queueLength; i++) {
+
+            // Means fulfilled
             if (queue[i] == address(0)) continue;
 
+            bool skipElement;
+            for (uint256 j = 0; j < i; j++) {
+
+                if (queue[j] == queue[i]) {
+                    skipElement = true;
+                    break;
+                }
+            }
+
+            if (skipElement) continue;
+
             uint256 numWithdrawal;
-            for (uint256 j = 0; j < queue.length; j++) {
-                if (queue[i] == queue[j]) numWithdrawal++;
+            for (uint256 k = i; k < queue.length; k++) {
+
+                if (queue[i] == queue[k]) numWithdrawal++;
             }
 
             withdrawals[queue[i]] = numWithdrawal;

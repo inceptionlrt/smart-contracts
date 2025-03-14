@@ -32,6 +32,8 @@ interface IIBaseAdapter {
 
     error InvalidDataLength(uint256 expected, uint256 received);
 
+    error AmountIsNotUsed();
+
     /************************************
      ************** Events **************
      ************************************/
