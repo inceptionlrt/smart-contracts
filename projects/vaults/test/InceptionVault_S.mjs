@@ -1412,6 +1412,10 @@ assets.forEach(function(a) {
         );
       });
 
+      it("setWithdrawMinAmount(): error if try to set 0", async function() {
+        await expect(iVault.setWithdrawMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
+      });
+
       it("setName(): only owner can", async function() {
         const prevValue = await iVault.name();
         const newValue = "New name";
@@ -1873,6 +1877,13 @@ assets.forEach(function(a) {
           newDepositUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalBonusRate > newMaxBonusRate",
+          newMaxBonusRate: () => BigInt(0.2 * 10 ** 8),
+          newOptimalBonusRate: () => BigInt(2 * 10 ** 8),
+          newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setDepositBonusParams reverts when ${arg.name}`, async function() {
@@ -2084,6 +2095,13 @@ assets.forEach(function(a) {
           newWithdrawUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalWithdrawalRate > newMaxFlashFeeRate",
+          newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
+          newOptimalWithdrawalRate: () => BigInt(3 * 10 ** 8),
+          newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function() {
