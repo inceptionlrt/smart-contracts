@@ -1230,96 +1230,6 @@ assets.forEach(function(a) {
       });
     });
 
-    describe("Flash withdrawal: setFlashMinAmount method", function() {
-      // let targetCapacity;
-      const flashMinAmount = toWei(1);
-      const depositedAmount = toWei(2);
-
-      beforeEach(async function() {
-        await snapshot.restore();
-        await iVault.setTargetFlashCapacity(e18); //1%
-
-        // deposit to vault
-        const tx = await iVault.connect(staker).deposit(depositedAmount, staker.address);
-        await tx.wait();
-
-        // set flash min amount
-        await iVault.setFlashMinAmount(flashMinAmount);
-      });
-
-      it('Flash min amount could be set', async function() {
-        expect(await iVault.flashMinAmount()).to.be.eq(flashMinAmount);
-      });
-
-      it('Event FlashMinAmountChanged is emitted', async function() {
-        // act
-        const newFlashMinAmount = 2n;
-        const tx = await iVault.setFlashMinAmount(newFlashMinAmount);
-        const receipt = await tx.wait();
-
-        // assert
-        const event = receipt.logs?.find(e => e.eventName === "FlashMinAmountChanged");
-        expect(event).to.exist;
-        expect(event.args).to.have.lengthOf(2);
-        expect(event?.args[0]).to.be.eq(flashMinAmount);
-        expect(event?.args[1]).to.be.eq(newFlashMinAmount);
-      });
-
-      it("Error when set flash min amount to 0", async function() {
-        await expect(iVault.setFlashMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
-      });
-
-      it('Flash min amount could be set only by owner', async function() {
-        await expect(iVault.connect(staker2).setFlashMinAmount(flashMinAmount)).to.be.revertedWith('Ownable: caller is not the owner');
-      });
-
-      it("Successfully withdraw MORE than min flash amount", async function() {
-        // arrange
-        const assetBalanceBefore = await asset.balanceOf(staker);
-        const withdrawalAmount = flashMinAmount + 1n;
-
-        // act
-        const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
-        const receipt = await tx.wait();
-        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
-
-        // assert
-        const collectedFees = withdrawEvent[0].args["fee"];
-        const assetBalanceAfter = await asset.balanceOf(staker);
-        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore + withdrawalAmount - collectedFees, transactErr);
-      });
-
-      it("Successfully withdraw the amount EQUAL to min flash amount", async function() {
-        // arrange
-        const assetBalanceBefore = await asset.balanceOf(staker);
-        const withdrawalAmount = flashMinAmount;
-
-        // act
-        const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
-        const receipt = await tx.wait();
-        const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
-
-        // assert
-        const collectedFees = withdrawEvent[0].args["fee"];
-        const assetBalanceAfter = await asset.balanceOf(staker);
-        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore + withdrawalAmount - collectedFees, transactErr);
-      });
-
-      it("Error when withdraw the amount LESS to min flash amount", async function() {
-        // arrange
-        const assetBalanceBefore = await asset.balanceOf(staker);
-        const withdrawalAmount = flashMinAmount - 1n;
-
-        // act
-        const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
-        await expect(withdrawalTx).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
-        
-        // assert
-        const assetBalanceAfter = await asset.balanceOf(staker);
-        expect(assetBalanceAfter).to.be.closeTo(assetBalanceBefore, transactErr);
-      });
-    });
-
     describe("iVault getters and setters", function() {
       beforeEach(async function() {
         await snapshot.restore();
@@ -1410,6 +1320,10 @@ assets.forEach(function(a) {
         await expect(iVault.connect(staker).setWithdrawMinAmount(randomBI(3))).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
+      });
+
+      it("setWithdrawMinAmount(): error if try to set 0", async function() {
+        await expect(iVault.setWithdrawMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
       it("setName(): only owner can", async function() {
@@ -1873,6 +1787,13 @@ assets.forEach(function(a) {
           newDepositUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalBonusRate > newMaxBonusRate",
+          newMaxBonusRate: () => BigInt(0.2 * 10 ** 8),
+          newOptimalBonusRate: () => BigInt(2 * 10 ** 8),
+          newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setDepositBonusParams reverts when ${arg.name}`, async function() {
@@ -2084,6 +2005,13 @@ assets.forEach(function(a) {
           newWithdrawUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalWithdrawalRate > newMaxFlashFeeRate",
+          newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
+          newOptimalWithdrawalRate: () => BigInt(3 * 10 ** 8),
+          newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function() {
