@@ -450,7 +450,7 @@ assets.forEach(function(a) {
           staker1: withdrawalQueuedEvent["stakerAddress"],
           staker2: eigenLayerVaults[0],
           staker3: eigenLayerAdapter.address,
-          nonce1: withdrawalQueuedEvent["nonce"] - 1n,
+          nonce1: withdrawalQueuedEvent["nonce"],
           nonce2: withdrawalQueuedEvent["withdrawalStartBlock"],
           tokens: [withdrawalQueuedEvent["strategy"]],
           shares: [withdrawalQueuedEvent["shares"]],
@@ -465,7 +465,7 @@ assets.forEach(function(a) {
           coder.encode(["bool[]"], [[true]]),
         ];
 
-        await mineBlocks(100000);
+        await mineBlocks(50);
 
         await iVault.connect(iVaultOperator).claim(
           undelegateEpoch, [eigenLayerAdapter.address], [eigenLayerVaults[0]], [_data],
