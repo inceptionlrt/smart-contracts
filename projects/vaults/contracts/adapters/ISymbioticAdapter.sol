@@ -71,8 +71,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
      * @dev Can only be called by trustee when contract is not paused
      * @param vaultAddress Address of the target Symbiotic vault
      * @param amount Amount of tokens to delegate
-     * @param _data Additional data (unused)
-     * @return depositedAmount The amount successfully deposited
      */
     function delegate(
         address vaultAddress,
@@ -291,10 +289,4 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
             vaults[i] = _symbioticVaults.at(i);
     }
-
-    /**
-     * @notice Returns the contract version
-     * @return Current version number
-     */
-    function getVersion()
 }

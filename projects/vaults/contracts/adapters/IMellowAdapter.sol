@@ -74,18 +74,9 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         address mellowVault,
         uint256 amount,
         bytes[] calldata _data
-    )
-    external
-    override
-    onlyTrustee
-    whenNotPaused
-    returns (uint256 depositedAmount)
+    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount)
     {
-        (address referral, bool delegateAuto) = abi.decode(
-            _data[0],
-            (address, bool)
-        );
-
+        (address referral, bool delegateAuto) = abi.decode(_data[0], (address, bool));
         if (!delegateAuto) return _delegate(mellowVault, amount, referral);
         else return _delegateAuto(amount, referral);
     }
@@ -166,11 +157,12 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         address claimer = _getClaimer(emergency);
-
         uint256 balanceState = _asset.balanceOf(claimer);
-        IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
-        uint256 claimed = (_asset.balanceOf(claimer) - balanceState);
 
+        // claim from mellow
+        IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
+
+        uint256 claimed = (_asset.balanceOf(claimer) - balanceState);
         if (claimed > 0) {
             claimer == address(this) ?
                 _asset.safeTransfer(_inceptionVault, claimed) :
@@ -191,7 +183,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         require(_data.length > 0, ValueZero());
 
         (address _mellowVault) = abi.decode(_data[0], (address));
-
         if (emergency) {
             return _emergencyClaim(_mellowVault);
         }
@@ -206,7 +197,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         if (amount == 0) revert ValueZero();
 
         _asset.safeTransfer(_inceptionVault, amount);
-
         return amount;
     }
 

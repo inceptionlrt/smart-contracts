@@ -14,9 +14,6 @@ const {
   e18,
   day,
 } = require("./helpers/utils.js");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-const { ZeroAddress } = require("ethers");
-const { eigenlayerVault } = require("../typechain-types/contracts/interfaces");
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -133,12 +130,6 @@ const symbioticVaults = [
   },
 ];
 
-const eigenLayerVaults = [
-  "0xDbEd88D83176316fc46797B43aDeE927Dc2ff2F5",
-  "0xe25480334fc57a4f38F081e87cdFeeEAF09779C9",
-  "0x1f8C8b1d78d01bCc42ebdd34Fae60181bD697662",
-];
-
 const initVault = async a => {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
@@ -207,20 +198,6 @@ const initVault = async a => {
   ]);
   symbioticAdapter.address = await symbioticAdapter.getAddress();
 
-  console.log("- EigenLayer Adapter");
-  let [deployer] = await ethers.getSigners();
-  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
-  let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
-    await deployer.getAddress(),
-    a.rewardsCoordinator,
-    a.delegationManager,
-    a.strategyManager,
-    a.assetStrategy,
-    a.assetAddress,
-    a.iVaultOperator,
-  ]);
-  eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
-
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
@@ -254,15 +231,12 @@ const initVault = async a => {
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addAdapter(symbioticAdapter.address);
   await iVault.addAdapter(mellowAdapter.address);
-  await iVault.addAdapter(eigenLayerAdapter.address);
   await iVault.setWithdrawalQueue(withdrawalQueue.address);
   await mellowAdapter.setInceptionVault(iVault.address);
   await mellowAdapter.setEmergencyClaimer(emergencyClaimer.address);
   await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
   await symbioticAdapter.setInceptionVault(iVault.address);
   await symbioticAdapter.setEmergencyClaimer(emergencyClaimer.address);
-  await eigenLayerAdapter.setEmergencyClaimer(emergencyClaimer.address);
-  await eigenLayerAdapter.setInceptionVault(iVault.address);
   await iToken.setVault(iVault.address);
   await emergencyClaimer.approveSpender(a.assetAddress, mellowAdapter.address);
 
@@ -282,7 +256,7 @@ const initVault = async a => {
     await this.connect(iVaultOperator).claim(await mellowAdapter.getAddress(), emptyBytes);
   };
 
-  return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue];
+  return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue];
 };
 
 async function skipEpoch(symbioticVault) {
@@ -305,7 +279,7 @@ async function mellowClaimParams(mellowVault) {
 assets.forEach(function(a) {
   describe(`Inception Symbiotic Vault ${a.assetName}`, function() {
     this.timeout(150000);
-    let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue;
+    let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue;
     let iVaultOperator, deployer, staker, staker2, staker3, treasury;
     let ratioErr, transactErr;
     let snapshot;
@@ -329,7 +303,7 @@ assets.forEach(function(a) {
         },
       ]);
 
-      [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, eigenLayerAdapter, iLibrary, withdrawalQueue] =
+      [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
         await initVault(a);
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;

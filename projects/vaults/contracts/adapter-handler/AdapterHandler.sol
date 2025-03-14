@@ -319,7 +319,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /**
      * @notice Returns the available balance for new deposits
-     * @return Available balance considering target capacity
+     * @return total Available balance considering target capacity
      */
     function getFreeBalance() public view returns (uint256 total) {
         uint256 flashCapacity = getFlashCapacity();
@@ -364,7 +364,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /**
      * @notice Returns the current flash capacity
-     * @return Available capacity for flash loans
+     * @return total Available capacity for flash loans
      */
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 _assets = totalAssets();

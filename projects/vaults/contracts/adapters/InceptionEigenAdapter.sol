@@ -102,7 +102,6 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     /**
      * @notice Initiates withdrawal process for funds
      * @dev Creates a queued withdrawal request in the delegation manager
-     * @param operator Operator address (unused)
      * @param amount Amount of tokens to withdraw
      * @param _data Additional data (must be empty)
      * @param emergency Flag for emergency withdrawal
@@ -232,7 +231,6 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
     /**
      * @notice Returns the amount deposited for a specific operator
-     * @param operatorAddress Address of the operator
      * @return Amount of underlying tokens deposited
      */
     function getDeposited(
