@@ -15,17 +15,18 @@ import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
  * @author The InceptionLRT team
  */
 abstract contract IBaseAdapter is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IIBaseAdapter
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+ERC165Upgradeable,
+OwnableUpgradeable,
+IIBaseAdapter
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
     address internal _trusteeManager;
     address internal _inceptionVault;
+    address internal _emergencyClaimer;
 
     modifier onlyTrustee() {
         require(
@@ -49,7 +50,11 @@ abstract contract IBaseAdapter is
     }
 
     function claimableAmount() public view virtual override returns (uint256) {
-        return _asset.balanceOf(address(this));
+        return claimableAmount(address(this));
+    }
+
+    function claimableAmount(address claimer) public view virtual returns (uint256) {
+        return _asset.balanceOf(claimer);
     }
 
     function setInceptionVault(address inceptionVault) external onlyOwner {
@@ -63,6 +68,10 @@ abstract contract IBaseAdapter is
         _trusteeManager = _newTrusteeManager;
     }
 
+    function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
+        _emergencyClaimer = _newEmergencyClaimer;
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -73,5 +82,12 @@ abstract contract IBaseAdapter is
 
     function getVersion() external pure virtual returns (uint256) {
         return 1;
+    }
+
+    function _getClaimer(bool emergency) internal view virtual returns (address) {
+        if (emergency) {
+            return _emergencyClaimer;
+        }
+        return address(this);
     }
 }

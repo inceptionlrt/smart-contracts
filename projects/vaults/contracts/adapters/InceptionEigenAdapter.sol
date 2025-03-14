@@ -70,19 +70,19 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             // deposit the asset to the appropriate strategy
             return
                 _strategyManager.depositIntoStrategy(
-                    _strategy,
-                    IWStethInterface(address(_asset)).stETH(),
-                    amount
-                );
+                _strategy,
+                IWStethInterface(address(_asset)).stETH(),
+                amount
+            );
         }
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
-            memory approverSignatureAndExpiry = abi.decode(
-                _data[1],
-                (IDelegationManager.SignatureWithExpiry)
-            );
+        memory approverSignatureAndExpiry = abi.decode(
+            _data[1],
+            (IDelegationManager.SignatureWithExpiry)
+        );
 
         _delegationManager.delegateTo(
             operator,
@@ -95,7 +95,8 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     function withdraw(
         address /*operator*/,
         uint256 amount,
-        bytes[] calldata _data
+        bytes[] calldata _data,
+        bool emergency
     ) external override onlyTrustee returns (uint256, uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
@@ -108,12 +109,12 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
 
         strategies[0] = _strategy;
         sharesToWithdraw[0] = shares;
-        address withdrawer = address(this);
+        address withdrawer = _getClaimer(emergency);
 
         IDelegationManager.QueuedWithdrawalParams[]
-            memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
-                1
-            );
+        memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](
+            1
+        );
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
@@ -136,9 +137,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return (IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.sharesToUnderlying(shares)), 0);
     }
 
-    function claim(
-        bytes[] calldata _data
-    ) external override onlyTrustee returns (uint256) {
+    function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
         IERC20 backedAsset = IWStethInterface(address(_asset)).stETH();
         uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
@@ -161,7 +160,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) -
-            balanceBefore;
+                    balanceBefore;
 
         backedAsset.approve(address(_asset), withdrawnAmount);
         uint256 wrapped = IWStethInterface(address(_asset)).wrap(withdrawnAmount);
@@ -174,16 +173,25 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return wrapped;
     }
 
-    function pendingWithdrawalAmount()
-        public
-        view
-        override
-        returns (uint256 total)
+    function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
-        return IWStethInterface(address(_asset)).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
+        return IWStethInterface(
+            address(_asset)
+        ).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
+    }
+
+    function pendingWithdrawalAmountEmergency() public view override returns (uint256 total)
+    {
+        return IWStethInterface(
+            address(_asset)
+        ).getWstETHByStETH(_strategy.sharesToUnderlyingView(_pendingShares));
     }
 
     function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + claimableAmount();
+    }
+
+    function inactiveBalanceEmergency() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
     }
 

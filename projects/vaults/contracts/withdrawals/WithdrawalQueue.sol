@@ -6,6 +6,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
@@ -110,14 +112,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param epoch The epoch to undelegate from (must match current epoch)
     /// @param adapters Array of adapter addresses
     /// @param vaults Array of vault addresses
-    /// @param shares Array of share amounts to undelegate
     /// @param undelegatedAmounts Array of undelegated amounts
     /// @param claimedAmounts Array of claimed amounts
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
         address[] calldata vaults,
-        uint256[] calldata shares,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
@@ -129,11 +129,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
                 withdrawal,
                 adapters[i],
                 vaults[i],
-                shares[i],
                 undelegatedAmounts[i],
                 claimedAmounts[i]
             );
         }
+
+        // update global state
+        totalSharesToWithdraw -= withdrawal.totalRequestedShares;
 
         _afterUndelegate(withdrawal);
     }
@@ -142,50 +144,52 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param withdrawal The storage reference to the withdrawal epoch
     /// @param adapter The adapter address
     /// @param vault The vault address
-    /// @param shares The number of shares to undelegate
     /// @param undelegatedAmount The amount undelegated
     /// @param claimedAmount The amount claimed
     function _undelegate(
         WithdrawalEpoch storage withdrawal,
         address adapter,
         address vault,
-        uint256 shares,
         uint256 undelegatedAmount,
         uint256 claimedAmount
     ) internal {
-        require(shares > 0, ValueZero());
-        require(withdrawal.totalUndelegatedShares + shares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
         require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
+        require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
+
+        console.logString("_undelegate");
+        console.logUint(undelegatedAmount);
+        console.logUint(claimedAmount);
 
         // update withdrawal data
         withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
-        withdrawal.adapterUndelegatedShares[adapter][vault] += shares;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
-        withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
         if (claimedAmount > 0) {
-            uint256 claimedShares = shares.mulDiv(
-                claimedAmount,
-                claimedAmount + undelegatedAmount,
-                Math.Rounding.Down
-            );
-
             totalAmountRedeem += claimedAmount;
-            totalSharesToWithdraw -= claimedShares;
             withdrawal.totalClaimedAmount += claimedAmount;
-            withdrawal.adapterUndelegatedShares[adapter][vault] -= claimedShares;
+        }
 
-            if (undelegatedAmount == 0) {
-                withdrawal.adaptersClaimedCounter++;
-            }
+        if (claimedAmount > 0 && undelegatedAmount == 0) {
+            withdrawal.adaptersClaimedCounter++;
         }
     }
 
     /// @notice Finalizes undelegation by advancing the epoch if completed
     /// @param withdrawal The storage reference to the withdrawal epoch
     function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
-        require(withdrawal.totalRequestedShares == withdrawal.totalUndelegatedShares, UndelegateNotCompleted());
+        uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+        uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
+
+        console.logString("_afterUndelegate");
+        console.logUint(requested);
+        console.logUint(totalUndelegated);
+
+        require(
+            requested >= totalUndelegated ? requested - totalUndelegated <= 10 : totalUndelegated - requested <= 10,
+            UndelegateNotCompleted()
+        );
+
         currentEpoch++;
 
         if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
@@ -207,7 +211,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(withdrawal.ableRedeem == false, EpochAlreadyRedeemable());
 
-        if(epoch == EMERGENCY_EPOCH) {
+        if (epoch == EMERGENCY_EPOCH) {
             // do nothing
             return;
         }
@@ -241,7 +245,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         // update global state
         totalAmountRedeem += claimedAmount;
-        totalSharesToWithdraw -= withdrawal.adapterUndelegatedShares[adapter][vault];
     }
 
     /// @notice Updates the redeemable status after a claim

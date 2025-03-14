@@ -94,13 +94,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function undelegate(
         address[] calldata adapters,
         address[] calldata vaults,
-        uint256[] calldata shares,
+        uint256[] calldata amounts,
         bytes[][] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
         require(
             adapters.length == vaults.length &&
-            vaults.length == shares.length &&
-            shares.length == _data.length,
+            vaults.length == amounts.length &&
+            amounts.length == _data.length,
             ValueZero()
         );
 
@@ -113,18 +113,16 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            uint256 amount = IERC4626(address(this)).convertToAssets(shares[i]);
             // undelegate adapter
             (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
-                adapters[i], vaults[i], amount, _data[i]
+                adapters[i], vaults[i], amounts[i], _data[i], false
             );
-
             emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmounts[i], undelegatedEpoch);
         }
 
         // undelegate from queue
         withdrawalQueue.undelegate(
-            undelegatedEpoch, adapters, vaults, shares, undelegatedAmounts, claimedAmounts
+            undelegatedEpoch, adapters, vaults, undelegatedAmounts, claimedAmounts
         );
     }
 
@@ -132,13 +130,14 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         address adapter,
         address vault,
         uint256 amount,
-        bytes[] calldata _data
+        bytes[] calldata _data,
+        bool emergency
     ) internal returns (uint256 undelegated, uint256 claimed) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
         // undelegate from adapter
-        return IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        return IIBaseAdapter(adapter).withdraw(vault, amount, _data, emergency);
     }
 
     function _undelegateAndClaim(uint256 undelegatedEpoch) internal {
@@ -167,7 +166,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
         for (uint256 i = 0; i < adapters.length; i++) {
             (uint256 undelegatedAmount,) = _undelegate(
-                adapters[i], vaults[i], amounts[i], _data[i]
+                adapters[i], vaults[i], amounts[i], _data[i], true
             );
 
             emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmount, epoch);
@@ -184,25 +183,37 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
-            claimedAmounts[i] = _claim(adapters[i], vaults[i], _data[i]);
+            claimedAmounts[i] = _claim(adapters[i], vaults[i], _data[i], false);
         }
 
         withdrawalQueue.claim(epochNum, adapters, vaults, claimedAmounts);
     }
 
-    function _claim(address adapter, address vault, bytes[] calldata _data) internal returns (uint256) {
+    function emergencyClaim(
+        address[] calldata adapters,
+        address[] calldata vaults,
+        bytes[][] calldata _data
+    ) public onlyOperator whenNotPaused nonReentrant {
+        require(adapters.length > 0 && adapters.length == vaults.length && vaults.length == _data.length, ValueZero());
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            _claim(adapters[i], vaults[i], _data[i], true);
+        }
+    }
+
+    function _claim(address adapter, address vault, bytes[] calldata _data, bool emergency) internal returns (uint256) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
+        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data, emergency);
 
         emit WithdrawalClaimed(adapter, withdrawnAmount);
         return withdrawnAmount;
     }
 
-    /*//////////////////////////
-    ////// GET functions //////
-    ////////////////////////*/
+/*//////////////////////////
+////// GET functions //////
+////////////////////////*/
 
-    /// @dev returns the total deposited into asset strategy
+/// @dev returns the total deposited into asset strategy
     function getTotalDeposited() public view returns (uint256) {
         return
             getTotalDelegated() +
@@ -232,7 +243,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return flashCapacity < targetFlash ? 0 : flashCapacity - targetFlash;
     }
 
-    /// @dev returns the total amount of pending withdrawals
+/// @dev returns the total amount of pending withdrawals
     function getPendingWithdrawals(
         address adapter
     ) public view returns (uint256) {
@@ -243,6 +254,14 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
             total += IIBaseAdapter(_adapters.at(i)).inactiveBalance();
+        }
+        return total;
+    }
+
+    function getTotalPendingEmergencyWithdrawals() public view returns (uint256) {
+        uint256 total;
+        for (uint256 i = 0; i < _adapters.length(); i++) {
+            total += IIBaseAdapter(_adapters.at(i)).inactiveBalanceEmergency();
         }
         return total;
     }
@@ -266,9 +285,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return withdrawalQueue.totalAmountRedeem();
     }
 
-    /*//////////////////////////
-    ////// SET functions //////
-    ////////////////////////*/
+/*//////////////////////////
+////// SET functions //////
+////////////////////////*/
 
     function setTargetFlashCapacity(
         uint256 newTargetCapacity

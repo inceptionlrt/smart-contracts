@@ -15,6 +15,8 @@ import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStak
 
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
 
+import {EmergencyClaimer} from "./EmergencyClaimer.sol";
+
 /**
  * @title The ISymbioticAdapter Contract
  * @author The InceptionLRT team
@@ -63,16 +65,16 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         uint256 amount,
         bytes[] calldata /* _data */
     )
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256 depositedAmount)
+    external
+    override
+    onlyTrustee
+    whenNotPaused
+    returns (uint256 depositedAmount)
     {
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
-        (depositedAmount, ) = IVault(vaultAddress).deposit(
+        (depositedAmount,) = IVault(vaultAddress).deposit(
             address(this),
             amount
         );
@@ -82,7 +84,8 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     function withdraw(
         address vaultAddress,
         uint256 amount,
-        bytes[] calldata /*_data */
+        bytes[] calldata _data,
+        bool emergency
     ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
@@ -91,7 +94,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             withdrawals[vaultAddress] > 0
         ) revert WithdrawalInProgress();
 
-        vault.withdraw(address(this), amount);
+        vault.withdraw(_getClaimer(emergency), amount);
 
         uint256 epoch = vault.currentEpoch() + 1;
         withdrawals[vaultAddress] = epoch;
@@ -100,7 +103,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     function claim(
-        bytes[] calldata _data
+        bytes[] calldata _data, bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         (address vaultAddress, uint256 sEpoch) = abi.decode(
             _data[0],
@@ -115,7 +118,18 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             revert AlreadyClaimed();
 
         delete withdrawals[vaultAddress];
+
+        if (emergency) {
+            return _emergencyClaim(vaultAddress, sEpoch);
+        }
+
         return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
+    }
+
+    function _emergencyClaim(address vaultAddress, uint256 sEpoch) internal returns (uint256) {
+        return EmergencyClaimer(_getClaimer(true)).claimSymbiotic(
+            vaultAddress, _inceptionVault, sEpoch
+        );
     }
 
     // /// TODO
@@ -148,17 +162,23 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         return total;
     }
 
-    function pendingWithdrawalAmount()
-        public
-        view
-        override
-        returns (uint256 total)
+    function pendingWithdrawalAmount() public view override returns (uint256 total)
+    {
+        return _pendingWithdrawalAmount(_getClaimer(false));
+    }
+
+    function pendingWithdrawalAmountEmergency() public view override returns (uint256 total)
+    {
+        return _pendingWithdrawalAmount(_getClaimer(true));
+    }
+
+    function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total)
     {
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
             if (withdrawals[_symbioticVaults.at(i)] != 0)
                 total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
                     withdrawals[_symbioticVaults.at(i)],
-                    address(this)
+                    claimer
                 );
 
         return total;
@@ -166,6 +186,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
+    }
+
+    function inactiveBalanceEmergency() public view override returns (uint256) {
+        return _pendingWithdrawalAmount(_getClaimer(true)) + claimableAmount(_getClaimer(true));
     }
 
     function addVault(address vaultAddress) external onlyOwner {

@@ -130,6 +130,11 @@ const initVault = async a => {
   const asset = await ethers.getContractAt(a.assetName, a.assetAddress);
   asset.address = await asset.getAddress();
 
+  console.log("- Emergency claimer");
+  const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
+  let emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
+  emergencyClaimer.address = await emergencyClaimer.getAddress();
+
   /// =============================== Mellow Vaults ===============================
   for (const mVaultInfo of mellowVaults) {
     console.log(`- MellowVault ${mVaultInfo.name} and curator`);
@@ -226,6 +231,7 @@ const initVault = async a => {
   let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
+  await emergencyClaimer.setEigenAdapter(eigenLayerAdapter.address);
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addAdapter(symbioticAdapter.address);
   await iVault.addAdapter(mellowAdapter.address);
@@ -234,6 +240,7 @@ const initVault = async a => {
   await mellowAdapter.setInceptionVault(iVault.address);
   await symbioticAdapter.setInceptionVault(iVault.address);
   await eigenLayerAdapter.setInceptionVault(iVault.address);
+  await eigenLayerAdapter.setEmergencyClaimer(emergencyClaimer.address);
   await iToken.setVault(iVault.address);
   MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
   console.log("... iVault initialization completed ....");
@@ -393,7 +400,7 @@ assets.forEach(function (a) {
         await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
         await adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], 0n, delegateData);
 
-        await expect(adapter.connect(staker).withdraw(ZeroAddress, amount / 2n, [])).to.be.revertedWithCustomError(
+        await expect(adapter.connect(staker).withdraw(ZeroAddress, amount / 2n, [], false)).to.be.revertedWithCustomError(
           adapter,
           "NotVaultOrTrusteeManager",
         );
@@ -533,7 +540,7 @@ assets.forEach(function (a) {
       it("Update ratio after all shares burn", async function () {
         const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
         console.log(`Calculated ratio:\t\t\t${calculatedRatio.format()}`);
-        expect(calculatedRatio).to.be.eq(999999045189759686n); //Because all shares have been burnt at this point
+        expect(calculatedRatio).to.be.eq(999999045189759685n); //Because all shares have been burnt at this point
 
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         console.log(`iVault ratio after:\t\t\t${(await iVault.ratio()).format()}`);
@@ -544,19 +551,16 @@ assets.forEach(function (a) {
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const totalDelegatedBefore = await iVault.getTotalDelegated();
-
         undelegateEpoch = await withdrawalQueue.currentEpoch();
-        const withdrawalEpoch = await withdrawalQueue.withdrawals(undelegateEpoch);
 
         console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
         console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
         console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
-        console.log(`Undelegate shares:\t\t\t${await iVault.convertToAssets(withdrawalEpoch[1])}`);
-        
+
         tx = await iVault
           .connect(iVaultOperator)
           .undelegate(
-            [eigenLayerAdapter.address], [eigenLayerVaults[0]], [withdrawalEpoch[1]], [[]]
+            [eigenLayerAdapter.address], [eigenLayerVaults[0]], [totalDelegatedBefore], [[]]
           );
         const totalDepositedAfter = await iVault.getTotalDeposited();
         const totalDelegatedAfter = await iVault.getTotalDelegated();
