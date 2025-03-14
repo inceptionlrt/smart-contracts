@@ -616,10 +616,16 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             // Means fulfilled
             if (queue[i] == address(0)) continue;
 
+            bool skipElement;
             for (uint256 j = 0; j < i; j++) {
 
-                if (queue[j] == queue[i]) continue;
+                if (queue[j] == queue[i]) {
+                    skipElement = true;
+                    break;
+                }
             }
+
+            if (skipElement) continue;
 
             uint256 numWithdrawal;
             for (uint256 k = i; k < queue.length; k++) {
