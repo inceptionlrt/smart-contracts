@@ -214,4 +214,16 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       expect(assetBalanceAfter).to.be.eq(assetBalanceBefore);
     });
   });
+
+  describe('decimals method', () => {
+    it('should return token decimals', async () => {
+      const tokenAddress = await iVault.inceptionToken();
+
+      const iVaultDecimals = await iVault.decimals();
+      const tokenDecimals = await (await ethers.getContractAt('IERC20Metadata', tokenAddress)).decimals();
+
+      expect(iVaultDecimals).to.be.eq(tokenDecimals);
+      expect(iVaultDecimals).to.be.eq(18n);
+    });
+  });
 });
