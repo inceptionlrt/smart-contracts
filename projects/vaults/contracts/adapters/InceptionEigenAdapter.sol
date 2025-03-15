@@ -91,10 +91,12 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
 
+        // prepare delegation
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
+        // delegate to EL
         _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
@@ -127,10 +129,10 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         sharesToWithdraw[0] = _strategy.underlyingToShares(amount);
 
         address staker = address(this);
-
         uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
         if (emergency) _emergencyQueuedWithdrawals[nonce] = true;
 
+        // prepare withdrawal
         IDelegationManager.QueuedWithdrawalParams[]
         memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](1);
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
@@ -139,6 +141,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             withdrawer: staker
         });
 
+        // queue from EL
         _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
@@ -167,13 +170,13 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
         uint256 balanceBefore = _asset.balanceOf(address(this));
 
+        // prepare withdrawal
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
 
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
-
         uint256 withdrawnAmount = _asset.balanceOf(address(this)) - balanceBefore;
         // send tokens to the vault
         _asset.safeTransfer(_inceptionVault, withdrawnAmount);

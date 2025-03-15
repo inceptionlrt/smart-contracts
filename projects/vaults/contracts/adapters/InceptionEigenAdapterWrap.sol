@@ -97,10 +97,12 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         require(operator != address(0), NullParams());
         require(_data.length == 2, InvalidDataLength(2, _data.length));
 
+        // prepare delegation
         bytes32 approverSalt = abi.decode(_data[0], (bytes32));
         IDelegationManager.SignatureWithExpiry
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
+        // delegate to EL
         _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
@@ -130,16 +132,15 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         IStrategy[] memory strategies = new IStrategy[](1);
 
         strategies[0] = _strategy;
-
         sharesToWithdraw[0] = _strategy.underlyingToShares(
             wrappedAsset().getStETHByWstETH(amount)
         );
 
         address staker = address(this);
-
         uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
         if (emergency) _emergencyQueuedWithdrawals[nonce] = true;
 
+        // prepare withdrawal
         IDelegationManager.QueuedWithdrawalParams[]
         memory withdrawals = new IDelegationManager.QueuedWithdrawalParams[](1);
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
@@ -148,6 +149,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             withdrawer: staker
         });
 
+        // queue withdrawal from EL
         _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
@@ -179,6 +181,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         IERC20 backedAsset = wrappedAsset().stETH();
         uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
+        // prepare withdrawal
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
