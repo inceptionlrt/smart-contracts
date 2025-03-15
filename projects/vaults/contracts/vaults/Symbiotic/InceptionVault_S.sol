@@ -100,8 +100,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
-
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -170,7 +169,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = convertToAssets(shares);
+        uint256 assetsAmount = previewMint(shares);
         _deposit(assetsAmount, msg.sender, receiver);
 
         return assetsAmount;
@@ -182,8 +181,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (receiver == address(0)) revert InvalidAddress();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -378,6 +377,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
 
         return convertToShares(assets + depositBonus);
+    }
+
+    /** @dev See {IERC4626-previewMint}. */
+    function previewMint(uint256 shares) public view returns (uint256) {
+        uint256 assets = Convert.multiplyAndDivideCeil(shares, 1e18, ratio());
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        return assets;
     }
 
     /** @dev See {IERC4626-previewRedeem}. */

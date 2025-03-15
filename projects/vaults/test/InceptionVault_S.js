@@ -2306,7 +2306,7 @@ assets.forEach(function(a) {
         const depositAmount = randomBI(19);
         await expect(iVault.connect(staker).deposit(depositAmount, staker.address)).to.be.revertedWithCustomError(
           iVault,
-          "InceptionOnPause",
+          "NullParams",
         );
       });
 
@@ -3224,7 +3224,7 @@ assets.forEach(function(a) {
           name: "to zero address",
           amount: async () => randomBI(18),
           receiver: () => ethers.ZeroAddress,
-          customError: "NullParams",
+          customError: "InvalidAddress",
         },
       ];
 
@@ -3272,7 +3272,7 @@ assets.forEach(function(a) {
         await snapshot.restore();
         await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWithCustomError(
           iVault,
-          "InceptionOnPause",
+          "NullParams",
         );
       });
     });

@@ -34,7 +34,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
     /**
      * @notice Initializes the adapter contract with required addresses and parameters
-     * @param ownerAddress Address of the contract owner
+     * @param claimer Address of the contract owner
      * @param rewardCoordinator Address of the rewards coordinator contract
      * @param delegationManager Address of the delegation manager contract
      * @param strategyManager Address of the strategy manager contract
@@ -43,7 +43,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @param trusteeManager Address of the trustee manager
      */
     function initialize(
-        address ownerAddress,
+        address claimer,
         address rewardCoordinator,
         address delegationManager,
         address strategyManager,
@@ -56,7 +56,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
         _inceptionVault = msg.sender;
-        _setRewardsCoordinator(rewardCoordinator, ownerAddress);
+        _setRewardsCoordinator(rewardCoordinator, claimer);
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);
     }
@@ -156,6 +156,8 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @return Amount of tokens withdrawn
      */
     function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
+        require(_data.length == 3, InvalidDataLength(3, _data.length));
+
         uint256 balanceBefore = _asset.balanceOf(address(this));
 
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
@@ -274,24 +276,23 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @notice Updates the rewards coordinator address
      * @dev Can only be called by the owner
      * @param newRewardsCoordinator Address of the new rewards coordinator
+     * @param claimer Address of the owner to set as claimer
      */
     function setRewardsCoordinator(
-        address newRewardsCoordinator
+        address newRewardsCoordinator,
+        address claimer
     ) external onlyOwner {
-        _setRewardsCoordinator(newRewardsCoordinator, owner());
+        _setRewardsCoordinator(newRewardsCoordinator, claimer);
     }
 
     /**
      * @notice Internal function to set the rewards coordinator
      * @dev Updates the rewards coordinator and sets the claimer
      * @param newRewardsCoordinator Address of the new rewards coordinator
-     * @param ownerAddress Address of the owner to set as claimer
+     * @param claimer Address of the owner to set as claimer
      */
-    function _setRewardsCoordinator(
-        address newRewardsCoordinator,
-        address ownerAddress
-    ) internal {
-        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(ownerAddress);
+    function _setRewardsCoordinator(address newRewardsCoordinator, address claimer) internal {
+        IRewardsCoordinator(newRewardsCoordinator).setClaimerFor(claimer);
 
         emit RewardCoordinatorChanged(
             address(rewardsCoordinator),
