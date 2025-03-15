@@ -137,7 +137,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
@@ -152,7 +151,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
-        amount = totalAssets() - depositedBefore;
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
