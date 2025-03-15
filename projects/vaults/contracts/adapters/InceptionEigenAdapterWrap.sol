@@ -64,10 +64,7 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
 
         // approve spending by strategyManager
         _asset.safeApprove(strategyManager, type(uint256).max);
-        wrappedAsset().stETH().approve(
-            strategyManager,
-            type(uint256).max
-        );
+        wrappedAsset().stETH().approve(strategyManager, type(uint256).max);
     }
 
     /**
@@ -90,7 +87,9 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
             amount = wrappedAsset().unwrap(amount);
             // deposit the asset to the appropriate strategy
             return wrappedAsset().getWstETHByStETH(_strategy.sharesToUnderlying(
-                _strategyManager.depositIntoStrategy(_strategy, _asset, amount)
+                _strategyManager.depositIntoStrategy(
+                    _strategy, wrappedAsset().stETH(), amount
+                )
             ));
         }
 
@@ -191,13 +190,14 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
 
         // send tokens to the vault
         uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) - balanceBefore;
+        backedAsset.safeApprove(address(_asset), withdrawnAmount);
         uint256 wrapped = wrappedAsset().wrap(withdrawnAmount);
         _asset.safeTransfer(_inceptionVault, wrapped);
 
         // update emergency withdrawal state
         _emergencyQueuedWithdrawals[withdrawal.nonce] = false;
 
-        return withdrawnAmount;
+        return wrappedAsset().getWstETHByStETH(withdrawnAmount);
     }
 
     /**
