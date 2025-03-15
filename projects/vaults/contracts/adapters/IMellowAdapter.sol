@@ -89,6 +89,22 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     /**
+    * @notice Checks if the specified Mellow Vault address is in the list of allowed vaults
+    * @dev Iterates through the mellowVaults array and compares the provided address with each element
+    * @param mellowVault The address of the vault to check
+    * @return bool Returns true if the vault is found in the list, false otherwise
+    **/
+    function _beforeDelegate(address mellowVault) internal returns (bool) {
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @notice Internal function to delegate funds to a specific vault
      * @param mellowVault Address of the Mellow vault
      * @param amount Amount to delegate
@@ -100,6 +116,8 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 amount,
         address referral
     ) internal returns (uint256 depositedAmount) {
+        if (!_beforeDelegate(mellowVault)) revert NotAdded();
+
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
         return
