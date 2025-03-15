@@ -636,7 +636,7 @@ assets.forEach(function(a) {
         // Encode the data
         const _data = [
           coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
-          coder.encode(["address[][]"], [[[a.assetAddress]]]),
+          coder.encode(["address[][]"], [[[a.backedAssetAddress]]]),
           coder.encode(["bool[]"], [[true]]),
         ];
 
