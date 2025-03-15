@@ -29,7 +29,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @custom:oz-renamed-from minAmount
     uint256 public withdrawMinAmount;
 
-    mapping(address => Withdrawal) private _claimerWithdrawals;
+    mapping(address => __deprecated_Withdrawal) private __deprecated_claimerWithdrawals;
 
     /// @dev the unique InceptionVault name
     string public name;

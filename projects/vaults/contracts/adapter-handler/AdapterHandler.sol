@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "../withdrawals/WithdrawalQueue.sol";
+import "../interfaces/adapter-handler/IAdapterHandler.sol";
 
+import "../withdrawals/WithdrawalQueue.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IAdapterHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
 import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
+import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
 /**
  * @title The AdapterHandler contract
@@ -34,7 +34,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /// @notice + amount to undelegate from Mellow
     uint256 private __deprecated_totalAmountToWithdraw;
 
-    Withdrawal[] private __deprecated_claimerWithdrawalsQueue;
+    __deprecated_Withdrawal[] private __deprecated_claimerWithdrawalsQueue;
 
     /// @dev heap reserved for the claimers
     uint256 private __deprecated_redeemReservedAmount;
@@ -280,10 +280,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      */
     function _claim(address adapter, address vault, bytes[] calldata _data, bool emergency) internal returns (uint256) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data, emergency);
-
-        emit WithdrawalClaimed(adapter, withdrawnAmount);
-        return withdrawnAmount;
+        return IIBaseAdapter(adapter).claim(_data, emergency);
     }
 
 /*//////////////////////////
