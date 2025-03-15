@@ -59,7 +59,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
-    mapping(address => uint256) public withdrawals;
+    mapping(address => uint256) private __deprecated_withdrawals;
 
     function __InceptionVault_init(
         string memory vaultName,
