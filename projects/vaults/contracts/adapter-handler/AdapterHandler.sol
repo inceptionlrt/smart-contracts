@@ -322,9 +322,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return IIBaseAdapter(adapter).claim(_data, emergency);
     }
 
-/*//////////////////////////
-////// GET functions //////
-////////////////////////*/
+    /*//////////////////////////
+    ////// GET functions //////
+    ////////////////////////*/
 
     /**
      * @notice Returns the total amount deposited across all strategies
