@@ -241,7 +241,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
+            // claim from adapter
             claimedAmounts[i] = _claim(adapters[i], vaults[i], _data[i], false);
+            emit ClaimedFrom(adapters[i], vaults[i], claimedAmounts[i], epochNum);
         }
 
         withdrawalQueue.claim(epochNum, adapters, vaults, claimedAmounts);
@@ -260,8 +262,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ) public onlyOperator whenNotPaused nonReentrant {
         require(adapters.length > 0 && adapters.length == vaults.length && vaults.length == _data.length, ValueZero());
 
+        uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
         for (uint256 i = 0; i < adapters.length; i++) {
-            _claim(adapters[i], vaults[i], _data[i], true);
+            // claim from adapter
+            uint256 claimedAmount = _claim(adapters[i], vaults[i], _data[i], true);
+            emit ClaimedFrom(adapters[i], vaults[i], claimedAmount, epoch);
         }
     }
 

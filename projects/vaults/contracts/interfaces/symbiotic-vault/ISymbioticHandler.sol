@@ -10,6 +10,13 @@ interface IMellowHandler {
         uint256 epoch
     );
 
+    event ClaimedFrom(
+        address indexed adapter,
+        address indexed vault,
+        uint256 claimedAmount,
+        uint256 epoch
+    );
+
     event StartSymbioticWithdrawal(
         address indexed stakerAddress,
         uint256 indexed mintedShares
