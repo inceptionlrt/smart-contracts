@@ -179,7 +179,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
      * @param emergency Flag for emergency claim process
      * @return Amount of tokens claimed
      */
-    function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
+    function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length > 0, ValueZero());
 
         (address _mellowVault) = abi.decode(_data[0], (address));

@@ -75,7 +75,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         address operator,
         uint256 amount,
         bytes[] calldata _data
-    ) external override onlyTrustee returns (uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
@@ -115,7 +115,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         uint256 amount,
         bytes[] calldata _data,
         bool emergency
-    ) external override onlyTrustee returns (uint256, uint256) {
+    ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
         uint256[] memory sharesToWithdraw = new uint256[](1);
@@ -158,7 +158,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @param emergency Flag for emergency withdrawal
      * @return Amount of tokens withdrawn
      */
-    function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee returns (uint256) {
+    function claim(
+        bytes[] calldata _data, bool emergency
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length == 3, InvalidDataLength(3, _data.length));
 
         uint256 balanceBefore = _asset.balanceOf(address(this));
