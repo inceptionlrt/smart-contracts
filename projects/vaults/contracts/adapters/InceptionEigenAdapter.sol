@@ -79,8 +79,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
             // deposit the asset to the appropriate strategy
-            return
-                _strategyManager.depositIntoStrategy(_strategy, _asset, amount);
+            return _strategy.sharesToUnderlying(
+                _strategyManager.depositIntoStrategy(_strategy, _asset, amount)
+            );
         }
 
         require(operator != address(0), NullParams());
