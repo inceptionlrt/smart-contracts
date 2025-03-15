@@ -60,7 +60,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         _inceptionVault = inceptionVault;
         _setRewardsCoordinator(rewardCoordinator, claimer);
         // approve spending by strategyManager
-        _asset.approve(strategyManager, type(uint256).max);
+        _asset.safeApprove(strategyManager, type(uint256).max);
     }
 
     /**
