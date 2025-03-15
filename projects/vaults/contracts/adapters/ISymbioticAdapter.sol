@@ -32,9 +32,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     /// @notice Mapping of vault addresses to their withdrawal epochs
     mapping(address => uint256) public withdrawals;
 
-    // /// @dev Symbiotic DefaultStakerRewards.sol
-    // IStakerRewards public stakerRewards;
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -166,11 +163,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             vaultAddress, _inceptionVault, sEpoch
         );
     }
-
-    // /// TODO
-    // function pendingRewards() external view returns (uint256) {
-    //     return stakerRewards.claimable(address(_asset), address(this), "");
-    // }
 
     /**
      * @notice Checks if a vault is supported by the adapter
