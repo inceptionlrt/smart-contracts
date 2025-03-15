@@ -55,11 +55,13 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         address inceptionVault
     ) public initializer {
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
+
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
         _inceptionVault = inceptionVault;
         _setRewardsCoordinator(rewardCoordinator, claimer);
+
         // approve spending by strategyManager
         _asset.safeApprove(strategyManager, type(uint256).max);
         wrappedAsset().stETH().approve(
