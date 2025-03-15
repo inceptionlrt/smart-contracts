@@ -77,4 +77,8 @@ interface IInceptionVaultErrors {
     error WithdrawalFailed();
 
     error InsufficientFreeBalance();
+
+    error MintedLess();
+
+    error LowerThanMinOut(uint256 minOut);
 }
