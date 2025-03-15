@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "../interfaces/adapter-handler/IAdapterHandler.sol";
-
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
+import {IAdapterHandler} from "../interfaces/adapter-handler/IAdapterHandler.sol";
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
 import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
