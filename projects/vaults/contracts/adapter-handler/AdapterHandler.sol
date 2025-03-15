@@ -3,15 +3,16 @@ pragma solidity ^0.8.28;
 
 import "../interfaces/adapter-handler/IAdapterHandler.sol";
 
-import "../withdrawals/WithdrawalQueue.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+
 import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
 import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
 import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title The AdapterHandler contract
@@ -23,35 +24,73 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    /**
+     * @dev Deprecated variable representing the epoch (no longer in use).
+     */
     uint256 private __deprecated_epoch;
 
-    /// @dev inception operator
+    /**
+     * @dev The address of the inception operator responsible for managing the contract.
+     */
     address internal _operator;
 
+    /**
+     * @dev Instance of the Mellow adapter interface for interacting with Mellow-related functionality.
+     */
     IIMellowAdapter public mellowAdapter;
 
-    /// @dev represents the pending amount to be redeemed by claimers,
-    /// @notice + amount to undelegate from Mellow
+    /**
+     * @dev Deprecated variable representing the total amount pending to be redeemed by claimers.
+     * @notice Previously included the amount to undelegate from Mellow.
+     */
     uint256 private __deprecated_totalAmountToWithdraw;
 
+    /**
+     * @dev Deprecated array storing the queue of withdrawal requests from claimers.
+     */
     __deprecated_Withdrawal[] private __deprecated_claimerWithdrawalsQueue;
 
-    /// @dev heap reserved for the claimers
+    /**
+     * @dev Deprecated variable representing the heap reserved for claimers' withdrawals.
+     */
     uint256 private __deprecated_redeemReservedAmount;
 
+    /**
+     * @dev The bonus amount provided for deposits to incentivize staking.
+     */
     uint256 public depositBonusAmount;
 
-    /// @dev measured in percentage, MAX_TARGET_PERCENT - 100%
+    /**
+     * @dev The target capacity of the system, measured in percentage.
+     * @notice Expressed as a value up to MAX_TARGET_PERCENT (100% = 100 * 1e18).
+     */
     uint256 public targetCapacity;
 
+    /**
+     * @dev Constant representing the maximum target percentage (100%).
+     * @notice Used as a reference for targetCapacity calculations, scaled to 1e18.
+     */
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
+    /**
+     * @dev Instance of the Symbiotic adapter interface for interacting with Symbiotic-related functionality.
+     */
     IISymbioticAdapter public symbioticAdapter;
 
+    /**
+     * @dev Set of adapter addresses currently registered in the system.
+     */
     EnumerableSet.AddressSet internal _adapters;
 
+    /**
+     * @dev Instance of the withdrawal queue interface for managing withdrawal requests.
+     */
     IWithdrawalQueue public withdrawalQueue;
 
+    /**
+     * @dev Reserved storage gap to allow for future upgrades without shifting storage layout.
+     * @notice Occupies 38 slots (50 total slots minus 12 used).
+     */
     uint256[50 - 12] private __gap;
 
     modifier onlyOperator() {

@@ -6,8 +6,6 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-import "hardhat/console.sol";
-
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
