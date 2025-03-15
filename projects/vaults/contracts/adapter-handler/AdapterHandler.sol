@@ -37,7 +37,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @dev Instance of the Mellow adapter interface for interacting with Mellow-related functionality.
      */
-    IIMellowAdapter public mellowAdapter;
+    IIMellowAdapter private __deprecated_mellowAdapter;
 
     /**
      * @dev Deprecated variable representing the total amount pending to be redeemed by claimers.
@@ -75,7 +75,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @dev Instance of the Symbiotic adapter interface for interacting with Symbiotic-related functionality.
      */
-    IISymbioticAdapter public symbioticAdapter;
+    IISymbioticAdapter private __deprecated_symbioticAdapter;
 
     /**
      * @dev Set of adapter addresses currently registered in the system.
