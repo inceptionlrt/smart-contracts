@@ -46,20 +46,27 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     /**
      * @notice Initializes the Mellow adapter with vaults and parameters
-     * @param _mellowVault Array of Mellow vault addresses
+     * @param _mellowVaults Array of Mellow vault addresses
      * @param asset Address of the underlying asset
      * @param trusteeManager Address of the trustee manager
      */
     function initialize(
-        IMellowVault[] memory _mellowVault,
+        IMellowVault[] memory _mellowVaults,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
         __IBaseAdapter_init(asset, trusteeManager);
 
-        for (uint256 i = 0; i < _mellowVault.length; i++) {
-            mellowVaults.push(_mellowVault[i]);
+        uint256 totalAllocations_;
+        for (uint256 i = 0; i < _mellowVaults.length; i++) {
+            for (uint8 j = 0; j < i; j++)
+                if (address(_mellowVaults[i]) == address(_mellowVaults[j])) revert AlreadyAdded();
+            mellowVaults.push(_mellowVaults[i]);
+            allocations[address(_mellowVaults[i])] = 1;
+            totalAllocations_ += 1;
         }
+
+        totalAllocations = totalAllocations_;
     }
 
     /**
