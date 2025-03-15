@@ -41,6 +41,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @param strategy Address of the strategy contract
      * @param asset Address of the underlying asset token
      * @param trusteeManager Address of the trustee manager
+     * @param inceptionVault Address of the inception vault
      */
     function initialize(
         address claimer,
@@ -49,13 +50,14 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         address strategyManager,
         address strategy,
         address asset,
-        address trusteeManager
+        address trusteeManager,
+        address inceptionVault
     ) public initializer {
         __IBaseAdapter_init(IERC20(asset), trusteeManager);
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
         _strategy = IStrategy(strategy);
-        _inceptionVault = msg.sender;
+        _inceptionVault = inceptionVault;
         _setRewardsCoordinator(rewardCoordinator, claimer);
         // approve spending by strategyManager
         _asset.approve(strategyManager, type(uint256).max);

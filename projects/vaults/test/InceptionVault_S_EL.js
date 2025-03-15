@@ -72,20 +72,6 @@ const initVault = async a => {
   console.log("- iVault operator");
   const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
 
-  console.log("- EigenLayer Adapter");
-  let [deployer] = await ethers.getSigners();
-  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
-  let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
-    await deployer.getAddress(),
-    a.rewardsCoordinator,
-    a.delegationManager,
-    a.strategyManager,
-    a.assetStrategy,
-    a.assetAddress,
-    a.iVaultOperator,
-  ]);
-  eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
-
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
@@ -108,6 +94,21 @@ const initVault = async a => {
     },
   );
   iVault.address = await iVault.getAddress();
+
+  console.log("- EigenLayer Adapter");
+  let [deployer] = await ethers.getSigners();
+  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+  let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+    await deployer.getAddress(),
+    a.rewardsCoordinator,
+    a.delegationManager,
+    a.strategyManager,
+    a.assetStrategy,
+    a.assetAddress,
+    a.iVaultOperator,
+    iVault.address
+  ]);
+  eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
 
   console.log("- Withdrawal Queue");
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
@@ -201,6 +202,7 @@ assets.forEach(function(a) {
           a.assetStrategy,
           a.assetAddress,
           trusteeManager.address,
+          iVault.address,
         ]);
       });
 
