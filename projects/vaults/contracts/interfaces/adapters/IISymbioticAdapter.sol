@@ -19,4 +19,6 @@ interface IISymbioticAdapter is IIBaseAdapter {
     error InvalidEpoch();
 
     error AlreadyClaimed();
+
+    error WrongEpoch();
 }
