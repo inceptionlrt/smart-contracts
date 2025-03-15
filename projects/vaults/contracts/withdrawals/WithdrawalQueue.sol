@@ -333,11 +333,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
                 continue;
             }
 
-            if (withdrawal.ableRedeem) {
-                amount += _getRedeemAmount(withdrawal, receiver);
-            } else {
-                amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
-            }
+            if (withdrawal.ableRedeem) amount += _getRedeemAmount(withdrawal, receiver);
+            else amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
         }
 
         return amount;
