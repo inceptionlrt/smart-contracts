@@ -6,6 +6,7 @@ interface IMellowHandler {
         address indexed adapter,
         address indexed vault,
         uint256 indexed actualAmounts,
+        uint256 claimedAmount,
         uint256 epoch
     );
 

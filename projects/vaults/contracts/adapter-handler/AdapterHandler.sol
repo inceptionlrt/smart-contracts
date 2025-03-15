@@ -142,7 +142,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
                 adapters[i], vaults[i], amounts[i], _data[i], false
             );
-            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmounts[i], undelegatedEpoch);
+
+            emit UndelegatedFrom(
+                adapters[i], vaults[i], undelegatedAmounts[i], claimedAmounts[i], undelegatedEpoch
+            );
         }
 
         // undelegate from queue
@@ -215,7 +218,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
                 adapters[i], vaults[i], amounts[i], _data[i], true
             );
 
-            emit UndelegatedFrom(adapters[i], vaults[i], undelegatedAmount, epoch);
+            emit UndelegatedFrom(
+                adapters[i], vaults[i], undelegatedAmount, 0, epoch
+            );
         }
     }
 
