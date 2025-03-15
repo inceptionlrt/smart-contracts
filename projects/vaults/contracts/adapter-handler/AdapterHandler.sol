@@ -443,9 +443,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return withdrawalQueue.totalAmountRedeem();
     }
 
-/*//////////////////////////
-////// SET functions //////
-////////////////////////*/
+    /*//////////////////////////
+    ////// SET functions //////
+    ////////////////////////*/
 
     /**
      * @notice Sets the target flash capacity percentage
