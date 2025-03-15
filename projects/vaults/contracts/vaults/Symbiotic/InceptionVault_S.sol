@@ -34,10 +34,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @dev the unique InceptionVault name
     string public name;
 
-    /**
-     *  @dev Flash withdrawal params
-     */
-
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
@@ -212,8 +208,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ) external nonReentrant whenNotPaused returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
-        uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner, 0);
+        (uint256 assets, uint256 fee) = _flashWithdraw(shares, receiver, owner, 0);
 
         emit Withdraw(owner, receiver, owner, assets, shares);
         emit WithdrawalFee(fee);
