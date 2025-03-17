@@ -503,7 +503,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (amount <= capacity) return amount - calculateFlashWithdrawFee(amount);
 
         // Insufficient Capacity
-        return InceptionLibrary.calculateWithdrawalFee(
+        return amount - InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 amount,
                 (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
