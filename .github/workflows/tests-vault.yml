@@ -28,3 +28,4 @@ jobs:
         run: npm run test:actual
         env:
           MAINNET_RPC: https://rpc.ankr.com/eth
+          RPC: https://rpc.ankr.com/eth
