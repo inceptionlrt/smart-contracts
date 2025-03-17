@@ -39,7 +39,7 @@ describe('------------------', function () {
         operator = await ethers.getSigner("0xd87D15b80445EC4251e33dBe0668C335624e54b7")
     });
 
-    describe('', function () {
+    describe('test #1', function () {
 
         before(async function () {
 
@@ -174,7 +174,7 @@ describe('------------------', function () {
             console.log("Vault 6: " + await adapter.lpAmountToAmount(1000000000000000000n, "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"));
         });
     });
-    describe('', function () {
+    describe('test #2', function () {
 
         before(async function () {
 
@@ -219,9 +219,6 @@ describe('------------------', function () {
             let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
             let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
-
-            console.log("inc token", await vault.inceptionToken());
-
             const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
             let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
             await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
@@ -237,7 +234,7 @@ describe('------------------', function () {
             // console.log("PendingWithdraw: " + await vault.getPendingWithdrawalAmountFromMellow());
         });
     });
-    describe('', function () {
+    describe('test #3', function () {
 
         before(async function () {
 
@@ -291,6 +288,20 @@ describe('------------------', function () {
             const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
             let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
             await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
+
+            const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
+            let emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
+            emergencyClaimer.address = await emergencyClaimer.getAddress();
+            await emergencyClaimer.setMellowAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
+            await emergencyClaimer.approveSpender("0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
+            await adapter.connect(owner).setEmergencyClaimer(emergencyClaimer.address);
+
+            await adapter.connect(owner).addMellowVault("0x5fD13359Ba15A84B76f7F87568309040176167cd");
+            await adapter.connect(owner).addMellowVault("0x7a4EffD87C2f3C55CA251080b1343b605f327E3a");
+            await adapter.connect(owner).addMellowVault("0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a");
+            await adapter.connect(owner).addMellowVault("0x49cd586dd9BA227Be9654C735A659a1dB08232a9");
+            await adapter.connect(owner).addMellowVault("0xd6E09a5e6D719d1c881579C9C8670a210437931b");
+            await adapter.connect(owner).addMellowVault("0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD");
 
             console.log("Our contracts are upgraded");
             console.log("Total Deposited: " + await vault.getTotalDeposited());

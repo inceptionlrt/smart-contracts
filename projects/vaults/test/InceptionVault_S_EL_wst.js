@@ -16,8 +16,9 @@ const assets = [
     vaultName: "InstEthVault",
     vaultFactory: "InVault_S_E2",
     assetName: "stETH",
-    assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+    assetAddress: "0x8d09a4502cc8cf1547ad300e066060d043f6982d",
     assetPoolName: "LidoMockPool",
+    backedAssetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
     assetPool: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
     assetStrategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3",
     strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
@@ -30,12 +31,21 @@ const assets = [
     blockNumber: 3338549,
     url: "https://rpc.ankr.com/eth_holesky",
     impersonateStaker: async function(staker, iVault) {
+      const wstETHDonorAddress = "0x0000000000a2d441d85315e5163dEEC094bf6FE1";
+      const donor1 = await impersonateWithEth(wstETHDonorAddress, toWei(10));
+
+      const wstAmount = toWei(100);
+      const wstEth = await ethers.getContractAt("IWSteth", this.assetAddress);
+      await wstEth.connect(donor1).transfer(staker.address, wstAmount);
+      await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
+
       const stETHDonorAddress = "0x66b25CFe6B9F0e61Bd80c4847225Baf4EE6Ba0A2";
-      const donor = await impersonateWithEth(stETHDonorAddress, toWei(1));
-      const stEth = await ethers.getContractAt("stETH", this.assetAddress);
+      const donor2 = await impersonateWithEth(stETHDonorAddress, toWei(1));
+      const stEth = await ethers.getContractAt("stETH", this.backedAssetAddress);
       const stEthAmount = toWei(1000);
-      await stEth.connect(donor).transfer(staker.address, stEthAmount);
+      await stEth.connect(donor2).transfer(staker.address, stEthAmount);
       await stEth.connect(staker).approve(iVault, stEthAmount);
+
       return staker;
     },
   },
@@ -97,7 +107,7 @@ const initVault = async a => {
 
   console.log("- EigenLayer Adapter");
   let [deployer] = await ethers.getSigners();
-  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
   let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
     await deployer.getAddress(),
     a.rewardsCoordinator,
@@ -106,7 +116,7 @@ const initVault = async a => {
     a.assetStrategy,
     a.assetAddress,
     a.iVaultOperator,
-    iVault.address
+    iVault.address,
   ]);
   eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
 
@@ -193,7 +203,7 @@ assets.forEach(function(a) {
         console.log(`iVaultMock balance of asset after: ${await asset.balanceOf(iVaultMock.address)}`);
         console.log(`trusteeManager balance of asset after: ${await asset.balanceOf(trusteeManager.address)}`);
 
-        const InceptionEigenAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter", iVaultMock);
+        const InceptionEigenAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap", iVaultMock);
         adapter = await upgrades.deployProxy(InceptionEigenAdapterFactory, [
           await deployer.getAddress(),
           a.rewardsCoordinator,
@@ -434,7 +444,7 @@ assets.forEach(function(a) {
       it("Claim from EigenLayer", async function() {
         const receipt = await tx.wait();
 
-        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
         let withdrawalQueuedEvent;
         receipt.logs.forEach(log => {
           try {
@@ -463,7 +473,7 @@ assets.forEach(function(a) {
         // Encode the data
         const _data = [
           coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
-          coder.encode(["address[][]"], [[[a.assetAddress]]]),
+          coder.encode(["address[][]"], [[[a.backedAssetAddress]]]),
           coder.encode(["bool[]"], [[true]]),
         ];
 
@@ -597,7 +607,7 @@ assets.forEach(function(a) {
       it("Emergency claim", async function() {
         const receipt = await undelegateTx.wait();
 
-        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
         let withdrawalQueuedEvent;
         receipt.logs.forEach(log => {
           try {
@@ -626,7 +636,7 @@ assets.forEach(function(a) {
         // Encode the data
         const _data = [
           coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
-          coder.encode(["address[][]"], [[[a.assetAddress]]]),
+          coder.encode(["address[][]"], [[[a.backedAssetAddress]]]),
           coder.encode(["bool[]"], [[true]]),
         ];
 

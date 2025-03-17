@@ -43,6 +43,8 @@ interface IIBaseAdapter {
         address indexed _newTrusteeManager
     );
 
+    event EmergencyClaimerSet(address indexed oldClaimer, address indexed newClaimer);
+
     function pendingWithdrawalAmount() external view returns (uint256);
 
     function getDeposited(address vaultAddress) external view returns (uint256);
@@ -53,6 +55,8 @@ interface IIBaseAdapter {
 
     function inactiveBalance() external view returns (uint256);
 
+    function inactiveBalanceEmergency() external view returns (uint256);
+
     function delegate(
         address vault,
         uint256 amount,
@@ -62,8 +66,9 @@ interface IIBaseAdapter {
     function withdraw(
         address vault,
         uint256 amount,
-        bytes[] calldata _data
+        bytes[] calldata _data,
+        bool emergency
     ) external returns (uint256 undelegated, uint256 claimed);
 
-    function claim(bytes[] calldata _data) external returns (uint256);
+    function claim(bytes[] calldata _data, bool emergency) external returns (uint256);
 }

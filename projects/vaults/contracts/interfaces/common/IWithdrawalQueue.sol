@@ -23,13 +23,9 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint256 totalRequestedShares;
         uint256 totalClaimedAmount;
         uint256 totalUndelegatedAmount;
-        uint256 totalUndelegatedShares;
 
-        mapping(address => bool) userRedeemed;
         mapping(address => uint256) userShares;
         mapping(address => mapping(address => uint256)) adapterUndelegated;
-        mapping(address => mapping(address => uint256)) adapterUndelegatedShares;
-        mapping(address => mapping(address => uint256)) adapterClaimed;
 
         uint256 adaptersUndelegatedCounter;
         uint256 adaptersClaimedCounter;
@@ -44,14 +40,12 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /// @param epoch The epoch to undelegate from (must match current epoch)
     /// @param adapters Array of adapter addresses
     /// @param vaults Array of vault addresses
-    /// @param shares Array of share amounts to undelegate
     /// @param undelegatedAmounts Array of undelegated amounts
     /// @param claimedAmounts Array of claimed amounts
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
         address[] calldata vaults,
-        uint256[] calldata shares,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external;

@@ -29,14 +29,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @custom:oz-renamed-from minAmount
     uint256 public withdrawMinAmount;
 
-    mapping(address => Withdrawal) private _claimerWithdrawals;
+    mapping(address => __deprecated_Withdrawal) private __deprecated_claimerWithdrawals;
 
     /// @dev the unique InceptionVault name
     string public name;
-
-    /**
-     *  @dev Flash withdrawal params
-     */
 
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
@@ -59,7 +55,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
-    mapping(address => uint256) public withdrawals;
+    mapping(address => uint256) private __deprecated_withdrawals;
 
     function __InceptionVault_init(
         string memory vaultName,
@@ -100,8 +96,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
-
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     function __afterDeposit(uint256 iShares) internal pure {
@@ -138,7 +133,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
@@ -153,7 +147,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
-        amount = totalAssets() - depositedBefore;
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
@@ -166,12 +159,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 shares,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(msg.sender);
+        uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        uint256 assetsAmount = previewMint(shares);
+        if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
 
         return assetsAmount;
     }
@@ -182,8 +175,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (receiver == address(0)) revert InvalidAddress();
+        if (targetCapacity == 0) revert NullParams();
     }
 
     /// @dev Performs burning iToken from mgs.sender
@@ -215,9 +208,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ) external nonReentrant whenNotPaused returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
-        assets = convertToAssets(shares);
-        uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+        (uint256 assets, uint256 fee) = _flashWithdraw(shares, receiver, owner, 0);
 
         emit Withdraw(owner, receiver, owner, assets, shares);
         emit WithdrawalFee(fee);
@@ -244,14 +235,16 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @param iShares is measured in Inception token(shares)
     function flashWithdraw(
         uint256 iShares,
-        address receiver
+        address receiver,
+        uint256 minOut
     ) external whenNotPaused nonReentrant {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
             iShares,
             receiver,
-            claimer
+            claimer,
+            minOut
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
@@ -259,7 +252,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function _flashWithdraw(
         uint256 iShares,
         address receiver,
-        address owner
+        address owner,
+        uint256 minOut
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
@@ -277,6 +271,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _transferAssetTo(treasury, protocolWithdrawalFee);
+        if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
         /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
@@ -370,6 +365,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view returns (uint256) {
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(assets);
@@ -380,10 +376,19 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return convertToShares(assets + depositBonus);
     }
 
+    /** @dev See {IERC4626-previewMint}. */
+    function previewMint(uint256 shares) public view returns (uint256) {
+
+        uint256 assets = Convert.multiplyAndDivideCeil(shares, 1e18, ratio());
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        return assets;
+    }
+
     /** @dev See {IERC4626-previewRedeem}. */
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
+        if (shares == 0) revert NullParams();
         return
             convertToAssets(shares) -
             calculateFlashWithdrawFee(convertToAssets(shares));

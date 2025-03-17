@@ -227,7 +227,6 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 

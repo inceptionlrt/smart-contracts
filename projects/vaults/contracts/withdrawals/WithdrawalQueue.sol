@@ -11,6 +11,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
     /// @dev emergency epoch number
     uint256 public constant EMERGENCY_EPOCH = 0;
+    /// @dev max threshold while convert shares to assets during undelegate
+    uint256 internal constant MAX_CONVERT_THRESHOLD = 50;
 
     /// @dev withdrawal queue owner
     address public vaultOwner;
@@ -87,6 +89,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param shares The number of shares to request for withdrawal
     function request(address receiver, uint256 shares) external onlyVault {
         require(shares > 0, ValueZero());
+        require(receiver != address(0), ValueZero());
 
         WithdrawalEpoch storage withdrawal = withdrawals[currentEpoch];
         withdrawal.userShares[receiver] += shares;
@@ -110,14 +113,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param epoch The epoch to undelegate from (must match current epoch)
     /// @param adapters Array of adapter addresses
     /// @param vaults Array of vault addresses
-    /// @param shares Array of share amounts to undelegate
     /// @param undelegatedAmounts Array of undelegated amounts
     /// @param claimedAmounts Array of claimed amounts
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
         address[] calldata vaults,
-        uint256[] calldata shares,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
@@ -129,11 +130,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
                 withdrawal,
                 adapters[i],
                 vaults[i],
-                shares[i],
                 undelegatedAmounts[i],
                 claimedAmounts[i]
             );
         }
+
+        // update global state
+        totalSharesToWithdraw -= withdrawal.totalRequestedShares;
 
         _afterUndelegate(withdrawal);
     }
@@ -142,50 +145,46 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @param withdrawal The storage reference to the withdrawal epoch
     /// @param adapter The adapter address
     /// @param vault The vault address
-    /// @param shares The number of shares to undelegate
     /// @param undelegatedAmount The amount undelegated
     /// @param claimedAmount The amount claimed
     function _undelegate(
         WithdrawalEpoch storage withdrawal,
         address adapter,
         address vault,
-        uint256 shares,
         uint256 undelegatedAmount,
         uint256 claimedAmount
     ) internal {
-        require(shares > 0, ValueZero());
-        require(withdrawal.totalUndelegatedShares + shares <= withdrawal.totalRequestedShares, UndelegateExceedRequested());
         require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
+        require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
 
         // update withdrawal data
         withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
-        withdrawal.adapterUndelegatedShares[adapter][vault] += shares;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
-        withdrawal.totalUndelegatedShares += shares;
         withdrawal.adaptersUndelegatedCounter++;
 
         if (claimedAmount > 0) {
-            uint256 claimedShares = shares.mulDiv(
-                claimedAmount,
-                claimedAmount + undelegatedAmount,
-                Math.Rounding.Down
-            );
-
             totalAmountRedeem += claimedAmount;
-            totalSharesToWithdraw -= claimedShares;
             withdrawal.totalClaimedAmount += claimedAmount;
-            withdrawal.adapterUndelegatedShares[adapter][vault] -= claimedShares;
+        }
 
-            if (undelegatedAmount == 0) {
-                withdrawal.adaptersClaimedCounter++;
-            }
+        if (claimedAmount > 0 && undelegatedAmount == 0) {
+            withdrawal.adaptersClaimedCounter++;
         }
     }
 
     /// @notice Finalizes undelegation by advancing the epoch if completed
     /// @param withdrawal The storage reference to the withdrawal epoch
     function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
-        require(withdrawal.totalRequestedShares == withdrawal.totalUndelegatedShares, UndelegateNotCompleted());
+        uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+        uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
+
+        require(
+            requested >= totalUndelegated ?
+                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
+                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+            UndelegateNotCompleted()
+        );
+
         currentEpoch++;
 
         if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
@@ -207,7 +206,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(withdrawal.ableRedeem == false, EpochAlreadyRedeemable());
 
-        if(epoch == EMERGENCY_EPOCH) {
+        if (epoch == EMERGENCY_EPOCH) {
             // do nothing
             return;
         }
@@ -231,17 +230,14 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 claimedAmount
     ) internal {
         require(withdrawal.adapterUndelegated[adapter][vault] > 0, ClaimUnknownAdapter());
-        require(withdrawal.adapterClaimed[adapter][vault] == 0, AdapterAlreadyClaimed());
         require(withdrawal.adapterUndelegated[adapter][vault] >= claimedAmount, ClaimedExceedUndelegated());
 
         // update withdrawal state
-        withdrawal.adapterClaimed[adapter][vault] += claimedAmount;
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adaptersClaimedCounter++;
 
         // update global state
         totalAmountRedeem += claimedAmount;
-        totalSharesToWithdraw -= withdrawal.adapterUndelegatedShares[adapter][vault];
     }
 
     /// @notice Updates the redeemable status after a claim
@@ -279,13 +275,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         while (i < epochs.length) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[receiver]) {
+            if (!withdrawal.ableRedeem || withdrawal.userShares[receiver] == 0) {
                 ++i;
                 continue;
             }
 
-            withdrawal.userRedeemed[receiver] = true;
             amount += _getRedeemAmount(withdrawal, receiver);
+            withdrawal.userShares[receiver] = 0;
 
             epochs[i] = epochs[epochs.length - 1];
             epochs.pop();
@@ -331,15 +327,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] memory epochs = userEpoch[receiver];
         for (uint256 i = 0; i < epochs.length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (withdrawal.userRedeemed[receiver]) {
+            if (withdrawal.userShares[receiver] == 0) {
                 continue;
             }
 
-            if (withdrawal.ableRedeem) {
-                amount += _getRedeemAmount(withdrawal, receiver);
-            } else {
-                amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
-            }
+            if (withdrawal.ableRedeem) amount += _getRedeemAmount(withdrawal, receiver);
+            else amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
         }
 
         return amount;
@@ -357,7 +350,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
 
         for (uint256 i = 0; i < epochs.length; i++) {
             WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (!withdrawal.ableRedeem || withdrawal.userRedeemed[claimer]) {
+            if (!withdrawal.ableRedeem || withdrawal.userShares[claimer] == 0) {
                 continue;
             }
 

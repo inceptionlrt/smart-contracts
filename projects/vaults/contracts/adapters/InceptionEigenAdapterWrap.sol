@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IWStethInterface} from "../interfaces/common/IStEth.sol";
 import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
@@ -13,12 +14,12 @@ import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
 import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
- * @title The InceptionEigenAdapter Contract
+ * @title The InceptionEigenAdapterWrap Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
+contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;
@@ -63,6 +64,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
         // approve spending by strategyManager
         _asset.safeApprove(strategyManager, type(uint256).max);
+        wrappedAsset().stETH().approve(strategyManager, type(uint256).max);
     }
 
     /**
@@ -82,10 +84,13 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
+            amount = wrappedAsset().unwrap(amount);
             // deposit the asset to the appropriate strategy
-            return _strategy.sharesToUnderlying(
-                _strategyManager.depositIntoStrategy(_strategy, _asset, amount)
-            );
+            return wrappedAsset().getWstETHByStETH(_strategy.sharesToUnderlying(
+                _strategyManager.depositIntoStrategy(
+                    _strategy, wrappedAsset().stETH(), amount
+                )
+            ));
         }
 
         require(operator != address(0), NullParams());
@@ -126,7 +131,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         IStrategy[] memory strategies = new IStrategy[](1);
 
         strategies[0] = _strategy;
-        sharesToWithdraw[0] = _strategy.underlyingToShares(amount);
+        sharesToWithdraw[0] = _strategy.underlyingToShares(
+            wrappedAsset().getStETHByWstETH(amount)
+        );
 
         address staker = address(this);
         uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
@@ -141,7 +148,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             withdrawer: staker
         });
 
-        // queue from EL
+        // queue withdrawal from EL
         _delegationManager.queueWithdrawals(withdrawals);
 
         emit StartWithdrawal(
@@ -153,7 +160,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             nonce
         );
 
-        return (amount, 0);
+        return (wrappedAsset().getWstETHByStETH(
+            _strategy.sharesToUnderlyingView(sharesToWithdraw[0])
+        ), 0);
     }
 
     /**
@@ -168,7 +177,8 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length == 3, InvalidDataLength(3, _data.length));
 
-        uint256 balanceBefore = _asset.balanceOf(address(this));
+        IERC20 backedAsset = wrappedAsset().stETH();
+        uint256 balanceBefore = backedAsset.balanceOf(address(this));
 
         // prepare withdrawal
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
@@ -177,14 +187,17 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) - balanceBefore;
+
         // send tokens to the vault
-        _asset.safeTransfer(_inceptionVault, withdrawnAmount);
+        uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) - balanceBefore;
+        backedAsset.safeApprove(address(_asset), withdrawnAmount);
+        uint256 wrapped = wrappedAsset().wrap(withdrawnAmount);
+        _asset.safeTransfer(_inceptionVault, wrapped);
 
         // update emergency withdrawal state
         _emergencyQueuedWithdrawals[withdrawal.nonce] = false;
 
-        return withdrawnAmount;
+        return wrappedAsset().getWstETHByStETH(withdrawnAmount);
     }
 
     /**
@@ -214,7 +227,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             total += shares[i][0];
         }
 
-        return _strategy.sharesToUnderlyingView(total);
+        return wrappedAsset().getWstETHByStETH(
+            _strategy.sharesToUnderlyingView(total)
+        );
     }
 
     /**
@@ -248,7 +263,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     function getDeposited(
         address /*operatorAddress*/
     ) external view override returns (uint256) {
-        return _strategy.userUnderlyingView(address(this));
+        return wrappedAsset().getWstETHByStETH(
+            _strategy.userUnderlyingView(address(this))
+        );
     }
 
     /**
@@ -263,7 +280,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
             address(this), strategies
         );
 
-        return _strategy.sharesToUnderlyingView(withdrawableShares[0]);
+        return wrappedAsset().getWstETHByStETH(
+            _strategy.sharesToUnderlyingView(withdrawableShares[0])
+        );
     }
 
     /**
@@ -272,6 +291,14 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      */
     function getDepositedShares() external view returns (uint256) {
         return _strategy.underlyingToSharesView(_strategy.userUnderlyingView(address(this)));
+    }
+
+    /**
+     * @notice Returns the wrapped asset
+     * @return Wrapped asset
+     */
+    function wrappedAsset() internal view returns (IWStethInterface) {
+        return IWStethInterface(address(_asset));
     }
 
     /**

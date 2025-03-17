@@ -91,9 +91,5 @@ interface IStrategyManager {
 
     function withdrawalDelayBlocks() external view returns (uint256);
 
-    function numWithdrawalsQueued(
-        address account
-    ) external view returns (uint256);
-
     function delegation() external view returns (address);
 }
