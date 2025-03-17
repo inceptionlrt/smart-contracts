@@ -344,10 +344,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address receiver) public view returns (uint256) {
-        return
-            !paused()
-            ? convertToShares(IERC20(asset()).balanceOf(receiver))
-            : 0;
+        return type(uint256).max;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
