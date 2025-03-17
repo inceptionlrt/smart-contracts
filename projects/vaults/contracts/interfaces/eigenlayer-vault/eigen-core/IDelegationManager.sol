@@ -61,14 +61,12 @@ interface IDelegationManager {
     function completeQueuedWithdrawal(
         Withdrawal calldata withdrawal,
         IERC20[] calldata tokens,
-        uint256 middlewareTimesIndex,
         bool receiveAsTokens
     ) external;
 
     function completeQueuedWithdrawals(
         Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external;
 
@@ -92,4 +90,13 @@ interface IDelegationManager {
     function isOperator(address operator) external view returns (bool);
 
     function isDelegated(address staker) external view returns (bool);
+
+    function getQueuedWithdrawals(
+        address staker
+    ) external view returns (Withdrawal[] memory withdrawals, uint256[][] memory shares);
+
+    function getWithdrawableShares(
+        address staker,
+        IStrategy[] memory strategies
+    ) external view returns (uint256[] memory withdrawableShares, uint256[] memory depositShares);
 }

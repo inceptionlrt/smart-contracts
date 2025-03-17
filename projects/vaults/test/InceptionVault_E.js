@@ -25,12 +25,12 @@ BigInt.prototype.format = function () {
 
 assets = [
   {
+    vaultName: "InrEthVault",
+    vaultFactory: "ERC4626Facet_EL_E2",
     assetName: "rETH",
     assetAddress: "0x7322c24752f79c05FFD1E2a6FCB97020C1C264F1",
     assetPoolName: "RocketMockPool",
     assetPool: "0x320f3aAB9405e38b955178BBe75c477dECBA0C27",
-    vaultName: "InrEthVault",
-    vaultFactory: "ERC4626Facet_EL_E2",
     strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
     assetStrategy: "0x3A8fBdf9e77DFc25d09741f51d3E181b25d0c4E0",
     iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",

@@ -37,34 +37,39 @@ const calculateRatio = async (vault, token, queue) => {
   const totalDelegated = await vault.getTotalDelegated();
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
-  const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
-  const totalDeposited = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount;
+  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
+  const emergencyPendingWithdrawals = await vault.getTotalPendingEmergencyWithdrawals();
+  const totalDeposited = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount;
   const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
 
   const numeral = totalSupply + totalSharesToWithdraw;
-  const denominator = totalDelegated + totalAssets + pendingWithdrawals + depositBonusAmount - redeemReservedAmount;
+  const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
   // console.log("ratio{");
   // console.log("totalSupply: " + totalSupply);
   // console.log("totalSharesToWithdraw: " + totalSharesToWithdraw);
   // console.log("totalDelegated: ", totalDelegated);
   // console.log("totalAssets: " + totalAssets);
-  // console.log("pendingWithdrawals: " + pendingWithdrawals);
+  // console.log("emergencyPendingWithdrawals: " + emergencyPendingWithdrawals);
   // console.log("depositBonusAmount: " + depositBonusAmount);
   // console.log("redeemReservedAmount: " + redeemReservedAmount);
   // console.log("}");
 
-  if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 20n)) {
+  if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 0n)) {
     console.log("iToken supply is 0, so the ration is going to be 1e18");
     return e18;
   }
 
+  // if(emergencyPendingWithdrawals === 0n && totalSupply === 0n) {
+  //   return e18;
+  // }
+
   const ratio = (numeral * e18) / denominator;
-  if ((numeral * e18) % denominator !== 0n) {
-    return ratio + 1n;
-  }
+  // if ((numeral * e18) % denominator !== 0n) {
+  //   return ratio + 1n;
+  // }
 
   return ratio;
 };

@@ -19,4 +19,10 @@ interface IISymbioticAdapter is IIBaseAdapter {
     error InvalidEpoch();
 
     error AlreadyClaimed();
+
+    error WrongEpoch();
+
+    event MintedShares(uint256 mintedShares);
+
+    event BurnedAndMintedShares(uint256 burnedShares, uint256 mintedShares);
 }
