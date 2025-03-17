@@ -4,7 +4,11 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --timeout 15000",
-    "format": "prettier --write scripts/*.js tasks/*.js test/*.js"
+    "format": "prettier --write scripts/*.js tasks/*.js test/*.js",
+    "test:actual": "npx hardhat test test/InceptionToken.js test/InceptionVault_S_EL.js test/InceptionVault_S_slashing.js test/InceptionVault_S.mjs",
+    "coverage": "npx hardhat coverage",
+    "coverage:vault": "npx hardhat coverage --sources vaults/Symbiotic/InceptionVault_S.sol",
+    "slither:vault": "slither ./contracts/vaults/Symbiotic/InceptionVault_S.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin"
   },
   "license": "MIT",
   "devDependencies": {
@@ -15,7 +19,7 @@
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-ignition": "^0.15.0",
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^3.1.8",
@@ -30,14 +34,14 @@
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.4.0",
-    "hardhat": "^2.14.0",
+    "hardhat": "^2.22.19",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-deploy": "^0.12.4",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-storage-layout": "^0.1.7",
     "hardhat-tracer": "^2.6.0",
     "prettier": "3.3.2",
-    "solidity-coverage": "^0.8.0",
+    "solidity-coverage": "^0.8.14",
     "ts-node": ">=8.0.0",
     "typechain": "^8.3.0",
     "typescript": ">=4.5.0"

@@ -1,27 +1,25 @@
 // Tests for InceptionVault_S contract;
 // The S in name does not mean only Symbiotic; this file contains tests for Symbiotic and Mellow adapters
 
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, upgrades, network } = require("hardhat");
-const { expect } = require("chai");
-const {
+import helpers from '@nomicfoundation/hardhat-network-helpers';
+import hardhat from 'hardhat';
+const { ethers, upgrades, network } = hardhat;
+import { expect } from 'chai';
+import {
   impersonateWithEth,
   setBlockTimestamp,
-  getRandomStaker,
   calculateRatio,
+  getRandomStaker,
   toWei,
   randomBI,
-  mineBlocks,
   randomBIMax,
   randomAddress,
   e18,
-  day,
-} = require("./helpers/utils.js");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-const { ZeroAddress } = require("ethers");
+} from './helpers/utils.js';
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
+
 
 const assets = [
   {
@@ -998,7 +996,7 @@ assets.forEach(function(a) {
         expect(await iVault.getTotalDelegated()).to.be.eq(0n);
       });
 
-      it("Deposit to Vault", async function() {
+      it("Deposit to Vault", async function() { // made by user
         deposited = toWei(10);
         freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
         const expectedShares = (deposited * e18) / (await iVault.ratio());
@@ -1022,7 +1020,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).to.be.eq(e18);
       });
 
-      it("Delegate freeBalance", async function() {
+      it("Delegate freeBalance", async function() { // made by operator
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const expectedFlashCapacity = (deposited * targetCapacity) / MAX_TARGET_PERCENT;
 
@@ -1054,7 +1052,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).lt(e18);
       });
 
-      it("Flash withdraw all capacity", async function() {
+      it("Flash withdraw all capacity", async function() { // made by user (flash capacity tests ends on this step)
         const sharesBefore = await iToken.balanceOf(staker);
         const assetBalanceBefore = await asset.balanceOf(staker);
         const treasuryBalanceBefore = await asset.balanceOf(treasury);
@@ -1108,6 +1106,7 @@ assets.forEach(function(a) {
         expect(flashCapacityAfter).to.be.closeTo(0n, transactErr);
       });
 
+      // made by user (withdrawal of funds if something left after flash withdraw)
       it("Withdraw all", async function() {
         const ratioBefore = await iVault.ratio();
         const shares = await iToken.balanceOf(staker.address);
@@ -1137,7 +1136,7 @@ assets.forEach(function(a) {
         expect(await iVault.ratio()).to.be.eq(ratioBefore);
       });
 
-      it("Undelegate from Mellow", async function() {
+      it("Undelegate from Mellow", async function() { // made by operator
         const totalAssetsBefore = await iVault.totalAssets();
         const totalDepositedBefore = await iVault.getTotalDeposited();
         const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -1172,6 +1171,7 @@ assets.forEach(function(a) {
         expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
       });
 
+      // made by operator
       it("Claim Mellow withdrawal transfer funds from adapter to vault", async function() {
         await helpers.time.increase(1209900);
 
@@ -1192,6 +1192,7 @@ assets.forEach(function(a) {
         // expect(adapterBalanceBefore - adapterBalanceAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
       });
 
+      // made by user
       it("Staker is able to redeem", async function() {
         const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
         const redeemReserve = await iVault.redeemReservedAmount();
@@ -1205,6 +1206,7 @@ assets.forEach(function(a) {
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
       });
 
+      // made by operator
       it("Redeem withdraw", async function() {
         const balanceBefore = await asset.balanceOf(staker2.address);
         const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
@@ -1324,6 +1326,10 @@ assets.forEach(function(a) {
         await expect(iVault.connect(staker).setWithdrawMinAmount(randomBI(3))).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
+      });
+
+      it("setWithdrawMinAmount(): error if try to set 0", async function() {
+        await expect(iVault.setWithdrawMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
       it("setName(): only owner can", async function() {
@@ -1787,6 +1793,13 @@ assets.forEach(function(a) {
           newDepositUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalBonusRate > newMaxBonusRate",
+          newMaxBonusRate: () => BigInt(0.2 * 10 ** 8),
+          newOptimalBonusRate: () => BigInt(2 * 10 ** 8),
+          newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setDepositBonusParams reverts when ${arg.name}`, async function() {
@@ -1998,6 +2011,13 @@ assets.forEach(function(a) {
           newWithdrawUtilizationKink: () => MAX_PERCENT + 1n,
           customError: "ParameterExceedsLimits",
         },
+        {
+          name: "newOptimalWithdrawalRate > newMaxFlashFeeRate",
+          newMaxFlashFeeRate: () => BigInt(2 * 10 ** 8),
+          newOptimalWithdrawalRate: () => BigInt(3 * 10 ** 8),
+          newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "InconsistentData",
+        }
       ];
       invalidArgs.forEach(function(arg) {
         it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function() {
@@ -4690,4 +4710,3 @@ assets.forEach(function(a) {
     });
   });
 });
-

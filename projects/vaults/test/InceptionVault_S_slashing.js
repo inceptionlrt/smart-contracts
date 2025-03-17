@@ -1,3 +1,5 @@
+// Just slashing tests for all adapters
+
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers, upgrades, network } = require("hardhat");
 const { expect } = require("chai");

@@ -21,10 +21,11 @@ jobs:
           node-version: 'node'
 
       - name: Install deps
-        run: yarn && cd projects/vaults && yarn
+        run: yarn install --frozen-lockfile && cd projects/vaults && yarn install --frozen-lockfile
 
       - name: Run tests
         working-directory: projects/vaults
-        run: npx hardhat test test/InceptionToken.js test/InceptionVault_S_EL.js test/InceptionVault_S_slashing.js test/InceptionVault_S.js
+        run: npm run test:actual
         env:
           MAINNET_RPC: https://rpc.ankr.com/eth
+          RPC: https://rpc.ankr.com/eth
