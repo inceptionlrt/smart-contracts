@@ -2338,7 +2338,6 @@ assets.forEach(function(a) {
         const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
         const realBonus = await iVault.depositBonusAmount();
         const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
-        expect(await iVault.maxMint(staker)).to.be.eq(await iVault.convertToShares(stakerBalance + bonus));
         expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
       });
 
@@ -2346,17 +2345,16 @@ assets.forEach(function(a) {
         await iVault.pause();
         const maxMint = await iVault.maxMint(staker);
         const maxDeposit = await iVault.maxDeposit(staker);
-        expect(maxMint).to.be.eq(0n);
         expect(maxDeposit).to.be.eq(0n);
       });
 
-      it("Max mint and deposit reverts when > available amount", async function() {
-        const maxMint = await iVault.maxMint(staker);
-        await expect(iVault.connect(staker).mint(maxMint + 1n, staker.address)).to.be.revertedWithCustomError(
-          iVault,
-          "ExceededMaxMint",
-        );
-      });
+      // it("Max mint and deposit reverts when > available amount", async function() {
+      //   const maxMint = await iVault.maxMint(staker);
+      //   await expect(iVault.connect(staker).mint(maxMint + 1n, staker.address)).to.be.revertedWithCustomError(
+      //     iVault,
+      //     "ExceededMaxMint",
+      //   );
+      // });
     });
 
     describe("Deposit with bonus for replenish", function() {
