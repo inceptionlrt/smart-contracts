@@ -205,7 +205,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 shares,
         address receiver,
         address owner
-    ) external nonReentrant whenNotPaused returns (uint256 assets) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
         (uint256 assets, uint256 fee) = _flashWithdraw(shares, receiver, owner, 0);

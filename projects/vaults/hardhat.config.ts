@@ -4,6 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-storage-layout";
+import 'solidity-coverage';
 
 // Hardhat tasks
 import "./tasks/get-free-balances";
@@ -29,6 +30,10 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  mocha: {
+    timeout: 120_000,
+    retries: 1,
+  }
 };
 
 export default config;
