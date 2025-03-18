@@ -280,7 +280,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256[] memory claimedAmounts = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
             // claim from adapter
-            claimedAmounts[i] = _claim(adapters[i], vaults[i], _data[i], false);
+            claimedAmounts[i] = _claim(adapters[i], _data[i], false);
             emit ClaimedFrom(adapters[i], vaults[i], claimedAmounts[i], epochNum);
         }
 
@@ -303,7 +303,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
         for (uint256 i = 0; i < adapters.length; i++) {
             // claim from adapter
-            uint256 claimedAmount = _claim(adapters[i], vaults[i], _data[i], true);
+            uint256 claimedAmount = _claim(adapters[i], _data[i], true);
             emit ClaimedFrom(adapters[i], vaults[i], claimedAmount, epoch);
         }
     }
@@ -311,12 +311,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @notice Internal function to claim assets from a single adapter
      * @param adapter The adapter address
-     * @param vault The vault address
      * @param _data Additional data required for claiming
      * @param emergency Whether this is an emergency claim
      * @return Amount of assets claimed
      */
-    function _claim(address adapter, address vault, bytes[] calldata _data, bool emergency) internal returns (uint256) {
+    function _claim(address adapter, bytes[] calldata _data, bool emergency) internal returns (uint256) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         return IIBaseAdapter(adapter).claim(_data, emergency);
     }
