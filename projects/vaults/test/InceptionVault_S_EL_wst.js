@@ -29,7 +29,7 @@ const assets = [
     ratioErr: 2n,
     transactErr: 5n,
     blockNumber: 3338549,
-    url: "https://rpc.ankr.com/eth_holesky",
+    url: "https://holesky.drpc.org",
     impersonateStaker: async function(staker, iVault) {
       const wstETHDonorAddress = "0x0000000000a2d441d85315e5163dEEC094bf6FE1";
       const donor1 = await impersonateWithEth(wstETHDonorAddress, toWei(10));
