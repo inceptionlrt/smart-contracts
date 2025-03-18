@@ -23,18 +23,18 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
 
     /// @dev Kept only for storage slot
-    mapping(address => IMellowDepositWrapper) public mellowDepositWrappers; // mellowVault => mellowDepositWrapper
+    mapping(address => IMellowDepositWrapper) private PLACE_HOLDER_1; // mellowVault => mellowDepositWrapper
     IMellowVault[] public mellowVaults;
 
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
 
     /// @dev Kept only for storage slot
-    uint256 public requestDeadline;
+    uint256 private PLACE_HOLDER_2;
     /// @dev Kept only for storage slot
-    uint256 public depositSlippage; // BasisPoints 10,000 = 100%
+    uint256 private PLACE_HOLDER_3; // BasisPoints 10,000 = 100%
     /// @dev Kept only for storage slot
-    uint256 public withdrawSlippage;
+    uint256 private PLACE_HOLDER_4;
 
     address public ethWrapper;
 
@@ -44,15 +44,22 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     function initialize(
-        IMellowVault[] memory _mellowVault,
+        IMellowVault[] memory _mellowVaults,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
         __IBaseAdapter_init(asset, trusteeManager);
 
-        for (uint256 i = 0; i < _mellowVault.length; i++) {
-            mellowVaults.push(_mellowVault[i]);
+        uint256 totalAllocations_;
+        for (uint256 i = 0; i < _mellowVaults.length; i++) {
+            for (uint8 j = 0; j < i; j++)
+                if (address(_mellowVaults[i]) == address(_mellowVaults[j])) revert AlreadyAdded();
+            mellowVaults.push(_mellowVaults[i]);
+            allocations[address(_mellowVaults[i])] = 1;
+            totalAllocations_ += 1;
         }
+
+        totalAllocations = totalAllocations_;
     }
 
     function delegate(
@@ -80,16 +87,29 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         uint256 amount,
         address referral
     ) internal returns (uint256 depositedAmount) {
+
+        bool exists;
+        for (uint8 i = 0; i < mellowVaults.length; i++) {
+            if (mellowVault == address(mellowVaults[i])) {
+                exists = true;
+                break;
+            }
+        }
+
+        if (!exists) revert NotAdded();
+
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
-        return
-            IEthWrapper(ethWrapper).deposit(
+
+        uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
                 address(_asset),
                 amount,
                 mellowVault,
                 address(this),
                 referral
             );
+
+        depositedAmount = lpAmountToAmount(lpAmount, IMellowVault(mellowVault));
     }
 
     function _delegateAuto(
@@ -133,7 +153,18 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return (_asset.balanceOf(address(this)) - balanceState);
     }
 
-    function claimPending() external returns (uint256) {
+    function claim(
+        bytes[] calldata /*_data */
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
+        _claimPending();
+        uint256 amount = _asset.balanceOf(address(this));
+        if (amount == 0) revert ValueZero();
+
+        _asset.safeTransfer(_inceptionVault, amount);
+
+        return amount;
+    }
+    function _claimPending() private {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             IMellowSymbioticVault(address(mellowVaults[i])).claim(
                 address(this),
@@ -141,17 +172,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                 type(uint256).max
             );
         }
-    }
-
-    function claim(
-        bytes[] calldata /*_data */
-    ) external override onlyTrustee returns (uint256) {
-        uint256 amount = _asset.balanceOf(address(this));
-        if (amount == 0) revert ValueZero();
-
-        _asset.safeTransfer(_inceptionVault, amount);
-
-        return amount;
     }
 
     function addMellowVault(address mellowVault) external onlyOwner {
