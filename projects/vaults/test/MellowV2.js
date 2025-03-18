@@ -49,7 +49,7 @@ describe('------------------', function () {
             params: [
             {
                 forking: {
-                jsonRpcUrl: "https://rpc.ankr.com/eth",
+                jsonRpcUrl: "https://holesky.drpc.org",
                 blockNumber: 21717995
                 },
             },
@@ -184,7 +184,7 @@ describe('------------------', function () {
             params: [
             {
                 forking: {
-                jsonRpcUrl: "https://rpc.ankr.com/eth",
+                jsonRpcUrl: "https://holesky.drpc.org",
                 blockNumber: 21717996
                 },
             },
@@ -244,7 +244,7 @@ describe('------------------', function () {
             params: [
             {
                 forking: {
-                jsonRpcUrl: "https://rpc.ankr.com/eth",
+                jsonRpcUrl: "https://eth.drpc.org",
                 blockNumber: 21737235
                 },
             },
