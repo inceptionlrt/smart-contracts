@@ -498,14 +498,11 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 amount = convertToAssets(shares);
         uint256 capacity = getFlashCapacity();
         uint256 targetCapacity = _getTargetCapacity();
+        uint256 flash = amount <= capacity ? capacity : amount;
 
-        // Sufficient Capacity
-        if (amount <= capacity) return amount - calculateFlashWithdrawFee(amount);
-
-        // Insufficient Capacity
         return amount - InceptionLibrary.calculateWithdrawalFee(
                 amount,
-                amount,
+                flash,
                 (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
                 optimalWithdrawalRate,
                 maxFlashFeeRate,
