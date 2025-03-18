@@ -459,7 +459,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /** @dev See {IERC4626-previewMint}. */
     function previewMint(uint256 shares) public view returns (uint256) {
 
-        uint256 assets = Convert.multiplyAndDivideCeil(iShares, 1e18, ratio());
+        uint256 assets = Convert.multiplyAndDivideCeil(shares, 1e18, ratio());
         if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         return assets;
     }
