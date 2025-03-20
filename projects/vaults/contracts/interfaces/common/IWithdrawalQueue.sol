@@ -27,8 +27,8 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         mapping(address => uint256) userShares;
         mapping(address => mapping(address => uint256)) adapterUndelegated;
 
-        uint256 adaptersUndelegatedCounter;
-        uint256 adaptersClaimedCounter;
+        uint8 adaptersUndelegatedCounter;
+        uint8 adaptersClaimedCounter;
     }
 
     /// @notice Requests a withdrawal for a receiver in the current epoch
