@@ -27,9 +27,5 @@ interface IIMellowAdapter is IIBaseAdapter {
 
     event EthWrapperChanged(address indexed _old, address indexed _new);
 
-    function pendingMellowRequest(IMellowVault mellowVault)
-        external
-        returns (IMellowVault.WithdrawalRequest memory);
-
     function claimableWithdrawalAmount() external view returns (uint256);
 }

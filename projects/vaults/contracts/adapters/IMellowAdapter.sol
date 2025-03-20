@@ -279,17 +279,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     /**
-     * @notice Returns pending withdrawal request for a specific Mellow vault
-     * @param mellowVault The vault to check
-     * @return WithdrawalRequest struct containing withdrawal details
-     */
-    function pendingMellowRequest(
-        IMellowVault mellowVault
-    ) public view override returns (IMellowVault.WithdrawalRequest memory) {
-        return mellowVault.withdrawalRequest(address(this));
-    }
-
-    /**
      * @notice Returns the total amount available for withdrawal
      * @return total Amount that can be claimed
      */
