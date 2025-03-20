@@ -25,4 +25,6 @@ interface IISymbioticAdapter is IIBaseAdapter {
     event MintedShares(uint256 mintedShares);
 
     event BurnedAndMintedShares(uint256 burnedShares, uint256 mintedShares);
+
+    function setEmergencyClaimer(address _newEmergencyClaimer) external;
 }

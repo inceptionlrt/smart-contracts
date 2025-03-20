@@ -8,9 +8,7 @@ import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDel
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
-
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
-import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
  * @title The InceptionEigenAdapter Contract

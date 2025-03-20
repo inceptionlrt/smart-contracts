@@ -115,12 +115,10 @@ const initVault = async a => {
   let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
-  await emergencyClaimer.setEigenAdapter(eigenLayerAdapter.address);
   await iVault.setRatioFeed(ratioFeed.address);
   await iVault.addAdapter(eigenLayerAdapter.address);
   await iVault.setWithdrawalQueue(withdrawalQueue.address);
   await eigenLayerAdapter.setInceptionVault(iVault.address);
-  await eigenLayerAdapter.setEmergencyClaimer(emergencyClaimer.address);
   await iToken.setVault(iVault.address);
 
   console.log("... iVault initialization completed ....");

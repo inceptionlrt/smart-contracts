@@ -39,6 +39,8 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     address public ethWrapper;
 
+    address internal _emergencyClaimer;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -420,6 +422,28 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         address oldWrapper = ethWrapper;
         ethWrapper = newEthWrapper;
         emit EthWrapperChanged(oldWrapper, newEthWrapper);
+    }
+
+    /**
+     * @notice Sets the emergency claimer address
+     * @dev Can only be called by owner
+     * @param _newEmergencyClaimer New emergency claimer address
+     */
+    function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
+        emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
+        _emergencyClaimer = _newEmergencyClaimer;
+    }
+
+    /**
+     * @notice Internal function to determine the claimer address
+     * @param emergency Whether to use emergency claimer
+     * @return Address of the claimer
+     */
+    function _getClaimer(bool emergency) internal view virtual returns (address) {
+        if (emergency) {
+            return _emergencyClaimer;
+        }
+        return address(this);
     }
 
     /**

@@ -32,6 +32,8 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     /// @notice Mapping of vault addresses to their withdrawal epochs
     mapping(address => uint256) public withdrawals;
 
+    address internal _emergencyClaimer;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -283,5 +285,27 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         vaults = new address[](_symbioticVaults.length());
         for (uint256 i = 0; i < _symbioticVaults.length(); i++)
             vaults[i] = _symbioticVaults.at(i);
+    }
+
+    /**
+     * @notice Sets the emergency claimer address
+     * @dev Can only be called by owner
+     * @param _newEmergencyClaimer New emergency claimer address
+     */
+    function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
+        emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
+        _emergencyClaimer = _newEmergencyClaimer;
+    }
+
+    /**
+     * @notice Internal function to determine the claimer address
+     * @param emergency Whether to use emergency claimer
+     * @return Address of the claimer
+     */
+    function _getClaimer(bool emergency) internal view virtual returns (address) {
+        if (emergency) {
+            return _emergencyClaimer;
+        }
+        return address(this);
     }
 }

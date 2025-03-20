@@ -17,7 +17,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract EmergencyClaimer is Initializable, Ownable2StepUpgradeable {
     address public symbioticAdapter;
     address public mellowAdapter;
-    address public eigenAdapter;
 
     event AdapterChanged(address adapter);
 
@@ -44,15 +43,6 @@ contract EmergencyClaimer is Initializable, Ownable2StepUpgradeable {
      */
     modifier onlySymbioticAdapter() {
         require(msg.sender == symbioticAdapter, "Only symbiotic adapter allowed");
-        _;
-    }
-
-    /**
-     * @notice Restricts function access to only the eigen adapter.
-     * @dev Reverts if the caller is not the designated eigen adapter.
-     */
-    modifier onlyEigenAdapter() {
-        require(msg.sender == eigenAdapter, "Only eigen adapter allowed");
         _;
     }
 
@@ -101,16 +91,6 @@ contract EmergencyClaimer is Initializable, Ownable2StepUpgradeable {
      */
     function setMellowAdapter(address adapter) external onlyOwner {
         mellowAdapter = adapter;
-        emit AdapterChanged(adapter);
-    }
-
-    /**
-     * @notice Sets the address of the eigen adapter.
-     * @dev Can only be called by the contract owner.
-     * @param adapter The new address of the eigen adapter.
-     */
-    function setEigenAdapter(address adapter) external onlyOwner {
-        eigenAdapter = adapter;
         emit AdapterChanged(adapter);
     }
 

@@ -283,7 +283,6 @@ describe('------------------', function () {
             console.log("Setting ethWrapper");
             let adapter = await ethers.getContractAt("IMellowAdapter", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
             await adapter.connect(owner).setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
-            await vault.connect(owner).addAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
 
             const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
             let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
@@ -295,13 +294,6 @@ describe('------------------', function () {
             await emergencyClaimer.setMellowAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
             await emergencyClaimer.approveSpender("0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
             await adapter.connect(owner).setEmergencyClaimer(emergencyClaimer.address);
-
-            await adapter.connect(owner).addMellowVault("0x5fD13359Ba15A84B76f7F87568309040176167cd");
-            await adapter.connect(owner).addMellowVault("0x7a4EffD87C2f3C55CA251080b1343b605f327E3a");
-            await adapter.connect(owner).addMellowVault("0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a");
-            await adapter.connect(owner).addMellowVault("0x49cd586dd9BA227Be9654C735A659a1dB08232a9");
-            await adapter.connect(owner).addMellowVault("0xd6E09a5e6D719d1c881579C9C8670a210437931b");
-            await adapter.connect(owner).addMellowVault("0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD");
 
             console.log("Our contracts are upgraded");
             console.log("Total Deposited: " + await vault.getTotalDeposited());
@@ -333,6 +325,7 @@ describe('------------------', function () {
             console.log("Depositing 20 wstETH to all vaults");
 
             console.log("operator addr", await operator.getAddress());
+            await vault.connect(owner).addAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);
             await vault.connect(operator).delegate("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "20000000000000000000", ["0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]);

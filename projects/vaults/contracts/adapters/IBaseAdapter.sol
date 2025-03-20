@@ -26,7 +26,6 @@ IIBaseAdapter
     IERC20 internal _asset;
     address internal _trusteeManager;
     address internal _inceptionVault;
-    address internal _emergencyClaimer;
 
     modifier onlyTrustee() {
         require(
@@ -93,16 +92,6 @@ IIBaseAdapter
     }
 
     /**
-     * @notice Sets the emergency claimer address
-     * @dev Can only be called by owner
-     * @param _newEmergencyClaimer New emergency claimer address
-     */
-    function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
-        emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
-        _emergencyClaimer = _newEmergencyClaimer;
-    }
-
-    /**
      * @notice Pauses the contract
      * @dev Can only be called by owner
      */
@@ -124,17 +113,5 @@ IIBaseAdapter
      */
     function getVersion() external pure virtual returns (uint256) {
         return 1;
-    }
-
-    /**
-     * @notice Internal function to determine the claimer address
-     * @param emergency Whether to use emergency claimer
-     * @return Address of the claimer
-     */
-    function _getClaimer(bool emergency) internal view virtual returns (address) {
-        if (emergency) {
-            return _emergencyClaimer;
-        }
-        return address(this);
     }
 }
