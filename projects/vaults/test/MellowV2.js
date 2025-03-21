@@ -62,7 +62,7 @@ describe('------------------', function () {
             let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
             let oldAbi = [
                 "function totalAmountToWithdraw() external view returns(uint256)",
-                "function getTotalDeposited() external view returns(uint256)", 
+                "function getTotalDeposited() external view returns(uint256)",
                 "function getTotalDelegated() external view returns(uint256)",
                 "function getDelegatedTo(address) external view returns(uint256)",
                 "function getFreeBalance() external view returns(uint256)",
@@ -100,10 +100,10 @@ describe('------------------', function () {
 
             console.log("Vault 6: " + await adapter.amountToLpAmount(1000000000000000000n, "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"));
             console.log("Vault 6: " + await adapter.lpAmountToAmount(1000000000000000000n, "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"));
-            
+
             console.log("Depositing 20 wstETH to all vaults");
             let oldVault = await ethers.getContractAt(["function delegateToMellowVault(address,uint256) external", "function undelegateFrom(address,uint256) external"], await vault.getAddress());
-            
+
             await oldVault.connect(operator).delegateToMellowVault("0x5fD13359Ba15A84B76f7F87568309040176167cd", "20000000000000000000");
             await oldVault.connect(operator).delegateToMellowVault("0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "20000000000000000000");
             await oldVault.connect(operator).delegateToMellowVault("0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "20000000000000000000");
@@ -196,7 +196,7 @@ describe('------------------', function () {
             this.timeout(150000000);
 
             // Factory
-            const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2", 
+            const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2",
                 {
                     libraries: {
                     InceptionLibrary: "0xF6940A8e7334Ab2a7781AF6f9E5aeD8EFB55116A"
@@ -256,7 +256,7 @@ describe('------------------', function () {
             this.timeout(150000000);
 
             // Factory
-            const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2", 
+            const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2",
                 {
                     libraries: {
                     InceptionLibrary: "0xF6940A8e7334Ab2a7781AF6f9E5aeD8EFB55116A"
@@ -275,7 +275,7 @@ describe('------------------', function () {
 
             await proxyAdminVault.connect(deployer).upgradeAndCall("0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97", await vaultImp.getAddress(), "0x");
             await proxyAdminRestaker.connect(deployer).upgradeAndCall("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", await restakerImp.getAddress(), "0x");
-            
+
             let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
             let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
@@ -287,13 +287,6 @@ describe('------------------', function () {
             const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
             let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
             await vault.connect(owner).setWithdrawalQueue(await withdrawalQueue.getAddress());
-
-            const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
-            let emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
-            emergencyClaimer.address = await emergencyClaimer.getAddress();
-            await emergencyClaimer.setMellowAdapter("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
-            await emergencyClaimer.approveSpender("0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378");
-            await adapter.connect(owner).setEmergencyClaimer(emergencyClaimer.address);
 
             console.log("Our contracts are upgraded");
             console.log("Total Deposited: " + await vault.getTotalDeposited());
@@ -387,6 +380,11 @@ describe('------------------', function () {
             let receipt6 = await tx6.wait();
             let events6 = receipt6.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
+            let adapterAddress = await adapter.getAddress();
+            const adapterEvents = receipt6.logs?.filter(log => log.address === adapterAddress)
+              .map(log => adapter.interface.parseLog(log));
+            let claimer = adapterEvents[0].args["claimer"];
+
             console.log("AFTER WITHDRAWS");
             // console.log("Ratio          : " + (await inceptionToken.totalSupply() * 1000000000000000000n) / (await vault.getTotalDeposited() - await vault.totalAmountToWithdraw()));
             console.log("Total Deposited: " + await vault.getTotalDeposited());
@@ -427,7 +425,7 @@ describe('------------------', function () {
             if (events1[0].args["actualAmounts"] > 0) {
                 await vault.connect(operator).claim(0,
                   [
-                    "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
+                      "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
                       "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
                       "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
                       "0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378",
@@ -443,12 +441,12 @@ describe('------------------', function () {
                     "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"
                   ],
                   [
-                    [abi.encode(["address"], ["0x5fD13359Ba15A84B76f7F87568309040176167cd"])],
-                      [abi.encode(["address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"])],
-                      [abi.encode(["address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"])],
-                      [abi.encode(["address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"])],
-                      [abi.encode(["address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"])],
-                      [abi.encode(["address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"])]
+                      [abi.encode(["address", "address"], ["0x5fD13359Ba15A84B76f7F87568309040176167cd", claimer])],
+                      [abi.encode(["address", "address"], ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", claimer])],
+                      [abi.encode(["address", "address"], ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", claimer])],
+                      [abi.encode(["address", "address"], ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9", claimer])],
+                      [abi.encode(["address", "address"], ["0xd6E09a5e6D719d1c881579C9C8670a210437931b", claimer])],
+                      [abi.encode(["address", "address"], ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", claimer])]
                   ]);
             }
 
