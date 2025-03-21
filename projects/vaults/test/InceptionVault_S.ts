@@ -17,9 +17,6 @@ import {
   e18,
 } from './helpers/utils.js';
 import { stETH } from './src/test-data/assets/inception-vault-s';
-BigInt.prototype.format = function() {
-  return this.toLocaleString("de-DE");
-};
 
 const assetInfo = stETH;
 
