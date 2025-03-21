@@ -31,8 +31,11 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     /// @notice Mapping of vault addresses to their withdrawal epochs
     mapping(address => uint256) public withdrawals;
+    mapping(address => address) internal claimerVaults;
 
     address internal _emergencyClaimer;
+    EnumerableSet.AddressSet internal pendingClaimers;
+    address[] internal availableClaimers;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -113,14 +116,14 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             withdrawals[vaultAddress] > 0
         ) revert WithdrawalInProgress();
 
-        uint256 burnedShares;
-        uint256 mintedShares;
-        (burnedShares, mintedShares) = vault.withdraw(_getClaimer(emergency), amount);
+        address claimer = _getOrCreateClaimer(emergency);
+        (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(claimer, amount);
 
         uint256 epoch = vault.currentEpoch() + 1;
         withdrawals[vaultAddress] = epoch;
+        claimerVaults[claimer] = vaultAddress;
 
-        emit BurnedAndMintedShares(burnedShares, mintedShares);
+        emit Withdrawn(burnedShares, mintedShares, claimer);
 
         return (amount, 0);
     }
@@ -138,9 +141,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         if (_data.length > 1) revert InvalidDataLength(1, _data.length);
 
-        (address vaultAddress, uint256 sEpoch) = abi.decode(
+        (address vaultAddress, uint256 sEpoch, address claimer) = abi.decode(
             _data[0],
-            (address, uint256)
+            (address, uint256, address)
         );
 
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
@@ -150,21 +153,13 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
         delete withdrawals[vaultAddress];
 
-        if (emergency) {
-            return _emergencyClaim(vaultAddress, sEpoch);
+        if (!emergency) {
+            delete claimerVaults[claimer];
+            pendingClaimers.remove(claimer);
+            availableClaimers.push(claimer);
         }
 
-        return IVault(vaultAddress).claim(_inceptionVault, sEpoch);
-    }
-
-    /**
-     * @notice Internal function to handle emergency claims
-     * @param vaultAddress Address of the vault to claim from
-     * @param sEpoch Epoch number for the claim
-     * @return Amount claimed
-     */
-    function _emergencyClaim(address vaultAddress, uint256 sEpoch) internal returns (uint256) {
-        return IEmergencyClaimer(_getClaimer(true)).claimSymbiotic(
+        return IEmergencyClaimer(claimer).claimSymbiotic(
             vaultAddress, _inceptionVault, sEpoch
         );
     }
@@ -210,7 +205,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
      */
     function pendingWithdrawalAmount() public view override returns (uint256 total)
     {
-        return _pendingWithdrawalAmount(_getClaimer(false));
+        return _pendingWithdrawalAmount(false);
     }
 
     /**
@@ -218,14 +213,26 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
      * @param claimer Address to check pending withdrawals for
      * @return total Total pending withdrawal amount
      */
-    function _pendingWithdrawalAmount(address claimer) internal view returns (uint256 total)
+    function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total)
     {
-        for (uint256 i = 0; i < _symbioticVaults.length(); i++)
-            if (withdrawals[_symbioticVaults.at(i)] != 0)
-                total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
-                    withdrawals[_symbioticVaults.at(i)],
-                    claimer
-                );
+        if (emergency) {
+            for (uint256 i = 0; i < _symbioticVaults.length(); i++) {
+                if (withdrawals[_symbioticVaults.at(i)] != 0) {
+                    total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
+                        withdrawals[_symbioticVaults.at(i)],
+                        _emergencyClaimer
+                    );
+                }
+            }
+
+            return;
+        }
+
+        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+            address _claimer = pendingClaimers.at(i);
+            address _vault = claimerVaults[_claimer];
+            total += IVault(_vault).withdrawalsOf(withdrawals[_vault], _claimer);
+        }
 
         return total;
     }
@@ -235,7 +242,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
      * @return Sum of pending withdrawals and claimable amounts
      */
     function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableAmount();
+        return pendingWithdrawalAmount();
     }
 
     /**
@@ -243,7 +250,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
      * @return Sum of emergency pending withdrawals and claimable amounts
      */
     function inactiveBalanceEmergency() public view override returns (uint256) {
-        return _pendingWithdrawalAmount(_getClaimer(true)) + claimableAmount(_getClaimer(true));
+        return _pendingWithdrawalAmount(true);
     }
 
     /**
@@ -288,24 +295,31 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     /**
-     * @notice Sets the emergency claimer address
-     * @dev Can only be called by owner
-     * @param _newEmergencyClaimer New emergency claimer address
-     */
-    function setEmergencyClaimer(address _newEmergencyClaimer) external onlyOwner {
-        emit EmergencyClaimerSet(_emergencyClaimer, _newEmergencyClaimer);
-        _emergencyClaimer = _newEmergencyClaimer;
-    }
-
-    /**
      * @notice Internal function to determine the claimer address
      * @param emergency Whether to use emergency claimer
      * @return Address of the claimer
      */
-    function _getClaimer(bool emergency) internal view virtual returns (address) {
+    function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
+            if (_emergencyClaimer == address(0)) {
+                _emergencyClaimer = _deployClaimer();
+            }
             return _emergencyClaimer;
         }
-        return address(this);
+
+        if (availableClaimers.length > 0) {
+            claimer = availableClaimers[availableClaimers.length - 1];
+            availableClaimers.pop();
+        } else {
+            claimer = _deployClaimer();
+        }
+
+        pendingClaimers.add(claimer);
+        return;
+    }
+
+    function _deployClaimer() internal returns (address) {
+        // todo: deploy contract
+        return;
     }
 }
