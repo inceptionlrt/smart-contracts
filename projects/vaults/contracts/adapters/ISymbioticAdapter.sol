@@ -14,7 +14,7 @@ import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
-import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
+import {SymbioticAdapterClaimer} from "../adapter-claimers/SymbioticAdapterClaimer.sol";
 
 /**
  * @title The ISymbioticAdapter Contract
@@ -123,7 +123,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         withdrawals[vaultAddress] = epoch;
         claimerVaults[claimer] = vaultAddress;
 
-        emit Withdrawn(burnedShares, mintedShares, claimer);
+        emit SymbioticWithdrawn(burnedShares, mintedShares, claimer);
 
         return (amount, 0);
     }
@@ -154,12 +154,10 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         delete withdrawals[vaultAddress];
 
         if (!emergency) {
-            delete claimerVaults[claimer];
-            pendingClaimers.remove(claimer);
-            availableClaimers.push(claimer);
+            _removePendingClaimer(claimer);
         }
 
-        return IEmergencyClaimer(claimer).claimSymbiotic(
+        return SymbioticAdapterClaimer(claimer).claim(
             vaultAddress, _inceptionVault, sEpoch
         );
     }
@@ -210,7 +208,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     /**
      * @notice Internal function to calculate pending withdrawal amount for an address
-     * @param claimer Address to check pending withdrawals for
+     * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
     function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total)
@@ -225,7 +223,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
                 }
             }
 
-            return;
+            return total;
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
@@ -294,11 +292,6 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
             vaults[i] = _symbioticVaults.at(i);
     }
 
-    /**
-     * @notice Internal function to determine the claimer address
-     * @param emergency Whether to use emergency claimer
-     * @return Address of the claimer
-     */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
             if (_emergencyClaimer == address(0)) {
@@ -315,11 +308,16 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         }
 
         pendingClaimers.add(claimer);
-        return;
+        return claimer;
+    }
+
+    function _removePendingClaimer(address claimer) internal {
+        delete claimerVaults[claimer];
+        pendingClaimers.remove(claimer);
+        availableClaimers.push(claimer);
     }
 
     function _deployClaimer() internal returns (address) {
-        // todo: deploy contract
-        return;
+        return address(new SymbioticAdapterClaimer(address(_asset)));
     }
 }

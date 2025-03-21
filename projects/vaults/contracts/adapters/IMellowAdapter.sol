@@ -204,7 +204,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                 _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
         }
 
-        emit Withdrawn(amount - claimedAmount, claimedAmount, claimer);
+        emit MellowWithdrawn(amount - claimedAmount, claimedAmount, claimer);
 
         return (amount - claimedAmount, claimedAmount);
     }
@@ -225,9 +225,16 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
             _removePendingClaimer(claimer);
         }
 
-        return MellowAdapterClaimer(
+        MellowAdapterClaimer(
             claimer
-        ).claim(_mellowVault, _inceptionVault, type(uint256).max);
+        ).claim(_mellowVault, address(this), type(uint256).max);
+
+
+        uint256 amount = _asset.balanceOf(address(this));
+        if (amount == 0) revert ValueZero();
+        _asset.safeTransfer(_inceptionVault, amount);
+
+        return amount;
     }
 
     /**
@@ -280,7 +287,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     /**
      * @notice Internal function to calculate claimable withdrawal amount for an address
-     * @param claimer Address to check claimable amount for
+     * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
     function _claimableWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
@@ -293,7 +300,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
+            total += IMellowSymbioticVault(claimerVaults[pendingClaimers.at(i)])
                 .claimableAssetsOf(pendingClaimers.at(i));
         }
         return total;
@@ -309,7 +316,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     /**
      * @notice Internal function to calculate pending withdrawal amount for an address
-     * @param claimer Address to check pending withdrawals for
+     * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
     function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
@@ -322,7 +329,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
+            total += IMellowSymbioticVault(claimerVaults[pendingClaimers.at(i)])
                 .pendingAssetsOf(pendingClaimers.at(i));
         }
         return total;
@@ -331,13 +338,15 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     /**
      * @notice Returns pending withdrawal amount for a specific vault
      * @param _mellowVault Address of the vault to check
-     * @return Amount of pending withdrawals for the vault
+     * @return total Amount of pending withdrawals for the vault
      */
     function pendingWithdrawalAmount(
         address _mellowVault
-    ) external view returns (uint256) {
-        return
-            IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
+    ) external view returns (uint256 total) {
+        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+            total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(pendingClaimers.at(i));
+        }
+        return total;
     }
 
     /**
@@ -434,11 +443,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return 3;
     }
 
-    /**
-     * @notice Internal function to determine the claimer address
-     * @param emergency Whether to use emergency claimer
-     * @return Address of the claimer
-     */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
             if (_emergencyClaimer == address(0)) {
@@ -465,15 +469,6 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     }
 
     function _deployClaimer() internal returns (address) {
-        // Данные для инициализации конструктора MellowAdapterClaimer
-        bytes memory initData = abi.encodeWithSelector(
-            MellowAdapterClaimer.constructor.selector,
-            address(_asset)
-        );
-
-        // Разворачиваем новый прокси через BeaconProxy
-        BeaconProxy proxy = new BeaconProxy(beacon, initData);
-
-        return address(proxy);
+        return address(new MellowAdapterClaimer(address(_asset)));
     }
 }
