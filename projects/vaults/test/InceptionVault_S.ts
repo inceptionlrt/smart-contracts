@@ -15,15 +15,14 @@ import {
   randomBIMax,
   randomAddress,
   e18,
-} from './helpers/utils.js';
+} from './helpers/utils';
 import { stETH } from './src/test-data/assets/inception-vault-s';
+import { emptyBytes } from "./src/constants";
 
 const assetInfo = stETH;
 
-let MAX_TARGET_PERCENT;
-let emptyBytes = [
-  "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-];
+let MAX_TARGET_PERCENT: BigInt;
+
 
 //https://docs.mellow.finance/mellow-lrt-lst-primitive/contract-deployments
 const mellowVaults = [
