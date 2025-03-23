@@ -20,7 +20,7 @@ import { stETH } from './src/test-data/assets/inception-vault-s';
 import { emptyBytes } from "./src/constants";
 import { mellowVaults } from "./src/test-data/assets/mellow-vauts";
 import { symbioticVaults } from "./src/test-data/assets/symbiotic-vaults";
-import { initVaultWithAdapters, abi, MAX_TARGET_PERCENT } from "./src/init-vault";
+import { initVault, abi, MAX_TARGET_PERCENT } from "./src/init-vault";
 
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
@@ -49,9 +49,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       },
     ]);
 
-    [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
-      await initVaultWithAdapters(assetData);
-    // ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } = await initVault(a, { initAdapters: true }));
+    ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue }
+      = await initVault(assetData, { initAdapters: true }));
 
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
