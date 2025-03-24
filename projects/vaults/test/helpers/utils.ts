@@ -172,7 +172,7 @@ const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroA
 
 const day = 86400n;
 
-module.exports = {
+export {
   addRewardsToStrategy,
   addRewardsToStrategyWrap,
   withdrawDataFromTx,
