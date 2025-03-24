@@ -19,10 +19,9 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
   let emergencyClaimer;
   if (options?.initAdapters) {
     console.log("- Emergency claimer");
-
-    const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
-    emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
-    emergencyClaimer.address = await emergencyClaimer.getAddress();
+    // const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
+    // emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
+    // emergencyClaimer.address = await emergencyClaimer.getAddress();
 
     /// =============================== Mellow Vaults ===============================
 
@@ -105,10 +104,10 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
   let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
-  if (options?.initAdapters) {
-    await emergencyClaimer.setMellowAdapter(mellowAdapter.address);
-    await emergencyClaimer.setSymbioticAdapter(symbioticAdapter.address);
-  }
+  // if (options?.initAdapters) {
+  //   await emergencyClaimer.setMellowAdapter(mellowAdapter.address);
+  //   await emergencyClaimer.setSymbioticAdapter(symbioticAdapter.address);
+  // }
 
   await iVault.setRatioFeed(ratioFeed.address);
 
@@ -121,16 +120,16 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
 
   if (options?.initAdapters) {
     await mellowAdapter.setInceptionVault(iVault.address);
-    await mellowAdapter.setEmergencyClaimer(emergencyClaimer.address);
+    // await mellowAdapter.setEmergencyClaimer(emergencyClaimer.address);
     await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
     await symbioticAdapter.setInceptionVault(iVault.address);
-    await symbioticAdapter.setEmergencyClaimer(emergencyClaimer.address);
+    // await symbioticAdapter.setEmergencyClaimer(emergencyClaimer.address);
   }
 
   await iToken.setVault(iVault.address);
 
   if (options?.initAdapters) {
-    await emergencyClaimer.approveSpender(assetData.assetAddress, mellowAdapter.address);
+    // await emergencyClaimer.approveSpender(assetData.assetAddress, mellowAdapter.address);
     MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
     console.log("... iVault initialization completed ....");
 
@@ -141,11 +140,17 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
 
       const receipt = await tx.wait();
       let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+      // NEW
+      const adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      let claimer = adapterEvents[0].args["claimer"];
+
       // await mellowAdapter.withdraw(mellowVaultAddress, amount, ["0x"]);
       // await mellowVaults[0].curator.processWithdrawals([mellowAdapter.address]);
 
       await helpers.time.increase(1209900);
-      const params = abi.encode(["address"], [mellowVaultAddress]);
+      const params = abi.encode(["address", "address"], [mellowVaultAddress, claimer]);
       if (events[0].args["actualAmounts"] > 0) {
         await this.connect(iVaultOperator).emergencyClaim(
           [await mellowAdapter.getAddress()], [mellowVaultAddress], [[params]],
