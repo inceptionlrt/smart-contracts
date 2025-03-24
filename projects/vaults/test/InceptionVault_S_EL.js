@@ -101,7 +101,7 @@ const initVault = async a => {
     a.assetStrategy,
     a.assetAddress,
     a.iVaultOperator,
-    iVault.address
+    iVault.address,
   ]);
   eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
 
@@ -650,6 +650,251 @@ assets.forEach(function(a) {
         expect(events[0].args["amount"]).to.be.closeTo(toWei(2), transactErr);
         expect(await asset.balanceOf(iVault.address)).to.be.closeTo(toWei(3), transactErr);
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
+      });
+    });
+
+    describe("Two adapters", function() {
+      let eigenLayerAdapter2, undelegateEpoch, tx;
+      let totalDeposited = 0n;
+
+      before(async function() {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+      });
+
+      it("Add second adapter", async function() {
+        let [deployer] = await ethers.getSigners();
+        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+
+        eigenLayerAdapter2 = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+          await deployer.getAddress(),
+          a.rewardsCoordinator,
+          a.delegationManager,
+          a.strategyManager,
+          a.assetStrategy,
+          a.assetAddress,
+          a.iVaultOperator,
+          iVault.address,
+        ]);
+
+        eigenLayerAdapter2.address = await eigenLayerAdapter2.getAddress();
+        await iVault.addAdapter(eigenLayerAdapter2.address);
+      });
+
+      it("Initial stats", async function() {
+        expect(await iVault.ratio()).to.be.eq(e18);
+        expect(await iVault.totalAssets()).to.be.eq(0n);
+        expect(await iVault.getTotalDeposited()).to.be.eq(0n);
+        expect(await iVault.getTotalDelegated()).to.be.eq(0n);
+        expect(await iVault.getFlashCapacity()).to.be.eq(0n);
+        expect(await iVault.getFreeBalance()).to.be.eq(0n);
+      });
+
+      it("User can deposit to iVault", async function() {
+        totalDeposited += toWei(20);
+        const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
+        const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
+        const receipt = await tx.wait();
+        const events = receipt.logs?.filter(e => e.eventName === "Deposit");
+        expect(events.length).to.be.eq(1);
+        expect(events[0].args["sender"]).to.be.eq(staker.address);
+        expect(events[0].args["receiver"]).to.be.eq(staker.address);
+        expect(events[0].args["amount"]).to.be.closeTo(totalDeposited, transactErr);
+        expect(events[0].args["iShares"]).to.be.closeTo(expectedShares, transactErr);
+
+        expect(await iToken.balanceOf(staker.address)).to.be.closeTo(expectedShares, transactErr);
+        expect(await iVault.totalAssets()).to.be.closeTo(totalDeposited, transactErr);
+        expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
+        expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      });
+
+      it("Delegate to EigenLayer", async function() {
+        await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, eigenLayerVaults[0], 0n, delegateData);
+        await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, ZeroAddress, toWei(10), []);
+
+        await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter2.address, eigenLayerVaults[1], 0n, delegateData);
+        await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter2.address, ZeroAddress, toWei(10), []);
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      });
+
+      it("User can withdraw all", async function() {
+        const shares = await iToken.balanceOf(staker.address);
+        const assetValue = await iVault.convertToAssets(shares);
+        console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
+        console.log(`Asset value:\t\t\t\t\t${assetValue.format()}`);
+        const tx = await iVault.connect(staker).withdraw(shares, staker2.address);
+        const receipt = await tx.wait();
+        const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
+        expect(events.length).to.be.eq(1);
+        expect(events[0].args["sender"]).to.be.eq(staker.address);
+        expect(events[0].args["receiver"]).to.be.eq(staker2.address);
+        expect(events[0].args["owner"]).to.be.eq(staker.address);
+        expect(events[0].args["amount"]).to.be.eq(assetValue);
+        expect(events[0].args["iShares"]).to.be.eq(shares);
+
+        const stakerPW = await iVault.getPendingWithdrawalOf(staker.address);
+        const staker2PW = await iVault.getPendingWithdrawalOf(staker2.address);
+
+        const withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        const totalPW = withdrawalEpoch[1];
+
+        expect(stakerPW).to.be.eq(0n);
+        expect(staker2PW).to.be.closeTo(assetValue, transactErr);
+        expect(totalPW).to.be.closeTo(shares, transactErr);
+      });
+
+      it("Undelegate from EigenLayer", async function() {
+        const totalAssetsBefore = await iVault.totalAssets();
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        const totalDelegatedBefore = await iVault.getTotalDelegated();
+
+        const delegatedTo1 = await iVault.getDelegatedTo(eigenLayerAdapter.address, eigenLayerVaults[0]);
+        const delegatedTo2 = await iVault.getDelegatedTo(eigenLayerAdapter2.address, eigenLayerVaults[1]);
+
+        undelegateEpoch = await withdrawalQueue.currentEpoch();
+
+        console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
+        console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
+        console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
+        console.log(`Delegated to 1:\t\t\t${delegatedTo1.format()}`);
+        console.log(`Delegated to 2:\t\t\t${delegatedTo2.format()}`);
+
+        tx = await iVault
+          .connect(iVaultOperator)
+          .undelegate(
+            [eigenLayerAdapter.address, eigenLayerAdapter2.address],     // all adapters
+            [eigenLayerVaults[0], eigenLayerVaults[1]],                 // all vaults
+            [delegatedTo1, delegatedTo2],                               // all amounts
+            [[], []]                                                   // all _data arrays
+          );
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+
+        console.log(`Total deposited after:\t\t\t${totalDepositedAfter.format()}`);
+        console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      });
+
+      it("Claim from EigenLayer", async function() {
+        const receipt = await tx.wait();
+
+        const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+        let withdrawalQueuedEvent = [];
+        receipt.logs.forEach(log => {
+          try {
+            const parsedLog = eigenLayerAdapterFactory.interface.parseLog(log);
+            if (parsedLog) {
+              console.log("🔹 Event Detected:");
+              withdrawalQueuedEvent.push(parsedLog.args);
+            }
+          } catch (error) {
+          }
+        });
+
+        const wData = {
+          staker1: withdrawalQueuedEvent[0]["stakerAddress"],
+          staker2: eigenLayerVaults[0],
+          staker3: eigenLayerAdapter.address,
+          nonce1: withdrawalQueuedEvent[0]["nonce"],
+          nonce2: withdrawalQueuedEvent[0]["withdrawalStartBlock"],
+          tokens: [withdrawalQueuedEvent[0]["strategy"]],
+          shares: [withdrawalQueuedEvent[0]["shares"]],
+        };
+
+        console.log(wData);
+
+        // Encode the data
+        const _data = [
+          coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
+          coder.encode(["address[][]"], [[[a.assetAddress]]]),
+          coder.encode(["bool[]"], [[true]]),
+        ];
+
+        const wData2 = {
+          staker1: withdrawalQueuedEvent[1]["stakerAddress"],
+          staker2: eigenLayerVaults[1],
+          staker3: eigenLayerAdapter2.address,
+          nonce1: withdrawalQueuedEvent[1]["nonce"],
+          nonce2: withdrawalQueuedEvent[1]["withdrawalStartBlock"],
+          tokens: [withdrawalQueuedEvent[1]["strategy"]],
+          shares: [withdrawalQueuedEvent[1]["shares"]],
+        };
+
+        // Encode the data
+        const _data2 = [
+          coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData2]),
+          coder.encode(["address[][]"], [[[a.assetAddress]]]),
+          coder.encode(["bool[]"], [[true]]),
+        ];
+
+        await mineBlocks(50);
+
+        await iVault.connect(iVaultOperator).claim(
+          undelegateEpoch,
+          [eigenLayerAdapter.address, eigenLayerAdapter2.address],
+          [eigenLayerVaults[0], eigenLayerVaults[1]],
+          [_data, _data2],
+        );
+
+        const totalAssetsBefore = await iVault.totalAssets();
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        const totalDelegatedBefore = await iVault.getTotalDelegated();
+
+        console.log(`Total deposited after claim:\t\t\t${totalDepositedBefore.format()}`);
+        console.log(`Total delegated after claim:\t\t\t${totalDelegatedBefore.format()}`);
+        console.log(`Total assets after claim:\t\t\t${totalAssetsBefore.format()}`);
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      });
+
+      it("Staker is able to redeem", async function() {
+        const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
+        const redeemReserve = await iVault.redeemReservedAmount();
+        const freeBalance = await iVault.getFreeBalance();
+
+        console.log("Pending withdrawal by staker", pendingWithdrawalByStaker.format());
+        console.log("Redeem reserve", redeemReserve.format());
+        console.log("Free balance", freeBalance.format());
+        console.log("Redeem reserve after", await iVault.redeemReservedAmount());
+        expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
+      });
+
+      it("Redeem withdraw", async function() {
+        const balanceBefore = await asset.balanceOf(staker2.address);
+        const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
+
+        console.log(`staker2PWBefore: ${staker2PWBefore.toString()}`);
+        console.log(`staker2PWBefore: ${(await iVault.redeemReservedAmount()).toString()}`);
+        console.log(`staker2PWBefore: ${(await asset.balanceOf(iVault.address)).toString()}`);
+        console.log(`staker2PWBefore: ${(await eigenLayerAdapter.getDepositedShares()).toString()}`);
+
+        const tx = await iVault.connect(iVaultOperator).redeem(staker2.address);
+        const receipt = await tx.wait();
+        const events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        expect(events.length).to.be.eq(1);
+        expect(events[0].args["sender"]).to.be.eq(iVaultOperator.address);
+        expect(events[0].args["receiver"]).to.be.eq(staker2.address);
+        expect(events[0].args["amount"]).to.be.eq(staker2PWBefore);
+
+        const staker2PWAfter = await iVault.getPendingWithdrawalOf(staker2.address);
+        const balanceAfter = await asset.balanceOf(staker2.address);
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+        console.log(`Total deposited after:\t\t${totalDepositedAfter.format()}`);
+        console.log(`Pending withdrawals after:\t${staker2PWAfter.format()}`);
+        console.log(`Ratio after:\t\t\t\t${(await iVault.ratio()).format()}`);
+
+        expect(staker2PWAfter).to.be.eq(0n);
+        expect(balanceAfter - balanceBefore).to.be.closeTo(staker2PWBefore, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(0n, transactErr * 3n);
+        expect(totalAssetsAfter).to.be.closeTo(0n, transactErr * 3n);
+
+        expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
       });
     });
   });
