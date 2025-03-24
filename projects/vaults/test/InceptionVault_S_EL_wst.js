@@ -69,11 +69,6 @@ const initVault = async a => {
   asset.address = await asset.getAddress();
 
   /// =============================== Inception Vault ===============================
-  console.log("- Emergency claimer");
-  const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
-  let emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
-  emergencyClaimer.address = await emergencyClaimer.getAddress();
-
   console.log("- iToken");
   const iTokenFactory = await ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);

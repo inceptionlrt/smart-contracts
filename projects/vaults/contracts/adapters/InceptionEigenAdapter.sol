@@ -95,7 +95,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
         // delegate to EL
-        _delegationManager.delegateTo(
+            _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
