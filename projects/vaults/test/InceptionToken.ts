@@ -2,13 +2,16 @@
 ///// Run with the default network, hardhat ////
 ///////////////////////////////////////////////
 
-const { ethers, upgrades } = require("hardhat");
-const { expect } = require("chai");
+// const { ethers, upgrades } = require("hardhat");
+// const { expect } = require("chai");
+import hardhat from "hardhat";
+const { ethers, upgrades } = hardhat;
+import { expect } from "chai";
 
 const e18 = "1000000000000000000",
   amount = "10000000";
 
-let iToken, staker1, staker2;
+let iToken, staker1, staker2, owner;
 
 const initInceptionToken = async () => {
   console.log(`... Initialization of Inception Token ...`);

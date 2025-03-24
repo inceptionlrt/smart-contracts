@@ -1,21 +1,31 @@
 // Just slashing tests for all adapters
 
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, upgrades, network } = require("hardhat");
-const { expect } = require("chai");
-const {
-  impersonateWithEth,
-  setBlockTimestamp,
-  getRandomStaker,
-  calculateRatio,
-  toWei,
-  randomBI,
-  mineBlocks,
-  randomBIMax,
-  randomAddress,
-  e18,
-  day,
-} = require("./helpers/utils.js");
+// const helpers = require("@nomicfoundation/hardhat-network-helpers");
+// const { ethers, upgrades, network } = require("hardhat");
+// const { expect } = require("chai");
+// const {
+//   impersonateWithEth,
+//   setBlockTimestamp,
+//   getRandomStaker,
+//   calculateRatio,
+//   toWei,
+//   randomBI,
+//   mineBlocks,
+//   randomBIMax,
+//   randomAddress,
+//   e18,
+//   day,
+// } = require("./helpers/utils");
+// BigInt.prototype.format = function() {
+//   return this.toLocaleString("de-DE");
+// };
+
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import hardhat from "hardhat";
+// import { ethers, network, upgrades } from "hardhat";
+const { ethers, network, upgrades } = hardhat;
+import { expect } from "chai";
+import { impersonateWithEth, setBlockTimestamp, calculateRatio, toWei, e18 } from "./helpers/utils";
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -67,7 +77,7 @@ const assets = [
     applySymbioticSlash: async function(symbioticVault, slashAmount) {
       const slasherAddressStorageIndex = 3;
 
-      [deployer] = await ethers.getSigners();
+      const [deployer] = await ethers.getSigners();
       deployer.address = await deployer.getAddress();
 
       await helpers.setStorageAt(
@@ -521,7 +531,7 @@ assets.forEach(function(a) {
         // ----------------
 
         // undelegate
-        withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
+        const withdrawalEpoch = await withdrawalQueue.withdrawals(await withdrawalQueue.currentEpoch());
         tx = await iVault.connect(iVaultOperator)
           .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
         receipt = await tx.wait();
@@ -1458,7 +1468,7 @@ assets.forEach(function(a) {
         // redeem
         tx = await iVault.connect(staker).redeem(staker.address);
         receipt = await tx.wait();
-        events = receipt.logs?.filter(e => e.eventName === "Redeem");
+        const events = receipt.logs?.filter(e => e.eventName === "Redeem");
 
         expect(events[0].args["amount"]).to.be.closeTo(1797344482370384621n, transactErr);
         expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(1112752741401218766n, ratioErr);
