@@ -2,9 +2,9 @@
 // The S in name does not mean only Symbiotic; this file contains tests for Symbiotic and Mellow adapters
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import hardhat from 'hardhat';
+import hardhat from "hardhat";
 const { ethers, upgrades, network } = hardhat;
-import { expect } from 'chai';
+import { expect } from "chai";
 import {
   impersonateWithEth,
   setBlockTimestamp,
@@ -15,8 +15,8 @@ import {
   randomBIMax,
   randomAddress,
   e18,
-} from './helpers/utils';
-import { stETH } from './src/test-data/assets/inception-vault-s';
+} from "./helpers/utils";
+import { stETH } from "./src/test-data/assets/inception-vault-s";
 import { emptyBytes } from "./src/constants";
 import { mellowVaults } from "./src/test-data/assets/mellow-vauts";
 import { symbioticVaults } from "./src/test-data/assets/symbiotic-vaults";
@@ -151,12 +151,21 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("Add new symbioticVault", async function () {
-      await expect(symbioticAdapter.addVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
-      await expect(symbioticAdapter.addVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
+      await expect(symbioticAdapter.addVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "ZeroAddress",
+      );
+      await expect(symbioticAdapter.addVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "NotContract",
+      );
       await expect(symbioticAdapter.addVault(symbioticVaults[1].vaultAddress))
         .to.emit(symbioticAdapter, "VaultAdded")
         .withArgs(symbioticVaults[1].vaultAddress);
-      await expect(symbioticAdapter.addVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(symbioticAdapter, "AlreadyAdded");
+      await expect(symbioticAdapter.addVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "AlreadyAdded",
+      );
     });
 
     it("Delegate all to symbioticVault#2", async function () {
@@ -164,9 +173,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
 
-      await expect(iVault
-        .connect(iVaultOperator)
-        .delegate(await symbioticAdapter.getAddress(), await iVaultOperator.getAddress(), amount, emptyBytes)).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .delegate(await symbioticAdapter.getAddress(), await iVaultOperator.getAddress(), amount, emptyBytes),
+      ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
 
       await iVault
         .connect(iVaultOperator)
@@ -253,6 +264,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     let symbioticVaultEpoch1;
     let symbioticVaultEpoch2;
+    let undelegateClaimer1;
+    let undelegateClaimer2;
 
     it("Undelegate from Symbiotic", async function () {
       const totalAssetsBefore = await iVault.totalAssets();
@@ -264,7 +277,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
       const amount = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
       const amount2 = await symbioticAdapter.getDeposited(symbioticVaults[1].vaultAddress);
-      await iVault.connect(iVaultOperator)
+      const tx = await iVault
+        .connect(iVaultOperator)
         .undelegate(
           [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
           [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
@@ -272,8 +286,17 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
           [emptyBytes, emptyBytes],
         );
 
-      symbioticVaultEpoch1 = await symbioticVaults[0].vault.currentEpoch() + 1n;
-      symbioticVaultEpoch2 = await symbioticVaults[1].vault.currentEpoch() + 1n;
+      const receipt = await tx.wait();
+      const events = receipt.logs
+        ?.filter(log => log.address === symbioticAdapter.address)
+        .map(log => symbioticAdapter.interface.parseLog(log));
+
+      expect(events.length).to.be.eq(2);
+      undelegateClaimer1 = events[0].args["claimer"];
+      undelegateClaimer2 = events[1].args["claimer"];
+
+      symbioticVaultEpoch1 = (await symbioticVaults[0].vault.currentEpoch()) + 1n;
+      symbioticVaultEpoch2 = (await symbioticVaults[1].vault.currentEpoch()) + 1n;
 
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -312,23 +335,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await setBlockTimestamp(Number(maxNextEpochStart + maxEpochDuration + 1n));
 
       console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
-
-      // const totalDepositedBefore = await iVault.getTotalDeposited();
-      // const pendingWithdrawalsMellowBefore = await symbioticAdapter.pendingWithdrawalAmount();
-      // const adapterBalanceBefore = await asset.balanceOf(symbioticAdapter.address);
-      // console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
-      // console.log(`Pending from Mellow before:\t\t${pendingWithdrawalsMellowBefore.format()}`);
-      // await mellowVaults[0].curator.processWithdrawals([mellowAdapter.address]);
-      // await mellowVaults[1].curator.processWithdrawals([mellowAdapter.address]);
-      // const totalDepositedAfter = await iVault.getTotalDeposited();
-      // const pendingWithdrawalsMellowAfter = await iVault.getPendingWithdrawalAmountFromMellow();
-      // const adapterBalanceAfter = await asset.balanceOf(mellowAdapter.address);
-      // console.log(`Total deposited after:\t\t\t${totalDepositedAfter.format()}`);
-      // console.log(`Pending from Mellow:\t\t\t${pendingWithdrawalsMellowAfter.format()}`);
-      // console.log(`Adapter balance diff:\t\t\t${(adapterBalanceAfter - adapterBalanceBefore).format()}`);
-      // expect(adapterBalanceAfter - adapterBalanceBefore).to.be.eq(pendingWithdrawalsMellowBefore);
-      // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-      // expect(pendingWithdrawalsMellowAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
     });
 
     it("Claim Symbiotic withdrawal transfer funds from Symbiotic to the vault", async function () {
@@ -338,21 +344,25 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
       // Vault 1
       params = abi.encode(
-        ["address", "uint256"],
-        [await iVaultOperator.getAddress(), (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        ["address", "uint256", "address"],
+        [await iVaultOperator.getAddress(), (await symbioticVaults[0].vault.currentEpoch()) - 1n, undelegateClaimer1],
       );
 
-      await expect(iVault.connect(iVaultOperator).claim(
-        1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .claim(1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
 
       params = abi.encode(
-        ["address", "uint256"],
-        [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch())],
+        ["address", "uint256", "address"],
+        [symbioticVaults[0].vaultAddress, await symbioticVaults[0].vault.currentEpoch(), undelegateClaimer2],
       );
 
-      await expect(iVault.connect(iVaultOperator).claim(
-        1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .claim(1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidEpoch");
 
       // params = abi.encode(
@@ -363,24 +373,29 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       // await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "AlreadyClaimed");
 
       params = abi.encode(
-        ["address", "uint256"],
-        [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n],
+        ["address", "uint256", "address"],
+        [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n, undelegateClaimer1],
       );
 
       // Vault 2
       let params2 = abi.encode(
-        ["address", "uint256"],
-        [symbioticVaults[1].vaultAddress, (await symbioticVaults[1].vault.currentEpoch()) - 1n],
+        ["address", "uint256", "address"],
+        [symbioticVaults[1].vaultAddress, (await symbioticVaults[1].vault.currentEpoch()) - 1n, undelegateClaimer2],
       );
 
-      await iVault.connect(iVaultOperator).claim(1,
-        [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
-        [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
-        [[params], [params2]],
-      );
+      await iVault
+        .connect(iVaultOperator)
+        .claim(
+          1,
+          [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
+          [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
+          [[params], [params2]],
+        );
 
-      await expect(iVault.connect(iVaultOperator).claim(
-        1, [await symbioticAdapter.getAddress()], [symbioticVaults[0].vaultAddress], [[params]]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .claim(1, [await symbioticAdapter.getAddress()], [symbioticVaults[0].vaultAddress], [[params]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "NothingToClaim");
 
       const totalAssetsAfter = await iVault.totalAssets();
@@ -391,12 +406,21 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("Remove symbioticVault", async function () {
-      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
-      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
+      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "ZeroAddress",
+      );
+      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "NotContract",
+      );
       await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
         .to.emit(symbioticAdapter, "VaultRemoved")
         .withArgs(symbioticVaults[1].vaultAddress);
-      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(symbioticAdapter, "NotAdded");
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(
+        symbioticAdapter,
+        "NotAdded",
+      );
     });
 
     it("Staker is able to redeem", async function () {
@@ -495,10 +519,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
       const delegatedTo = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress);
-      const delegatedTo2 = await iVault.getDelegatedTo(
-        await mellowAdapter.getAddress(),
-        mellowVaults[1].vaultAddress,
-      );
+      const delegatedTo2 = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress);
       const totalDepositedAfter = await iVault.getTotalDeposited();
       console.log("Mellow LP token balance: ", mellowBalance.format());
       console.log("Mellow LP token balance2: ", mellowBalance2.format());
@@ -534,10 +555,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const mellowBalance2 = await mellowVaults[1].vault.balanceOf(mellowAdapter.address);
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
-      const delegatedTo2 = await iVault.getDelegatedTo(
-        await mellowAdapter.getAddress(),
-        mellowVaults[1].vaultAddress,
-      );
+      const delegatedTo2 = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress);
       const totalDepositedAfter = await iVault.getTotalDeposited();
       console.log("Mellow LP token balance: ", mellowBalance.format());
       console.log("Mellow LP token balance2: ", mellowBalance2.format());
@@ -625,6 +643,9 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     //   expect(await iVault.ratio()).eq(calculatedRatio);
     // });
 
+    let undelegateClaimer1;
+    let undelegateClaimer2;
+
     it("Undelegate from Mellow", async function () {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
@@ -637,13 +658,19 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
       console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
 
-      console.log("Mellow1 delegated", await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress));
-      console.log("Mellow2 delegated", await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress));
+      console.log(
+        "Mellow1 delegated",
+        await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
+      );
+      console.log(
+        "Mellow2 delegated",
+        await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress),
+      );
 
       const assets1 = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress);
       const assets2 = await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress);
 
-      await iVault
+      const tx = await iVault
         .connect(iVaultOperator)
         .undelegate(
           [await mellowAdapter.getAddress(), await mellowAdapter.getAddress()],
@@ -652,8 +679,23 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
           [emptyBytes, emptyBytes],
         );
 
-      console.log("Mellow1 delegated", await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress));
-      console.log("Mellow2 delegated", await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress));
+      const receipt = await tx.wait();
+      const events = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+
+      expect(events.length).to.be.eq(2);
+      undelegateClaimer1 = events[0].args["claimer"];
+      undelegateClaimer2 = events[1].args["claimer"];
+
+      console.log(
+        "Mellow1 delegated",
+        await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
+      );
+      console.log(
+        "Mellow2 delegated",
+        await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress),
+      );
 
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -685,21 +727,26 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const totalAssetsBefore = await iVault.totalAssets();
       const withdrawalEpochBefore = await withdrawalQueue.withdrawals(undelegatedEpoch);
 
-      const params1 = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
-      const params2 = abi.encode(["address"], [mellowVaults[1].vaultAddress]);
+      const params1 = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
+      const params2 = abi.encode(["address", "address"], [mellowVaults[1].vaultAddress, undelegateClaimer2]);
 
-      await iVault.connect(iVaultOperator).claim(
-        undelegatedEpoch,
-        [await mellowAdapter.getAddress(), await mellowAdapter.getAddress()],
-        [mellowVaults[0].vaultAddress, mellowVaults[1].vaultAddress],
-        [[params1], [params2]],
-      );
+      await iVault
+        .connect(iVaultOperator)
+        .claim(
+          undelegatedEpoch,
+          [await mellowAdapter.getAddress(), await mellowAdapter.getAddress()],
+          [mellowVaults[0].vaultAddress, mellowVaults[1].vaultAddress],
+          [[params1], [params2]],
+        );
 
       const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
       const totalAssetsAfter = await iVault.totalAssets();
 
       expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-      expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+      expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(
+        pendingWithdrawalsMellowBefore,
+        transactErr,
+      );
     });
 
     it("Staker is able to redeem", async function () {
@@ -762,7 +809,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.getTotalDelegated()).to.be.eq(0n);
     });
 
-    it("Deposit to Vault", async function () { // made by user
+    it("Deposit to Vault", async function () {
+      // made by user
       deposited = toWei(10);
       freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
       const expectedShares = (deposited * e18) / (await iVault.ratio());
@@ -786,7 +834,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.ratio()).to.be.eq(e18);
     });
 
-    it("Delegate freeBalance", async function () { // made by operator
+    it("Delegate freeBalance", async function () {
+      // made by operator
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const expectedFlashCapacity = (deposited * targetCapacity) / MAX_TARGET_PERCENT;
 
@@ -818,7 +867,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.ratio()).lt(e18);
     });
 
-    it("Flash withdraw all capacity", async function () { // made by user (flash capacity tests ends on this step)
+    it("Flash withdraw all capacity", async function () {
+      // made by user (flash capacity tests ends on this step)
       const sharesBefore = await iToken.balanceOf(staker);
       const assetBalanceBefore = await asset.balanceOf(staker);
       const treasuryBalanceBefore = await asset.balanceOf(treasury);
@@ -902,7 +952,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.ratio()).to.be.eq(ratioBefore);
     });
 
-    it("Undelegate from Mellow", async function () { // made by operator
+    let undelegateClaimer;
+
+    it("Undelegate from Mellow", async function () {
+      // made by operator
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -913,9 +966,17 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
       const amount = await iVault.getTotalDelegated();
 
-      await iVault
+      const tx = await iVault
         .connect(iVaultOperator)
         .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [amount], [emptyBytes]);
+
+      const receipt = await tx.wait();
+      const events = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+
+      expect(events.length).to.be.eq(1);
+      undelegateClaimer = events[0].args["claimer"];
 
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -946,15 +1007,20 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       // const adapterBalanceBefore = await asset.balanceOf(mellowAdapter.address);
       const withdrawalEpochBefore = await withdrawalQueue.withdrawals(1);
 
-      const params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
-      await iVault.connect(iVaultOperator).claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]);
+      const params = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer]);
+      await iVault
+        .connect(iVaultOperator)
+        .claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]);
 
       const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
       const totalAssetsAfter = await iVault.totalAssets();
       // const adapterBalanceAfter = await asset.balanceOf(mellowAdapter.address);
 
       expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-      expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+      expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(
+        pendingWithdrawalsMellowBefore,
+        transactErr,
+      );
       // expect(adapterBalanceBefore - adapterBalanceAfter).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
     });
 
@@ -1176,9 +1242,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const prevValue = await iVault.protocolFee();
       const newValue = randomBI(10);
 
-      await expect(iVault.setProtocolFee(newValue))
-        .to.emit(iVault, "ProtocolFeeChanged")
-        .withArgs(prevValue, newValue);
+      await expect(iVault.setProtocolFee(newValue)).to.emit(iVault, "ProtocolFeeChanged").withArgs(prevValue, newValue);
       expect(await iVault.protocolFee()).to.be.eq(newValue);
     });
 
@@ -1517,8 +1581,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
                 const upperBound = (toUtilization * targetCapacityPercent) / MAX_PERCENT;
                 const replenished = upperBound > flashCapacity + _amount ? _amount : upperBound - flashCapacity;
                 const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
-                const bonusPercent =
-                  fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacityPercent;
+                const bonusPercent = fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacityPercent;
                 const bonus = (replenished * bonusPercent) / MAX_PERCENT;
                 console.log(`Replenished:\t\t\t${replenished.format()}`);
                 console.log(`Bonus percent:\t\t\t${bonusPercent.format()}`);
@@ -1565,7 +1628,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         newOptimalBonusRate: () => BigInt(2 * 10 ** 8),
         newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
         customError: "InconsistentData",
-      }
+      },
     ];
     invalidArgs.forEach(function (arg) {
       it(`setDepositBonusParams reverts when ${arg.name}`, async function () {
@@ -1581,9 +1644,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     it("setDepositBonusParams reverts when caller is not an owner", async function () {
       await expect(
-        iVault
-          .connect(staker)
-          .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
+        iVault.connect(staker).setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
@@ -1783,7 +1844,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         newOptimalWithdrawalRate: () => BigInt(3 * 10 ** 8),
         newWithdrawUtilizationKink: () => BigInt(25 * 10 ** 8),
         customError: "InconsistentData",
-      }
+      },
     ];
     invalidArgs.forEach(function (arg) {
       it(`setFlashWithdrawFeeParams reverts when ${arg.name}`, async function () {
@@ -3213,7 +3274,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
         let tx = await iVault
           .connect(staker)
-        ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
+          ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
         const receipt = await tx.wait();
         const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
         expect(withdrawEvent.length).to.be.eq(1);
@@ -3388,19 +3449,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     it("addMellowVault reverts when already added", async function () {
       const mellowVault = mellowVaults[0].vaultAddress;
       const wrapper = mellowVaults[0].wrapperAddress;
-      await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(
-        mellowAdapter,
-        "AlreadyAdded",
-      );
+      await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "AlreadyAdded");
     });
 
     it("addMellowVault vault is 0 address", async function () {
       const mellowVault = ethers.ZeroAddress;
       const wrapper = mellowVaults[1].wrapperAddress;
-      await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(
-        mellowAdapter,
-        "ZeroAddress",
-      );
+      await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "ZeroAddress");
     });
 
     // it("addMellowVault wrapper is 0 address", async function () {
@@ -3522,6 +3577,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       console.log(`Staker's pending withdrawals:\t${(await iVault.getPendingWithdrawalOf(staker.address)).format()}`);
     });
 
+    let undelegateClaimer1;
+
     it("undelegateFromMellow from mellowVault#1 by operator", async function () {
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       const pendingWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
@@ -3530,14 +3587,12 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       let tx = await iVault
         .connect(iVaultOperator)
         .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [assets1], [emptyBytes]);
-      await tx.wait();
+      const receipt = await tx.wait();
 
-      // todo: recheck
-      // await expect(tx).to.emit(iVault, "UndelegatedFrom")
-      // .withArgs(mellowAdapter.address, mellowVaults[0].vaultAddress, (amount, ) => {
-      //   expect(amount).to.be.closeTo(0, transactErr);
-      //   return true;
-      // });
+      const events = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      undelegateClaimer1 = events[0].args["claimer"];
 
       expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[0].vaultAddress)).to.be.equal(
         assets1,
@@ -3621,11 +3676,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     //   expect(ratioAfter).to.be.closeTo(ratioBeforeUndelegate, ratioErr);
     // });
 
+    let undelegateClaimer2;
+
     it("undelegateFromMellow all from mellowVault#2", async function () {
       const pendingMellowWithdrawalsBefore = await mellowAdapter.pendingWithdrawalAmount();
-      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(
-        await mellowAdapter.getAddress(),
-      );
+      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
 
       //Amount can slightly exceed delegatedTo, but final number will be corrected
       //undelegateFromMellow fails when deviation is too big
@@ -3637,9 +3692,16 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         .undelegate(
           [await mellowAdapter.getAddress()],
           [mellowVaults[1].vaultAddress],
-          [epochShares],
+          [undelegatedAmount],
           [emptyBytes],
         );
+
+      const receipt = await tx.wait();
+      const events = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      receipt.logs?.filter(log => console.log(log.address));
+      undelegateClaimer2 = events[0].args["claimer"];
 
       // todo: recheck
       // .to.emit(iVault, "UndelegatedFrom")
@@ -3648,9 +3710,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       //   return true;
       // });
 
-      expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[1].vaultAddress)).to.be.closeTo(
+      expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[1].vaultAddress)).to.be.equal(
         undelegatedAmount,
-        transactErr,
       );
 
       const pendingMellowWithdrawalsAfter = await mellowAdapter.pendingWithdrawalAmount();
@@ -3671,9 +3732,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     it("Can not claim when adapter balance is 0", async function () {
       vault2Delegated = vault2Delegated - (await mellowAdapter.claimableAmount());
-      params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
+      params = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
       await expect(
-        iVault.connect(iVaultOperator).claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]),
+        iVault
+          .connect(iVaultOperator)
+          .claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]),
       ).to.be.revertedWithCustomError(mellowAdapter, "ValueZero");
     });
 
@@ -3735,27 +3798,36 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     it("Can not claim funds from mellowAdapter when iVault is paused", async function () {
       await iVault.pause();
-      await expect(iVault.connect(iVaultOperator).claim(
-        await withdrawalQueue.currentEpoch(), [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [emptyBytes],
-      )).to.be.revertedWith("Pausable: paused");
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .claim(
+            await withdrawalQueue.currentEpoch(),
+            [await mellowAdapter.getAddress()],
+            [mellowVaults[0].vaultAddress],
+            [emptyBytes],
+          ),
+      ).to.be.revertedWith("Pausable: paused");
     });
 
     it("Claim funds from mellowAdapter to iVault", async function () {
       if (await iVault.paused()) {
         await iVault.unpause();
       }
-      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(
-        await mellowAdapter.getAddress(),
-      );
+      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
 
       // const usersTotalWithdrawals = await iVault.totalSharesToWithdraw();
       const totalAssetsBefore = await iVault.totalAssets();
       const freeBalanceBefore = await iVault.getFreeBalance();
 
-      params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
-      await iVault.connect(iVaultOperator).claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]);
-      params = abi.encode(["address"], [mellowVaults[1].vaultAddress]);
-      await iVault.connect(iVaultOperator).claim(2, [await mellowAdapter.getAddress()], [mellowVaults[1].vaultAddress], [[params]]);
+      params = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
+      await iVault
+        .connect(iVaultOperator)
+        .claim(1, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]);
+      params = abi.encode(["address", "address"], [mellowVaults[1].vaultAddress, undelegateClaimer2]);
+      await iVault
+        .connect(iVaultOperator)
+        .claim(2, [await mellowAdapter.getAddress()], [mellowVaults[1].vaultAddress], [[params]]);
       console.log("getTotalDelegated", await iVault.getTotalDelegated());
       console.log("totalAssets", await iVault.totalAssets());
       console.log(
@@ -3847,8 +3919,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       // },
       {
         name: "mellowVault is 0 address",
-        amount: async () =>
-          await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
+        amount: async () => await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
         mellowVault: async () => ethers.ZeroAddress,
         operator: () => iVaultOperator,
         customError: "InvalidAddress",
@@ -3856,8 +3927,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       },
       {
         name: "called by not an operator",
-        amount: async () =>
-          await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
+        amount: async () => await iVault.getDelegatedTo(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress),
         mellowVault: async () => mellowVaults[0].vaultAddress,
         operator: () => staker,
         customError: "OnlyOperatorAllowed",
@@ -4103,14 +4173,26 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const tx = await iVault
         .connect(iVaultOperator)
         .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [epochShares], [emptyBytes]);
+
       const receipt = await tx.wait();
       let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+      const adapterEvents = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      let claimer = adapterEvents[0].args["claimer"];
+
       await helpers.time.increase(1209900);
+
       if (events[0].args["actualAmounts"] > 0) {
-        params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
-        await iVault.connect(iVaultOperator).claim(
-          events[0].args["epoch"], [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]],
-        );
+        params = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, claimer]);
+        await iVault
+          .connect(iVaultOperator)
+          .claim(
+            events[0].args["epoch"],
+            [await mellowAdapter.getAddress()],
+            [mellowVaults[0].vaultAddress],
+            [[params]],
+          );
       }
 
       const redeemReserveAfter = await iVault.redeemReservedAmount();
@@ -4278,15 +4360,18 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
       it(`${j} Withdraw from EL and update ratio`, async function () {
         undelegatedEpoch = await withdrawalQueue.currentEpoch();
-        let amount = await iVault.convertToAssets(
-          await withdrawalQueue.getRequestedShares(undelegatedEpoch)
-        );
+        let amount = await iVault.convertToAssets(await withdrawalQueue.getRequestedShares(undelegatedEpoch));
 
         const tx = await iVault
           .connect(iVaultOperator)
           .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [amount], [emptyBytes]);
         const receipt = await tx.wait();
         let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+
+        const adapterEvents = receipt.logs
+          ?.filter(log => log.address === mellowAdapter.address)
+          .map(log => mellowAdapter.interface.parseLog(log));
+        let claimer = adapterEvents[0].args["claimer"];
 
         await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
@@ -4298,10 +4383,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         await helpers.time.increase(1209900);
 
         if (events[0].args["actualAmounts"] > 0) {
-          params = abi.encode(["address"], [mellowVaults[0].vaultAddress]);
-          await iVault.connect(iVaultOperator).claim(
-            undelegatedEpoch, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]],
-          );
+          params = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, claimer]);
+          await iVault
+            .connect(iVaultOperator)
+            .claim(undelegatedEpoch, [await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [[params]]);
         }
 
         console.log(`Total assets: ${await iVault.totalAssets()}`);
@@ -4353,92 +4438,120 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
   describe("AdapterHandler negative cases", function () {
     it("null adapter delegation", async function () {
-      await expect(iVault.connect(iVaultOperator)
-        .delegate("0x0000000000000000000000000000000000000000", symbioticVaults[0].vaultAddress, 0, emptyBytes),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .delegate("0x0000000000000000000000000000000000000000", symbioticVaults[0].vaultAddress, 0, emptyBytes),
       ).to.be.revertedWithCustomError(iVault, "NullParams");
     });
 
     it("adapter not exists", async function () {
-      await expect(iVault.connect(iVaultOperator)
-        .delegate(staker.address, symbioticVaults[0].vaultAddress, 0, emptyBytes),
+      await expect(
+        iVault.connect(iVaultOperator).delegate(staker.address, symbioticVaults[0].vaultAddress, 0, emptyBytes),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
     });
 
     it("undelegate input args", async function () {
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
+      await expect(
+        iVault.connect(iVaultOperator).undelegate([], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([await mellowAdapter.getAddress()], [], [1n], [emptyBytes]),
+      await expect(
+        iVault.connect(iVaultOperator).undelegate([await mellowAdapter.getAddress()], [], [1n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [1n], []),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [1n], []),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate(["0x0000000000000000000000000000000000000000"], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .undelegate(
+            ["0x0000000000000000000000000000000000000000"],
+            [mellowVaults[0].vaultAddress],
+            [1n],
+            [emptyBytes],
+          ),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
     });
 
     it("undelegateVault input args", async function () {
-      await expect(iVault.connect(iVaultOperator)
-        .emergencyUndelegate([staker.address], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .emergencyUndelegate([staker.address], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
-      await expect(iVault.connect(iVaultOperator)
-        .emergencyUndelegate([mellowAdapter.address], ["0x0000000000000000000000000000000000000000"], [1n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .emergencyUndelegate(
+            [mellowAdapter.address],
+            ["0x0000000000000000000000000000000000000000"],
+            [1n],
+            [emptyBytes],
+          ),
       ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
 
-      await expect(iVault.connect(iVaultOperator)
-        .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
-      await expect(iVault.connect(staker)
-        .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(staker)
+          .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
     });
 
     it("claim input args", async function () {
-      await expect(iVault.connect(staker)
-        .claim(0, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [emptyBytes]),
+      await expect(
+        iVault.connect(staker).claim(0, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
 
-      await expect(iVault.connect(iVaultOperator)
-        .claim(0, [staker.address], [mellowVaults[0].vaultAddress], [emptyBytes]),
+      await expect(
+        iVault.connect(iVaultOperator).claim(0, [staker.address], [mellowVaults[0].vaultAddress], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
     });
 
     it("addAdapter input args", async function () {
-      await expect(iVault.addAdapter(staker.address))
-        .to.be.revertedWithCustomError(iVault, "NotContract");
+      await expect(iVault.addAdapter(staker.address)).to.be.revertedWithCustomError(iVault, "NotContract");
 
-      await expect(iVault.addAdapter(mellowAdapter.address))
-        .to.be.revertedWithCustomError(iVault, "AdapterAlreadyAdded");
+      await expect(iVault.addAdapter(mellowAdapter.address)).to.be.revertedWithCustomError(
+        iVault,
+        "AdapterAlreadyAdded",
+      );
 
-      await expect(iVault.connect(iVaultOperator).addAdapter(mellowAdapter.address))
-        .to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(iVault.connect(iVaultOperator).addAdapter(mellowAdapter.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("removeAdapter input args", async function () {
-      await expect(iVault.removeAdapter(staker.address))
-        .to.be.revertedWithCustomError(iVault, "NotContract");
+      await expect(iVault.removeAdapter(staker.address)).to.be.revertedWithCustomError(iVault, "NotContract");
 
-      await expect(iVault.removeAdapter(iToken.address))
-        .to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+      await expect(iVault.removeAdapter(iToken.address)).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
-      await expect(iVault.connect(staker)
-        .removeAdapter(mellowAdapter.address),
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(iVault.connect(staker).removeAdapter(mellowAdapter.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
 
       await iVault.removeAdapter(mellowAdapter.address);
     });
@@ -4446,32 +4559,34 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
   describe("SymbioticAdapter input args", function () {
     it("withdraw input args", async function () {
-      await expect(iVault.connect(iVaultOperator)
-        .undelegate([await symbioticAdapter.getAddress()], [staker.address], [1n], [emptyBytes]),
+      await expect(
+        iVault
+          .connect(iVaultOperator)
+          .undelegate([await symbioticAdapter.getAddress()], [staker.address], [1n], [emptyBytes]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
     });
 
     it("add & remove vaults input args", async function () {
-      await expect(symbioticAdapter.connect(iVaultOperator)
-        .addVault(staker.address),
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(symbioticAdapter.connect(iVaultOperator).addVault(staker.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
 
-      await expect(symbioticAdapter.connect(iVaultOperator)
-        .removeVault(symbioticVaults[0].vaultAddress),
+      await expect(
+        symbioticAdapter.connect(iVaultOperator).removeVault(symbioticVaults[0].vaultAddress),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
-
   });
 
   describe("MellowAdapter input args", function () {
     it("setEthWrapper input args", async function () {
-      await expect(mellowAdapter.connect(iVaultOperator)
-        .setEthWrapper(staker.address),
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(mellowAdapter.connect(iVaultOperator).setEthWrapper(staker.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
 
-      await expect(
-        mellowAdapter.setEthWrapper(staker.address),
-      ).to.be.revertedWithCustomError(mellowAdapter, "NotContract");
+      await expect(mellowAdapter.setEthWrapper(staker.address)).to.be.revertedWithCustomError(
+        mellowAdapter,
+        "NotContract",
+      );
     });
   });
 });
