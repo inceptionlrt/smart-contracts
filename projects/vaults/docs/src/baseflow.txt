@@ -1,0 +1,50 @@
+  @startuml
+
+  participant User #LightBlue
+  participant InceptionVault_S as Vault <<.sol>>
+  participant iToken <<.sol>>
+  participant IOperator as Operator <<Backend>>
+  participant AdapterHandler <<.sol>>
+  participant IIBaseAdapter <<.sol>>
+  participant WithdrawalQueue <<.sol>>
+  participant Strategy #Gold
+
+  title Base flow
+
+  == Deposit ==
+  User -> Vault: //deposit(assets)//
+  note left: <color:gray>or <color:black>//depositWithReferral(assets, code)//\n<color:gray>or <color:black>//mint(shares)//
+  Vault --> Vault: Calc bonus
+  Vault -> iToken: //mint(shares)//
+  Vault -> User: transfer shares
+
+  Operator -> AdapterHandler: //delegate(assets)//
+  AdapterHandler -> IIBaseAdapter: //delegate(assets)//
+  IIBaseAdapter -> Strategy: delegate
+
+
+  == Withdrawal ==
+  User -> Vault: withdraw(shares)
+  Vault -> iToken: burn()
+  Vault -> WithdrawalQueue: request()
+
+  WithdrawalQueue -> WithdrawalQueue: update user requested shares
+
+  Operator -> AdapterHandler: undelegate(): batch undelegations from adapters
+  AdapterHandler -> IIBaseAdapter: withdraw()
+  AdapterHandler -> WithdrawalQueue: undelegate()
+  WithdrawalQueue -> WithdrawalQueue: update epoch
+
+  Operator -> AdapterHandler: claim(): claim asset from adapter
+  AdapterHandler -> WithdrawalQueue: claim()
+  WithdrawalQueue -> WithdrawalQueue: update given epoch state
+
+  User -> Vault: redeem()
+  Vault -> WithdrawalQueue: redeem(claimer)
+  WithdrawalQueue -> WithdrawalQueue: mark available withdrawals as redeemed
+  WithdrawalQueue -> Vault: redeemed amount
+  Vault -> User: transfer assets
+
+
+  @enduml
+  
