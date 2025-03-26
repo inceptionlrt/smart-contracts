@@ -11,7 +11,31 @@ import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVau
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 
+import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMultiVaultStorage.sol";
+import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
+import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
+
 import {IBaseAdapter} from "./IBaseAdapter.sol";
+
+interface IWithdrawalQueueERC721 {
+    struct WithdrawalRequestStatus {
+        uint256 amountOfStETH;
+        uint256 amountOfShares;
+        address owner;
+        uint256 timestamp;
+        bool isFinalized;
+        bool isClaimed;
+    }
+    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds);
+    function requestWithdrawalsWstETH(uint256[] calldata _amounts, address _owner) external returns (uint256[] memory requestIds);
+    function getWithdrawalStatus(uint256[] calldata _requestIds) external view returns (WithdrawalRequestStatus[] memory statuses);
+    function claimWithdrawal(uint256 _requestId) external;
+}
+
+interface IWeth {
+    function deposit() payable external;
+    function withdraw(uint wad) external;
+}
 
 /**
  * @title The MellowAdapter Contract
@@ -19,7 +43,7 @@ import {IBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
 
     /// @dev Kept only for storage slot
@@ -37,6 +61,10 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     uint256 private PLACE_HOLDER_4;
 
     address public ethWrapper;
+
+    address public claimer;
+    address public wstETH;
+    address public withdrawalQueue;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -99,15 +127,9 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         if (!exists) revert NotAdded();
 
         _asset.safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
+        IERC20(_asset).safeIncreaseAllowance(address(mellowVault), amount);
 
-        uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
-                address(_asset),
-                amount,
-                mellowVault,
-                address(this),
-                referral
-            );
+        uint256 lpAmount = IERC4626(mellowVault).deposit(amount, address(this));
 
         depositedAmount = lpAmountToAmount(lpAmount, IMellowVault(mellowVault));
     }
@@ -127,13 +149,8 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                     address(ethWrapper),
                     localBalance
                 );
-                uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
-                    address(_asset),
-                    localBalance,
-                    address(mellowVaults[i]),
-                    address(this),
-                    referral
-                );
+                uint256 lpAmount = IERC4626(address(mellowVaults[i])).deposit(localBalance, address(this));
+
                 depositedAmount += lpAmountToAmount(lpAmount, mellowVaults[i]);
             }
         }
@@ -165,13 +182,55 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return amount;
     }
     function _claimPending() private {
+
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            IMellowSymbioticVault(address(mellowVaults[i])).claim(
-                address(this),
-                address(this),
-                type(uint256).max
-            );
+
+            uint256 amount;
+            uint256 numbers;
+            uint256 length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+
+            uint256[] memory claimableArray = new uint256[](length);
+            uint256[] memory subvaultIndices;
+            uint256[][] memory indices;
+
+            for (uint256 j = 0; j < length; j++) {
+
+                claimableArray[j] = IWithdrawalQueue(IMultiVaultStorage(address(mellowVaults[i])).subvaultAt(j).withdrawalQueue).claimableAssetsOf(address(this));
+
+                if (claimableArray[j] != 0) { 
+                    amount += claimableArray[j];
+                    numbers++;
+                }
+            }
+
+            if (numbers != 0) {
+                subvaultIndices = new uint256[](numbers);
+                uint256 l;
+                for (uint256 k = 0; k < length; k++) {
+                    if (claimableArray[k] != 0) {
+                        subvaultIndices[l++] = k;
+                    }
+                }
+            }
+
+            IClaimer(claimer).multiAcceptAndClaim(address(mellowVaults[i]), subvaultIndices, indices, address(this), amount);
         }
+    }
+
+    function unstakeFromLido() public onlyTrustee returns (uint256[] memory requestIds) {
+        uint256 balance = IERC20(wstETH).balanceOf(address(this));
+        IERC20(wstETH).safeIncreaseAllowance(withdrawalQueue, balance);
+        requestIds = IWithdrawalQueueERC721(withdrawalQueue).requestWithdrawalsWstETH(_makeArray(balance), address(0));
+    }
+
+    function claimFromLido() public onlyTrustee {
+        uint256[] memory ids = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalRequests(address(this));
+        IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
+        for (uint256 i = 0; i < status.length; i++) {
+            if (status[i].isFinalized) IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(ids[i]);  // TODO Maybe use claimWithdrawals or claimWithdrawalsOf to avoid unbounded loop
+        }
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance != 0) IWeth(address(_asset)).deposit{ value: ethBalance }();
     }
 
     function addMellowVault(address mellowVault) external onlyOwner {
@@ -205,20 +264,47 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
 
+    function claimableWithdrawalLido() public view returns (uint256 total) {
+        uint256[] memory ids = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalRequests(address(this));
+        IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
+        for (uint256 i = 0; i < status.length; i++) {
+            if (status[i].isFinalized && !status[i].isClaimed) total += status[i].amountOfStETH;
+        }
+    }
+
+    function pendingWithdrawalLido() public view returns (uint256 total) {
+        uint256[] memory ids = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalRequests(address(this));
+        IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
+        for (uint256 i = 0; i < status.length; i++) {
+            if (!status[i].isFinalized) total += status[i].amountOfStETH;
+        }
+    }
+
     function claimableWithdrawalAmount() public view returns (uint256 total) {
+
+        uint256 length;
+
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
-                .claimableAssetsOf(address(this));
+
+            length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+
+            for (uint256 j = 0; j < length; j++) {
+                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(address(mellowVaults[i])).subvaultAt(j);
+                total += IWithdrawalQueue(subvault.withdrawalQueue).claimableAssetsOf(address(this));
+            }
         }
     }
 
     function claimableWithdrawalAmount(
         address _mellowVault
-    ) external view returns (uint256) {
-        return
-            IMellowSymbioticVault(_mellowVault).claimableAssetsOf(
-                address(this)
-            );
+    ) external view returns (uint256 assets) {
+
+        uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
+
+        for (uint256 i = 0; i < length; i++) {
+            IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(_mellowVault).subvaultAt(i);
+            assets += IWithdrawalQueue(subvault.withdrawalQueue).claimableAssetsOf(address(this));
+        }
     }
 
     function pendingWithdrawalAmount()
@@ -227,17 +313,29 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         override
         returns (uint256 total)
     {
+        uint256 length;
+
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
-                .pendingAssetsOf(address(this));
+
+            length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+
+            for (uint256 j = 0; j < length; j++) {
+                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(address(mellowVaults[i])).subvaultAt(j);
+                total += IWithdrawalQueue(subvault.withdrawalQueue).pendingAssetsOf(address(this));
+            }
         }
     }
 
     function pendingWithdrawalAmount(
         address _mellowVault
-    ) external view returns (uint256) {
-        return
-            IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
+    ) external view returns (uint256 assets) {
+
+        uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
+
+        for (uint256 i = 0; i < length; i++) {
+            IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(_mellowVault).subvaultAt(i);
+            assets += IWithdrawalQueue(subvault.withdrawalQueue).pendingAssetsOf(address(this));
+        }
     }
 
     function getDeposited(
@@ -266,7 +364,9 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return
             pendingWithdrawalAmount() +
             claimableWithdrawalAmount() +
-            claimableAmount();
+            claimableAmount() +
+            pendingWithdrawalLido() + 
+            claimableWithdrawalLido();
     }
 
     function amountToLpAmount(
@@ -292,7 +392,21 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         emit EthWrapperChanged(oldWrapper, newEthWrapper);
     }
 
+    function setClaimer(address newClaimer) external onlyOwner {
+        if (!Address.isContract(newClaimer)) revert NotContract();
+        if (newClaimer == address(0)) revert ZeroAddress();
+
+        address oldClaimer = claimer;
+        claimer = newClaimer;
+        emit ClaimerChanged(oldClaimer, newClaimer);
+    }
+
     function getVersion() external pure override returns (uint256) {
         return 3;
+    }
+
+    function _makeArray(uint256 _value) internal view returns (uint256[] memory _array) {
+        _array = new uint256[](1);
+        _array[0] = _value;
     }
 }
