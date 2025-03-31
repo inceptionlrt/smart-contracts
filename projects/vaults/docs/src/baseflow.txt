@@ -31,29 +31,29 @@
   User -> Vault: //withdraw(shares)//\n<back:yellow> 2 shares
   User --> User: user balance: <back:yellow>//shares//=8
   Vault -> iToken: //burn()//\n<back:yellow>2 shares
-  Vault --> Vault: <back:yellow>//totalAssets//=8
+  Vault --> Vault: <back:yellow>//totalAssets//=0
   Vault -> WithdrawalQueue: //request(2)//
 
   WithdrawalQueue --> WithdrawalQueue: update user requested shares\n<back:yellow>//totalSharesToWithdraw//=2
 
   Operator -> AdapterHandler: undelegate()\n(batch undelegations from adapters)
   AdapterHandler -> IIBaseAdapter: //withdraw(2 assets)//
+  IIBaseAdapter -> Strategy: undelegate
   AdapterHandler -> WithdrawalQueue: //undelegate(2 assets)//
   AdapterHandler --> AdapterHandler: <back:yellow>assets //totalDelegated//=8, //totalSharesToWithdraw// = 0
-  IIBaseAdapter -> Strategy: undelegate
   WithdrawalQueue --> WithdrawalQueue: update epoch
 
   Operator -> AdapterHandler: //claim(2)//\n(claim asset from adapter)
-  AdapterHandler -> WithdrawalQueue: //claim(2)//
-  AdapterHandler --> AdapterHandler: <back:yellow>//redeemReservedAmount//=2; //totalAssets//=8
   IIBaseAdapter -> Strategy: claim
+  AdapterHandler -> WithdrawalQueue: //claim(2)//
+  AdapterHandler --> AdapterHandler: <back:yellow>//redeemReservedAmount//=2; //totalAssets//=2
   WithdrawalQueue --> WithdrawalQueue: update given epoch state
 
   User -> Vault: //redeem(2)//
   Vault -> WithdrawalQueue: //redeem(2, claimer address)//
   WithdrawalQueue --> WithdrawalQueue: mark available withdrawals as redeemed
   WithdrawalQueue -> Vault: redeemed amount
-  Vault --> Vault: <back:yellow>//redeemReservedAmount//=0; //vaultBalnace//=0;
+  Vault --> Vault: <back:yellow>//redeemReservedAmount//=0; //totalAssets//=0;
   Vault -> User: transfer assets
   User --> User: user balance: <back:yellow>//assets//=2, //shares//=8
 
