@@ -1,25 +1,5 @@
 // Just slashing tests for all adapters
 
-// const helpers = require("@nomicfoundation/hardhat-network-helpers");
-// const { ethers, upgrades, network } = require("hardhat");
-// const { expect } = require("chai");
-// const {
-//   impersonateWithEth,
-//   setBlockTimestamp,
-//   getRandomStaker,
-//   calculateRatio,
-//   toWei,
-//   randomBI,
-//   mineBlocks,
-//   randomBIMax,
-//   randomAddress,
-//   e18,
-//   day,
-// } = require("./helpers/utils");
-// BigInt.prototype.format = function() {
-//   return this.toLocaleString("de-DE");
-// };
-
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
 // import { ethers, network, upgrades } from "hardhat";
@@ -1733,4 +1713,3 @@ assets.forEach(function(a) {
     });
   });
 });
-
