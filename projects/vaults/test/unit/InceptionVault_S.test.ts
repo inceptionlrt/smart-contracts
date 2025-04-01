@@ -5,14 +5,16 @@ const { ethers, network } = hardhat;
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { stETH } from '../src/test-data/assets/inception-vault-s';
 import { initVault } from "../src/init-vault";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const assetInfo = stETH;
 
 describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
-  let iVault, asset;
-  let deployer, staker, staker2;
-  let transactErr;
-  let snapshot;
+  let iVault;
+  let asset;
+  let staker: HardhatEthersSigner, staker2: HardhatEthersSigner;
+  let transactErr: bigint;
+  let snapshot: helpers.SnapshotRestorer
 
   before(async function () {
     if (process.env.ASSETS) {
@@ -33,7 +35,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
     ({ iVault, asset } = await initVault(assetInfo));
     transactErr = assetInfo.transactErr;
 
-    [deployer, staker, staker2] = await ethers.getSigners();
+    [, staker, staker2] = await ethers.getSigners();
 
     staker = await assetInfo.impersonateStaker(staker, iVault);
     staker2 = await assetInfo.impersonateStaker(staker2, iVault);
