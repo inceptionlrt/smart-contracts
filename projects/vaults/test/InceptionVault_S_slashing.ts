@@ -57,8 +57,6 @@ assets.forEach(function (a) {
         },
       ]);
 
-      // [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
-      //   await initVault(a);
       ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
         await initVault(a, { initAdapters: true }));
       ratioErr = a.ratioErr;
