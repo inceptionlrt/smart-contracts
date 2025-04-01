@@ -2,231 +2,16 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
-// import { ethers, network, upgrades } from "hardhat";
 const { ethers, network, upgrades } = hardhat;
 import { expect } from "chai";
 import { impersonateWithEth, setBlockTimestamp, calculateRatio, toWei, e18 } from "./helpers/utils";
-BigInt.prototype.format = function() {
-  return this.toLocaleString("de-DE");
-};
+import { initVault, abi, MAX_TARGET_PERCENT, symbioticVaults, mellowVaults } from "./src/init-vault";
+import { stETH } from "./src/test-data/assets/inception-vault-s";
 
-const abi = ethers.AbiCoder.defaultAbiCoder();
-
-const assets = [
-  {
-    assetName: "stETH",
-    assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-    vaultName: "InstEthVault",
-    vaultFactory: "InVault_S_E2",
-    iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
-    rewardsCoordinator: "0x7750d328b314EfFa365A0402CcfD489B80B0adda",
-    delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
-    strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
-    assetStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
-    ratioErr: 3n,
-    transactErr: 5n,
-    blockNumber: 21850700, //21687985,
-    impersonateStaker: async function(staker, iVault) {
-      const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
-      const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
-      const stEthAmount = toWei(1000);
-      await stEth.connect(donor).approve(this.assetAddress, stEthAmount);
-
-      const wstEth = await ethers.getContractAt("IWSteth", this.assetAddress);
-      const balanceBefore = await wstEth.balanceOf(donor.address);
-      await wstEth.connect(donor).wrap(stEthAmount);
-      const balanceAfter = await wstEth.balanceOf(donor.address);
-
-      const wstAmount = balanceAfter - balanceBefore;
-      await wstEth.connect(donor).transfer(staker.address, wstAmount);
-      await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
-      return staker;
-    },
-    addRewardsMellowVault: async function(amount, mellowVault) {
-      const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
-      const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
-      await stEth.connect(donor).approve(this.assetAddress, amount);
-
-      const wstEth = await ethers.getContractAt("IWSteth", this.assetAddress);
-      const balanceBefore = await wstEth.balanceOf(donor);
-      await wstEth.connect(donor).wrap(amount);
-      const balanceAfter = await wstEth.balanceOf(donor);
-      const wstAmount = balanceAfter - balanceBefore;
-      await wstEth.connect(donor).transfer(mellowVault, wstAmount);
-    },
-    applySymbioticSlash: async function(symbioticVault, slashAmount) {
-      const slasherAddressStorageIndex = 3;
-
-      const [deployer] = await ethers.getSigners();
-      deployer.address = await deployer.getAddress();
-
-      await helpers.setStorageAt(
-        await symbioticVault.getAddress(),
-        slasherAddressStorageIndex,
-        ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address]),
-      );
-
-      await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
-    },
-  },
-];
-let MAX_TARGET_PERCENT;
+const assets = [stETH];
 let emptyBytes = [
   "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 ];
-
-//https://docs.mellow.finance/mellow-lrt-lst-primitive/contract-deployments
-const mellowVaults = [
-  {
-    name: "P2P",
-    vaultAddress: "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a",
-    wrapperAddress: "0x41A1FBEa7Ace3C3a6B66a73e96E5ED07CDB2A34d",
-    bondStrategyAddress: "0xA0ea6d4fe369104eD4cc18951B95C3a43573C0F6",
-    curatorAddress: "0x4a3c7F2470Aa00ebE6aE7cB1fAF95964b9de1eF4",
-    configuratorAddress: "0x84b240E99d4C473b5E3dF1256300E2871412dDfe",
-  },
-  {
-    name: "Mev Capital",
-    vaultAddress: "0x5fD13359Ba15A84B76f7F87568309040176167cd",
-    wrapperAddress: "0xdC1741f9bD33DD791942CC9435A90B0983DE8665",
-    bondStrategyAddress: "0xc3A149b5Ca3f4A5F17F5d865c14AA9DBb570F10A",
-    curatorAddress: "0xA1E38210B06A05882a7e7Bfe167Cd67F07FA234A",
-    configuratorAddress: "0x2dEc4fDC225C1f71161Ea481E23D66fEaAAE2391",
-  },
-  {
-    name: "Re7",
-    vaultAddress: "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a",
-    wrapperAddress: "0x70cD3464A41B6692413a1Ba563b9D53955D5DE0d",
-    bondStrategyAddress: "0xcE3A8820265AD186E8C1CeAED16ae97176D020bA",
-    curatorAddress: "0xE86399fE6d7007FdEcb08A2ee1434Ee677a04433",
-    configuratorAddress: "0x214d66d110060dA2848038CA0F7573486363cAe4",
-  },
-];
-
-const symbioticVaults = [
-  {
-    name: "Gauntlet Restaked wstETH",
-    vaultAddress: "0xc10A7f0AC6E3944F4860eE97a937C51572e3a1Da",
-    collateral: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-    burner: "0xDB0737bd7eBEA50135e4c8af56900b029b858371",
-    delegator: "0x1f16782a9b75FfFAD87e7936791C672bdDBCb8Ec",
-    slasher: "0x541c86eb2C5e7F3E0C04eF82aeb68EA6A86409ef",
-  },
-  {
-    name: "Ryabina wstETH",
-    vaultAddress: "0x93b96D7cDe40DC340CA55001F46B3B8E41bC89B4",
-    collateral: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-    burner: "0x80918bcD2d1e343ed46E201CD09238149dB5A5bF",
-    delegator: "0x742DD9676086579994E9a3DD536C9CCc0Cc6e78D",
-    slasher: "0xCCA42120Dc4fc945F2fBd227d7D9EA5963bba490",
-  },
-];
-
-const initVault = async a => {
-  const block = await ethers.provider.getBlock("latest");
-  console.log(`Starting at block number: ${block.number}`);
-  console.log("... Initialization of Inception ....");
-
-  console.log("- Asset");
-  const asset = await ethers.getContractAt(a.assetName, a.assetAddress);
-  asset.address = await asset.getAddress();
-
-  /// =============================== Mellow Vaults ===============================
-  for (const mVaultInfo of mellowVaults) {
-    console.log(`- MellowVault ${mVaultInfo.name} and curator`);
-    mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
-
-    const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mVaultInfo.bondStrategyAddress]);
-    mellowVaultOperatorMock.address = await mellowVaultOperatorMock.getAddress();
-    await network.provider.send("hardhat_setCode", [
-      mVaultInfo.curatorAddress,
-      await mellowVaultOperatorMock.getDeployedCode(),
-    ]);
-    //Copy storage values
-    for (let i = 0; i < 5; i++) {
-      const slot = "0x" + i.toString(16);
-      const value = await network.provider.send("eth_getStorageAt", [mellowVaultOperatorMock.address, slot, "latest"]);
-      await network.provider.send("hardhat_setStorageAt", [mVaultInfo.curatorAddress, slot, value]);
-    }
-    mVaultInfo.curator = await ethers.getContractAt("OperatorMock", mVaultInfo.curatorAddress);
-  }
-
-  /// =============================== Symbiotic Vaults ===============================
-
-  for (const sVaultInfo of symbioticVaults) {
-    console.log(`- Symbiotic ${sVaultInfo.name}`);
-    sVaultInfo.vault = await ethers.getContractAt("IVault", sVaultInfo.vaultAddress);
-  }
-
-  /// =============================== Inception Vault ===============================
-  console.log("- iToken");
-  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
-  const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
-  iToken.address = await iToken.getAddress();
-
-  console.log("- iVault operator");
-  const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
-
-  console.log("- Mellow Adapter");
-  const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
-  let mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
-    [mellowVaults[0].vaultAddress],
-    a.assetAddress,
-    a.iVaultOperator,
-  ]);
-  mellowAdapter.address = await mellowAdapter.getAddress();
-
-  console.log("- Symbiotic Adapter");
-  const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
-  let symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
-    [symbioticVaults[0].vaultAddress],
-    a.assetAddress,
-    a.iVaultOperator,
-  ]);
-  symbioticAdapter.address = await symbioticAdapter.getAddress();
-
-  console.log("- Ratio feed");
-  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
-  const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
-  await ratioFeed.updateRatioBatch([iToken.address], [e18]); //Set initial ratio e18
-  ratioFeed.address = await ratioFeed.getAddress();
-
-  console.log("- InceptionLibrary");
-  const iLibrary = await ethers.deployContract("InceptionLibrary");
-  await iLibrary.waitForDeployment();
-
-  console.log("- iVault");
-  const iVaultFactory = await ethers.getContractFactory(a.vaultFactory, {
-    libraries: { InceptionLibrary: await iLibrary.getAddress() },
-  });
-  const iVault = await upgrades.deployProxy(
-    iVaultFactory,
-    [a.vaultName, a.iVaultOperator, a.assetAddress, iToken.address],
-    {
-      unsafeAllowLinkedLibraries: true,
-    },
-  );
-  iVault.address = await iVault.getAddress();
-
-  console.log("- Withdrawal Queue");
-  const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
-  withdrawalQueue.address = await withdrawalQueue.getAddress();
-
-  await iVault.setRatioFeed(ratioFeed.address);
-  await iVault.addAdapter(symbioticAdapter.address);
-  await iVault.addAdapter(mellowAdapter.address);
-  await iVault.setWithdrawalQueue(withdrawalQueue.address);
-  await mellowAdapter.setInceptionVault(iVault.address);
-  await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
-  await symbioticAdapter.setInceptionVault(iVault.address);
-  await iToken.setVault(iVault.address);
-
-  MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
-  console.log("... iVault initialization completed ....");
-
-  return [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue];
-};
 
 async function skipEpoch(symbioticVault) {
   let epochDuration = await symbioticVault.vault.epochDuration();
@@ -245,8 +30,8 @@ async function mellowClaimParams(mellowVault, claimer) {
   return abi.encode(["address", "address"], [mellowVault.vaultAddress, claimer]);
 }
 
-assets.forEach(function(a) {
-  describe(`Inception Symbiotic Vault ${a.assetName}`, function() {
+assets.forEach(function (a) {
+  describe(`Inception Symbiotic Vault ${a.assetName}`, function () {
     this.timeout(150000);
     let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue;
     let iVaultOperator, deployer, staker, staker2, staker3, treasury;
@@ -254,7 +39,7 @@ assets.forEach(function(a) {
     let snapshot;
     let params;
 
-    before(async function() {
+    before(async function () {
       if (process.env.ASSETS) {
         const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
         if (!assets.includes(a.assetName.toLowerCase())) {
@@ -272,8 +57,10 @@ assets.forEach(function(a) {
         },
       ]);
 
-      [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
-        await initVault(a);
+      // [iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue] =
+      //   await initVault(a);
+      ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
+        await initVault(a, { initAdapters: true }));
       ratioErr = a.ratioErr;
       transactErr = a.transactErr;
 
@@ -287,21 +74,21 @@ assets.forEach(function(a) {
       snapshot = await helpers.takeSnapshot();
     });
 
-    after(async function() {
+    after(async function () {
       if (iVault) {
         await iVault.removeAllListeners();
       }
     });
 
-    describe("Symbiotic", function() {
-      beforeEach(async function() {
+    describe("Symbiotic", function () {
+      beforeEach(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
       });
 
       // flow:
       // success: deposit -> delegate -> withdraw -> undelegate -> claim -> redeem
-      it("one withdrawal without slash", async function() {
+      it("one withdrawal without slash", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -359,7 +146,7 @@ assets.forEach(function(a) {
       // flow:
       // deposit -> delegate -> withdraw -> undelegate -> claim ->
       // withdraw -> slash -> undelegate -> claim -> redeem -> redeem
-      it("2 withdraw & slash between undelegate", async function() {
+      it("2 withdraw & slash between undelegate", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -467,7 +254,7 @@ assets.forEach(function(a) {
       // flow:
       // deposit #1 -> deposit #2 -> delegate -> withdraw #1 -> undelegate -> claim ->
       // withdraw #2 -> undelegate -> slash -> claim -> redeem -> redeem
-      it("2 withdraw & slash after undelegate", async function() {
+      it("2 withdraw & slash after undelegate", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -566,7 +353,7 @@ assets.forEach(function(a) {
       // flow:
       // deposit #1 -> deposit #2 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
       // deposit #3 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
-      it("slash between withdraw", async function() {
+      it("slash between withdraw", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -662,7 +449,7 @@ assets.forEach(function(a) {
       // flow:
       // deposit #1 -> deposit #2 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
       // slash -> deposit #3 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
-      it("withdraw->slash->withdraw->slash", async function() {
+      it("withdraw->slash->withdraw->slash", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -770,7 +557,7 @@ assets.forEach(function(a) {
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 -> slash -> withdraw #2 ->
       // slash -> deposit #2 -> delegate #2 -> undelegate -> claim -> redeem -> redeem
-      it("withdraw all->slash->redeem all", async function() {
+      it("withdraw all->slash->redeem all", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -837,7 +624,7 @@ assets.forEach(function(a) {
 
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> slash -> claim -> redeem
-      it("slash after undelegate", async function() {
+      it("slash after undelegate", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -900,7 +687,7 @@ assets.forEach(function(a) {
 
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> claim -> deposit #2 -> slash
-      it("slash after deposit", async function() {
+      it("slash after deposit", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -956,7 +743,7 @@ assets.forEach(function(a) {
 
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> claim -> slash
-      it("slash after claim", async function() {
+      it("slash after claim", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(5), staker.address);
         await tx.wait();
@@ -1007,7 +794,7 @@ assets.forEach(function(a) {
 
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 ->  withdraw #1 -> undelegate -> slash -> claim -> redeem
-      it("2 withdraw from one user in epoch", async function() {
+      it("2 withdraw from one user in epoch", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1075,7 +862,7 @@ assets.forEach(function(a) {
 
       // flow:
       // deposit #1 -> delegate #1 -> withdraw #1 -> undelegate -> slash -> claim -> withdraw -> undelegate -> claim -> redeem
-      it("2 withdraw from one user in different epoch", async function() {
+      it("2 withdraw from one user in different epoch", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1168,7 +955,7 @@ assets.forEach(function(a) {
         // ----------------
       });
 
-      it("redeem unavailable claim", async function() {
+      it("redeem unavailable claim", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1230,7 +1017,7 @@ assets.forEach(function(a) {
 
       });
 
-      it("undelegate from symbiotic and mellow", async function() {
+      it("undelegate from symbiotic and mellow", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1318,7 +1105,7 @@ assets.forEach(function(a) {
         // ----------------
       });
 
-      it("partially undelegate from mellow", async function() {
+      it("partially undelegate from mellow", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1380,7 +1167,7 @@ assets.forEach(function(a) {
         // ----------------
       });
 
-      it("emergency undelegate", async function() {
+      it("emergency undelegate", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1456,10 +1243,10 @@ assets.forEach(function(a) {
       });
     });
 
-    describe("Withdrawal queue: negative cases", async function() {
+    describe("Withdrawal queue: negative cases", async function () {
       let customVault, withdrawalQueue;
 
-      beforeEach(async function() {
+      beforeEach(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
 
@@ -1469,7 +1256,7 @@ assets.forEach(function(a) {
         withdrawalQueue.address = await withdrawalQueue.getAddress();
       });
 
-      it("only vault", async function() {
+      it("only vault", async function () {
         await expect(withdrawalQueue.connect(staker).request(iVault.address, toWei(1)))
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
@@ -1485,7 +1272,7 @@ assets.forEach(function(a) {
           .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
       });
 
-      it("zero value", async function() {
+      it("zero value", async function () {
         await expect(withdrawalQueue.connect(customVault).request(iVault.address, 0)).to.be.revertedWithCustomError(
           withdrawalQueue, "ValueZero");
 
@@ -1494,7 +1281,7 @@ assets.forEach(function(a) {
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
       });
 
-      it("undelegate failed", async function() {
+      it("undelegate failed", async function () {
         await withdrawalQueue.connect(customVault).request(iVault.address, toWei(5));
 
         await expect(withdrawalQueue.connect(customVault)
@@ -1502,13 +1289,13 @@ assets.forEach(function(a) {
           .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateEpochMismatch()");
       });
 
-      it("claim failed", async function() {
+      it("claim failed", async function () {
         await expect(
           withdrawalQueue.connect(customVault).claim(1, [mellowAdapter.address], [mellowVaults[0].vaultAddress], [1n]),
         ).to.be.revertedWithCustomError(withdrawalQueue, "ClaimUnknownAdapter");
       });
 
-      it("initialize", async function() {
+      it("initialize", async function () {
         const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
         await expect(upgrades.deployProxy(withdrawalQueueFactory, ["0x0000000000000000000000000000000000000000", [], [], 0]))
           .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
@@ -1521,8 +1308,8 @@ assets.forEach(function(a) {
       });
     });
 
-    describe("Withdrawal queue: legacy", async function() {
-      it("Redeem", async function() {
+    describe("Withdrawal queue: legacy", async function () {
+      it("Redeem", async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
 
@@ -1574,13 +1361,13 @@ assets.forEach(function(a) {
       });
     });
 
-    describe("pending emergency", async function() {
-      beforeEach(async function() {
+    describe("pending emergency", async function () {
+      beforeEach(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
       });
 
-      it("symbiotic", async function() {
+      it("symbiotic", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
@@ -1644,7 +1431,7 @@ assets.forEach(function(a) {
         // ----------------
       });
 
-      it("mellow", async function() {
+      it("mellow", async function () {
         // deposit
         let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
         await tx.wait();
