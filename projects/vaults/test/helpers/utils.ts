@@ -1,5 +1,6 @@
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, network } = require("hardhat");
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { ethers, network } from "hardhat";
+
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -171,7 +172,7 @@ const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroA
 
 const day = 86400n;
 
-module.exports = {
+export {
   addRewardsToStrategy,
   addRewardsToStrategyWrap,
   withdrawDataFromTx,

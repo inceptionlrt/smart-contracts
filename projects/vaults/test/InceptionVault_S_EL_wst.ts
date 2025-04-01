@@ -1,15 +1,15 @@
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, upgrades, network } = require("hardhat");
-const { expect } = require("chai");
-const { ZeroAddress } = require("ethers");
-const {
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { ethers, upgrades, network } from "hardhat";
+import { expect } from "chai";
+import { ZeroAddress } from "ethers";
+import {
   addRewardsToStrategy,
   impersonateWithEth,
   calculateRatio,
   toWei,
   mineBlocks,
   e18,
-} = require("./helpers/utils.js");
+} from "./helpers/utils";
 
 const assets = [
   {
