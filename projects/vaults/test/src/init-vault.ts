@@ -1,11 +1,14 @@
 
 import hardhat from "hardhat";
 import { e18, impersonateWithEth } from "../helpers/utils";
-import { mellowVaults } from "./test-data/assets/mellow-vauts";
-import { symbioticVaults } from "./test-data/assets/symbiotic-vaults";
+import { mellowVaults as mellowVaultsData } from "./test-data/assets/mellow-vauts";
+import { symbioticVaults as symbioticVaultsData } from "./test-data/assets/symbiotic-vaults";
 const { ethers, upgrades, network } = hardhat;
 import { emptyBytes } from './constants';
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+
+export let symbioticVaults = [...symbioticVaultsData];
+export let mellowVaults = [...mellowVaultsData];
 
 export async function initVault(assetData, options?: { initAdapters?: boolean }) {
   const block = await ethers.provider.getBlock("latest");
@@ -16,13 +19,7 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
   const asset = await ethers.getContractAt(assetData.assetName, assetData.assetAddress);
   asset.address = await asset.getAddress();
 
-  let emergencyClaimer;
   if (options?.initAdapters) {
-    console.log("- Emergency claimer");
-    // const emergencyClaimerFactory = await ethers.getContractFactory("EmergencyClaimer");
-    // emergencyClaimer = await upgrades.deployProxy(emergencyClaimerFactory);
-    // emergencyClaimer.address = await emergencyClaimer.getAddress();
-
     /// =============================== Mellow Vaults ===============================
 
     for (const mVaultInfo of mellowVaults) {
@@ -104,11 +101,6 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
   let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
-  // if (options?.initAdapters) {
-  //   await emergencyClaimer.setMellowAdapter(mellowAdapter.address);
-  //   await emergencyClaimer.setSymbioticAdapter(symbioticAdapter.address);
-  // }
-
   await iVault.setRatioFeed(ratioFeed.address);
 
   if (options?.initAdapters) {
@@ -120,10 +112,8 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
 
   if (options?.initAdapters) {
     await mellowAdapter.setInceptionVault(iVault.address);
-    // await mellowAdapter.setEmergencyClaimer(emergencyClaimer.address);
     await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
     await symbioticAdapter.setInceptionVault(iVault.address);
-    // await symbioticAdapter.setEmergencyClaimer(emergencyClaimer.address);
   }
 
   await iToken.setVault(iVault.address);

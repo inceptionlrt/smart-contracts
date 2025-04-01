@@ -1,6 +1,7 @@
 import hardhat from "hardhat";
 import { impersonateWithEth, toWei } from '../../../helpers/utils';
 const { ethers } = hardhat;
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 
 export const stETH = {
   assetName: "stETH",
@@ -38,5 +39,19 @@ export const stETH = {
     const balanceAfter = await wstEth.balanceOf(donor);
     const wstAmount = balanceAfter - balanceBefore;
     await wstEth.connect(donor).transfer(mellowVault, wstAmount);
+  },
+  applySymbioticSlash: async function (symbioticVault, slashAmount) {
+    const slasherAddressStorageIndex = 3;
+
+    const [deployer] = await ethers.getSigners();
+    deployer.address = await deployer.getAddress();
+
+    await helpers.setStorageAt(
+      await symbioticVault.getAddress(),
+      slasherAddressStorageIndex,
+      ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address]),
+    );
+
+    await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
   },
 };
