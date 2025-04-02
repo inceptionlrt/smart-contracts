@@ -29,5 +29,7 @@ interface IIMellowAdapter is IIBaseAdapter {
 
     event MellowWithdrawn(uint256 amount, uint256 claimedAmount, address claimer);
 
+    event ClaimerChanged(address indexed _old, address indexed _new);
+
     function claimableWithdrawalAmount() external view returns (uint256);
 }
