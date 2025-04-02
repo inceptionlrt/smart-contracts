@@ -34,13 +34,11 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   // await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
-const calculateRatio = async (vault, token, queue) => {
+const calculateRatio = async (vault, token) => {
   const totalDelegated = await vault.getTotalDelegated();
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
-  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const emergencyPendingWithdrawals = await vault.getTotalPendingEmergencyWithdrawals();
-  const totalDeposited = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount;
   const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
@@ -59,7 +57,7 @@ const calculateRatio = async (vault, token, queue) => {
   // console.log("}");
 
   if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 0n)) {
-    console.log("iToken supply is 0, so the ration is going to be 1e18");
+    console.log("iToken supply is 0, so the ratio is going to be 1e18");
     return e18;
   }
 
