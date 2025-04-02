@@ -25,7 +25,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 public currentEpoch;
     uint256 public totalAmountRedeem;
     uint256 public totalSharesToWithdraw;
-    uint256 public totalPendingClaimedAmounts;
 
     /// @notice Initializes the contract with a vault address and legacy withdrawal data
     /// @param _vault The address of the vault contract that will interact with this queue
