@@ -43,7 +43,9 @@ const calculateRatio = async (vault, token) => {
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
 
+  // shares
   const numeral = totalSupply + totalSharesToWithdraw;
+  // tokens/assets
   const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
   // console.log("ratio{");

@@ -90,6 +90,7 @@ describe(`Symbiotic ${assetData.assetName}`, function () {
     // assert vault balance (token/asset)
     expect(await asset.balanceOf(iVault.address)).to.be.eq(depositAmount);
     expect(await iToken.totalSupply()).to.be.eq(depositAmount);
+    expect(await iVault.totalAssets()).to.be.eq(depositAmount);
     // assert user balance (shares)
     expect(await iToken.balanceOf(staker.address)).to.be.eq(depositAmount);
     expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
@@ -101,17 +102,30 @@ describe(`Symbiotic ${assetData.assetName}`, function () {
     // assert delegated amount
     expect(await iVault.getTotalDelegated()).to.be.eq(depositAmount);
     // assert vault balance (token/asset)
+    expect(await iToken.totalSupply()).to.be.eq(depositAmount);
     expect(await asset.balanceOf(iVault.address)).to.be.eq(0);
+    expect(await iVault.totalAssets()).to.be.eq(0);
 
     // one withdraw
     let shares = await iToken.balanceOf(staker.address);
     tx = await iVault.connect(staker).withdraw(shares, staker.address);
     await tx.wait();
 
+    expect(await asset.balanceOf(iVault.address)).to.be.eq(0);
+    expect(await iVault.totalAssets()).to.be.eq(0);
+    expect(await iVault.getTotalDelegated()).to.be.eq(depositAmount);
+    // shares burned
+    expect(await iToken.totalSupply()).to.be.eq(0);
+    expect(await iToken.balanceOf(staker.address)).to.be.eq(0);
+
     expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
+
+    expect(await withdrawalQueue.currentEpoch()).to.be.eq(1, 'Current epoch should be 1');
+    expect(await withdrawalQueue.totalSharesToWithdraw()).to.be.eq(depositAmount);
 
     // undelegate
     let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
+    expect(epochShares).to.be.eq(shares);
     tx = await iVault.connect(iVaultOperator)
       .undelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [epochShares], [emptyBytes]);
     let receipt = await tx.wait();
@@ -120,6 +134,15 @@ describe(`Symbiotic ${assetData.assetName}`, function () {
       .map(log => symbioticAdapter.interface.parseLog(log));
     let claimer = adapterEvents[0].args["claimer"];
 
+    // assert balances
+    expect(await iVault.getTotalDelegated()).to.be.eq(0);
+    expect(await iToken.totalSupply()).to.be.eq(0);
+    expect(events[0].args["epoch"]).to.be.eq(1);
+    expect(await asset.balanceOf(iVault.address)).to.be.eq(0);
+    expect(await withdrawalQueue.totalSharesToWithdraw()).to.be.eq(0);
+    expect(await withdrawalQueue.currentEpoch()).to.be.eq(2, 'Current epoch should be 2');
+    
+
     expect(events[0].args["adapter"]).to.be.eq(symbioticAdapter.address);
     expect(events[0].args["actualAmounts"]).to.be.eq(depositAmount);
     expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
@@ -127,10 +150,13 @@ describe(`Symbiotic ${assetData.assetName}`, function () {
 
     // claim
     await skipEpoch(symbioticVaults[0]);
-    let params = await symbioticClaimParams(symbioticVaults[0], claimer);
+    const params = await symbioticClaimParams(symbioticVaults[0], claimer);
     tx = await iVault.connect(iVaultOperator)
       .claim(events[0].args["epoch"], [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]]);
     await tx.wait();
+
+    expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(depositAmount);
+    expect(await asset.balanceOf(iVault.address)).to.be.eq(depositAmount);
 
     expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
     // ----------------
@@ -139,6 +165,8 @@ describe(`Symbiotic ${assetData.assetName}`, function () {
     tx = await iVault.connect(staker).redeem(staker.address);
     receipt = await tx.wait();
     events = receipt.logs?.filter(e => e.eventName === "Redeem");
+
+    expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
 
     expect(events[0].args["amount"]).to.be.closeTo(depositAmount, transactErr);
     expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
