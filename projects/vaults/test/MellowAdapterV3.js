@@ -477,6 +477,9 @@ assets.forEach(function(a) {
 
         expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
         expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+
+        const wqueue = await ethers.getContractAt("ILidoWithdrawalQueue", "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1");
+        console.log(await wqueue.finalize(0, 0));
       });
 
       it("Staker is able to redeem", async function() {

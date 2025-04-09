@@ -294,10 +294,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         (address claimer) = abi.decode(_data[0], (address));
 
         uint256 balance = _asset.balanceOf(address(this));
-
-        console.logString("claimer:");
-        console.logAddress(claimer);
-
         _claimFromLido(claimer);
 
         if (!emergency) {
@@ -315,12 +311,9 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         uint256[] memory ids = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalRequests(claimer);
         IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
         for (uint256 i = 0; i < status.length; i++) {
-            console.log(status[i].owner);
-            console.log(status[i].isFinalized);
-            console.log(status[i].amountOfShares);
-            console.log(status[i].amountOfStETH);
-            console.log(status[i].timestamp);
-            if (status[i].isFinalized) IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(ids[i]);  // TODO Maybe use claimWithdrawals or claimWithdrawalsOf to avoid unbounded loop
+            if (status[i].isFinalized) {
+                IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(ids[i]);
+            }// TODO Maybe use claimWithdrawals or claimWithdrawalsOf to avoid unbounded loop
         }
 
         uint256 ethBalance = address(this).balance;
