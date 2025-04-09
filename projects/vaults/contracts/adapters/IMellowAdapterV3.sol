@@ -74,7 +74,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
 
     address public ethWrapper;
 
-    address public wstETH;
     address public withdrawalQueue;
 
     address internal _emergencyClaimer;
@@ -237,9 +236,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         uint256 numbers;
         uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
 
-        console.logAddress(_mellowVault);
-        console.logUint(length);
-
         uint256[] memory claimableArray = new uint256[](length);
         uint256[] memory subvaultIndices;
         uint256[][] memory indices;
@@ -251,7 +247,7 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
                 IMultiVaultStorage(_mellowVault).subvaultAt(j).withdrawalQueue
             ).claimableAssetsOf(claimer);
 
-            mellowClaimer =  IWithdrawalQueue(
+            mellowClaimer = IWithdrawalQueue(
                 IMultiVaultStorage(_mellowVault).subvaultAt(j).withdrawalQueue
             ).claimer();
 
@@ -282,10 +278,12 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
     }
 
     function _unstakeFromLido(address claimer) internal returns (uint256[] memory requestIds) {
+        address wstETH = IEthWrapper(ethWrapper).wstETH();
         uint256 balance = IERC20(wstETH).balanceOf(claimer);
-        IERC20(wstETH).safeIncreaseAllowance(withdrawalQueue, balance);
-        requestIds = IWithdrawalQueueERC721(withdrawalQueue).
-            requestWithdrawalsWstETH(_makeArray(balance), claimer);
+
+        return MellowV3AdapterClaimer(claimer).requestWithdrawalsWstETH(
+            withdrawalQueue, balance
+        );
     }
 
     function claim(
@@ -296,11 +294,19 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         (address claimer) = abi.decode(_data[0], (address));
 
         uint256 balance = _asset.balanceOf(address(this));
+
+        console.logString("claimer:");
+        console.logAddress(claimer);
+
         _claimFromLido(claimer);
 
         if (!emergency) {
             _removePendingClaimer(claimer);
         }
+
+        console.logString("claim()");
+        console.logUint(address(this).balance);
+        console.logUint(_asset.balanceOf(address(this)) - balance);
 
         return _asset.balanceOf(address(this)) - balance;
     }
@@ -309,6 +315,11 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         uint256[] memory ids = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalRequests(claimer);
         IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
         for (uint256 i = 0; i < status.length; i++) {
+            console.log(status[i].owner);
+            console.log(status[i].isFinalized);
+            console.log(status[i].amountOfShares);
+            console.log(status[i].amountOfStETH);
+            console.log(status[i].timestamp);
             if (status[i].isFinalized) IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(ids[i]);  // TODO Maybe use claimWithdrawals or claimWithdrawalsOf to avoid unbounded loop
         }
 
@@ -491,11 +502,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
 
     function getVersion() external pure override returns (uint256) {
         return 3;
-    }
-
-    function _makeArray(uint256 _value) internal view returns (uint256[] memory _array) {
-        _array = new uint256[](1);
-        _array[0] = _value;
     }
 
     function convertUnderlyingToAsset(uint256 amount) private view returns (uint256) {

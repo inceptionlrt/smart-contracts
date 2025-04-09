@@ -446,7 +446,7 @@ assets.forEach(function(a) {
         // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
       });
 
-      it("Claim Mellow wstETH to adater", async function() {
+      it("Claim Mellow wstETH to adapter", async function() {
         await helpers.time.increase(1209900);
 
         const params1 = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
@@ -456,32 +456,29 @@ assets.forEach(function(a) {
         await mellowAdapterV3.connect(iVaultOperator).claimFromMellow([params2], false);
       });
 
+      it("Claim from Lido", async function() {
+        await helpers.time.increase(1209900);
 
-      // it("Claim Mellow withdrawal transfer funds from adapter to vault", async function() {
-      //   await helpers.time.increase(1209900);
-      //
-      //   const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapterV3.getAddress());
-      //   const totalAssetsBefore = await iVault.totalAssets();
-      //   const withdrawalEpochBefore = await withdrawalQueue.withdrawals(undelegatedEpoch);
-      //
-      //   const params1 = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
-      //   const params2 = abi.encode(["address", "address"], [mellowVaults[1].vaultAddress, undelegateClaimer2]);
-      //
-      //   await iVault.connect(iVaultOperator).claim(
-      //     undelegatedEpoch,
-      //     [await mellowAdapterV3.getAddress(), await mellowAdapterV3.getAddress()],
-      //     [mellowVaults[0].vaultAddress, mellowVaults[1].vaultAddress],
-      //     [[params1], [params2]],
-      //   );
-      //
-      //   const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
-      //   const totalAssetsAfter = await iVault.totalAssets();
-      //
-      //   expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-      //   expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-      // });
+        const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapterV3.getAddress());
+        const totalAssetsBefore = await iVault.totalAssets();
+        const withdrawalEpochBefore = await withdrawalQueue.withdrawals(undelegatedEpoch);
 
-      /*
+        const params1 = abi.encode(["address"], [undelegateClaimer1]);
+        const params2 = abi.encode(["address"], [undelegateClaimer2]);
+
+        await mellowAdapterV3.connect(iVaultOperator).claim([params1], false);
+        await mellowAdapterV3.connect(iVaultOperator).claim([params2], false);
+
+        const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
+        const totalAssetsAfter = await iVault.totalAssets();
+
+        console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
+        console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
+
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+        expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
+      });
+
       it("Staker is able to redeem", async function() {
         const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
         const redeemReserve = await iVault.redeemReservedAmount();
@@ -495,6 +492,7 @@ assets.forEach(function(a) {
         expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
       });
 
+      /*
       it("Redeem withdraw", async function() {
         const balanceBefore = await asset.balanceOf(staker2.address);
         const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
