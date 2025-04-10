@@ -74,8 +74,13 @@ const deployVault = async (
   console.log(`SymbioticRestaker address: ${srAddress}`);
   const srImpAddress = await upgrades.erc1967.getImplementationAddress(srAddress);
 
-  await iVault.setMellowRestaker(mrAddress);
-  await iVault.setSymbioticRestaker(srAddress);
+  tx = await iVault.setMellowRestaker(mrAddress);
+  await tx.wait();
+  console.log("mellow restaker set");
+
+  tx = await iVault.setSymbioticRestaker(srAddress);
+  await tx.wait();
+  console.log("symbiotic restaker set");
 
   const iAddresses = {
     iVaultAddress: iVaultAddress,
