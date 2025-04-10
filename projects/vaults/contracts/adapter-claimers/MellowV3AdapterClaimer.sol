@@ -8,8 +8,14 @@ import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
 
 interface IWithdrawalQueueERC721 {
     function requestWithdrawalsWstETH(uint256[] calldata _amounts, address _owner) external returns (uint256[] memory requestIds);
+
     function claimWithdrawal(uint256 _requestId) external;
+
     function WSTETH() external view returns (address);
+}
+
+interface IWETH {
+    function deposit() payable external;
 }
 
 contract MellowV3AdapterClaimer {
@@ -49,5 +55,16 @@ contract MellowV3AdapterClaimer {
         ).safeIncreaseAllowance(withdrawalQueue, balance);
 
         return IWithdrawalQueueERC721(withdrawalQueue).requestWithdrawalsWstETH(_amounts, address(this));
+    }
+
+    function claimLidoWithdrawal(address withdrawalQueue, uint256 requestID, address asset) external {
+        require(msg.sender == adapter);
+
+        uint256 ethBalanceBefore = address(this).balance;
+        IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(requestID);
+        uint256 ethBalanceAfter = address(this).balance;
+
+        (bool success,) = msg.sender.call{value: ethBalanceAfter - ethBalanceBefore}("");
+        require(success);
     }
 }

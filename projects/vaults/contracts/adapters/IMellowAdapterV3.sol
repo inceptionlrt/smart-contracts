@@ -301,10 +301,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
             _removePendingClaimer(claimer);
         }
 
-        console.logString("claim()");
-        console.logUint(address(this).balance);
-        console.logUint(_asset.balanceOf(address(this)) - balance);
-
         return _asset.balanceOf(address(this)) - balance;
     }
 
@@ -313,8 +309,10 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status = IWithdrawalQueueERC721(withdrawalQueue).getWithdrawalStatus(ids);
         for (uint256 i = 0; i < status.length; i++) {
             if (status[i].isFinalized) {
-                IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(ids[i]);
-            }// TODO Maybe use claimWithdrawals or claimWithdrawalsOf to avoid unbounded loop
+                MellowV3AdapterClaimer(claimer).claimLidoWithdrawal(
+                    withdrawalQueue, ids[i], address(_asset)
+                );
+            }
         }
 
         uint256 ethBalance = address(this).balance;
