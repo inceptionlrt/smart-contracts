@@ -226,7 +226,8 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
 
         uint256 amount = _claimPending(_mellowVault, claimer);
-        _unstakeFromLido(claimer);
+        uint256 requestID = _unstakeFromLido(claimer);
+        emit LidoUnstaked(requestID);
 
         return amount;
     }
@@ -277,13 +278,13 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         );
     }
 
-    function _unstakeFromLido(address claimer) internal returns (uint256[] memory requestIds) {
+    function _unstakeFromLido(address claimer) internal returns (uint256 requestId) {
         address wstETH = IEthWrapper(ethWrapper).wstETH();
         uint256 balance = IERC20(wstETH).balanceOf(claimer);
 
         return MellowV3AdapterClaimer(claimer).requestWithdrawalsWstETH(
             withdrawalQueue, balance
-        );
+        )[0];
     }
 
     function claim(

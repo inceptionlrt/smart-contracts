@@ -53,6 +53,29 @@ const assets = [
       const wstAmount = balanceAfter - balanceBefore;
       await wstEth.connect(donor).transfer(mellowVault, wstAmount);
     },
+    finalizeLidoWithdrawal: async function(requestId) {
+      const [deployer] = await ethers.getSigners();
+      const targetAddress = await deployer.getAddress();
+
+      const FINALIZE_ROLE = "0x485191a2ef18512555bd4426d18a716ce8e98c80ec2de16394dcf86d7d91bc80";
+      const withdrawalQueueAddress = "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1";
+      const adminAddress = "0x3e40d73eb977dc6a537af587d48316fee66e9c8c";
+      const withdrawalQueueABI = [
+        "function finalize(uint256 _lastRequestIdToBeFinalized, uint256 _maxShareRate) external",
+        "function grantRole(bytes32 role, address account) external",
+      ];
+
+      await network.provider.request({ method: "hardhat_impersonateAccount", params: [adminAddress] });
+      const adminSigner = await ethers.getSigner(adminAddress);
+      await impersonateWithEth(adminAddress, toWei(10));
+
+      const withdrawalQueue = await ethers.getContractAt(withdrawalQueueABI, withdrawalQueueAddress);
+      const grantTx = await withdrawalQueue.connect(adminSigner).grantRole(FINALIZE_ROLE, targetAddress);
+      await grantTx.wait();
+
+      const finalizeTx = await withdrawalQueue.connect(deployer).finalize(requestId, toWei(1000));
+      await finalizeTx.wait();
+    },
   },
 ];
 
@@ -446,18 +469,30 @@ assets.forEach(function(a) {
         // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
       });
 
+      let lidoRequestIDs = [];
+
       it("Claim Mellow wstETH to adapter", async function() {
         await helpers.time.increase(1209900);
 
         const params1 = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
         const params2 = abi.encode(["address", "address"], [mellowVaults[1].vaultAddress, undelegateClaimer2]);
 
-        await mellowAdapterV3.connect(iVaultOperator).claimFromMellow([params1], false);
-        await mellowAdapterV3.connect(iVaultOperator).claimFromMellow([params2], false);
+        let tx = await mellowAdapterV3.connect(iVaultOperator).claimFromMellow([params1], false);
+        let receipt = await tx.wait();
+        let events = receipt.logs?.filter(e => e.eventName === "LidoUnstaked");
+        lidoRequestIDs.push(events[0].args[0]);
+
+        tx = await mellowAdapterV3.connect(iVaultOperator).claimFromMellow([params2], false);
+        receipt = await tx.wait();
+        events = receipt.logs?.filter(e => e.eventName === "LidoUnstaked");
+        lidoRequestIDs.push(events[0].args[0]);
       });
 
       it("Claim from Lido", async function() {
         await helpers.time.increase(1209900);
+
+        await a.finalizeLidoWithdrawal(lidoRequestIDs[0]);
+        await a.finalizeLidoWithdrawal(lidoRequestIDs[1]);
 
         const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapterV3.getAddress());
         const totalAssetsBefore = await iVault.totalAssets();
@@ -466,8 +501,13 @@ assets.forEach(function(a) {
         const params1 = abi.encode(["address"], [undelegateClaimer1]);
         const params2 = abi.encode(["address"], [undelegateClaimer2]);
 
-        await mellowAdapterV3.connect(iVaultOperator).claim([params1], false);
-        await mellowAdapterV3.connect(iVaultOperator).claim([params2], false);
+        await iVault.connect(iVaultOperator)
+          .claim(
+            undelegatedEpoch,
+            [await mellowAdapterV3.getAddress(), await mellowAdapterV3.getAddress()],
+            [mellowVaults[0].vaultAddress, mellowVaults[1].vaultAddress],
+            [[params1], [params2]],
+          );
 
         const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
         const totalAssetsAfter = await iVault.totalAssets();
@@ -477,9 +517,6 @@ assets.forEach(function(a) {
 
         expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
         expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-
-        const wqueue = await ethers.getContractAt("ILidoWithdrawalQueue", "0x889edc2edab5f40e902b864ad4d7ade8e412f9b1");
-        console.log(await wqueue.finalize(0, 0));
       });
 
       it("Staker is able to redeem", async function() {

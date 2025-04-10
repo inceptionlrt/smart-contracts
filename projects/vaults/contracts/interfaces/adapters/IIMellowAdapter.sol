@@ -31,5 +31,7 @@ interface IIMellowAdapter is IIBaseAdapter {
 
     event ClaimerChanged(address indexed _old, address indexed _new);
 
+    event LidoUnstaked(uint256 indexed requestID);
+
     function claimableWithdrawalAmount() external view returns (uint256);
 }
