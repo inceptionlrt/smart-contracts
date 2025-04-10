@@ -98,7 +98,11 @@ const deployVault = async (
 
   tx = await mr.setVault(await iVault.getAddress());
   await tx.wait();
-  console.log("restaker vault set");
+  console.log("mellow restaker vault set");
+
+  tx = await sr.setVault(await iVault.getAddress());
+  await tx.wait();
+  console.log("symbiotic restaker vault set");
 
   tx = await iVault.setTargetFlashCapacity(flashCap); // 5%
   await tx.wait();
