@@ -5,7 +5,8 @@ const deployVault = async (
   addresses, vaultName, tokenName, tokenSymbol,
   mellowWrappers, mellowVaults,
   symbioticVaults,
-  asset, ratioFeed
+  asset, ratioFeed,
+  flashCap
 ) => {
   const [deployer] = await ethers.getSigners();
 
@@ -76,8 +77,6 @@ const deployVault = async (
   await iVault.setMellowRestaker(mrAddress);
   await iVault.setSymbioticRestaker(srAddress);
 
-  console.log(iVault.mellow)
-
   const iAddresses = {
     iVaultAddress: iVaultAddress,
     iVaultImpl: iVaultImplAddress,
@@ -101,7 +100,7 @@ const deployVault = async (
   await tx.wait();
   console.log("restaker vault set");
 
-  tx = await iVault.setTargetFlashCapacity("500000000000000000"); // 5%
+  tx = await iVault.setTargetFlashCapacity(flashCap); // 5%
   await tx.wait();
   console.log("iVault target flash capacity set");
 
