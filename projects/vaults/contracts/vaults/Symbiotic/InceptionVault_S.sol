@@ -494,9 +494,20 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
-        return
-            convertToAssets(shares) -
-            calculateFlashWithdrawFee(convertToAssets(shares));
+
+        uint256 amount = convertToAssets(shares);
+        uint256 capacity = getFlashCapacity();
+        uint256 targetCapacity = _getTargetCapacity();
+        uint256 flash = amount <= capacity ? capacity : amount;
+
+        return amount - InceptionLibrary.calculateWithdrawalFee(
+                amount,
+                flash,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
