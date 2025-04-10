@@ -68,7 +68,7 @@ const deployVault = async (
 
   // 2.1 Symbiotic restaker
   const symbioticRestakerFactory = await hre.ethers.getContractFactory("ISymbioticRestaker");
-  const sr = await upgrades.deployProxy(symbioticRestakerFactory, [symbioticVaults, asset, addresses.Operator, iVaultAddress], { kind: "transparent" });
+  const sr = await upgrades.deployProxy(symbioticRestakerFactory, [symbioticVaults, iVaultAddress, asset, addresses.Operator], { kind: "transparent" });
   await sr.waitForDeployment();
   const srAddress = await sr.getAddress();
   console.log(`SymbioticRestaker address: ${srAddress}`);
