@@ -58,13 +58,15 @@ const deployVault = async (
   console.log(`InceptionVault address: ${iVaultAddress}`);
   const iVaultImplAddress = await upgrades.erc1967.getImplementationAddress(iVaultAddress);
 
-  // 2. Mellow restaker
-  const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
-  const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowVaults, asset, addresses.Operator, iVaultAddress], { kind: "transparent" });
-  await mr.waitForDeployment();
-  const mrAddress = await mr.getAddress();
-  console.log(`MellowRestaker address: ${mrAddress}`);
-  const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
+  if (mellowVaults.length > 0) {
+    // 2. Mellow restaker
+    const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
+    const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowVaults, asset, addresses.Operator, iVaultAddress], { kind: "transparent" });
+    await mr.waitForDeployment();
+    const mrAddress = await mr.getAddress();
+    console.log(`MellowRestaker address: ${mrAddress}`);
+    const mrImpAddress = await upgrades.erc1967.getImplementationAddress(mrAddress);
+  }
 
   // 2.1 Symbiotic restaker
   const symbioticRestakerFactory = await hre.ethers.getContractFactory("ISymbioticRestaker");
@@ -74,9 +76,11 @@ const deployVault = async (
   console.log(`SymbioticRestaker address: ${srAddress}`);
   const srImpAddress = await upgrades.erc1967.getImplementationAddress(srAddress);
 
-  tx = await iVault.setMellowRestaker(mrAddress);
-  await tx.wait();
-  console.log("mellow restaker set");
+  if (mellowVaults.length > 0) {
+    tx = await iVault.setMellowRestaker(mrAddress);
+    await tx.wait();
+    console.log("mellow restaker set");
+  }
 
   tx = await iVault.setSymbioticRestaker(srAddress);
   await tx.wait();
@@ -87,8 +91,8 @@ const deployVault = async (
     iVaultImpl: iVaultImplAddress,
     iTokenAddress: iTokenAddress,
     iTokenImpl: iTokenImplAddress,
-    MellowRestaker: mrAddress,
-    MellowRestakerImpl: mrImpAddress,
+    // MellowRestaker: mrAddress,
+    // MellowRestakerImpl: mrImpAddress,
     SymbioticRestaker: srAddress,
     SymbioticRestakerImpl: srImpAddress
   };
@@ -101,9 +105,11 @@ const deployVault = async (
   await tx.wait();
   console.log("iToken vault set");
 
-  tx = await mr.setVault(await iVault.getAddress());
-  await tx.wait();
-  console.log("mellow restaker vault set");
+  if (mellowVaults.length > 0) {
+    tx = await mr.setVault(await iVault.getAddress());
+    await tx.wait();
+    console.log("mellow restaker vault set");
+  }
 
   tx = await sr.setVault(await iVault.getAddress());
   await tx.wait();
