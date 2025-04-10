@@ -23,21 +23,21 @@ async function main() {
   });
   console.log(`New Impl of InceptionVault(${vaultImpl}) was deployed`);
 
-  // Symbiotic
-  const sRestaker = await ethers.getContractFactory("ISymbioticRestaker");
-  vaults = ["0x4e0554959A631B3D3938ffC158e0a7b2124aF9c5", "0xc10A7f0AC6E3944F4860eE97a937C51572e3a1Da"];
-  const s = await upgrades.deployProxy(
-    sRestaker,
-    [vaults, InVault_S, "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", addresses.Operator],
-    { kind: "transparent" },
-  );
-  await s.waitForDeployment();
-  console.log(`New Impl of MellowRestaker(${await s.getAddress()}) was deployed`);
+  // // Symbiotic
+  // const sRestaker = await ethers.getContractFactory("ISymbioticRestaker");
+  // vaults = ["0x4e0554959A631B3D3938ffC158e0a7b2124aF9c5", "0xc10A7f0AC6E3944F4860eE97a937C51572e3a1Da"];
+  // const s = await upgrades.deployProxy(
+  //   sRestaker,
+  //   [vaults, InVault_S, "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", addresses.Operator],
+  //   { kind: "transparent" },
+  // );
+  // await s.waitForDeployment();
+  // console.log(`New Impl of MellowRestaker(${await s.getAddress()}) was deployed`);
 
-  // Mellow
-  const mRestaker = await ethers.getContractFactory("IMellowRestaker");
-  const mImp = await upgrades.prepareUpgrade(MellowRestaker, mRestaker);
-  console.log(`New Impl of MellowRestaker(${mImp}) was deployed`);
+  // // Mellow
+  // const mRestaker = await ethers.getContractFactory("IMellowRestaker");
+  // const mImp = await upgrades.prepareUpgrade(MellowRestaker, mRestaker);
+  // console.log(`New Impl of MellowRestaker(${mImp}) was deployed`);
 }
 
 main()
