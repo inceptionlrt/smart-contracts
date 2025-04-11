@@ -1390,7 +1390,7 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(40 * 1e8)
+            const deposited = BigInt(80 * 1e8)
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
