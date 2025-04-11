@@ -1390,7 +1390,7 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(80 * 1e8)
+            const deposited = BigInt(10 * 1e8)
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
@@ -1600,7 +1600,7 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateFlashWithdrawFee for: ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(10 * 1e8);
+            const deposited = BigInt(80 * 1e8);
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
@@ -2083,6 +2083,9 @@ assets.forEach(function(a) {
         it(`---Prepare state: ${state.name}`, async function() {
           await snapshot.restore();
           await iVault.setTargetFlashCapacity(1n);
+          await iVault.setDepositMinAmount(1e4);
+          await iVault.setWithdrawMinAmount(1e4);
+          await iVault.setFlashMinAmount(1e4);
           const deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
           if (state.withBonus) {
             await iVault.setTargetFlashCapacity(targetCapacityPercent);
@@ -2119,7 +2122,7 @@ assets.forEach(function(a) {
             const freeBalance = await iVault.getFreeBalance();
             await iVault
               .connect(iVaultOperator)
-              .delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance - flashCapacityBefore, 1296000);
+              .delegateToSymbioticVault(symbioticVaults[0].vaultAddress, freeBalance - flashCapacityBefore);
             await iVault.setTargetFlashCapacity(targetCapacityPercent);
             await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
             const calculatedRatio = await calculateRatio(iVault, iToken);
