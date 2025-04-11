@@ -1117,6 +1117,9 @@ assets.forEach(function(a) {
 
       it("delegate reverts when called by not a trustee", async function() {
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         await iVault.connect(staker).deposit(e18, staker.address);
         await mellowRestaker.changeAllocation(mellowVaults[0].vaultAddress, 1n);
 
@@ -1128,6 +1131,9 @@ assets.forEach(function(a) {
 
       it("withdrawMellow reverts when called by not a trustee", async function() {
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         await iVault.connect(staker).deposit(randomBI(19), staker.address);
         const delegated = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, delegated, 1296000);
@@ -1234,6 +1240,9 @@ assets.forEach(function(a) {
           .withArgs(prevValue, newValue);
 
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         await iVault.connect(staker).deposit(randomBI(19), staker.address);
         const delegated = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, delegated, 1296000);
@@ -1381,7 +1390,7 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(10 * 1e8)
+            const deposited = BigInt(40 * 1e8)
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
@@ -1472,6 +1481,9 @@ assets.forEach(function(a) {
     describe("Withdraw fee params setter and calculation", function() {
       let targetCapacityPercent, MAX_PERCENT, localSnapshot;
       before(async function() {
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         MAX_PERCENT = await iVault.MAX_PERCENT();
       });
 
@@ -1566,6 +1578,9 @@ assets.forEach(function(a) {
         it(`setFlashWithdrawFeeParams: ${arg.name}`, async function() {
           await snapshot.restore();
           await iVault.setTargetFlashCapacity(1n);
+          await iVault.setDepositMinAmount(1e4);
+          await iVault.setWithdrawMinAmount(1e4);
+          await iVault.setFlashMinAmount(1e4);
           await expect(
             iVault.setFlashWithdrawFeeParams(
               arg.newMaxFlashFeeRate,
@@ -1585,14 +1600,14 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateFlashWithdrawFee for: ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = toWei(100);
+            const deposited = BigInt(10 * 1e8);
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
             let flashCapacity = amount.flashCapacity(targetCapacity);
             await iVault
               .connect(iVaultOperator)
-              .delegateToMellowVault(mellowVaults[0].vaultAddress, deposited - flashCapacity - 1n, 1296000);
+              .delegateToSymbioticVault(symbioticVaults[0].vaultAddress, deposited - flashCapacity - 1n);
             await iVault.setTargetFlashCapacity(targetCapacityPercent); //1%
             console.log(`Flash capacity:\t\t\t${await iVault.getFlashCapacity()}`);
 
@@ -1669,6 +1684,9 @@ assets.forEach(function(a) {
       it("calculateFlashWithdrawFee reverts when capacity is not sufficient", async function() {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         await iVault.connect(staker, staker).deposit(randomBI(19), staker.address);
         const capacity = await iVault.getFlashCapacity();
         await expect(iVault.calculateFlashWithdrawFee(capacity + 1n))
@@ -1690,10 +1708,13 @@ assets.forEach(function(a) {
 
       before(async function() {
         await snapshot.restore();
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
         await iVault.setTargetFlashCapacity(1n);
         await iVault.connect(staker3).deposit(e18, staker3.address);
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, amount, 1296000);
+        await iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, amount);
         await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
         ratio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -1829,10 +1850,10 @@ assets.forEach(function(a) {
 
           const amount = await iVault.getFreeBalance();
           await expect(
-            iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, amount, 1296000),
+            iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, amount),
           )
             .to.emit(iVault, "DelegatedTo")
-            .withArgs(mellowRestaker.address, mellowVaults[0].vaultAddress, amount);
+            .withArgs(symbioticRestaker.address, symbioticVaults[0].vaultAddress, amount);
 
           const delegatedAfter = await iVault.getDelegatedTo(mellowVaults[0].vaultAddress);
           const totalDepositedAfter = await iVault.getTotalDeposited();
