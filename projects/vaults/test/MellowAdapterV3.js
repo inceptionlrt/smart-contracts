@@ -62,7 +62,7 @@ const assets = [
       const adminAddress = "0x3e40d73eb977dc6a537af587d48316fee66e9c8c";
       const withdrawalQueueABI = [
         "function finalize(uint256 _lastRequestIdToBeFinalized, uint256 _maxShareRate) external",
-        "function grantRole(bytes32 role, address account) external",
+        "function grantRole(bytes32 role, address account) external"
       ];
 
       await network.provider.request({ method: "hardhat_impersonateAccount", params: [adminAddress] });
@@ -70,6 +70,7 @@ const assets = [
       await impersonateWithEth(adminAddress, toWei(10));
 
       const withdrawalQueue = await ethers.getContractAt(withdrawalQueueABI, withdrawalQueueAddress);
+
       const grantTx = await withdrawalQueue.connect(adminSigner).grantRole(FINALIZE_ROLE, targetAddress);
       await grantTx.wait();
 
