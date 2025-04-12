@@ -15,6 +15,7 @@ const
 
 const Asset = "0x8236a87084f8b84306f72007f36f2618a5634494";
 const RatioFeed = "0xFd73Be536503B5Aa80Bf99D1Fd65b1306c69B191";
+let InceptionTokenAddr = ""; // to deploy the new one leave empty
 let InceptionLibrary = "0xA2aeaf634aD12c51aAC17E656C155866ad9423b1"; // to deploy the new one leave empty
 let MellowRestakerAddr = "0xa50299e123f6d18fa64B53c5fCA1E1e08bA2251b"; // to deploy the new one leave empty
 let SymbioticRestakerAddr = "0x8Fe10F5E170DE85dD0AB1b69e5Ce522a625cA137"; // to deploy the new one leave empty
@@ -52,9 +53,16 @@ async function getDeployer() {
 }
 
 async function deployInceptionToken() {
-  const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
-  const iToken = await upgrades.deployProxy(iTokenFactory, [TokenName, TokenSymbol], { kind: "transparent" });
-  await iToken.waitForDeployment();
+  let iToken;
+
+  if (InceptionTokenAddr) {
+    iToken = await ethers.getContractAt("InceptionToken", InceptionTokenAddr);
+  } else {
+    // deploy new inception token
+    const iTokenFactory = await hre.ethers.getContractFactory("InceptionToken");
+    iToken = await upgrades.deployProxy(iTokenFactory, [TokenName, TokenSymbol], { kind: "transparent" });
+    await iToken.waitForDeployment();
+  }
 
   const iTokenAddress = await iToken.getAddress();
   console.log(`InceptionToken address: ${iTokenAddress}`);
