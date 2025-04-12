@@ -165,8 +165,8 @@ contract ISymbioticRestaker is
         return total;
     }
 
-    function claimableAmount() external pure returns (uint256) {
-        return 0;
+    function claimableAmount() external view returns (uint256) {
+        return _asset.balanceOf(address(this));
     }
 
     function addVault(address vaultAddress) external onlyOwner {

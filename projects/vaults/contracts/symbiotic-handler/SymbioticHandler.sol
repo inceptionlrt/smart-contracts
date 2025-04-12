@@ -193,6 +193,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
             getTotalDelegated() +
             totalAssets() +
             symbioticRestaker.pendingWithdrawalAmount() +
+            symbioticRestaker.claimableAmount() +
             getPendingWithdrawalAmountFromMellow() -
             depositBonusAmount;
     }
@@ -255,9 +256,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         emit SymbioticRestakerAdded(newSymbioticRestaker);
     }
 
-    function setMellowRestaker(
-        address newMellowRestaker
-    ) external onlyOwner {
+    function setMellowRestaker(address newMellowRestaker) external onlyOwner {
         require(newMellowRestaker != address(0), InvalidAddress());
         require(Address.isContract(newMellowRestaker), NotContract());
 
