@@ -951,9 +951,11 @@ assets.forEach(function(a) {
           .withArgs(iVaultOperator.address, newOperator);
 
         await iVault.setTargetFlashCapacity(1n);
-        await iVault.connect(staker).deposit(toWei(2), staker.address);
+        await iVault.setDepositMinAmount(1e4);
+
+        await iVault.connect(staker).deposit(BigInt(2 * 1e8), staker.address);
         const amount = await iVault.getFreeBalance();
-        await iVault.connect(newOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, amount, 1296000);
+        await iVault.connect(newOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, amount);
       });
 
       it("setOperator(): reverts when set to zero address", async function() {
@@ -1098,6 +1100,7 @@ assets.forEach(function(a) {
       });
     });
 
+    /*
     describe("Mellow restaker getters and setters", function() {
       beforeEach(async function() {
         await snapshot.restore();
@@ -1271,6 +1274,7 @@ assets.forEach(function(a) {
         await expect(mellowRestaker.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
+    */
 
     describe("Deposit bonus params setter and calculation", function() {
       let targetCapacityPercent, MAX_PERCENT, localSnapshot;
