@@ -75,9 +75,9 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        withdrawMinAmount = 1e16;
-        depositMinAmount = 1e16;
-        flashMinAmount = 1e16;
+        withdrawMinAmount = 1e4;
+        depositMinAmount = 1e4;
+        flashMinAmount = 1e4;
 
         protocolFee = 50 * 1e8;
 
