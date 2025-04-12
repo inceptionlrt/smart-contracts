@@ -1731,7 +1731,7 @@ assets.forEach(function (a) {
 
         const amount = await iVault.getFreeBalance();
         await iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, amount);
-        await a.addRewardsMellowVault(BigInt(1e8), symbioticVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(BigInt(1e8), symbioticRestaker.address);
 
         ratio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -2756,7 +2756,7 @@ assets.forEach(function (a) {
 
         await iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, freeBalance);
 
-        await a.addRewardsMellowVault(BigInt(1e8), symbioticVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(BigInt(1e8), symbioticRestaker.address);
 
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -2878,7 +2878,7 @@ assets.forEach(function (a) {
         const freeBalance = await iVault.getFreeBalance();
 
         await iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, freeBalance);
-        await a.addRewardsMellowVault(BigInt(1e8), symbioticVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(BigInt(1e8), symbioticRestaker.address);
 
         const calculatedRatio = await calculateRatio(iVault, iToken);
 
@@ -3197,7 +3197,7 @@ assets.forEach(function (a) {
         await iVault
           .connect(iVaultOperator)
           .delegateToSymbioticVault(symbioticVaults[0].vaultAddress, freeBalance / 2n);
-        await a.addRewardsMellowVault(BigInt(1e8), symbioticVaults[0].vaultAddress);
+        await a.addRewardsMellowVault(BigInt(1e8), symbioticRestaker.address);
 
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
