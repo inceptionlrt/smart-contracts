@@ -367,34 +367,36 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        uint256 targetCapacity = _getTargetCapacity();
-        return
-            InceptionLibrary.calculateDepositBonus(
-                amount,
-                getFlashCapacity(),
-                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
-                optimalBonusRate,
-                maxBonusRate,
-                targetCapacity
-            );
+        return 0;
+//        uint256 targetCapacity = _getTargetCapacity();
+//
+//        return
+//            InceptionLibrary.calculateDepositBonus(
+//                amount,
+//                getFlashCapacity(),
+//                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+//                optimalBonusRate,
+//                maxBonusRate,
+//                targetCapacity
+//            );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
-        uint256 capacity = getFlashCapacity();
-        if (amount > capacity) revert InsufficientCapacity(capacity);
-        uint256 targetCapacity = _getTargetCapacity();
-        return
-            InceptionLibrary.calculateWithdrawalFee(
-                amount,
-                capacity,
-                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-                optimalWithdrawalRate,
-                maxFlashFeeRate,
-                targetCapacity
-            );
+//        uint256 capacity = getFlashCapacity();
+//        if (amount > capacity) revert InsufficientCapacity(capacity);
+//        uint256 targetCapacity = _getTargetCapacity();
+//        return
+//            InceptionLibrary.calculateWithdrawalFee(
+//                amount,
+//                capacity,
+//                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+//                optimalWithdrawalRate,
+//                maxFlashFeeRate,
+//                targetCapacity
+//            );
     }
 
     /*//////////////////////////////
