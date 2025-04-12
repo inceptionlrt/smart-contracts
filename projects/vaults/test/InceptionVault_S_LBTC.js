@@ -11,7 +11,7 @@ const {
   mineBlocks,
   randomBIMax,
   randomAddress,
-  e18,
+  e18, e28,
   day,
 } = require("./helpers/utils.js");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
@@ -129,7 +129,7 @@ const symbioticVaults = [
   {
     name: "MEV LBTC Vault",
     vaultAddress: "0xdC47953c816531a8CA9E1D461AB53687d48EEA26",
-  }
+  },
 ];
 
 const initVault = async a => {
@@ -211,7 +211,7 @@ const initVault = async a => {
   console.log("- Ratio feed");
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
-  await ratioFeed.updateRatioBatch([iToken.address], [e18]); //Set initial ratio e18
+  await ratioFeed.updateRatioBatch([iToken.address], [e28]); //Set initial ratio e18
   ratioFeed.address = await ratioFeed.getAddress();
 
   console.log("- InceptionLibrary");
@@ -309,7 +309,10 @@ assets.forEach(function(a) {
       });
 
       it("Initial stats", async function() {
-        expect(await iVault.ratio()).to.be.eq(e18);
+        const ratio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
+
+        expect(await iVault.ratio()).to.be.eq(e28); //e28
         expect(await iVault.totalAssets()).to.be.eq(0n);
         expect(await iVault.getTotalDeposited()).to.be.eq(0n);
         expect(await iVault.getTotalDelegated()).to.be.eq(0n);
@@ -319,7 +322,7 @@ assets.forEach(function(a) {
 
       it("User can deposit to iVault", async function() {
         totalDeposited += BigInt(20 * 1e8);
-        const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
+        const expectedShares = toWei(20);
         const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
         const receipt = await tx.wait();
         const events = receipt.logs?.filter(e => e.eventName === "Deposit");
@@ -333,7 +336,7 @@ assets.forEach(function(a) {
         expect(await iVault.totalAssets()).to.be.closeTo(totalDeposited, transactErr);
         expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
         expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, 1n);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e28, 1n);
       });
 
       it("Delegate to symbioticVault#1", async function() {
@@ -370,7 +373,7 @@ assets.forEach(function(a) {
         expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr);
         expect(symbioticBalance).to.be.gte(amount / 2n);
         // expect(symbioticBalance2).to.be.eq(0n);
-        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e18, ratioErr);
+        expect(await calculateRatio(iVault, iToken)).to.be.closeTo(e28, ratioErr);
       });
 
       // it("Add new symbioticVault", async function() {
@@ -458,7 +461,7 @@ assets.forEach(function(a) {
       it("Update ratio after all shares burn", async function() {
         const calculatedRatio = await calculateRatio(iVault, iToken);
         console.log(`Calculated ratio:\t\t\t${calculatedRatio.format()}`);
-        expect(calculatedRatio).to.be.eq(e18); //Because all shares have been burnt at this point
+        expect(calculatedRatio).to.be.eq(e28); //Because all shares have been burnt at this point
 
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         console.log(`iVault ratio after:\t\t\t${(await iVault.ratio()).format()}`);
@@ -630,9 +633,12 @@ assets.forEach(function(a) {
       });
 
       it("Initial ratio is 1e18", async function() {
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+
         const ratio = await iVault.ratio();
         console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
-        expect(ratio).to.be.eq(e18);
+        expect(ratio).to.be.eq(e28);
       });
 
       it("Initial delegation is 0", async function() {
@@ -642,7 +648,7 @@ assets.forEach(function(a) {
       it("Deposit to Vault", async function() {
         deposited = BigInt(10 * 1e8);
         freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
-        const expectedShares = (deposited * e18) / (await iVault.ratio());
+        const expectedShares = BigInt(10 * 1e18);
         const tx = await iVault.connect(staker).deposit(deposited, staker.address);
         const receipt = await tx.wait();
         const events = receipt.logs?.filter(e => e.eventName === "Deposit");
@@ -660,7 +666,7 @@ assets.forEach(function(a) {
         expect(await iVault.getFreeBalance()).to.be.closeTo(freeBalance, transactErr);
         expect(await iVault.getTotalDeposited()).to.be.closeTo(deposited, transactErr);
         expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-        expect(await iVault.ratio()).to.be.eq(e18);
+        expect(await iVault.ratio()).to.be.eq(e28);
       });
 
       it("Delegate freeBalance", async function() {
@@ -682,7 +688,7 @@ assets.forEach(function(a) {
         expect(delegatedTo).to.be.closeTo(amount, transactErr);
         expect(await iVault.getFreeBalance()).to.be.closeTo(0n, transactErr);
         expect(await iVault.getFlashCapacity()).to.be.closeTo(expectedFlashCapacity, transactErr);
-        expect(await iVault.ratio()).closeTo(e18, ratioErr);
+        expect(await iVault.ratio()).closeTo(e28, ratioErr);
       });
 
       it("Update asset ratio", async function() {
@@ -1390,7 +1396,7 @@ assets.forEach(function(a) {
         amounts.forEach(function(amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(10 * 1e8)
+            const deposited = BigInt(10 * 1e8);
             targetCapacityPercent = e18;
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);

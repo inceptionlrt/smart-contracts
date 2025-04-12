@@ -38,9 +38,11 @@ const calculateRatio = async (vault, token) => {
     denominator = totalDeposited - totalAmountToWithdraw;
   }
 
+  const e28 = 10000_000_000_000_000_000_000_000_000n;
+
   if (denominator === 0n || totalSupply === 0n) {
     console.log("iToken supply is 0, so the ration is going to be 1e18");
-    return e18;
+    return e28;
   }
 
   const ratio = (totalSupply * e18) / denominator;
@@ -140,6 +142,7 @@ async function sleep(msec) {
 const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
+const e28 = 10000_000_000_000_000_000_000_000_000n;
 const e18 = 1000_000_000_000_000_000n;
 const e9 = 1000_000_000n;
 const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroAddress, 0, 1, [ethers.ZeroAddress], [0]];
@@ -163,5 +166,6 @@ module.exports = {
   randomAddress,
   format,
   e18,
+  e28,
   day,
 };
