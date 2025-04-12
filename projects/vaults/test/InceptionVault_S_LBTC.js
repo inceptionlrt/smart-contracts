@@ -3189,12 +3189,15 @@ assets.forEach(function (a) {
       beforeEach(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
-        await iVault.connect(staker3).deposit(randomBI(18), staker3.address);
+        await iVault.setDepositMinAmount(1e4);
+        await iVault.setWithdrawMinAmount(1e4);
+        await iVault.setFlashMinAmount(1e4);
+        await iVault.connect(staker3).deposit(randomBI(8), staker3.address);
         const freeBalance = await iVault.getFreeBalance();
         await iVault
           .connect(iVaultOperator)
-          .delegateToMellowVault(mellowVaults[0].vaultAddress, freeBalance / 2n, 1296000);
-        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+          .delegateToSymbioticVault(symbioticVaults[0].vaultAddress, freeBalance / 2n);
+        await a.addRewardsMellowVault(BigInt(1e8), symbioticVaults[0].vaultAddress);
 
         const calculatedRatio = await calculateRatio(iVault, iToken);
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -3209,21 +3212,21 @@ assets.forEach(function (a) {
         {
           name: "User amount < flash capacity",
           sharesOwner: () => staker,
-          deposited: randomBI(18),
+          deposited: randomBI(8),
           maxRedeem: async () => await iToken.balanceOf(staker),
         },
         {
           name: "User amount = flash capacity",
           sharesOwner: () => staker,
-          deposited: randomBI(18),
+          deposited: randomBI(8),
           delegated: async deposited => (await iVault.totalAssets()) - deposited,
           maxRedeem: async () => await iToken.balanceOf(staker),
         },
         {
           name: "User amount > flash capacity > 0",
           sharesOwner: () => staker,
-          deposited: randomBI(18),
-          delegated: async deposited => (await iVault.totalAssets()) - randomBI(17),
+          deposited: randomBI(8),
+          delegated: async deposited => (await iVault.totalAssets()) - randomBI(7),
           maxRedeem: async () => await iVault.convertToShares(await iVault.getFlashCapacity()),
         },
         {
@@ -3236,14 +3239,13 @@ assets.forEach(function (a) {
 
       async function prepareState(arg) {
         const sharesOwner = arg.sharesOwner();
-        console.log(sharesOwner.address);
         if (arg.deposited) {
           await iVault.connect(sharesOwner).deposit(arg.deposited, sharesOwner.address);
         }
 
         if (arg.delegated) {
           const delegated = await arg.delegated(arg.deposited);
-          await iVault.connect(iVaultOperator).delegateToMellowVault(mellowVaults[0].vaultAddress, delegated, 1296000);
+          await iVault.connect(iVaultOperator).delegateToSymbioticVault(symbioticVaults[0].vaultAddress, delegated);
         }
         return sharesOwner;
       }
@@ -3269,7 +3271,7 @@ assets.forEach(function (a) {
       });
 
       it("Reverts when iVault is paused", async function () {
-        await iVault.connect(staker).deposit(e18, staker.address);
+        await iVault.connect(staker).deposit(BigInt(1e8), staker.address);
         await iVault.pause();
         expect(await iVault.maxRedeem(staker)).to.be.eq(0n);
       });
