@@ -136,7 +136,15 @@ async function deployInceptionLib() {
 async function deployMellowRestaker(iVault) {
   const iVaultAddress = await iVault.getAddress();
 
-  if (!MellowRestakerAddr) {
+  if (MellowRestakerAddr) {
+    const mr = await ethers.getContractAt("IMellowRestaker", MellowRestakerAddr);
+
+    let tx = await mr.setVault(iVaultAddress);
+    await tx.wait();
+    console.log("MellowRestaker vault set");
+
+    return mr;
+  } else {
     const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
     const mr = await upgrades.deployProxy(mellowRestakerFactory,
       [MellowVaults, Asset, addresses.Operator, iVaultAddress], { kind: "transparent" },
@@ -151,21 +159,21 @@ async function deployMellowRestaker(iVault) {
     console.log("iVault mellow restaker set");
 
     return mr;
-  } else {
-    const mr = await ethers.getContractAt("IMellowRestaker", MellowRestakerAddr);
-
-    let tx = await mr.setVault(iVaultAddress);
-    await tx.wait();
-    console.log("MellowRestaker vault set");
-
-    return mr;
   }
 }
 
 async function deploySymbioticRestaker(iVault) {
   const iVaultAddress = await iVault.getAddress();
 
-  if (!SymbioticRestakerAddr) {
+  if (SymbioticRestakerAddr) {
+    const sr = await ethers.getContractAt("ISymbioticRestaker", SymbioticRestakerAddr);
+
+    let tx = await sr.setVault(iVaultAddress);
+    await tx.wait();
+    console.log("SymbioticRestaker vault set");
+
+    return sr;
+  } else {
     const symbioticRestakerFactory = await hre.ethers.getContractFactory("ISymbioticRestaker");
     const sr = await upgrades.deployProxy(symbioticRestakerFactory,
       [SymbioticVaults, iVaultAddress, Asset, addresses.Operator], { kind: "transparent" },
@@ -178,14 +186,6 @@ async function deploySymbioticRestaker(iVault) {
     let tx = await iVault.setSymbioticRestaker(srAddress);
     await tx.wait();
     console.log("iVault symbiotic restaker set");
-
-    return sr;
-  } else {
-    const sr = await ethers.getContractAt("ISymbioticRestaker", SymbioticRestakerAddr);
-
-    let tx = await sr.setVault(iVaultAddress);
-    await tx.wait();
-    console.log("SymbioticRestaker vault set");
 
     return sr;
   }
