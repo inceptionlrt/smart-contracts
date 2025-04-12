@@ -38,11 +38,11 @@ const calculateRatio = async (vault, token) => {
     denominator = totalDeposited - totalAmountToWithdraw;
   }
 
-  const e28 = 10000_000_000_000_000_000_000_000_000n;
+  // const e28 = 10000_000_000_000_000_000_000_000_000n;
 
   if (denominator === 0n || totalSupply === 0n) {
     console.log("iToken supply is 0, so the ration is going to be 1e18");
-    return e28;
+    return e18;
   }
 
   const ratio = (totalSupply * e18) / denominator;
