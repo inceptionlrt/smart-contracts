@@ -369,7 +369,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        return 0;
         //        uint256 targetCapacity = _getTargetCapacity();
         //
         //        return
@@ -381,13 +380,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         //                maxBonusRate,
         //                targetCapacity
         //            );
+        return 0;
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
-        return 0;
         //        uint256 capacity = getFlashCapacity();
         //        if (amount > capacity) revert InsufficientCapacity(capacity);
         //        uint256 targetCapacity = _getTargetCapacity();
@@ -400,6 +399,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         //                maxFlashFeeRate,
         //                targetCapacity
         //            );
+        return 0;
     }
 
     /*//////////////////////////////
