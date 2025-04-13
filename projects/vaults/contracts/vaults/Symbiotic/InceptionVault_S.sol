@@ -11,8 +11,6 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "hardhat/console.sol";
-
 /// @author The InceptionLRT team
 /// @title The InceptionVault_S contract
 /// @notice Aims to maximize the profit of asset.
