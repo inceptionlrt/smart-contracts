@@ -73,20 +73,9 @@ async function deployInceptionToken() {
 
 async function deployVault(iToken) {
   // deploy library if not exists
-  let inceptionLibAddress = InceptionLibrary;
-  if (!inceptionLibAddress) {
-    inceptionLibAddress = await deployInceptionLib();
-  }
-
-  let mellowRestakerAddr = MellowRestakerAddr;
-  if (!mellowRestakerAddr) {
-    mellowRestakerAddr = ethers.ZeroAddress;
-  }
-
-  let symbioticRestakerAddr = SymbioticRestakerAddr;
-  if (!symbioticRestakerAddr) {
-    symbioticRestakerAddr = ethers.ZeroAddress;
-  }
+  const inceptionLibAddress = InceptionLibrary || await deployInceptionLib();
+  const mellowRestakerAddr = MellowRestakerAddr || ethers.ZeroAddress;
+  const symbioticRestakerAddr = SymbioticRestakerAddr || ethers.ZeroAddress;
 
   const InceptionVaultFactory = await hre.ethers.getContractFactory(VaultFactory, {
     libraries: { InceptionLibrary: inceptionLibAddress },
@@ -104,7 +93,7 @@ async function deployVault(iToken) {
 
   await iVault.waitForDeployment();
   const iVaultAddress = await iVault.getAddress();
-  console.log(`InceptionVault address: ${iVaultAddress}`);
+  console.log(`Deployed InceptionVault address: ${iVaultAddress}`);
 
   // set flash cap
   let tx = await iVault.setTargetFlashCapacity(FlashCap);
@@ -129,7 +118,7 @@ async function deployInceptionLib() {
   await lib.waitForDeployment();
   const libAddress = await lib.getAddress();
 
-  console.log("InceptionLibrary address:", libAddress);
+  console.log("Deployed InceptionLibrary address:", libAddress);
   return libAddress;
 }
 
@@ -152,7 +141,7 @@ async function deployMellowRestaker(iVault) {
 
     await mr.waitForDeployment();
     const mrAddress = await mr.getAddress();
-    console.log(`MellowRestaker address: ${mrAddress}`);
+    console.log(`Deployed MellowRestaker address: ${mrAddress}`);
 
     let tx = await iVault.setMellowRestaker(mrAddress);
     await tx.wait();
@@ -181,7 +170,7 @@ async function deploySymbioticRestaker(iVault) {
 
     await sr.waitForDeployment();
     const srAddress = await sr.getAddress();
-    console.log(`SymbioticRestaker address: ${srAddress}`);
+    console.log(`Deployed SymbioticRestaker address: ${srAddress}`);
 
     let tx = await iVault.setSymbioticRestaker(srAddress);
     await tx.wait();
