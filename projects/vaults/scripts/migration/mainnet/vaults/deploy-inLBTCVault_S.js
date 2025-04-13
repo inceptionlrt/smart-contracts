@@ -1,6 +1,7 @@
 const { addresses } = require("../config-addresses");
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 // ===================VAULT CONFIGURATION===================
 
@@ -128,9 +129,9 @@ async function deployMellowRestaker(iVault) {
   if (MellowRestakerAddr) {
     const mr = await ethers.getContractAt("IMellowRestaker", MellowRestakerAddr);
 
-    let tx = await mr.setVault(iVaultAddress);
-    await tx.wait();
-    console.log("MellowRestaker vault set");
+    // let tx = await mr.setVault(iVaultAddress);
+    // await tx.wait();
+    // console.log("MellowRestaker vault set");
 
     return mr;
   } else {
@@ -157,9 +158,9 @@ async function deploySymbioticRestaker(iVault) {
   if (SymbioticRestakerAddr) {
     const sr = await ethers.getContractAt("ISymbioticRestaker", SymbioticRestakerAddr);
 
-    let tx = await sr.setVault(iVaultAddress);
-    await tx.wait();
-    console.log("SymbioticRestaker vault set");
+    // let tx = await sr.setVault(iVaultAddress);
+    // await tx.wait();
+    // console.log("SymbioticRestaker vault set");
 
     return sr;
   } else {
