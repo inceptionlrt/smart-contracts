@@ -66,6 +66,7 @@ contract ISymbioticRestaker is
             if (IVault(vaults[i]).collateral() != address(asset))
                 revert InvalidCollateral();
             if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
+
             _symbioticVaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
@@ -166,7 +167,7 @@ contract ISymbioticRestaker is
     }
 
     function claimableAmount() external view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        return 0;
     }
 
     function addVault(address vaultAddress) external onlyOwner {

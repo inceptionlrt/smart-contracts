@@ -193,7 +193,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
             getTotalDelegated() +
             totalAssets() +
             symbioticRestaker.pendingWithdrawalAmount() +
-            symbioticRestaker.claimableAmount() +
             getPendingWithdrawalAmountFromMellow() -
             depositBonusAmount;
     }
