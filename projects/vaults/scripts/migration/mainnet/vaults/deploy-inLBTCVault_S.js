@@ -199,7 +199,7 @@ async function saveAddresses(deployer, iVault, iToken, mellowRestaker, symbiotic
   console.log("================DEPLOYED DATA================");
   console.log(iAddresses);
   console.log("=============================================");
-  console.log(`deployed spent: ${deployer.initBalance - await deployer.provider.getBalance(deployer.address)}`);
+  console.log(`deployed spent: ${ethers.formatEther(deployer.initBalance - await deployer.provider.getBalance(deployer.address))} ETH`);
 }
 
 main()
