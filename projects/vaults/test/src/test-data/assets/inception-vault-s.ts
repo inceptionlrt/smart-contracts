@@ -3,6 +3,9 @@ import { impersonateWithEth, toWei } from '../../../helpers/utils';
 const { ethers } = hardhat;
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 
+const donorAddress = '0x43594da5d6A03b2137a04DF5685805C676dEf7cB';
+const stETHAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
+
 export const stETH = {
   assetName: "stETH",
   assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
@@ -13,8 +16,8 @@ export const stETH = {
   transactErr: 5n,
   blockNumber: 21850700, //21687985,
   impersonateStaker: async function (staker, iVault) {
-    const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
-    const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
+    const donor = await impersonateWithEth(donorAddress, toWei(1));
+    const stEth = await ethers.getContractAt("stETH", stETHAddress);
     const stEthAmount = toWei(1000);
     await stEth.connect(donor).approve(this.assetAddress, stEthAmount);
 
@@ -29,8 +32,8 @@ export const stETH = {
     return staker;
   },
   addRewardsMellowVault: async function (amount, mellowVault) {
-    const donor = await impersonateWithEth("0x43594da5d6A03b2137a04DF5685805C676dEf7cB", toWei(1));
-    const stEth = await ethers.getContractAt("stETH", "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
+    const donor = await impersonateWithEth(donorAddress, toWei(1));
+    const stEth = await ethers.getContractAt("stETH", stETHAddress);
     await stEth.connect(donor).approve(this.assetAddress, amount);
 
     const wstEth = await ethers.getContractAt("IWSteth", this.assetAddress);
@@ -44,12 +47,11 @@ export const stETH = {
     const slasherAddressStorageIndex = 3;
 
     const [deployer] = await ethers.getSigners();
-    deployer.address = await deployer.getAddress();
 
     await helpers.setStorageAt(
       await symbioticVault.getAddress(),
       slasherAddressStorageIndex,
-      ethers.AbiCoder.defaultAbiCoder().encode(["address"], [deployer.address]),
+      ethers.AbiCoder.defaultAbiCoder().encode(["address"], [await deployer.getAddress()]),
     );
 
     await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
