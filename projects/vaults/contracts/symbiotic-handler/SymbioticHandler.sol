@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {ISymbioticHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
 import {IIMellowRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowRestaker.sol";
+import {IIMellowMultiVaultRestaker} from "../interfaces/symbiotic-vault/restakers/IIMellowMultiVaultRestaker.sol";
 import {IISymbioticRestaker} from "../interfaces/symbiotic-vault/restakers/IISymbioticRestaker.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
@@ -42,7 +43,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     IISymbioticRestaker public symbioticRestaker;
 
-    uint256[50 - 9] private __gap;
+    IIMellowMultiVaultRestaker public mellowMultiVaultRestaker;
+
+    /// TODO
+    uint256[50 - 10] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
@@ -78,6 +82,15 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         mellowRestaker.delegateMellow(amount, mellowVault, referral);
     }
 
+    function _depositAssetIntoMellowMultiVault(
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) internal {
+        _asset.safeIncreaseAllowance(address(mellowMultiVaultRestaker), amount);
+        mellowMultiVaultRestaker.delegate(vault, amount, _data);
+    }
+
     function _depositAssetIntoSymbiotic(
         uint256 amount,
         address vault
@@ -90,6 +103,21 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ////// Withdrawal functions //////
     ///////////////////////////////*/
 
+    /// @dev TODO
+    function undelegate(
+        address adapter,
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external whenNotPaused nonReentrant onlyOperator {
+        /// TODO change the error name
+        if (adapter != address(mellowMultiVaultRestaker)) revert NullParams();
+        if (vault == address(0) || amount == 0) revert NullParams();
+
+        amount = mellowMultiVaultRestaker.withdraw(vault, amount, _data);
+        emit StartMellowWithdrawal(address(mellowRestaker), amount);
+    }
+
     /// @dev performs creating a withdrawal request from Mellow Protocol
     /// @dev requires a specific amount to withdraw
     function undelegateFromMellow(
@@ -100,7 +128,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         if (amount == 0) revert ValueZero();
         amount = mellowRestaker.withdrawMellow(mellowVault, amount);
         emit StartMellowWithdrawal(address(mellowRestaker), amount);
-        return;
     }
 
     /// @dev performs creating a withdrawal request from Symbiotic Protocol
@@ -114,7 +141,6 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         amount = symbioticRestaker.withdraw(vault, amount);
 
         emit StartSymbioticWithdrawal(address(symbioticRestaker), amount);
-        return;
     }
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
@@ -128,6 +154,22 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
         uint256 withdrawnAmount = mellowRestaker
             .claimMellowWithdrawalCallback();
+
+        emit WithdrawalClaimed(withdrawnAmount);
+
+        _updateEpoch(availableBalance + withdrawnAmount);
+    }
+
+    /// @dev TODO update the description
+    function claim(
+        address adapter,
+        bytes[] calldata _data
+    ) public onlyOperator whenNotPaused nonReentrant {
+        if (adapter != address(mellowMultiVaultRestaker)) revert NullParams();
+
+        uint256 availableBalance = getFreeBalance();
+
+        uint256 withdrawnAmount = mellowMultiVaultRestaker.claim(_data);
 
         emit WithdrawalClaimed(withdrawnAmount);
 
@@ -192,15 +234,16 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         return
             getTotalDelegated() +
             totalAssets() +
-            symbioticRestaker.pendingWithdrawalAmount() +
-            getPendingWithdrawalAmountFromMellow() -
+            //symbioticRestaker.pendingWithdrawalAmount() +
+            getPendingWithdrawalAmountFromMellowMultiVault() -
+            //  getPendingWithdrawalAmountFromMellow() -
             depositBonusAmount;
     }
 
     function getTotalDelegated() public view returns (uint256) {
-        return
-            mellowRestaker.getTotalDeposited() +
-            symbioticRestaker.getTotalDeposited();
+        return mellowMultiVaultRestaker.getTotalDeposited();
+        // mellowRestaker.getTotalDeposited() +
+        // symbioticRestaker.getTotalDeposited();
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -211,6 +254,17 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev returns the total amount of pending withdrawals from Mellow LRT
     function getPendingWithdrawalAmountFromMellow()
+        public
+        view
+        returns (uint256)
+    {
+        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
+        uint256 mellowClaimable = mellowRestaker.claimableWithdrawalAmount();
+        uint256 claimableAmount = mellowRestaker.claimableAmount();
+        return pendingWithdrawal + claimableAmount + mellowClaimable;
+    }
+
+    function getPendingWithdrawalAmountFromMellowMultiVault()
         public
         view
         returns (uint256)
@@ -255,13 +309,24 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         emit SymbioticRestakerAdded(newSymbioticRestaker);
     }
 
-    function setMellowRestaker(
-        address newMellowRestaker
-    ) external onlyOwner {
+    function setMellowRestaker(address newMellowRestaker) external onlyOwner {
         require(newMellowRestaker != address(0), InvalidAddress());
         require(Address.isContract(newMellowRestaker), NotContract());
 
         mellowRestaker = IIMellowRestaker(newMellowRestaker);
         emit MellowRestakerAdded(newMellowRestaker);
     }
+
+    function setMellowMultiVaultRestaker(
+        address newMellowMultiVaultRestaker
+    ) external onlyOwner {
+        require(newMellowMultiVaultRestaker != address(0), InvalidAddress());
+        require(Address.isContract(newMellowMultiVaultRestaker), NotContract());
+
+        mellowMultiVaultRestaker = IIMellowMultiVaultRestaker(
+            newMellowMultiVaultRestaker
+        );
+        /// TODO add a specific event
+    }
 }
+

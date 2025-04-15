@@ -179,6 +179,24 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ////// Delegation functions //////
     ///////////////////////////////*/
 
+    /// @dev Sends underlying to a single Mellow Multi Vault
+    function delegate(
+        address adapter,
+        address vault,
+        uint256 amount,
+        bytes[] calldata _data
+    ) external nonReentrant whenNotPaused onlyOperator {
+        /// TODO change the error name
+        if (adapter != address(mellowMultiVaultRestaker)) revert NullParams();
+        if (vault == address(0) || amount == 0) revert NullParams();
+
+        _beforeDeposit(amount);
+        _depositAssetIntoMellowMultiVault(vault, amount, _data);
+
+        emit DelegatedTo(address(symbioticRestaker), vault, amount);
+        return;
+    }
+
     /// @dev Sends underlying to a single symbiotic vault
     function delegateToSymbioticVault(
         address vault,
@@ -494,13 +512,14 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
-
         uint256 amount = convertToAssets(shares);
         uint256 capacity = getFlashCapacity();
         uint256 targetCapacity = _getTargetCapacity();
         uint256 flash = amount <= capacity ? capacity : amount;
 
-        return amount - InceptionLibrary.calculateWithdrawalFee(
+        return
+            amount -
+            InceptionLibrary.calculateWithdrawalFee(
                 amount,
                 flash,
                 (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
@@ -647,3 +666,4 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _unpause();
     }
 }
+
