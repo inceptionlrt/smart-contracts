@@ -10,3 +10,4 @@ cache
 artifacts
 projects/vaults/storageLayout
 projects/vaults/.solhint.json
+projects/vaults/.vscode/settings.json
