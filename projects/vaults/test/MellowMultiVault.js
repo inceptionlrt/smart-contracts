@@ -3,7 +3,8 @@ const { ZeroAddress } = require("ethers");
 const { ethers, upgrades, network } = require("hardhat");
 const { expect } = require("chai");
 const { impersonateWithEth, calculateRatio, toWei, e18 } = require("./helpers/utils.js");
-const { randomBI, day, randomAddress } = require("./helpers/utils");
+const { randomBI, day, randomAddress, randomBIMax, getRandomStaker } = require("./helpers/utils");
+const { mellow } = require("../typechain-types/contracts/tests");
 
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
@@ -1709,6 +1710,1646 @@ assets.forEach(function(a) {
           iVault,
           "ExceededMaxMint",
         );
+      });
+    });
+
+    describe("Deposit with bonus for replenish", function () {
+      const states = [
+        {
+          name: "deposit bonus = 0",
+          withBonus: false,
+        },
+        {
+          name: "deposit bonus > 0",
+          withBonus: true,
+        },
+      ];
+
+      const amounts = [
+        {
+          name: "for the first time",
+          predepositAmount: targetCapacity => 0n,
+          amount: targetCapacity => randomBIMax(targetCapacity / 4n) + targetCapacity / 4n,
+          receiver: () => staker.address,
+        },
+        {
+          name: "more",
+          predepositAmount: targetCapacity => targetCapacity / 3n,
+          amount: targetCapacity => randomBIMax(targetCapacity / 3n),
+          receiver: () => staker.address,
+        },
+        {
+          name: "up to target cap",
+          predepositAmount: targetCapacity => targetCapacity / 10n,
+          amount: targetCapacity => (targetCapacity * 9n) / 10n,
+          receiver: () => staker.address,
+        },
+        {
+          name: "all rewards",
+          predepositAmount: targetCapacity => 0n,
+          amount: targetCapacity => targetCapacity,
+          receiver: () => staker.address,
+        },
+        {
+          name: "up to target cap and above",
+          predepositAmount: targetCapacity => targetCapacity / 10n,
+          amount: targetCapacity => targetCapacity,
+          receiver: () => staker.address,
+        },
+        {
+          name: "above target cap",
+          predepositAmount: targetCapacity => targetCapacity,
+          amount: targetCapacity => randomBI(19),
+          receiver: () => staker.address,
+        },
+      ];
+
+      states.forEach(function (state) {
+        let localSnapshot;
+        const targetCapacityPercent = e18;
+        const targetCapacity = e18;
+        it(`---Prepare state: ${state.name}`, async function () {
+          await snapshot.restore();
+          await iVault.setTargetFlashCapacity(1n);
+          const deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
+          if (state.withBonus) {
+            await iVault.setTargetFlashCapacity(targetCapacityPercent);
+            await iVault.connect(staker3).deposit(toWei(1.5), staker3.address);
+            const balanceOf = await iToken.balanceOf(staker3.address);
+            await iVault.connect(staker3).flashWithdraw(balanceOf, staker3.address);
+            await iVault.setTargetFlashCapacity(1n);
+          }
+
+          await iVault.connect(staker3).deposit(deposited, staker3.address);
+          console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
+          console.log(`Deposit bonus:\t\t${(await iVault.depositBonusAmount()).format()}`);
+          localSnapshot = await helpers.takeSnapshot();
+        });
+
+        it("Max mint and deposit", async function () {
+          const stakerBalance = await asset.balanceOf(staker);
+          const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
+          const realBonus = await iVault.depositBonusAmount();
+          const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
+          expect(await iVault.maxMint(staker)).to.be.eq(await iVault.convertToShares(stakerBalance + bonus));
+          expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
+        });
+
+        amounts.forEach(function (arg) {
+          it(`Deposit ${arg.name}`, async function () {
+            if (localSnapshot) {
+              await localSnapshot.restore();
+            } else {
+              expect(false).to.be.true("Can not restore local snapshot");
+            }
+
+            const flashCapacityBefore = arg.predepositAmount(targetCapacity);
+            const freeBalance = await iVault.getFreeBalance();
+            await iVault
+              .connect(iVaultOperator)
+              .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance - flashCapacityBefore, emptyBytes);
+            await iVault.setTargetFlashCapacity(targetCapacityPercent);
+            await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+            const calculatedRatio = await calculateRatio(iVault, iToken);
+            await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+
+            const ratioBefore = await iVault.ratio();
+            let availableBonus = await iVault.depositBonusAmount();
+            const receiver = arg.receiver();
+            const stakerSharesBefore = await iToken.balanceOf(receiver);
+            const totalDepositedBefore = await iVault.getTotalDeposited();
+            const totalAssetsBefore = await iVault.totalAssets();
+            console.log(`Target capacity:\t\t${targetCapacity.format()}`);
+            console.log(`Flash capacity before:\t${flashCapacityBefore.format()}`);
+
+            const amount = await arg.amount(targetCapacity);
+            console.log(`Amount:\t\t\t\t\t${amount.format()}`);
+            const calculatedBonus = await iVault.calculateDepositBonus(amount);
+            console.log(`Calculated bonus:\t\t${calculatedBonus.format()}`);
+            console.log(`Available bonus:\t\t${availableBonus.format()}`);
+            const expectedBonus = calculatedBonus <= availableBonus ? calculatedBonus : availableBonus;
+            availableBonus -= expectedBonus;
+            console.log(`Expected bonus:\t\t\t${expectedBonus.format()}`);
+            const convertedShares = await iVault.convertToShares(amount + expectedBonus);
+            const expectedShares = ((amount + expectedBonus) * (await iVault.ratio())) / e18;
+            const previewShares = await iVault.previewDeposit(amount);
+
+            const tx = await iVault.connect(staker).deposit(amount, receiver);
+            const receipt = await tx.wait();
+            const depositEvent = receipt.logs?.filter(e => e.eventName === "Deposit");
+            expect(depositEvent.length).to.be.eq(1);
+            expect(depositEvent[0].args["sender"]).to.be.eq(staker.address);
+            expect(depositEvent[0].args["receiver"]).to.be.eq(receiver);
+            expect(depositEvent[0].args["amount"]).to.be.closeTo(amount, transactErr);
+            expect(depositEvent[0].args["iShares"] - expectedShares).to.be.closeTo(0, transactErr);
+            //DepositBonus event
+            expect(receipt.logs.find(l => l.eventName === "DepositBonus")?.args.amount || 0n).to.be.closeTo(
+              expectedBonus,
+              transactErr,
+            );
+
+            const stakerSharesAfter = await iToken.balanceOf(receiver);
+            const totalDepositedAfter = await iVault.getTotalDeposited();
+            const totalAssetsAfter = await iVault.totalAssets();
+            const flashCapacityAfter = await iVault.getFlashCapacity();
+            const ratioAfter = await iVault.ratio();
+            console.log(`Ratio after:\t\t\t${ratioAfter.format()}`);
+            console.log(`Bonus after:\t\t\t${availableBonus.format()}`);
+
+            expect(stakerSharesAfter - stakerSharesBefore).to.be.closeTo(expectedShares, transactErr);
+            expect(stakerSharesAfter - stakerSharesBefore).to.be.closeTo(convertedShares, transactErr);
+
+            expect(totalDepositedAfter - totalDepositedBefore).to.be.closeTo(amount + expectedBonus, transactErr);
+            expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(amount, transactErr); //Everything stays on iVault after deposit
+            expect(flashCapacityAfter).to.be.closeTo(flashCapacityBefore + amount + expectedBonus, transactErr);
+            expect(ratioAfter).to.be.closeTo(ratioBefore, ratioErr); //Ratio stays the same
+            expect(previewShares).to.be.eq(stakerSharesAfter - stakerSharesBefore); //Ratio stays the same
+          });
+        });
+      });
+    });
+
+    describe("Delegate to mellow vault", function () {
+      let ratio, firstDeposit;
+
+      beforeEach(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker3).deposit(e18, staker3.address);
+        firstDeposit = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, firstDeposit, emptyBytes);
+        await a.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+        ratio = await iVault.ratio();
+        console.log(`Initial ratio: ${ratio.format()}`);
+      });
+
+      const args = [
+        {
+          name: "random amounts ~ e18",
+          depositAmount: async () => toWei(1),
+        },
+        {
+          name: "amounts which are close to min",
+          depositAmount: async () => (await iVault.withdrawMinAmount()) + 1n,
+        },
+      ];
+
+      args.forEach(function (arg) {
+        it(`Deposit and delegate ${arg.name} many times`, async function () {
+          await iVault.setTargetFlashCapacity(1n);
+          let totalDelegated = 0n;
+          const count = 10;
+          for (let i = 0; i < count; i++) {
+            const deposited = await arg.depositAmount();
+            await iVault.connect(staker).deposit(deposited, staker.address);
+            const delegated = await iVault.getFreeBalance();
+            await iVault
+              .connect(iVaultOperator)
+              .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, delegated, emptyBytes);
+
+            totalDelegated += deposited;
+          }
+          console.log(`Final ratio:\t${(await iVault.ratio()).format()}`);
+          console.log(`Total delegated:\t${totalDelegated.format()}`);
+
+          const balanceExpected = (totalDelegated * ratio) / e18;
+          const totalSupplyExpected = balanceExpected + firstDeposit;
+          const err = BigInt(count) * transactErr * 2n;
+
+          const balanceAfter = await iToken.balanceOf(staker.address);
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+          const totalDelegatedAfter = await iVault.getTotalDelegated();
+          const totalDelegatedToAfter = await iVault.getDelegatedToMellowMultiVault(mellowVaults[0].vaultAddress);
+          const totalSupplyAfter = await iToken.totalSupply();
+          const totalAssetsAfter = await iVault.totalAssets();
+          console.log(`Staker balance after: ${balanceAfter.format()}`);
+          console.log(`Total deposited after: ${totalDepositedAfter.format()}`);
+          console.log(`Total delegated after: ${totalDelegatedAfter.format()}`);
+          console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
+          console.log(`Total assets after: ${totalAssetsAfter.format()}`);
+
+          expect(balanceAfter - balanceExpected).to.be.closeTo(0, err);
+          expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
+          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
+        });
+      });
+
+      const args2 = [
+        {
+          name: "by the same staker",
+          staker: async () => staker,
+        },
+        {
+          name: "by different stakers",
+          staker: async () => await getRandomStaker(iVault, asset, staker3, toWei(1)),
+        },
+      ];
+
+      args2.forEach(function (arg) {
+        it(`Deposit many times and delegate once ${arg.name}`, async function () {
+          await iVault.setTargetFlashCapacity(1n);
+          let totalDeposited = 0n;
+          const count = 10;
+          for (let i = 0; i < count; i++) {
+            const staker = await arg.staker();
+            const deposited = await randomBI(18);
+            await iVault.connect(staker).deposit(deposited, staker.address);
+            totalDeposited += deposited;
+          }
+          const totalDelegated = await iVault.getFreeBalance();
+          await iVault
+            .connect(iVaultOperator)
+            .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, totalDelegated, emptyBytes);
+
+          console.log(`Final ratio:\t${await iVault.ratio()}`);
+          console.log(`Total deposited:\t${totalDeposited.format()}`);
+          console.log(`Total delegated:\t${totalDelegated.format()}`);
+
+          const balanceExpected = (totalDelegated * ratio) / e18;
+          const totalSupplyExpected = balanceExpected + firstDeposit;
+          const err = BigInt(count) * transactErr * 2n;
+
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+          const totalDelegatedAfter = await iVault.getTotalDelegated();
+          const totalDelegatedToAfter = await iVault.getDelegatedToMellowMultiVault(mellowVaults[0].vaultAddress);
+          const totalSupplyAfter = await iToken.totalSupply();
+          const totalAssetsAfter = await iVault.totalAssets();
+          console.log(`Total deposited after: ${totalDepositedAfter.format()}`);
+          console.log(`Total delegated after: ${totalDelegatedAfter.format()}`);
+          console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
+          console.log(`Total assets after: ${totalAssetsAfter.format()}`);
+
+          expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0n, err);
+          expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0n, err);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
+          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(count) * ratioErr);
+        });
+      });
+
+      const args3 = [
+        {
+          name: "to the same operator",
+          count: 10,
+          mellowVault: i => mellowVaults[0].vaultAddress,
+        },
+      ];
+
+      args3.forEach(function (arg) {
+        it(`Delegate many times ${arg.name}`, async function () {
+          await iVault.setTargetFlashCapacity(1n);
+          //Deposit by 2 stakers
+          const totalDelegated = toWei(60);
+          await iVault.connect(staker).deposit(totalDelegated / 2n, staker.address);
+          await iVault.connect(staker2).deposit(totalDelegated / 2n, staker2.address);
+          //Delegate
+          for (let i = 0; i < arg.count; i++) {
+            const taBefore = await iVault.totalAssets();
+            const mVault = arg.mellowVault(i);
+            console.log(`#${i} mellow vault: ${mVault}`);
+            const fb = await iVault.getFreeBalance();
+            const amount = fb / BigInt(arg.count - i);
+            await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mVault, amount, emptyBytes);
+
+            const taAfter = await iVault.totalAssets();
+            expect(taBefore - taAfter).to.be.closeTo(amount, transactErr);
+          }
+          console.log(`Final ratio:\t${await iVault.ratio()}`);
+
+          const balanceExpected = (totalDelegated * ratio) / e18;
+          const totalSupplyExpected = balanceExpected + firstDeposit;
+          const err = BigInt(arg.count) * transactErr * 2n;
+
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+          const totalDelegatedAfter = await iVault.getTotalDelegated();
+          const totalDelegatedToAfter = await iVault.getDelegatedToMellowMultiVault(mellowVaults[0].vaultAddress);
+          const totalSupplyAfter = await iToken.totalSupply();
+          const totalAssetsAfter = await iVault.totalAssets();
+          console.log(`Total deposited after: ${totalDepositedAfter.format()}`);
+          console.log(`Total delegated after: ${totalDelegatedAfter.format()}`);
+          console.log(`Total delegatedTo after: ${totalDelegatedToAfter.format()}`);
+          console.log(`Total assets after: ${totalAssetsAfter.format()}`);
+
+          expect(totalDepositedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+          expect(totalDelegatedAfter - ((firstDeposit * e18) / ratio + totalDelegated)).to.be.closeTo(0, err);
+          expect(totalSupplyAfter - totalSupplyExpected).to.be.closeTo(0, err);
+          expect(totalAssetsAfter).to.be.lte(transactErr);
+          expect(await iVault.ratio()).to.be.closeTo(ratio, BigInt(arg.count) * ratioErr);
+        });
+      });
+
+      //Delegate invalid params
+      const invalidArgs = [
+        {
+          name: "amount is 0",
+          deposited: toWei(1),
+          amount: async () => 0n,
+          mVault: async () => mellowVaults[0].vaultAddress,
+          operator: () => iVaultOperator,
+        },
+        {
+          name: "amount is greater than free balance",
+          deposited: toWei(10),
+          targetCapacityPercent: e18,
+          amount: async () => (await iVault.getFreeBalance()) + 1n,
+          mVault: async () => mellowVaults[0].vaultAddress,
+          operator: () => iVaultOperator,
+          customError: "InsufficientCapacity",
+          source: () => iVault,
+        },
+        {
+          name: "unknown mellow vault",
+          deposited: toWei(1),
+          amount: async () => await iVault.getFreeBalance(),
+          mVault: async () => "0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5",
+          operator: () => iVaultOperator,
+          customError: "NotAdded",
+          source: () => mellowAdapterV3,
+        },
+        {
+          name: "mellow vault is zero address",
+          deposited: toWei(1),
+          amount: async () => await iVault.getFreeBalance(),
+          mVault: async () => ethers.ZeroAddress,
+          operator: () => iVaultOperator,
+          customError: "NullParams",
+          source: () => iVault,
+        },
+        {
+          name: "caller is not an operator",
+          deposited: toWei(1),
+          amount: async () => await iVault.getFreeBalance(),
+          mVault: async () => mellowVaults[0].vaultAddress,
+          operator: () => staker,
+          customError: "OnlyOperatorAllowed",
+          source: () => iVault,
+        },
+      ];
+
+      invalidArgs.forEach(function (arg) {
+        it(`delegateToMellowVault reverts when ${arg.name}`, async function () {
+          if (arg.targetCapacityPercent) {
+            await iVault.setTargetFlashCapacity(arg.targetCapacityPercent);
+          }
+          await asset.connect(staker3).approve(await iVault.getAddress(), arg.deposited);
+          await iVault.connect(staker3).deposit(arg.deposited, staker3.address);
+
+          const operator = arg.operator();
+          const delegateAmount = await arg.amount();
+          const mVault = await arg.mVault();
+
+          if (arg.customError) {
+            await expect(
+              iVault.connect(operator).delegate(mellowAdapterV3.address, mVault, delegateAmount, emptyBytes),
+            ).to.be.revertedWithCustomError(arg.source(), arg.customError);
+          } else {
+            await expect(iVault.connect(operator).delegate(mellowAdapterV3.address, mVault, delegateAmount, emptyBytes)).to.be
+              .reverted;
+          }
+        });
+      });
+
+      it("delegateToMellowVault reverts when iVault is paused", async function () {
+        const amount = randomBI(18);
+        await iVault.connect(staker).deposit(amount, staker.address);
+        await iVault.pause();
+        await expect(
+          iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes),
+        ).to.be.revertedWith("Pausable: paused");
+      });
+
+      it("delegateToMellowVault reverts when mellowAdapterV3 is paused", async function () {
+        if (await iVault.paused()) {
+          await iVault.unpause();
+        }
+        const amount = randomBI(18);
+        await iVault.connect(staker).deposit(amount, staker.address);
+        await mellowAdapterV3.pause();
+
+        await expect(
+          iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes),
+        ).to.be.revertedWith("Pausable: paused");
+        await mellowAdapterV3.unpause();
+      });
+    });
+
+    describe("Withdraw: user can unstake", function () {
+      let ratio, totalDeposited, TARGET;
+
+      before(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(toWei(10), staker.address);
+        const freeBalance = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+        totalDeposited = await iVault.getTotalDeposited();
+        TARGET = 1000_000n;
+        await iVault.setTargetFlashCapacity(TARGET);
+        ratio = await iVault.ratio();
+        console.log(`Initial ratio: ${ratio}`);
+      });
+
+      const testData = [
+        {
+          name: "random e18",
+          amount: async shares => 724399519262012598n,
+          receiver: () => staker.address,
+        },
+        {
+          name: "999999999999999999",
+          amount: async shares => 999999999999999999n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "888888888888888888",
+          amount: async shares => 888888888888888888n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "777777777777777777",
+          amount: async shares => 777777777777777777n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "666666666666666666",
+          amount: async shares => 666666666666666666n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "555555555555555555",
+          amount: async shares => 555555555555555555n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "444444444444444444",
+          amount: async shares => 444444444444444444n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "333333333333333333",
+          amount: async shares => 333333333333333333n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "222222222222222222",
+          amount: async shares => 222222222222222222n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "111111111111111111",
+          amount: async shares => 111111111111111111n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "min amount",
+          amount: async shares => (await iVault.convertToAssets(await iVault.withdrawMinAmount())) + 1n,
+          receiver: () => staker2.address,
+        },
+        {
+          name: "all",
+          amount: async shares => shares,
+          receiver: () => staker2.address,
+        },
+      ];
+
+      testData.forEach(function (test) {
+        it(`Withdraw ${test.name}`, async function () {
+          const ratioBefore = await iVault.ratio();
+          const balanceBefore = await iToken.balanceOf(staker.address);
+          const amount = await test.amount(balanceBefore);
+          const assetValue = await iVault.convertToAssets(amount);
+          const stakerPWBefore = await iVault.getPendingWithdrawalOf(test.receiver());
+          const totalPWBefore = await iVault.totalAmountToWithdraw();
+
+          const tx = await iVault.connect(staker).withdraw(amount, test.receiver());
+          const receipt = await tx.wait();
+          const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
+          expect(events.length).to.be.eq(1);
+          expect(events[0].args["sender"]).to.be.eq(staker.address);
+          expect(events[0].args["receiver"]).to.be.eq(test.receiver());
+          expect(events[0].args["owner"]).to.be.eq(staker.address);
+          expect(events[0].args["amount"]).to.be.closeTo(assetValue, transactErr);
+          expect(events[0].args["iShares"]).to.be.eq(amount);
+
+          expect(balanceBefore - (await iToken.balanceOf(staker.address))).to.be.eq(amount);
+          expect((await iVault.getPendingWithdrawalOf(test.receiver())) - stakerPWBefore).to.be.closeTo(
+            assetValue,
+            transactErr,
+          );
+          expect((await iVault.totalAmountToWithdraw()) - totalPWBefore).to.be.closeTo(assetValue, transactErr);
+          expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
+          expect(await iVault.ratio()).to.be.closeTo(ratioBefore, ratioErr);
+        });
+      });
+    });
+
+    describe("Withdraw: negative cases", function () {
+      before(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(toWei(10), staker.address);
+        const freeBalance = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
+        await a.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+      });
+
+      const invalidData = [
+        {
+          name: "> balance",
+          amount: async () => (await iToken.balanceOf(staker.address)) + 1n,
+          receiver: () => staker.address,
+          error: "ERC20: burn amount exceeds balance",
+        },
+        {
+          name: "< min amount",
+          amount: async () => (await iVault.convertToShares(await iVault.withdrawMinAmount())) - 1n,
+          receiver: () => staker.address,
+          customError: "LowerMinAmount",
+        },
+        {
+          name: "0",
+          amount: async () => 0n,
+          receiver: () => staker.address,
+          customError: "NullParams",
+        },
+        {
+          name: "to zero address",
+          amount: async () => randomBI(18),
+          receiver: () => ethers.ZeroAddress,
+          customError: "NullParams",
+        },
+      ];
+
+      invalidData.forEach(function (test) {
+        it(`Reverts: withdraws ${test.name}`, async function () {
+          const amount = await test.amount();
+          const receiver = test.receiver();
+          if (test.customError) {
+            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWithCustomError(
+              iVault,
+              test.customError,
+            );
+          } else if (test.error) {
+            await expect(iVault.connect(staker).withdraw(amount, receiver)).to.be.revertedWith(test.error);
+          }
+        });
+      });
+
+      it("Withdraw small amount many times", async function () {
+        const ratioBefore = await iVault.ratio();
+        console.log(`Ratio before:\t${ratioBefore.format()}`);
+
+        const count = 100;
+        const amount = await iVault.withdrawMinAmount();
+        for (let i = 0; i < count; i++) {
+          await iVault.connect(staker).withdraw(amount, staker.address);
+        }
+        const ratioAfter = await iVault.ratio();
+        console.log(`Ratio after:\t${ratioAfter.format()}`);
+
+        expect(ratioBefore - ratioAfter).to.be.closeTo(0, count);
+
+        await iVault.connect(staker).withdraw(e18, staker.address);
+        console.log(`Ratio after withdraw 1eth:\t${await iVault.ratio()}`);
+        expect(await iVault.ratio()).to.be.closeTo(ratioAfter, ratioErr);
+      });
+
+      it("Reverts: withdraw when iVault is paused", async function () {
+        await iVault.pause();
+        await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWith("Pausable: paused");
+        await iVault.unpause();
+      });
+
+      it("Reverts: withdraw when targetCapacity is not set", async function () {
+        await snapshot.restore();
+        await expect(iVault.connect(staker).withdraw(toWei(1), staker.address)).to.be.revertedWithCustomError(
+          iVault,
+          "InceptionOnPause",
+        );
+      });
+    });
+
+    describe("Flash withdraw with fee", function () {
+      const targetCapacityPercent = e18;
+      const targetCapacity = e18;
+      let deposited = 0n;
+      beforeEach(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
+        await iVault.connect(staker3).deposit(deposited, staker.address);
+        const freeBalance = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
+
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+        await iVault.setTargetFlashCapacity(targetCapacityPercent);
+      });
+
+      const args = [
+        {
+          name: "part of the free balance when pool capacity > TARGET",
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
+          amount: async () => (await iVault.getFreeBalance()) / 2n,
+          receiver: () => staker,
+        },
+        {
+          name: "all of the free balance when pool capacity > TARGET",
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
+          amount: async () => await iVault.getFreeBalance(),
+          receiver: () => staker,
+        },
+        {
+          name: "all when pool capacity > TARGET",
+          poolCapacity: targetCapacityPercent => targetCapacityPercent + e18,
+          amount: async () => await iVault.getFlashCapacity(),
+          receiver: () => staker,
+        },
+        {
+          name: "partially when pool capacity = TARGET",
+          poolCapacity: targetCapacityPercent => targetCapacityPercent,
+          amount: async () => (await iVault.getFlashCapacity()) / 2n,
+          receiver: () => staker,
+        },
+        {
+          name: "all when pool capacity = TARGET",
+          poolCapacity: targetCapacityPercent => targetCapacityPercent,
+          amount: async () => await iVault.getFlashCapacity(),
+          receiver: () => staker,
+        },
+        {
+          name: "partially when pool capacity < TARGET",
+          poolCapacity: targetCapacityPercent => (targetCapacityPercent * 3n) / 4n,
+          amount: async () => (await iVault.getFlashCapacity()) / 2n,
+          receiver: () => staker,
+        },
+        {
+          name: "all when pool capacity < TARGET",
+          poolCapacity: targetCapacityPercent => (targetCapacityPercent * 3n) / 4n,
+          amount: async () => await iVault.getFlashCapacity(),
+          receiver: () => staker,
+        },
+      ];
+
+      args.forEach(function (arg) {
+        it(`flashWithdraw: ${arg.name}`, async function () {
+          //Undelegate from Mellow
+          const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
+          const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
+
+          await iVault.connect(iVaultOperator).undelegate(await mellowAdapterV3.getAddress(), mellowVaults[0].vaultAddress, undelegateAmount, emptyBytes);
+          await helpers.time.increase(1209900);
+          await iVault.connect(iVaultOperator).claim(await mellowAdapterV3.getAddress(), []);
+
+          //flashWithdraw
+          const ratioBefore = await iVault.ratio();
+          console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
+
+          const sharesBefore = await iToken.balanceOf(staker);
+          const assetBalanceBefore = await asset.balanceOf(staker);
+          const treasuryBalanceBefore = await asset.balanceOf(treasury);
+          const totalDepositedBefore = await iVault.getTotalDeposited();
+          const totalAssetsBefore = await iVault.totalAssets();
+          const flashCapacityBefore = await iVault.getFlashCapacity();
+          const freeBalanceBefore = await iVault.getFreeBalance();
+          console.log(`flashCapacityBefore:\t${flashCapacityBefore.format()}`);
+          console.log(`freeBalanceBefore:\t\t${freeBalanceBefore.format()}`);
+
+          const amount = await arg.amount();
+          const shares = await iVault.convertToShares(amount);
+          const receiver = await arg.receiver();
+          const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
+          console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
+
+          let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address);
+          const receipt = await tx.wait();
+          const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
+          expect(withdrawEvent.length).to.be.eq(1);
+          expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
+          expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
+          expect(withdrawEvent[0].args["owner"]).to.be.eq(staker.address);
+          expect(withdrawEvent[0].args["amount"]).to.be.closeTo(amount - expectedFee, transactErr);
+          expect(withdrawEvent[0].args["iShares"]).to.be.closeTo(shares, transactErr);
+          const fee = withdrawEvent[0].args["fee"];
+          expect(fee).to.be.closeTo(expectedFee, transactErr);
+
+          const sharesAfter = await iToken.balanceOf(staker);
+          const assetBalanceAfter = await asset.balanceOf(staker);
+          const treasuryBalanceAfter = await asset.balanceOf(treasury);
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+          const totalAssetsAfter = await iVault.totalAssets();
+          const flashCapacityAfter = await iVault.getFlashCapacity();
+          console.log(`Balance diff:\t\t\t${(sharesBefore - sharesAfter).format()}`);
+          console.log(`TotalDeposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
+          console.log(`TotalAssets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
+          console.log(`FlashCapacity diff:\t\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
+          console.log(`Fee:\t\t\t\t\t${fee.format()}`);
+
+          expect(sharesBefore - sharesAfter).to.be.eq(shares);
+          expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee, 2n);
+          expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 2n);
+          expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
+          expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, transactErr);
+          expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, transactErr);
+        });
+
+        it(`redeem(shares,receiver,owner): ${arg.name}`, async function () {
+          //Undelegate from Mellow
+          const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
+          const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
+
+          await iVault.connect(iVaultOperator).undelegate(await mellowAdapterV3.getAddress(), mellowVaults[0].vaultAddress, undelegateAmount, emptyBytes);
+          await helpers.time.increase(1209900);
+          await iVault.connect(iVaultOperator).claim(await mellowAdapterV3.getAddress(), []);
+
+          //flashWithdraw
+          const ratioBefore = await iVault.ratio();
+          console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
+
+          const sharesBefore = await iToken.balanceOf(staker);
+          const assetBalanceBefore = await asset.balanceOf(staker);
+          const treasuryBalanceBefore = await asset.balanceOf(treasury);
+          const totalDepositedBefore = await iVault.getTotalDeposited();
+          const totalAssetsBefore = await iVault.totalAssets();
+          const flashCapacityBefore = await iVault.getFlashCapacity();
+          const freeBalanceBefore = await iVault.getFreeBalance();
+          console.log(`flashCapacityBefore:\t${flashCapacityBefore.format()}`);
+          console.log(`freeBalanceBefore:\t\t${freeBalanceBefore.format()}`);
+
+          const amount = await arg.amount();
+          const shares = await iVault.convertToShares(amount); //+1 to compensate rounding after converting from shares to amount
+          const previewAmount = await iVault.previewRedeem(shares);
+          const receiver = await arg.receiver();
+          const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
+          console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
+
+          let tx = await iVault
+            .connect(staker)
+            ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
+          const receipt = await tx.wait();
+          const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
+          expect(withdrawEvent.length).to.be.eq(1);
+          expect(withdrawEvent[0].args["sender"]).to.be.eq(staker.address);
+          expect(withdrawEvent[0].args["receiver"]).to.be.eq(receiver.address);
+          expect(withdrawEvent[0].args["owner"]).to.be.eq(staker.address);
+          expect(withdrawEvent[0].args["amount"]).to.be.closeTo(amount - expectedFee, transactErr);
+          expect(withdrawEvent[0].args["iShares"]).to.be.closeTo(shares, transactErr);
+          const feeEvent = receipt.logs?.filter(e => e.eventName === "WithdrawalFee");
+          const fee = feeEvent[0].args["fee"];
+          expect(fee).to.be.closeTo(expectedFee, transactErr);
+
+          const sharesAfter = await iToken.balanceOf(staker);
+          const assetBalanceAfter = await asset.balanceOf(staker);
+          const treasuryBalanceAfter = await asset.balanceOf(treasury);
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+          const totalAssetsAfter = await iVault.totalAssets();
+          const flashCapacityAfter = await iVault.getFlashCapacity();
+          console.log(`Balance diff:\t\t\t${(sharesBefore - sharesAfter).format()}`);
+          console.log(`TotalDeposited diff:\t${(totalDepositedBefore - totalDepositedAfter).format()}`);
+          console.log(`TotalAssets diff:\t\t${(totalAssetsBefore - totalAssetsAfter).format()}`);
+          console.log(`FlashCapacity diff:\t\t${(flashCapacityBefore - flashCapacityAfter).format()}`);
+          console.log(`Fee:\t\t\t\t\t${fee.format()}`);
+
+          expect(sharesBefore - sharesAfter).to.be.eq(shares);
+          expect(assetBalanceAfter - assetBalanceBefore).to.be.closeTo(amount - expectedFee, 2n);
+          expect(treasuryBalanceAfter - treasuryBalanceBefore).to.be.closeTo(expectedFee / 2n, 2n);
+          expect(totalDepositedBefore - totalDepositedAfter).to.be.closeTo(amount, transactErr);
+          expect(totalAssetsBefore - totalAssetsAfter).to.be.closeTo(amount - expectedFee / 2n, transactErr);
+          expect(flashCapacityBefore - flashCapacityAfter).to.be.closeTo(amount, transactErr);
+          expect(previewAmount).to.be.eq(assetBalanceAfter - assetBalanceBefore);
+        });
+      });
+
+      it("Reverts when capacity is not sufficient", async function () {
+        const shares = await iToken.balanceOf(staker.address);
+        const capacity = await iVault.getFlashCapacity();
+        await expect(iVault.connect(staker).flashWithdraw(shares, staker.address))
+          .to.be.revertedWithCustomError(iVault, "InsufficientCapacity")
+          .withArgs(capacity);
+      });
+
+      it("Reverts when amount < min", async function () {
+        const withdrawMinAmount = await iVault.withdrawMinAmount();
+        const shares = (await iVault.convertToShares(withdrawMinAmount)) - 1n;
+        await expect(iVault.connect(staker).flashWithdraw(shares, staker.address))
+          .to.be.revertedWithCustomError(iVault, "LowerMinAmount")
+          .withArgs(withdrawMinAmount);
+      });
+
+      it("Reverts redeem when owner != message sender", async function () {
+        await iVault.connect(staker).deposit(e18, staker.address);
+        const amount = await iVault.getFlashCapacity();
+        await expect(
+          iVault.connect(staker)["redeem(uint256,address,address)"](amount, staker.address, staker2.address),
+        ).to.be.revertedWithCustomError(iVault, "MsgSenderIsNotOwner");
+      });
+
+      it("Reverts when iVault is paused", async function () {
+        await iVault.connect(staker).deposit(e18, staker.address);
+        await iVault.pause();
+        const amount = await iVault.getFlashCapacity();
+        await expect(iVault.connect(staker).flashWithdraw(amount, staker.address)).to.be.revertedWith(
+          "Pausable: paused",
+        );
+        await expect(
+          iVault.connect(staker)["redeem(uint256,address,address)"](amount, staker.address, staker.address),
+        ).to.be.revertedWith("Pausable: paused");
+        await iVault.unpause();
+      });
+    });
+
+    describe("Max redeem", function () {
+      beforeEach(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker3).deposit(randomBI(18), staker3.address);
+        const freeBalance = await iVault.getFreeBalance();
+        await iVault
+          .connect(iVaultOperator)
+          .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance / 2n, emptyBytes);
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+      });
+
+      const args = [
+        {
+          name: "User amount = 0",
+          sharesOwner: () => ethers.Wallet.createRandom(),
+          maxRedeem: async () => 0n,
+        },
+        {
+          name: "User amount < flash capacity",
+          sharesOwner: () => staker,
+          deposited: randomBI(18),
+          maxRedeem: async () => await iToken.balanceOf(staker),
+        },
+        {
+          name: "User amount = flash capacity",
+          sharesOwner: () => staker,
+          deposited: randomBI(18),
+          delegated: async deposited => (await iVault.totalAssets()) - deposited,
+          maxRedeem: async () => await iToken.balanceOf(staker),
+        },
+        {
+          name: "User amount > flash capacity > 0",
+          sharesOwner: () => staker,
+          deposited: randomBI(18),
+          delegated: async deposited => (await iVault.totalAssets()) - randomBI(17),
+          maxRedeem: async () => await iVault.convertToShares(await iVault.getFlashCapacity()),
+        },
+        {
+          name: "User amount > flash capacity = 0",
+          sharesOwner: () => staker3,
+          delegated: async deposited => await iVault.totalAssets(),
+          maxRedeem: async () => 0n,
+        },
+      ];
+
+      async function prepareState(arg) {
+        const sharesOwner = arg.sharesOwner();
+        console.log(sharesOwner.address);
+        if (arg.deposited) {
+          await iVault.connect(sharesOwner).deposit(arg.deposited, sharesOwner.address);
+        }
+
+        if (arg.delegated) {
+          const delegated = await arg.delegated(arg.deposited);
+          await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, delegated, emptyBytes);
+        }
+        return sharesOwner;
+      }
+
+      args.forEach(function (arg) {
+        it(`maxReedem: ${arg.name}`, async function () {
+          const sharesOwner = await prepareState(arg);
+
+          const maxRedeem = await iVault.maxRedeem(sharesOwner);
+          const expectedMaxRedeem = await arg.maxRedeem();
+
+          console.log(`User shares:\t\t${(await iToken.balanceOf(sharesOwner)).format()}`);
+          console.log(`flashCapacity:\t\t${(await iVault.convertToShares(await iVault.getFlashCapacity())).format()}`);
+          console.log(`total assets:\t\t${await iVault.totalAssets()}`);
+          console.log(`maxRedeem:\t\t\t${maxRedeem.format()}`);
+          console.log(`expected Redeem:\t${expectedMaxRedeem.format()}`);
+
+          if (maxRedeem > 0n) {
+            await iVault.connect(sharesOwner).redeem(maxRedeem, sharesOwner.address, sharesOwner.address);
+          }
+          expect(maxRedeem).to.be.eq(expectedMaxRedeem);
+        });
+      });
+
+      it("Reverts when iVault is paused", async function () {
+        await iVault.connect(staker).deposit(e18, staker.address);
+        await iVault.pause();
+        expect(await iVault.maxRedeem(staker)).to.be.eq(0n);
+      });
+    });
+
+    describe("Mellow vaults management", function () {
+      beforeEach(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(e18, staker.address);
+      });
+
+      it("addMellowVault reverts when already added", async function () {
+        const mellowVault = mellowVaults[0].vaultAddress;
+        await expect(mellowAdapterV3.addMellowVault(mellowVault)).to.revertedWithCustomError(
+          mellowAdapterV3,
+          "AlreadyAdded",
+        );
+      });
+
+      it("addMellowVault vault is 0 address", async function () {
+        const mellowVault = ethers.ZeroAddress;
+        await expect(mellowAdapterV3.addMellowVault(mellowVault)).to.revertedWithCustomError(
+          mellowAdapterV3,
+          "ZeroAddress",
+        );
+      });
+
+      it("addMellowVault wrapper is 0 address", async function () {
+        const mellowVault = ethers.ZeroAddress;
+        const wrapper = ethers.ZeroAddress;
+        await expect(mellowAdapterV3.addMellowVault(mellowVault)).to.revertedWithCustomError(
+          mellowAdapterV3,
+          "ZeroAddress",
+        );
+      });
+
+      it("addMellowVault reverts when called by not an owner", async function () {
+        const mellowVault = mellowVaults[0].vaultAddress;
+        await expect(mellowAdapterV3.connect(staker).addMellowVault(mellowVault)).to.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+    });
+
+    /*
+    describe("undelegateFromMellow: request withdrawal from mellow vault", function () {
+      let ratio, ratioDiff, totalDeposited, assets1, assets2, rewards, vault1Delegated, vault2Delegated;
+
+      before(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        totalDeposited = 10n * e18;
+        await iVault.connect(staker).deposit(totalDeposited, staker.address);
+      });
+
+      it("Delegate to mellowVault#1", async function () {
+        vault1Delegated = (await iVault.getFreeBalance());
+        await iVault
+          .connect(iVaultOperator)
+          .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, vault1Delegated, emptyBytes);
+
+        expect(await mellowAdapterV3.getDeposited(mellowVaults[0].vaultAddress)).to.be.closeTo(
+          vault1Delegated,
+          transactErr,
+        );
+      });
+
+      it("Staker withdraws shares1", async function () {
+        assets1 = e18;
+        const shares = await iVault.convertToShares(assets1);
+        console.log(`Staker is going to withdraw:\t${assets1.format()}`);
+        await iVault.connect(staker).withdraw(shares, staker.address);
+        console.log(`Staker's pending withdrawals:\t${(await iVault.getPendingWithdrawalOf(staker.address)).format()}`);
+      });
+
+      it("undelegateFromMellow from mellowVault#1 by operator", async function () {
+        const totalDelegatedBefore = await iVault.getTotalDelegated();
+        const pendingWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const ratioBefore = await calculateRatio(iVault, iToken);
+
+        await iVault.connect(iVaultOperator).undelegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, assets1, emptyBytes);
+
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const pendingWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const vault1DelegatedAfter = await mellowAdapterV3.getDeposited(mellowVaults[0].vaultAddress);
+        const ratioAfter = await calculateRatio(iVault, iToken);
+
+        expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets1, transactErr);
+        expect(pendingWithdrawalsAfter - pendingWithdrawalsBefore).to.be.closeTo(assets1, transactErr);
+        expect(vault1DelegatedAfter).to.be.closeTo(vault1Delegated - assets1, transactErr);
+        expect(ratioAfter).to.be.closeTo(ratioBefore, 1n);
+      });
+
+      it("Adding rewards to mellowVault#1 increases pending withdrawal respectively", async function () {
+        const pendingMellowWithdrawalsBefore = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const vault1DelegatedBefore = await mellowAdapterV3.getDeposited(mellowVaults[0].vaultAddress);
+        const ratioBefore = await iVault.ratio();
+
+        //Add rewards
+        await a.addRewardsMellowVault(10n * e18, mellowVaults[0].vaultAddress);
+        const vault1DelegatedAfter = await mellowAdapterV3.getDeposited(mellowVaults[0].vaultAddress);
+        const pendingMellowWithdrawalsAfter = await mellowAdapterV3.pendingWithdrawalAmount();
+        rewards =
+          vault1DelegatedAfter + pendingMellowWithdrawalsAfter - vault1DelegatedBefore - pendingMellowWithdrawalsBefore;
+        vault1Delegated += rewards;
+        totalDeposited += rewards;
+        //Update ratio
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+        ratio = await iVault.ratio();
+        ratioDiff = ratioBefore - ratio;
+
+        const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        expect((pendingMellowWithdrawalsBefore * vault1DelegatedAfter) / vault1DelegatedBefore).to.be.closeTo(
+          pendingMellowWithdrawalsAfter,
+          transactErr,
+        );
+        expect((totalPendingMellowWithdrawalsBefore * vault1DelegatedAfter) / vault1DelegatedBefore).to.be.closeTo(
+          totalPendingMellowWithdrawalsAfter,
+          transactErr,
+        );
+        expect(totalDeposited).to.be.closeTo(await iVault.getTotalDeposited(), transactErr);
+      });
+
+      it("Staker withdraws shares2 to Staker2", async function () {
+        assets2 = e18;
+        const shares = await iVault.convertToShares(assets2);
+        console.log(`Staker is going to withdraw:\t${assets2.format()}`);
+        await iVault.connect(staker).withdraw(shares, staker2.address);
+        console.log(
+          `Staker2's pending withdrawals:\t${(await iVault.getPendingWithdrawalOf(staker2.address)).format()}`,
+        );
+      });
+
+      it("undelegateFromMellow replaces pending withdraw from mellowVault#1", async function () {
+        const ratioBeforeUndelegate = await iVault.ratio();
+
+        const amount = assets2;
+        await expect(iVault.connect(iVaultOperator).undelegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes))
+          .to.emit(iVault, "StartMellowWithdrawal")
+          .withArgs(mellowAdapterV3.address, a => {
+            expect(a).to.be.closeTo(amount, transactErr);
+            return true;
+          });
+
+        const pendingMellowWithdrawalsAfter = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+        const ratioAfter = await calculateRatio(iVault, iToken);
+
+        expect(pendingMellowWithdrawalsAfter).to.be.closeTo(amount, transactErr);
+        expect(totalPendingMellowWithdrawalsAfter).to.be.closeTo(amount, transactErr);
+        expect(totalDeposited - totalDelegatedAfter).to.be.closeTo(amount, transactErr);
+        expect(ratioAfter).to.be.closeTo(ratioBeforeUndelegate, ratioErr);
+      });
+
+      it("undelegateFromMellow all from mellowVault#2", async function () {
+        const pendingMellowWithdrawalsBefore = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+
+        //Amount can slightly exceed delegatedTo, but final number will be corrected
+        //undelegateFromMellow fails when deviation is too big
+        await expect(
+          iVault
+            .connect(iVaultOperator)
+            .undelegateFromMellow(mellowVaults[1].vaultAddress, vault2Delegated + 1000_000_000n, 1296000),
+        )
+          .to.emit(iVault, "StartMellowWithdrawal")
+          .withArgs(mellowAdapterV3.address, a => {
+            expect(a).to.be.closeTo(vault2Delegated, transactErr);
+            return true;
+          });
+
+        const pendingMellowWithdrawalsAfter = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDelegatedAfter = await iVault.getTotalDelegated();
+
+        expect(pendingMellowWithdrawalsAfter - pendingMellowWithdrawalsBefore).to.be.closeTo(
+          vault2Delegated,
+          transactErr,
+        );
+        expect(totalPendingMellowWithdrawalsAfter - totalPendingMellowWithdrawalsBefore).to.be.closeTo(
+          vault2Delegated,
+          transactErr,
+        );
+        expect(totalDeposited - totalDelegatedAfter).to.be.closeTo(vault2Delegated + assets2, transactErr);
+        expect(await iVault.ratio()).to.be.eq(await calculateRatio(iVault, iToken));
+      });
+
+      it("Can not claim when restaker balance is 0", async function () {
+        await expect(iVault.connect(iVaultOperator).claimCompletedWithdrawalsMellow()).to.be.revertedWithCustomError(
+          mellowAdapterV3,
+          "ValueZero",
+        );
+      });
+
+      it("Process pending withdrawal from mellowVault#1 to mellowAdapterV3", async function () {
+        const restakerBalanceBefore = await mellowAdapterV3.claimableAmount();
+        const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
+        console.log(`Pending from Mellow before:\t\t${totalPendingMellowWithdrawalsBefore.format()}`);
+
+        await mellowVaults[0].curator.processWithdrawals([mellowAdapterV3.address]);
+
+        const restakerBalanceAfter = await mellowAdapterV3.claimableAmount();
+        const pendingMellowWithdrawalsAfter = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        console.log(`Total deposited after:\t\t\t${totalDepositedAfter.format()}`);
+        console.log(`Pending from Mellow:\t\t\t${totalPendingMellowWithdrawalsAfter.format()}`);
+        console.log(`Restaker balance diff:\t\t\t${(restakerBalanceAfter - restakerBalanceBefore).format()}`);
+
+        expect(restakerBalanceAfter - restakerBalanceBefore).to.be.closeTo(assets2, transactErr);
+        expect(pendingMellowWithdrawalsAfter).to.be.closeTo(vault2Delegated, transactErr);
+        expect(totalPendingMellowWithdrawalsAfter).to.be.closeTo(totalPendingMellowWithdrawalsBefore, transactErr);
+        expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
+        expect(await iVault.ratio()).to.be.eq(await calculateRatio(iVault, iToken));
+      });
+
+      it("Process pending withdrawal from mellowVault#2 to mellowAdapterV3", async function () {
+        const restakerBalanceBefore = await mellowAdapterV3.claimableAmount();
+        const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDepositedBefore = await iVault.getTotalDeposited();
+        console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
+        console.log(`Pending from Mellow before:\t\t${totalPendingMellowWithdrawalsBefore.format()}`);
+
+        await mellowVaults[1].curator.processWithdrawals([mellowAdapterV3.address]);
+
+        const restakerBalanceAfter = await mellowAdapterV3.claimableAmount();
+        const pendingMellowWithdrawalsAfter = await mellowAdapterV3.pendingWithdrawalAmount();
+        const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const totalDepositedAfter = await iVault.getTotalDeposited();
+        console.log(`Total deposited after:\t\t\t${totalDepositedAfter.format()}`);
+        console.log(`Pending from Mellow:\t\t\t${totalPendingMellowWithdrawalsAfter.format()}`);
+        console.log(`Restaker balance diff:\t\t\t${(restakerBalanceAfter - restakerBalanceBefore).format()}`);
+
+        expect(restakerBalanceAfter - restakerBalanceBefore).to.be.closeTo(vault2Delegated, transactErr);
+        expect(pendingMellowWithdrawalsAfter).to.be.eq(0n);
+        expect(totalPendingMellowWithdrawalsAfter).to.be.eq(totalPendingMellowWithdrawalsBefore);
+        expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
+        expect(await iVault.ratio()).to.be.eq(await calculateRatio(iVault, iToken));
+      });
+
+      it("Can not claim funds from mellowAdapterV3 when iVault is paused", async function () {
+        await iVault.pause();
+        await expect(iVault.connect(iVaultOperator).claimCompletedWithdrawalsMellow()).to.be.revertedWith(
+          "Pausable: paused",
+        );
+      });
+
+      it("Claim funds from mellowAdapterV3 to iVault", async function () {
+        if (await iVault.paused()) {
+          await iVault.unpause();
+        }
+        const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawalAmountFromMellowMultiVault();
+        const usersTotalWithdrawals = await iVault.totalAmountToWithdraw();
+        const totalAssetsBefore = await iVault.totalAssets();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+
+        await iVault.connect(iVaultOperator).claimCompletedWithdrawalsMellow();
+        console.log("getTotalDelegated", await iVault.getTotalDelegated());
+        console.log("totalAssets", await iVault.totalAssets());
+        console.log("getPendingWithdrawalAmountFromMellow", await iVault.getPendingWithdrawalAmountFromMellowMultiVault());
+        console.log("redeemReservedAmount", await iVault.redeemReservedAmount());
+        console.log("depositBonusAmount", await iVault.depositBonusAmount());
+
+        const totalAssetsAfter = await iVault.totalAssets();
+        const restakerBalanceAfter = await mellowAdapterV3.claimableAmount();
+        const freeBalanceAfter = await iVault.getFreeBalance();
+
+        expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(totalPendingMellowWithdrawalsBefore, transactErr);
+        expect(restakerBalanceAfter).to.be.eq(0n, transactErr);
+        //Withdraw leftover goes to freeBalance
+        expect(freeBalanceAfter - freeBalanceBefore).to.be.closeTo(
+          totalPendingMellowWithdrawalsBefore - usersTotalWithdrawals,
+          transactErr,
+        );
+
+        console.log("vault ratio:", await iVault.ratio());
+        console.log("calculated ratio:", await calculateRatio(iVault, iToken));
+
+        expect(await iVault.ratio()).to.be.eq(await calculateRatio(iVault, iToken));
+      });
+
+      it("Staker is able to redeem", async function () {
+        expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.true;
+      });
+
+      it("Staker2 is able to redeem", async function () {
+        expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
+      });
+
+      it("Staker redeems withdrawals", async function () {
+        const stakerBalanceBefore = await asset.balanceOf(staker.address);
+        const stakerPWBefore = await iVault.getPendingWithdrawalOf(staker.address);
+
+        await iVault.redeem(staker.address);
+        const stakerBalanceAfter = await asset.balanceOf(staker.address);
+        const stakerPWAfter = await iVault.getPendingWithdrawalOf(staker.address);
+
+        console.log(`Staker balance after: ${stakerBalanceAfter.format()}`);
+        console.log(`Staker pending withdrawals after: ${stakerPWAfter.format()}`);
+
+        expect(stakerPWBefore - stakerPWAfter).to.be.closeTo(assets1, transactErr * 2n);
+        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(assets1, transactErr * 2n);
+        expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken), 1n);
+      });
+    });
+    */
+
+    describe("undelegateFromMellow: negative cases", function () {
+      beforeEach(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(randomBI(19), staker.address);
+        const freeBalance = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
+        console.log(`Delegated amount: \t${freeBalance.format()}`);
+      });
+
+      const invalidArgs = [
+        {
+          name: "amount is 0",
+          amount: async () => 0n,
+          mellowVault: async () => mellowVaults[0].vaultAddress,
+          operator: () => iVaultOperator,
+          customError: "NullParams",
+          source: () => mellowAdapterV3,
+        },
+        {
+          name: "mellowVault is 0 address",
+          amount: async () => await iVault.getDelegatedToMellowMultiVault(mellowVaults[0].vaultAddress),
+          mellowVault: async () => ethers.ZeroAddress,
+          operator: () => iVaultOperator,
+          customError: "NullParams",
+          source: () => iVault,
+        },
+        {
+          name: "called by not an operator",
+          amount: async () => await iVault.getDelegatedToMellowMultiVault(mellowVaults[0].vaultAddress),
+          mellowVault: async () => mellowVaults[0].vaultAddress,
+          operator: () => staker,
+          customError: "OnlyOperatorAllowed",
+          source: () => iVault,
+        },
+      ];
+
+      invalidArgs.forEach(function (arg) {
+        it(`Reverts: when ${arg.name}`, async function () {
+          const amount = await arg.amount();
+          const mellowVault = await arg.mellowVault();
+          console.log(`Undelegate amount: \t${amount.format()}`);
+          if (arg.customError) {
+            await expect(
+              iVault.connect(arg.operator()).undelegate(mellowAdapterV3.address, mellowVault, amount, emptyBytes),
+            ).to.be.revertedWithCustomError(arg.source(), arg.customError);
+          } else {
+            await expect(
+              iVault.connect(arg.operator()).undelegate(mellowAdapterV3.address, amount, emptyBytes),
+            ).to.be.revertedWith(arg.error);
+          }
+        });
+      });
+
+      it("Reverts: undelegate when iVault is paused", async function () {
+        const amount = randomBI(17);
+        await iVault.pause();
+        await expect(
+          iVault.connect(iVaultOperator).undelegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes),
+        ).to.be.revertedWith("Pausable: paused");
+        await iVault.unpause();
+      });
+
+      it("Reverts: undelegate when mellowAdapterV3 is paused", async function () {
+        if (await iVault.paused()) {
+          await iVault.unpause();
+        }
+
+        const amount = randomBI(17);
+        await mellowAdapterV3.pause();
+        await expect(
+          iVault.connect(iVaultOperator).undelegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes),
+        ).to.be.revertedWith("Pausable: paused");
+      });
+    });
+
+    describe("Redeem: retrieves assets after they were received from Mellow", function () {
+      let ratio, stakerAmount, staker2Amount, stakerUnstakeAmount1, stakerUnstakeAmount2, staker2UnstakeAmount;
+      before(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker3).deposit(e18, staker3.address);
+        await iVault
+          .connect(iVaultOperator)
+          .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, await iVault.getFreeBalance(), emptyBytes);
+        await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken)]);
+        ratio = await iVault.ratio();
+      });
+
+      it("Deposit and Delegate partially", async function () {
+        stakerAmount = 9_399_680_561_290_658_040n;
+        await iVault.connect(staker).deposit(stakerAmount, staker.address);
+        staker2Amount = 1_348_950_494_309_030_813n;
+        await iVault.connect(staker2).deposit(staker2Amount, staker2.address);
+
+        const delegated = (await iVault.getFreeBalance()) - e18;
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, delegated, emptyBytes);
+
+        await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken)]);
+        console.log(`Staker amount: ${stakerAmount}`);
+        console.log(`Staker2 amount: ${staker2Amount}`);
+        console.log(`Ratio: ${await iVault.ratio()}`);
+      });
+
+      it("Staker has nothing to claim yet", async function () {
+        expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.false;
+      });
+
+      it("Staker withdraws half of their shares", async function () {
+        const shares = await iToken.balanceOf(staker.address);
+        stakerUnstakeAmount1 = shares / 2n;
+        await iVault.connect(staker).withdraw(stakerUnstakeAmount1, staker.address);
+        await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken)]);
+        console.log(`Ratio: ${await iVault.ratio()}`);
+      });
+
+      it("Staker is not able to redeem yet", async function () {
+        expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.false;
+      });
+
+      it("updateEpoch can not unlock withdrawals without enough freeBalance", async function () {
+        const redeemReserveBefore = await iVault.redeemReservedAmount();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+        const epochBefore = await iVault.epoch();
+        await iVault.connect(iVaultOperator).updateEpoch();
+
+        const redeemReserveAfter = await iVault.redeemReservedAmount();
+        const freeBalanceAfter = await iVault.getFreeBalance();
+        const epochAfter = await iVault.epoch();
+
+        expect(redeemReserveAfter).to.be.eq(redeemReserveBefore);
+        expect(freeBalanceAfter).to.be.eq(freeBalanceBefore);
+        expect(epochAfter).to.be.eq(epochBefore);
+      });
+
+      it("Withdraw from mellowVault amount = pending withdrawals", async function () {
+        const redeemReserveBefore = await iVault.redeemReservedAmount();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+        const amount = await iVault.totalAmountToWithdraw();
+
+        await iVault.connect(iVaultOperator).undelegate(await mellowAdapterV3.getAddress(), mellowVaults[0].vaultAddress, amount, emptyBytes);
+        await helpers.time.increase(1209900);
+        await iVault.connect(iVaultOperator).claim(await mellowAdapterV3.getAddress(), []);
+
+        const redeemReserveAfter = await iVault.redeemReservedAmount();
+        const freeBalanceAfter = await iVault.getFreeBalance();
+        await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken)]);
+        console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
+        console.log(`Pending withdrawals:\t${(await iVault.getPendingWithdrawalOf(staker.address)).format()}`);
+        console.log(`Ratio: ${await iVault.ratio()}`);
+
+        expect(redeemReserveAfter - redeemReserveBefore).to.be.closeTo(amount, transactErr);
+        expect(freeBalanceAfter).to.be.closeTo(freeBalanceBefore, transactErr);
+      });
+
+      it("Staker is now able to redeem", async function () {
+        expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.true;
+      });
+
+      it("Redeem reverts when iVault is paused", async function () {
+        await iVault.pause();
+        await expect(iVault.connect(iVaultOperator).redeem(staker.address)).to.be.revertedWith("Pausable: paused");
+      });
+
+      it("Unpause after previous test", async function () {
+        await iVault.unpause();
+      });
+
+      it("Staker2 withdraws < freeBalance", async function () {
+        staker2UnstakeAmount = (await iVault.getFreeBalance()) - 1000_000_000n;
+        await iVault.connect(staker2).withdraw(staker2UnstakeAmount, staker2.address);
+      });
+
+      it("Staker2 can not claim the same epoch even if freeBalance is enough", async function () {
+        expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.false;
+      });
+
+      it("Staker is still able to claim", async function () {
+        const ableRedeem = await iVault.isAbleToRedeem(staker.address);
+        expect(ableRedeem[0]).to.be.true;
+        expect([...ableRedeem[1]]).to.have.members([0n]);
+      });
+
+      it("Redeem reverts when pending withdrawal is not covered", async function () {
+        await expect(iVault.connect(iVaultOperator).redeem(staker2.address)).to.be.revertedWithCustomError(
+          iVault,
+          "IsNotAbleToRedeem",
+        );
+      });
+
+      it("Stakers new withdrawal goes to the end of queue", async function () {
+        stakerUnstakeAmount2 = (await iToken.balanceOf(staker.address)) / 2n;
+        await iVault.connect(staker).withdraw(stakerUnstakeAmount2, staker.address);
+
+        const newQueuedWithdrawal = await iVault.claimerWithdrawalsQueue(2);
+        console.log(`Pending withdrawals: ${await iVault.getPendingWithdrawalOf(staker.address)}`);
+        console.log(`Unstake amount: ${stakerUnstakeAmount2.toString()}`);
+        console.log(`Ratio: ${await calculateRatio(iVault, iToken)}`);
+
+        expect(newQueuedWithdrawal.epoch).to.be.eq(2n); //queue length - 1
+        expect(newQueuedWithdrawal.receiver).to.be.eq(staker.address);
+        expect(newQueuedWithdrawal.amount).to.be.closeTo(
+          await iVault.convertToAssets(stakerUnstakeAmount2),
+          transactErr,
+        );
+      });
+
+      it("Staker is still able to redeem the 1st withdrawal", async function () {
+        const ableRedeem = await iVault.isAbleToRedeem(staker.address);
+        expect(ableRedeem[0]).to.be.true;
+        expect([...ableRedeem[1]]).to.have.members([0n]);
+      });
+
+      it("updateEpoch unlocks pending withdrawals in order they were submitted", async function () {
+        const staker2Pending = await iVault.getPendingWithdrawalOf(staker2.address);
+        const redeemReserveBefore = await iVault.redeemReservedAmount();
+        const freeBalanceBefore = await iVault.getFreeBalance();
+        const epochBefore = await iVault.epoch();
+        await iVault.connect(iVaultOperator).updateEpoch();
+
+        const redeemReserveAfter = await iVault.redeemReservedAmount();
+        const freeBalanceAfter = await iVault.getFreeBalance();
+        const epochAfter = await iVault.epoch();
+
+        expect(redeemReserveAfter - redeemReserveBefore).to.be.closeTo(staker2Pending, transactErr);
+        expect(freeBalanceBefore - freeBalanceAfter).to.be.closeTo(staker2Pending, transactErr);
+        expect(epochAfter).to.be.eq(epochBefore + 1n);
+      });
+
+      it("Staker2 is able to claim", async function () {
+        const ableRedeem = await iVault.isAbleToRedeem(staker2.address);
+        expect(ableRedeem[0]).to.be.true;
+        expect([...ableRedeem[1]]).to.have.members([1n]);
+      });
+
+      it("Staker is able to claim only the 1st wwl", async function () {
+        const ableRedeem = await iVault.isAbleToRedeem(staker.address);
+        expect(ableRedeem[0]).to.be.true;
+        expect([...ableRedeem[1]]).to.have.members([0n]);
+      });
+
+      it("Staker redeems withdrawals", async function () {
+        const stakerBalanceBefore = await asset.balanceOf(staker.address);
+        const stakerPendingWithdrawalsBefore = await iVault.getPendingWithdrawalOf(staker.address);
+        const stakerRedeemedAmount = await iVault.convertToAssets(stakerUnstakeAmount1);
+        const stakerPendingAmount = await iVault.convertToAssets(stakerUnstakeAmount2);
+
+        await iVault.connect(staker).redeem(staker.address);
+        const stakerBalanceAfter = await asset.balanceOf(staker.address);
+        const stakerPendingWithdrawalsAfter = await iVault.getPendingWithdrawalOf(staker.address);
+
+        console.log(`Staker balance after: ${stakerBalanceAfter}`);
+        console.log(`Staker pending withdrawals after: ${stakerPendingWithdrawalsAfter}`);
+        console.log(`stakerUnstakeAmountAssetValue: ${stakerRedeemedAmount}`);
+        console.log(`stakerPendingWithdrawalsBefore[0]: ${stakerPendingWithdrawalsBefore}`);
+
+        expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
+          stakerRedeemedAmount,
+          transactErr,
+        );
+        expect(stakerPendingWithdrawalsAfter).to.be.closeTo(stakerPendingAmount, transactErr);
+        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerRedeemedAmount, transactErr);
+        expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.false;
+        expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken), ratioErr);
+      });
+
+      it("Staker2 redeems withdrawals", async function () {
+        const stakerBalanceBefore = await asset.balanceOf(staker2.address);
+        const stakerPendingWithdrawalsBefore = await iVault.getPendingWithdrawalOf(staker2.address);
+
+        await iVault.connect(staker2).redeem(staker2.address);
+        const stakerBalanceAfter = await asset.balanceOf(staker2.address);
+        const stakerPendingWithdrawalsAfter = await iVault.getPendingWithdrawalOf(staker2.address);
+
+        console.log(`Staker balance after: ${stakerBalanceAfter}`);
+        console.log(`Staker pending withdrawals after: ${stakerPendingWithdrawalsAfter}`);
+        const stakerUnstakeAmountAssetValue = await iVault.convertToAssets(staker2UnstakeAmount);
+        expect(stakerPendingWithdrawalsBefore - stakerPendingWithdrawalsAfter).to.be.closeTo(
+          stakerUnstakeAmountAssetValue,
+          transactErr * 2n,
+        );
+        expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2n);
+        expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.false;
+        expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken), ratioErr);
+      });
+    });
+
+    describe("Redeem: to the different addresses", function () {
+      let ratio, recipients, pendingShares;
+
+      before(async function () {
+        await snapshot.restore();
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit("9292557565124725653", staker.address);
+        const amount = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes);
+      });
+
+      const count = 3;
+      for (let j = 0; j < count; j++) {
+        it(`${j} Withdraw to 5 random addresses`, async function () {
+          recipients = [];
+          pendingShares = 0n;
+          for (let i = 0; i < 5; i++) {
+            const recipient = randomAddress();
+            const shares = randomBI(17);
+            pendingShares = pendingShares + shares;
+            await iVault.connect(staker).withdraw(shares, recipient);
+            recipients.push(recipient);
+          }
+        });
+
+        it(`${j} Withdraw from EL and update ratio`, async function () {
+          const amount = await iVault.totalAmountToWithdraw();
+          await iVault.connect(iVaultOperator).undelegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes);
+
+          await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+          const calculatedRatio = await calculateRatio(iVault, iToken);
+          await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+          ratio = await iVault.ratio();
+          console.log(`New ratio is: ${ratio}`);
+
+          await helpers.time.increase(1209900);
+          await iVault.connect(iVaultOperator).claim(await mellowAdapterV3.getAddress(), []);
+
+          console.log(`Total assets: ${await iVault.totalAssets()}`);
+          console.log(`Total withdrawn shares to assets ${await iVault.convertToAssets(pendingShares)}`);
+          console.log(`Ratio: ${await iVault.ratio()}`);
+        });
+
+        it(`${j} Recipients claim`, async function () {
+          for (const r of recipients) {
+            const rBalanceBefore = await asset.balanceOf(r);
+            const rPendingWithdrawalsBefore = await iVault.getPendingWithdrawalOf(r);
+            await iVault.connect(deployer).redeem(r);
+            const rBalanceAfter = await asset.balanceOf(r);
+            const rPendingWithdrawalsAfter = await iVault.getPendingWithdrawalOf(r);
+
+            expect(rBalanceAfter - rPendingWithdrawalsBefore).to.be.closeTo(0, transactErr);
+            expect(rBalanceBefore - rPendingWithdrawalsAfter).to.be.closeTo(0, transactErr);
+          }
+          expect(await iVault.ratio()).to.be.lte(ratio);
+          console.log(`Total assets: ${await iVault.totalAssets()}`);
+          console.log(`Ratio: ${await iVault.ratio()}`);
+        });
+
+        it(`${j} Deposit extra from iVault`, async function () {
+          const totalDepositedBefore = await iVault.getTotalDeposited();
+
+          const amount = await iVault.getFreeBalance();
+          await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes);
+          const totalDepositedAfter = await iVault.getTotalDeposited();
+
+          console.log(`Total assets: ${await iVault.totalAssets()}`);
+          console.log(`Ratio: ${await iVault.ratio()}`);
+
+          expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
+          expect(await iVault.totalAssets()).to.be.lte(100);
+          expect(await iVault.ratio()).to.be.lte(ratio);
+        });
+      }
+
+      it("Update asset ratio and withdraw the rest", async function () {
+        await a.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
+        const calculatedRatio = await calculateRatio(iVault, iToken);
+        await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
+        ratio = await iVault.ratio();
+        console.log(`New ratio is: ${ratio}`);
+
+        //Withdraw all and take from EL
+        const shares = await iToken.balanceOf(staker.address);
+        await iVault.connect(staker).withdraw(shares, staker.address);
+        const amount = await iVault.getTotalDelegated();
+
+        await iVault.connect(iVaultOperator).undelegate(await mellowAdapterV3.getAddress(), mellowVaults[0].vaultAddress, amount, emptyBytes);
+        await helpers.time.increase(1209900);
+        await iVault.connect(iVaultOperator).claim(await mellowAdapterV3.getAddress(), []);
+
+        await iVault.connect(iVaultOperator).redeem(staker.address);
+
+        console.log(`iVault total assets: ${await iVault.totalAssets()}`);
+        console.log(`Total deposited: ${await iVault.getTotalDeposited()}`);
       });
     });
   });
