@@ -269,9 +269,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         view
         returns (uint256)
     {
-        uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
-        uint256 mellowClaimable = mellowRestaker.claimableWithdrawalAmount();
-        uint256 claimableAmount = mellowRestaker.claimableAmount();
+        uint256 pendingWithdrawal = mellowMultiVaultRestaker.pendingWithdrawalAmount();
+        uint256 mellowClaimable = mellowMultiVaultRestaker.claimableWithdrawalAmount();
+        uint256 claimableAmount = mellowMultiVaultRestaker.claimableAmount();
         return pendingWithdrawal + claimableAmount + mellowClaimable;
     }
 

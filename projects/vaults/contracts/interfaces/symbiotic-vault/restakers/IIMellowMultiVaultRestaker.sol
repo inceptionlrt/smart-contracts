@@ -50,5 +50,7 @@ interface IIMellowMultiVaultRestaker is IIBaseRestaker {
     ) external returns (uint256);
 
     function claim(bytes[] calldata _data) external returns (uint256);
+
+    function claimableWithdrawalAmount() external view returns (uint256);
 }
 
