@@ -1,5 +1,6 @@
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, network } = require("hardhat");
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { ethers, network } from "hardhat";
+
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -33,18 +34,18 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   // await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
-const calculateRatio = async (vault, token, queue) => {
+const calculateRatio = async (vault, token) => {
   const totalDelegated = await vault.getTotalDelegated();
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
-  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const emergencyPendingWithdrawals = await vault.getTotalPendingEmergencyWithdrawals();
-  const totalDeposited = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount;
   const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
 
+  // shares
   const numeral = totalSupply + totalSharesToWithdraw;
+  // tokens/assets
   const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
   // console.log("ratio{");
@@ -58,7 +59,7 @@ const calculateRatio = async (vault, token, queue) => {
   // console.log("}");
 
   if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 0n)) {
-    console.log("iToken supply is 0, so the ration is going to be 1e18");
+    console.log("iToken supply is 0, so the ratio is going to be 1e18");
     return e18;
   }
 
@@ -171,7 +172,7 @@ const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroA
 
 const day = 86400n;
 
-module.exports = {
+export {
   addRewardsToStrategy,
   addRewardsToStrategyWrap,
   withdrawDataFromTx,
