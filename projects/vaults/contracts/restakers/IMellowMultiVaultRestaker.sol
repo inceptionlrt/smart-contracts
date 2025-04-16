@@ -18,63 +18,25 @@ import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMul
 import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
 import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
 
-// interface IWithdrawalQueueERC721 {
-//     struct WithdrawalRequestStatus {
-//         uint256 amountOfStETH;
-//         uint256 amountOfShares;
-//         address owner;
-//         uint256 timestamp;
-//         bool isFinalized;
-//         bool isClaimed;
-//     }
-
-//     function getWithdrawalRequests(
-//         address _owner
-//     ) external view returns (uint256[] memory requestsIds);
-
-//     function requestWithdrawalsWstETH(
-//         uint256[] calldata _amounts,
-//         address _owner
-//     ) external returns (uint256[] memory requestIds);
-
-//     function getWithdrawalStatus(
-//         uint256[] calldata _requestIds
-//     ) external view returns (WithdrawalRequestStatus[] memory statuses);
-
-//     function claimWithdrawal(uint256 _requestId) external;
-// }
-
 /**
  * @title The IMellowMultiVaultRestaker Contract
  * @author The InceptionLRT team
- *
- * @dev TODO: Complete the description
- *
- *  @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract IMellowMultiVaultRestaker is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IIMellowMultiVaultRestaker
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+ERC165Upgradeable,
+OwnableUpgradeable,
+IIMellowMultiVaultRestaker
 {
     using SafeERC20 for IERC20;
 
-    /// @dev Kept only for storage slot
-    /// TODO Do we need this?
-    mapping(address => IMellowDepositWrapper) private PLACE_HOLDER_1; // mellowVault => mellowDepositWrapper
     IMellowVault[] public vaults;
 
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
-
-    // /// @dev Kept only for storage slot
-    // uint256 private PLACE_HOLDER_2;
-    // /// @dev Kept only for storage slot
-    // uint256 private PLACE_HOLDER_3; // BasisPoints 10,000 = 100%
-    // /// @dev Kept only for storage slot
-    // uint256 private PLACE_HOLDER_4;
 
     IERC20 internal _asset;
     address internal _trusteeManager;
@@ -131,11 +93,11 @@ contract IMellowMultiVaultRestaker is
         uint256 amount,
         bytes[] calldata _data
     )
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256 depositedAmount)
+    external
+    override
+    onlyTrustee
+    whenNotPaused
+    returns (uint256 depositedAmount)
     {
         bool delegateAuto = abi.decode(_data[0], (bool));
 
@@ -229,8 +191,8 @@ contract IMellowMultiVaultRestaker is
             for (uint256 j = 0; j < length; j++) {
                 claimableArray[j] = IWithdrawalQueue(
                     IMultiVaultStorage(address(vaults[i]))
-                        .subvaultAt(j)
-                        .withdrawalQueue
+                    .subvaultAt(j)
+                    .withdrawalQueue
                 ).claimableAssetsOf(address(this));
 
                 if (claimableArray[j] != 0) {
@@ -298,8 +260,8 @@ contract IMellowMultiVaultRestaker is
 
             for (uint256 j = 0; j < length; j++) {
                 IMultiVaultStorage.Subvault
-                    memory subvault = IMultiVaultStorage(address(vaults[i]))
-                        .subvaultAt(j);
+                memory subvault = IMultiVaultStorage(address(vaults[i]))
+                    .subvaultAt(j);
                 total += IWithdrawalQueue(subvault.withdrawalQueue)
                     .claimableAssetsOf(address(this));
             }
@@ -328,8 +290,8 @@ contract IMellowMultiVaultRestaker is
 
             for (uint256 j = 0; j < length; j++) {
                 IMultiVaultStorage.Subvault
-                    memory subvault = IMultiVaultStorage(address(vaults[i]))
-                        .subvaultAt(j);
+                memory subvault = IMultiVaultStorage(address(vaults[i]))
+                    .subvaultAt(j);
                 total += IWithdrawalQueue(subvault.withdrawalQueue)
                     .pendingAssetsOf(address(this));
             }

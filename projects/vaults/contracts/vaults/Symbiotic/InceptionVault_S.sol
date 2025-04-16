@@ -186,8 +186,7 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 amount,
         bytes[] calldata _data
     ) external nonReentrant whenNotPaused onlyOperator {
-        /// TODO change the error name
-        if (adapter != address(mellowMultiVaultRestaker)) revert NullParams();
+        if (adapter != address(mellowMultiVaultRestaker)) revert OnlyMellowMultiVaultAdapterAllowed();
         if (vault == address(0) || amount == 0) revert NullParams();
 
         _beforeDeposit(amount);
@@ -454,6 +453,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         address vault
     ) external view returns (uint256) {
         return mellowRestaker.getDeposited(vault);
+    }
+
+    function getDelegatedToMellowMultiVault(
+        address vault
+    ) external view returns (uint256) {
+        return mellowMultiVaultRestaker.getDeposited(vault);
     }
 
     function getDelegatedToSymbiotic(

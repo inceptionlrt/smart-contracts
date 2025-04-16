@@ -47,4 +47,6 @@ interface ISymbioticHandler is IMellowHandler {
     event SymbioticRestakerAdded(address indexed newValue);
 
     event MellowRestakerAdded(address indexed newValue);
+
+    event MellowMultiVaultRestakerAdded(address indexed newValue);
 }

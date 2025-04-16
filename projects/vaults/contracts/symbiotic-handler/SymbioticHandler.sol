@@ -103,15 +103,17 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     ////// Withdrawal functions //////
     ///////////////////////////////*/
 
-    /// @dev TODO
+    /// @dev Initiates the undelegation of a specified amount from a vault through the provided adapter.
+    ///      Verifies that the adapter matches the mellowMultiVaultRestaker, and ensures the vault and amount are non-zero.
+    ///      Calls the withdraw function on the mellowMultiVaultRestaker and emits a StartMellowWithdrawal event.
+    ///      Only callable by the operator when the contract is not paused.
     function undelegate(
         address adapter,
         address vault,
         uint256 amount,
         bytes[] calldata _data
     ) external whenNotPaused nonReentrant onlyOperator {
-        /// TODO change the error name
-        if (adapter != address(mellowMultiVaultRestaker)) revert NullParams();
+        if (adapter != address(mellowMultiVaultRestaker)) revert OnlyMellowMultiVaultAdapterAllowed();
         if (vault == address(0) || amount == 0) revert NullParams();
 
         amount = mellowMultiVaultRestaker.withdraw(vault, amount, _data);
@@ -145,10 +147,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawalsMellow()
-        public
-        onlyOperator
-        whenNotPaused
-        nonReentrant
+    public
+    onlyOperator
+    whenNotPaused
+    nonReentrant
     {
         uint256 availableBalance = getFreeBalance();
 
@@ -160,7 +162,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         _updateEpoch(availableBalance + withdrawnAmount);
     }
 
-    /// @dev TODO update the description
+    /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claim(
         address adapter,
         bytes[] calldata _data
@@ -209,7 +211,7 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         uint256 withdrawalsNum = claimerWithdrawalsQueue.length;
         uint256 redeemReservedBuffer;
         uint256 epochBuffer;
-        for (uint256 i = epoch; i < withdrawalsNum; ) {
+        for (uint256 i = epoch; i < withdrawalsNum;) {
             uint256 amount = claimerWithdrawalsQueue[i].amount;
             unchecked {
                 if (amount > availableBalance) {
@@ -254,9 +256,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev returns the total amount of pending withdrawals from Mellow LRT
     function getPendingWithdrawalAmountFromMellow()
-        public
-        view
-        returns (uint256)
+    public
+    view
+    returns (uint256)
     {
         uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
         uint256 mellowClaimable = mellowRestaker.claimableWithdrawalAmount();
@@ -265,9 +267,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
     }
 
     function getPendingWithdrawalAmountFromMellowMultiVault()
-        public
-        view
-        returns (uint256)
+    public
+    view
+    returns (uint256)
     {
         uint256 pendingWithdrawal = mellowMultiVaultRestaker.pendingWithdrawalAmount();
         uint256 mellowClaimable = mellowMultiVaultRestaker.claimableWithdrawalAmount();
@@ -326,7 +328,8 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
         mellowMultiVaultRestaker = IIMellowMultiVaultRestaker(
             newMellowMultiVaultRestaker
         );
-        /// TODO add a specific event
+
+        emit MellowMultiVaultRestakerAdded(newMellowMultiVaultRestaker);
     }
 }
 
