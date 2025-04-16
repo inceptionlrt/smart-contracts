@@ -22,18 +22,12 @@ const assets = [
     blockNumber: 22276903,
     impersonateStaker: async function(staker, iVault) {
       const donor = await impersonateWithEth(this.assetDonor, toWei(1));
-
-      console.log("asset address: ", this.assetAddress);
-      console.log("donor address: ", donor.address);
-
       const asset = await ethers.getContractAt("IERC20", this.assetAddress);
-      console.log("Donor balance: ", await asset.balanceOf(donor));
-
-      /// The donor's balance is 142 ETH
-      const amount = toWei(40);
-      await asset.connect(donor).transfer(staker.address, amount);
-      await asset.connect(staker).approve(await iVault.getAddress(), amount);
-      console.log("Donor balance after: ", await asset.balanceOf(donor));
+      const ABI = ["function authorizedMint(address _to, uint256 _amount) external"];
+      const baseDonor = await impersonateWithEth("0xaCA5d659364636284041b8D3ACAD8a57f6E7B8A5", toWei(1));
+      const USBD = await ethers.getContractAt(ABI, this.assetAddress);
+      await USBD.connect(baseDonor).authorizedMint(staker, toWei(1000));
+      await asset.connect(staker).approve(await iVault.getAddress(), toWei(1000));
       return staker;
     },
     addRewardsMellowVault: async function(amount, mellowVault) {
@@ -978,6 +972,212 @@ assets.forEach(function(a) {
       it("unpause(): reverts when caller is not an owner", async function() {
         await mellowAdapterV3.pause();
         await expect(mellowAdapterV3.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+    });
+
+    describe("Deposit bonus params setter and calculation", function () {
+      let targetCapacityPercent, MAX_PERCENT, localSnapshot;
+      before(async function () {
+        await iVault.setTargetFlashCapacity(1n);
+        MAX_PERCENT = await iVault.MAX_PERCENT();
+      });
+
+      const depositBonusSegment = [
+        {
+          fromUtilization: async () => 0n,
+          fromPercent: async () => await iVault.maxBonusRate(),
+          toUtilization: async () => await iVault.depositUtilizationKink(),
+          toPercent: async () => await iVault.optimalBonusRate(),
+        },
+        {
+          fromUtilization: async () => await iVault.depositUtilizationKink(),
+          fromPercent: async () => await iVault.optimalBonusRate(),
+          toUtilization: async () => await iVault.MAX_PERCENT(),
+          toPercent: async () => await iVault.optimalBonusRate(),
+        },
+        {
+          fromUtilization: async () => await iVault.MAX_PERCENT(),
+          fromPercent: async () => 0n,
+          toUtilization: async () => ethers.MaxUint256,
+          toPercent: async () => 0n,
+        },
+      ];
+
+      const args = [
+        {
+          name: "Normal bonus rewards profile > 0",
+          newMaxBonusRate: BigInt(2 * 10 ** 8), //2%
+          newOptimalBonusRate: BigInt(0.2 * 10 ** 8), //0.2%
+          newDepositUtilizationKink: BigInt(25 * 10 ** 8), //25%
+        },
+        {
+          name: "Optimal utilization = 0 => always optimal rate",
+          newMaxBonusRate: BigInt(2 * 10 ** 8),
+          newOptimalBonusRate: BigInt(10 ** 8), //1%
+          newDepositUtilizationKink: 0n,
+        },
+        {
+          name: "Optimal bonus rate = 0",
+          newMaxBonusRate: BigInt(2 * 10 ** 8),
+          newOptimalBonusRate: 0n,
+          newDepositUtilizationKink: BigInt(25 * 10 ** 8),
+        },
+        {
+          name: "Optimal bonus rate = max > 0 => rate is constant over utilization",
+          newMaxBonusRate: BigInt(2 * 10 ** 8),
+          newOptimalBonusRate: BigInt(2 * 10 ** 8),
+          newDepositUtilizationKink: BigInt(25 * 10 ** 8),
+        },
+        {
+          name: "Optimal bonus rate = max = 0 => no bonus",
+          newMaxBonusRate: 0n,
+          newOptimalBonusRate: 0n,
+          newDepositUtilizationKink: BigInt(25 * 10 ** 8),
+        },
+        //Will fail when OptimalBonusRate > MaxBonusRate
+      ];
+
+      const amounts = [
+        {
+          name: "min amount from 0",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => (await iVault.convertToAssets(await iVault.withdrawMinAmount())) + 1n,
+        },
+        {
+          name: "1 wei from 0",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => 1n,
+        },
+        {
+          name: "from 0 to 25% of TARGET",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => (targetCapacityPercent * 25n) / 100n,
+        },
+        {
+          name: "from 0 to 25% + 1wei of TARGET",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => (targetCapacityPercent * 25n) / 100n,
+        },
+        {
+          name: "from 25% to 100% of TARGET",
+          flashCapacity: targetCapacity => (targetCapacity * 25n) / 100n,
+          amount: async () => (targetCapacityPercent * 75n) / 100n,
+        },
+        {
+          name: "from 0% to 100% of TARGET",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => targetCapacityPercent,
+        },
+        {
+          name: "from 0% to 200% of TARGET",
+          flashCapacity: targetCapacity => 0n,
+          amount: async () => targetCapacityPercent * 2n,
+        },
+      ];
+
+      args.forEach(function (arg) {
+        it(`setDepositBonusParams: ${arg.name}`, async function () {
+          await snapshot.restore();
+          await iVault.setTargetFlashCapacity(1n);
+          await expect(
+            iVault.setDepositBonusParams(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink),
+          )
+            .to.emit(iVault, "DepositBonusParamsChanged")
+            .withArgs(arg.newMaxBonusRate, arg.newOptimalBonusRate, arg.newDepositUtilizationKink);
+          expect(await iVault.maxBonusRate()).to.be.eq(arg.newMaxBonusRate);
+          expect(await iVault.optimalBonusRate()).to.be.eq(arg.newOptimalBonusRate);
+          expect(await iVault.depositUtilizationKink()).to.be.eq(arg.newDepositUtilizationKink);
+          localSnapshot = await helpers.takeSnapshot();
+        });
+
+        amounts.forEach(function (amount) {
+          it(`calculateDepositBonus for ${amount.name}`, async function () {
+            await localSnapshot.restore();
+            const deposited = toWei(100);
+            targetCapacityPercent = e18;
+            const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
+            await iVault.connect(staker).deposit(deposited, staker.address);
+            let flashCapacity = amount.flashCapacity(targetCapacity);
+            await iVault
+              .connect(iVaultOperator)
+              .delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, deposited - flashCapacity - 1n, emptyBytes);
+            await iVault.setTargetFlashCapacity(targetCapacityPercent); //1%
+            console.log(`Flash capacity:\t\t${await iVault.getFlashCapacity()}`);
+
+            let _amount = await amount.amount();
+            let depositBonus = 0n;
+            while (_amount > 0n) {
+              for (const feeFunc of depositBonusSegment) {
+                const utilization = (flashCapacity * MAX_PERCENT) / targetCapacity;
+                const fromUtilization = await feeFunc.fromUtilization();
+                const toUtilization = await feeFunc.toUtilization();
+                if (_amount > 0n && fromUtilization <= utilization && utilization < toUtilization) {
+                  const fromPercent = await feeFunc.fromPercent();
+                  const toPercent = await feeFunc.toPercent();
+                  const upperBound = (toUtilization * targetCapacityPercent) / MAX_PERCENT;
+                  const replenished = upperBound > flashCapacity + _amount ? _amount : upperBound - flashCapacity;
+                  const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
+                  const bonusPercent =
+                    fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacityPercent;
+                  const bonus = (replenished * bonusPercent) / MAX_PERCENT;
+                  console.log(`Replenished:\t\t\t${replenished.format()}`);
+                  console.log(`Bonus percent:\t\t\t${bonusPercent.format()}`);
+                  console.log(`Bonus:\t\t\t\t\t${bonus.format()}`);
+                  flashCapacity += replenished;
+                  _amount -= replenished;
+                  depositBonus += bonus;
+                }
+              }
+            }
+            let contractBonus = await iVault.calculateDepositBonus(await amount.amount());
+            console.log(`Expected deposit bonus:\t${depositBonus.format()}`);
+            console.log(`Contract deposit bonus:\t${contractBonus.format()}`);
+            expect(contractBonus).to.be.closeTo(depositBonus, 1n);
+          });
+        });
+      });
+
+      const invalidArgs = [
+        {
+          name: "MaxBonusRate > MAX_PERCENT",
+          newMaxBonusRate: () => MAX_PERCENT + 1n,
+          newOptimalBonusRate: () => BigInt(0.2 * 10 ** 8), //0.2%
+          newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "ParameterExceedsLimits",
+        },
+        {
+          name: "OptimalBonusRate > MAX_PERCENT",
+          newMaxBonusRate: () => BigInt(2 * 10 ** 8),
+          newOptimalBonusRate: () => MAX_PERCENT + 1n,
+          newDepositUtilizationKink: () => BigInt(25 * 10 ** 8),
+          customError: "ParameterExceedsLimits",
+        },
+        {
+          name: "DepositUtilizationKink > MAX_PERCENT",
+          newMaxBonusRate: () => BigInt(2 * 10 ** 8),
+          newOptimalBonusRate: () => BigInt(0.2 * 10 ** 8), //0.2%
+          newDepositUtilizationKink: () => MAX_PERCENT + 1n,
+          customError: "ParameterExceedsLimits",
+        },
+      ];
+      invalidArgs.forEach(function (arg) {
+        it(`setDepositBonusParams reverts when ${arg.name}`, async function () {
+          await expect(
+            iVault.setDepositBonusParams(
+              arg.newMaxBonusRate(),
+              arg.newOptimalBonusRate(),
+              arg.newDepositUtilizationKink(),
+            ),
+          ).to.be.revertedWithCustomError(iVault, arg.customError);
+        });
+      });
+
+      it("setDepositBonusParams reverts when caller is not an owner", async function () {
+        await expect(
+          iVault
+            .connect(staker)
+            .setDepositBonusParams(BigInt(2 * 10 ** 8), BigInt(0.2 * 10 ** 8), BigInt(25 * 10 ** 8)),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
   });
