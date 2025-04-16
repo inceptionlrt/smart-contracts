@@ -33,16 +33,25 @@ IIMellowMultiVaultRestaker
 {
     using SafeERC20 for IERC20;
 
+    /// @dev Kept only for storage slot
+    mapping(address => IMellowDepositWrapper) private PLACE_HOLDER_1;
     IMellowVault[] public vaults;
 
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
 
+    /// @dev Kept only for storage slot
+    uint256 private PLACE_HOLDER_2;
+    /// @dev Kept only for storage slot
+    uint256 private PLACE_HOLDER_3; // BasisPoints 10,000 = 100%
+    /// @dev Kept only for storage slot
+    uint256 private PLACE_HOLDER_4;
+
+    address public ethWrapper;
+
     IERC20 internal _asset;
     address internal _trusteeManager;
     address internal _inceptionVault;
-
-    address public ethWrapper;
 
     address public claimer;
     address public wstETH;
