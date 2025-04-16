@@ -520,13 +520,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newDepositUtilizationKink);
         if (newOptimalBonusRate > newMaxBonusRate) revert InconsistentData();
 
-        if (newMaxBonusRate == 0)
-            revert ParameterIsZero(newMaxBonusRate);
-        if (newOptimalBonusRate == 0)
-            revert ParameterIsZero(newOptimalBonusRate);
-        if (newDepositUtilizationKink == 0)
-            revert ParameterIsZero(newDepositUtilizationKink);
-
         maxBonusRate = newMaxBonusRate;
         optimalBonusRate = newOptimalBonusRate;
         depositUtilizationKink = newDepositUtilizationKink;
@@ -551,13 +544,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             revert ParameterExceedsLimits(newWithdrawUtilizationKink);
         if (newOptimalWithdrawalRate > newMaxFlashFeeRate)
             revert InconsistentData();
-
-        if (newMaxFlashFeeRate == 0)
-            revert ParameterIsZero(newMaxFlashFeeRate);
-        if (newOptimalWithdrawalRate == 0)
-            revert ParameterIsZero(newOptimalWithdrawalRate);
-        if (newWithdrawUtilizationKink == 0)
-            revert ParameterIsZero(newWithdrawUtilizationKink);
 
         maxFlashFeeRate = newMaxFlashFeeRate;
         optimalWithdrawalRate = newOptimalWithdrawalRate;
