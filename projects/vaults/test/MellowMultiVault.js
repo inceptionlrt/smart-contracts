@@ -3,7 +3,7 @@ const { ZeroAddress } = require("ethers");
 const { ethers, upgrades, network } = require("hardhat");
 const { expect } = require("chai");
 const { impersonateWithEth, calculateRatio, toWei, e18 } = require("./helpers/utils.js");
-const { randomBI } = require("./helpers/utils");
+const { randomBI, day } = require("./helpers/utils");
 
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
@@ -686,20 +686,20 @@ assets.forEach(function(a) {
       });
     });
 
-    describe("iVault getters and setters", function () {
-      beforeEach(async function () {
+    describe("iVault getters and setters", function() {
+      beforeEach(async function() {
         await snapshot.restore();
       });
 
-      it("Assset", async function () {
+      it("Assset", async function() {
         expect(await iVault.asset()).to.be.eq(asset.address);
       });
 
-      it("Default epoch", async function () {
+      it("Default epoch", async function() {
         expect(await iVault.epoch()).to.be.eq(0n);
       });
 
-      it("setTreasuryAddress(): only owner can", async function () {
+      it("setTreasuryAddress(): only owner can", async function() {
         const treasury = await iVault.treasury();
         const newTreasury = ethers.Wallet.createRandom().address;
 
@@ -709,17 +709,17 @@ assets.forEach(function(a) {
         expect(await iVault.treasury()).to.be.eq(newTreasury);
       });
 
-      it("setTreasuryAddress(): reverts when set to zero address", async function () {
+      it("setTreasuryAddress(): reverts when set to zero address", async function() {
         await expect(iVault.setTreasuryAddress(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
-      it("setTreasuryAddress(): reverts when caller is not an operator", async function () {
+      it("setTreasuryAddress(): reverts when caller is not an operator", async function() {
         await expect(iVault.connect(staker).setTreasuryAddress(staker2.address)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("setOperator(): only owner can", async function () {
+      it("setOperator(): only owner can", async function() {
         const newOperator = staker2;
         await expect(iVault.setOperator(newOperator.address))
           .to.emit(iVault, "OperatorChanged")
@@ -731,17 +731,17 @@ assets.forEach(function(a) {
         await iVault.connect(newOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, amount, emptyBytes);
       });
 
-      it("setOperator(): reverts when set to zero address", async function () {
+      it("setOperator(): reverts when set to zero address", async function() {
         await expect(iVault.setOperator(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
-      it("setOperator(): reverts when caller is not an operator", async function () {
+      it("setOperator(): reverts when caller is not an operator", async function() {
         await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("setRatioFeed(): only owner can", async function () {
+      it("setRatioFeed(): only owner can", async function() {
         const ratioFeed = await iVault.ratioFeed();
         const newRatioFeed = ethers.Wallet.createRandom().address;
         await expect(iVault.setRatioFeed(newRatioFeed))
@@ -750,18 +750,18 @@ assets.forEach(function(a) {
         expect(await iVault.ratioFeed()).to.be.eq(newRatioFeed);
       });
 
-      it("setRatioFeed(): reverts when new value is zero address", async function () {
+      it("setRatioFeed(): reverts when new value is zero address", async function() {
         await expect(iVault.setRatioFeed(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
-      it("setRatioFeed(): reverts when caller is not an owner", async function () {
+      it("setRatioFeed(): reverts when caller is not an owner", async function() {
         const newRatioFeed = ethers.Wallet.createRandom().address;
         await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("setWithdrawMinAmount(): only owner can", async function () {
+      it("setWithdrawMinAmount(): only owner can", async function() {
         const prevValue = await iVault.withdrawMinAmount();
         const newMinAmount = randomBI(3);
         await expect(iVault.setWithdrawMinAmount(newMinAmount))
@@ -770,48 +770,48 @@ assets.forEach(function(a) {
         expect(await iVault.withdrawMinAmount()).to.be.eq(newMinAmount);
       });
 
-      it("setWithdrawMinAmount(): another address can not", async function () {
+      it("setWithdrawMinAmount(): another address can not", async function() {
         await expect(iVault.connect(staker).setWithdrawMinAmount(randomBI(3))).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("setName(): only owner can", async function () {
+      it("setName(): only owner can", async function() {
         const prevValue = await iVault.name();
         const newValue = "New name";
         await expect(iVault.setName(newValue)).to.emit(iVault, "NameChanged").withArgs(prevValue, newValue);
         expect(await iVault.name()).to.be.eq(newValue);
       });
 
-      it("setName(): reverts when name is blank", async function () {
+      it("setName(): reverts when name is blank", async function() {
         await expect(iVault.setName("")).to.be.revertedWithCustomError(iVault, "NullParams");
       });
 
-      it("setName(): another address can not", async function () {
+      it("setName(): another address can not", async function() {
         await expect(iVault.connect(staker).setName("New name")).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("updateEpoch(): reverts when iVault is paused", async function () {
+      it("updateEpoch(): reverts when iVault is paused", async function() {
         await iVault.pause();
         await expect(iVault.connect(iVaultOperator).updateEpoch()).to.be.revertedWith("Pausable: paused");
       });
 
-      it("pause(): only owner can", async function () {
+      it("pause(): only owner can", async function() {
         expect(await iVault.paused()).is.false;
         await iVault.pause();
         expect(await iVault.paused()).is.true;
       });
 
-      it("pause(): another address can not", async function () {
+      it("pause(): another address can not", async function() {
         await expect(iVault.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("pause(): reverts when already paused", async function () {
+      it("pause(): reverts when already paused", async function() {
         await iVault.pause();
         await expect(iVault.pause()).to.be.revertedWith("Pausable: paused");
       });
 
-      it("unpause(): only owner can", async function () {
+      it("unpause(): only owner can", async function() {
         await iVault.pause();
         expect(await iVault.paused()).is.true;
 
@@ -819,13 +819,13 @@ assets.forEach(function(a) {
         expect(await iVault.paused()).is.false;
       });
 
-      it("unpause(): another address can not", async function () {
+      it("unpause(): another address can not", async function() {
         await iVault.pause();
         expect(await iVault.paused()).is.true;
         await expect(iVault.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("setTargetFlashCapacity(): only owner can", async function () {
+      it("setTargetFlashCapacity(): only owner can", async function() {
         const prevValue = await iVault.targetCapacity();
         const newValue = randomBI(18);
         await expect(iVault.connect(deployer).setTargetFlashCapacity(newValue))
@@ -834,21 +834,21 @@ assets.forEach(function(a) {
         expect(await iVault.targetCapacity()).to.be.eq(newValue);
       });
 
-      it("setTargetFlashCapacity(): reverts when caller is not an owner", async function () {
+      it("setTargetFlashCapacity(): reverts when caller is not an owner", async function() {
         const newValue = randomBI(18);
         await expect(iVault.connect(staker).setTargetFlashCapacity(newValue)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
 
-      it("setTargetFlashCapacity(): reverts when set to 0", async function () {
+      it("setTargetFlashCapacity(): reverts when set to 0", async function() {
         await expect(iVault.connect(deployer).setTargetFlashCapacity(0n)).to.revertedWithCustomError(
           iVault,
           "InvalidTargetFlashCapacity",
         );
       });
 
-      it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function () {
+      it("setProtocolFee(): sets share of flashWithdrawFee that goes to treasury", async function() {
         const prevValue = await iVault.protocolFee();
         const newValue = randomBI(10);
 
@@ -858,18 +858,126 @@ assets.forEach(function(a) {
         expect(await iVault.protocolFee()).to.be.eq(newValue);
       });
 
-      it("setProtocolFee(): reverts when > MAX_PERCENT", async function () {
+      it("setProtocolFee(): reverts when > MAX_PERCENT", async function() {
         const newValue = (await iVault.MAX_PERCENT()) + 1n;
         await expect(iVault.setProtocolFee(newValue))
           .to.be.revertedWithCustomError(iVault, "ParameterExceedsLimits")
           .withArgs(newValue);
       });
 
-      it("setProtocolFee(): reverts when caller is not an owner", async function () {
+      it("setProtocolFee(): reverts when caller is not an owner", async function() {
         const newValue = randomBI(10);
         await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
+      });
+    });
+
+    describe("Mellow restaker getters and setters", function() {
+      beforeEach(async function() {
+        await snapshot.restore();
+      });
+
+      it("delegateMellow reverts when called by not a trustee", async function() {
+        await asset.connect(staker).approve(mellowAdapterV3.address, e18);
+
+        let time = await helpers.time.latest();
+        await expect(
+          mellowAdapterV3.connect(staker).delegate(mellowVaults[0].vaultAddress, randomBI(9), emptyBytes),
+        ).to.revertedWithCustomError(mellowAdapterV3, "NotVaultOrTrusteeManager");
+      });
+
+      it("delegateMellow reverts when called by not a trustee", async function() {
+        await asset.connect(staker).approve(mellowAdapterV3.address, e18);
+
+        let time = await helpers.time.latest();
+        await expect(
+          mellowAdapterV3.connect(staker).delegate(mellowVaults[0].vaultAddress, randomBI(9), emptyBytes),
+        ).to.revertedWithCustomError(mellowAdapterV3, "NotVaultOrTrusteeManager");
+      });
+
+      it("delegate reverts when called by not a trustee", async function() {
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(e18, staker.address);
+        await mellowAdapterV3.changeAllocation(mellowVaults[0].vaultAddress, 1n);
+
+        let time = await helpers.time.latest();
+        await expect(
+          mellowAdapterV3.connect(staker).delegate(mellowVaults[0].vaultAddress, await iVault.getFreeBalance(), emptyBytes),
+        ).to.revertedWithCustomError(mellowAdapterV3, "NotVaultOrTrusteeManager");
+      });
+
+      it("withdrawMellow reverts when called by not a trustee", async function() {
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(randomBI(19), staker.address);
+        const delegated = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, delegated, emptyBytes);
+
+        await expect(
+          mellowAdapterV3.connect(staker).withdraw(mellowVaults[0].vaultAddress, delegated, []),
+        ).to.revertedWithCustomError(mellowAdapterV3, "NotVaultOrTrusteeManager");
+      });
+
+      it("claimMellowWithdrawalCallback reverts when called by not a trustee", async function() {
+        await asset.connect(staker).transfer(mellowAdapterV3.address, e18);
+
+        await expect(mellowAdapterV3.connect(staker).claim([])).to.revertedWithCustomError(
+          mellowAdapterV3, "NotVaultOrTrusteeManager",
+        );
+      });
+
+      it("getVersion", async function() {
+        expect(await mellowAdapterV3.getVersion()).to.be.eq(3n);
+      });
+
+      it("setVault(): only owner can", async function() {
+        const prevValue = iVault.address;
+        const newValue = staker.address;
+
+        await expect(mellowAdapterV3.setVault(newValue))
+          .to.emit(mellowAdapterV3, "VaultSet")
+          .withArgs(prevValue, newValue);
+
+        await asset.connect(staker).approve(mellowAdapterV3.address, e18);
+        let time = await helpers.time.latest();
+        await mellowAdapterV3.connect(staker).delegate(mellowVaults[0].vaultAddress, randomBI(9), emptyBytes);
+      });
+
+      it("setVault(): reverts when caller is not an owner", async function() {
+        await expect(mellowAdapterV3.connect(staker).setVault(staker.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("setTrusteeManager(): only owner can", async function() {
+        const prevValue = iVaultOperator.address;
+        const newValue = staker.address;
+
+        await expect(mellowAdapterV3.setTrusteeManager(newValue))
+          .to.emit(mellowAdapterV3, "TrusteeManagerSet")
+          .withArgs(prevValue, newValue);
+
+        await iVault.setTargetFlashCapacity(1n);
+        await iVault.connect(staker).deposit(randomBI(19), staker.address);
+        const delegated = await iVault.getFreeBalance();
+        await iVault.connect(iVaultOperator).delegate(mellowAdapterV3.address, mellowVaults[0].vaultAddress, delegated, emptyBytes);
+
+        await mellowAdapterV3.connect(staker).withdraw(mellowVaults[0].vaultAddress, delegated, emptyBytes);
+      });
+
+      it("setTrusteeManager(): reverts when caller is not an owner", async function() {
+        await expect(mellowAdapterV3.connect(staker).setTrusteeManager(staker.address)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("pause(): reverts when caller is not an owner", async function() {
+        await expect(mellowAdapterV3.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("unpause(): reverts when caller is not an owner", async function() {
+        await mellowAdapterV3.pause();
+        await expect(mellowAdapterV3.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
   });

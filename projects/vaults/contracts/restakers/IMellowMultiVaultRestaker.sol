@@ -377,5 +377,23 @@ IIMellowMultiVaultRestaker
     function getVersion() external pure returns (uint256) {
         return 3;
     }
+
+    function setVault(address vault) external onlyOwner {
+        emit VaultSet(_inceptionVault, vault);
+        _inceptionVault = vault;
+    }
+
+    function setTrusteeManager(address _newTrusteeManager) external onlyOwner {
+        emit TrusteeManagerSet(_trusteeManager, _newTrusteeManager);
+        _trusteeManager = _newTrusteeManager;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 }
 
