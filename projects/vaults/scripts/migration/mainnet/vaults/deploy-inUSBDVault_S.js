@@ -12,7 +12,7 @@ const
   TokenSymbol = "inUSBDs",
   SymbioticVaults = [],
   MellowVaults = ["0x7DD12E437C226018A374Bfa2BdAf48340B9942bC"],
-  FlashCap = "500000000000000000";
+  FlashCap = "500000000000000000"; // 0.5%
 
 const Asset = "0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c";
 const RatioFeed = "0xFd73Be536503B5Aa80Bf99D1Fd65b1306c69B191";
