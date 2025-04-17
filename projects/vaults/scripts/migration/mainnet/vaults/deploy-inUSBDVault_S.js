@@ -18,7 +18,7 @@ const RatioFeed = "0xFd73Be536503B5Aa80Bf99D1Fd65b1306c69B191";
 const MellowV3Claimer = "0x25024a3017B8da7161d8c5DCcF768F8678fB5802";
 
 let InceptionTokenAddr = ""; // to deploy the new one leave empty
-let InceptionLibrary = ""; // to deploy the new one leave empty
+let InceptionLibrary = "0xA2aeaf634aD12c51aAC17E656C155866ad9423b1"; // to deploy the new one leave empty
 let InceptionVault = ""; // to deploy the new one leave empty
 let MellowAdapter = ""; // to deploy the new one leave empty
 
