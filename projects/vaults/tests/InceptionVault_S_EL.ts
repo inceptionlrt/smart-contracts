@@ -6,41 +6,15 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import {
   addRewardsToStrategy,
-  impersonateWithEth,
   calculateRatio,
   toWei,
   mineBlocks,
   e18,
 } from "./helpers/utils";
 import { abi, initVaultEL } from "./src/init-vault";
+import { wstETH } from "./data/assets/stETH-lido";
 
-const assetData = {
-  vaultName: "InstEthVault",
-  vaultFactory: "InVault_S_E2",
-  assetName: "stETH",
-  assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
-  assetPoolName: "LidoMockPool",
-  assetPool: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
-  assetStrategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3",
-  strategyManager: "0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6",
-  iVaultOperator: "0xa4341b5Cf43afD2993e1ae47d956F44A2d6Fc08D",
-  delegationManager: "0xA44151489861Fe9e3055d95adC98FbD462B948e7",
-  rewardsCoordinator: "0xAcc1fb458a1317E886dB376Fc8141540537E68fE",
-  withdrawalDelayBlocks: 400,
-  ratioErr: 2n,
-  transactErr: 5n,
-  blockNumber: 3338549,
-  url: "https://holesky.drpc.org",
-  impersonateStaker: async function (staker, iVault) {
-    const stETHDonorAddress = "0x66b25CFe6B9F0e61Bd80c4847225Baf4EE6Ba0A2";
-    const donor = await impersonateWithEth(stETHDonorAddress, toWei(1));
-    const stEth = await ethers.getContractAt("stETH", this.assetAddress);
-    const stEthAmount = toWei(1000);
-    await stEth.connect(donor).transfer(staker.address, stEthAmount);
-    await stEth.connect(staker).approve(iVault, stEthAmount);
-    return staker;
-  },
-};
+const assetData = wstETH;
 
 const eigenLayerVaults = [
   "0x78FDDe7a5006cC64E109aeD99cA7B0Ad3d8687bb",
