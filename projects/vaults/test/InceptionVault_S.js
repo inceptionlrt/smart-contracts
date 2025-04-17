@@ -4412,6 +4412,33 @@ assets.forEach(function(a) {
         console.log(`Total deposited: ${await iVault.getTotalDeposited()}`);
       });
     });
+
+    describe("AdapterHandler negative cases", function() {
+      it("addAdapter input args", async function() {
+        await expect(iVault.addAdapter(staker.address))
+          .to.be.revertedWithCustomError(iVault, "NotContract");
+
+        await expect(iVault.addAdapter(mellowAdapter.address))
+          .to.be.revertedWithCustomError(iVault, "AdapterAlreadyAdded");
+
+        await expect(iVault.connect(iVaultOperator).addAdapter(mellowAdapter.address))
+          .to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("removeAdapter input args", async function() {
+        await expect(iVault.removeAdapter(staker.address))
+          .to.be.revertedWithCustomError(iVault, "NotContract");
+
+        await expect(iVault.removeAdapter(iToken.address))
+          .to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+        await expect(iVault.connect(staker)
+          .removeAdapter(mellowAdapter.address),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await iVault.removeAdapter(mellowAdapter.address);
+      });
+    });
   });
 });
 
