@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "../interfaces/adapters/IIMellowAdapter.sol";
-import "./IBaseAdapter.sol";
+import "../interfaces/adapters/IMellowAdapter.sol";
+import "./InceptionBaseAdapter.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
 
+import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
-import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMultiVaultStorage.sol";
 
+import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMultiVaultStorage.sol";
 import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -20,32 +20,21 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title The IMellowAdapterV3 Contract
+ * @title The InceptionMellowAdapterV3 Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
+contract InceptionMellowAdapterV3 is IMellowAdapter, InceptionBaseAdapter {
     using SafeERC20 for IERC20;
 
-    /// @dev Kept only for storage slot
-    mapping(address => IMellowDepositWrapper) private PLACE_HOLDER_1;
     IMellowVault[] public vaults;
 
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
 
-    /// @dev Kept only for storage slot
-    uint256 private PLACE_HOLDER_2;
-    /// @dev Kept only for storage slot
-    uint256 private PLACE_HOLDER_3; // BasisPoints 10,000 = 100%
-    /// @dev Kept only for storage slot
-    uint256 private PLACE_HOLDER_4;
-
     address public ethWrapper;
-
     address public claimer;
-    address public wstETH;
     address public withdrawalQueue;
 
     /// @custom:oz-upgrades-unsafe-allow constructor

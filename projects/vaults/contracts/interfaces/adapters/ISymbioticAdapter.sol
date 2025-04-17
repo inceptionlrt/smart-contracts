@@ -3,9 +3,9 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IIBaseAdapter} from "./IIBaseAdapter.sol";
+import {IBaseAdapter} from "./IBaseAdapter.sol";
 
-interface IISymbioticAdapter is IIBaseAdapter {
+interface ISymbioticAdapter is IBaseAdapter {
     error WithdrawalInProgress();
 
     error NothingToClaim();

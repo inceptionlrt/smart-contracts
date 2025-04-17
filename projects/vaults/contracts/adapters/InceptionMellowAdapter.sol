@@ -5,13 +5,13 @@ import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IMellowAdapter} from "../interfaces/adapters/IMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 
-import {IBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 /**
  * @title The MellowAdapter Contract
@@ -19,7 +19,7 @@ import {IBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
     using SafeERC20 for IERC20;
 
     /// @dev Kept only for storage slot

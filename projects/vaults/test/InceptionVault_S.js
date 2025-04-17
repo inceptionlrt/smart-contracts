@@ -169,7 +169,7 @@ const initVault = async a => {
   const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
 
   console.log("- Mellow Adapter");
-  const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
+  const mellowAdapterFactory = await ethers.getContractFactory("InceptionMellowAdapter");
   let mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
     [mellowVaults[0].vaultAddress],
     a.assetAddress,
@@ -178,7 +178,7 @@ const initVault = async a => {
   mellowAdapter.address = await mellowAdapter.getAddress();
 
   console.log("- Symbiotic Adapter");
-  const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
+  const symbioticAdapterFactory = await ethers.getContractFactory("InceptionSymbioticAdapter");
   let symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
     [symbioticVaults[0].vaultAddress],
     a.assetAddress,

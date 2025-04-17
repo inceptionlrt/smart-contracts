@@ -142,13 +142,13 @@ async function deployMellowAdapterV3(iVault) {
 
   let mellowAdapter;
   if (MellowAdapter) {
-    mellowAdapter = await ethers.getContractAt("IMellowAdapterV3", MellowAdapter);
+    mellowAdapter = await ethers.getContractAt("InceptionMellowAdapterV3", MellowAdapter);
 
     let tx = await mellowAdapter.setInceptionVault(iVaultAddress);
     await tx.wait();
     console.log("MellowAdapter vault set");
   } else {
-    const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapterV3");
+    const mellowAdapterFactory = await ethers.getContractFactory("InceptionMellowAdapterV3");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
       MellowVaults, Asset, addresses.Operator,
     ]);

@@ -4,9 +4,9 @@ pragma solidity ^0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IMellowVault} from "../symbiotic-vault/mellow-core/IMellowVault.sol";
-import {IIBaseAdapter} from "./IIBaseAdapter.sol";
+import {IBaseAdapter} from "./IBaseAdapter.sol";
 
-interface IIMellowAdapter is IIBaseAdapter {
+interface IMellowAdapter is IBaseAdapter {
     error InactiveWrapper();
     error NoWrapperExists();
     error BadMellowWithdrawRequest();

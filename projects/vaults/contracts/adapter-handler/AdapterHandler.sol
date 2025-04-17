@@ -3,12 +3,12 @@ pragma solidity ^0.8.28;
 
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 import {IAdapterHandler} from "../interfaces/symbiotic-vault/ISymbioticHandler.sol";
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
-import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
+import {IMellowAdapter} from "../interfaces/adapters/IMellowAdapter.sol";
+import {ISymbioticAdapter} from "../interfaces/adapters/ISymbioticAdapter.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
+import {IBaseAdapter} from "../interfaces/adapters/IBaseAdapter.sol";
 
 /**
  * @title The AdapterHandler contract
@@ -25,7 +25,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /// @dev inception operator
     address internal _operator;
 
-    IIMellowAdapter public mellowAdapter;
+    IMellowAdapter public mellowAdapter;
 
     /// @dev represents the pending amount to be redeemed by claimers,
     /// @notice + amount to undelegate from Mellow
@@ -43,7 +43,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     uint256 public constant MAX_TARGET_PERCENT = 100 * 1e18;
 
-    IISymbioticAdapter public symbioticAdapter;
+    ISymbioticAdapter public symbioticAdapter;
 
     EnumerableSet.AddressSet internal _adapters;
 
@@ -81,7 +81,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
 
         _asset.safeIncreaseAllowance(address(adapter), amount);
-        IIBaseAdapter(adapter).delegate(vault, amount, _data);
+        IBaseAdapter(adapter).delegate(vault, amount, _data);
         emit DelegatedTo(adapter, vault, amount);
     }
 
@@ -95,7 +95,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
 
-        amount = IIBaseAdapter(adapter).withdraw(vault, amount, _data);
+        amount = IBaseAdapter(adapter).withdraw(vault, amount, _data);
 
         emit UndelegatedFrom(adapter, vault, amount);
     }
@@ -105,7 +105,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         bytes[] calldata _data
     ) public onlyOperator whenNotPaused nonReentrant {
         uint256 availableBalance = getFreeBalance();
-        uint256 withdrawnAmount = IIBaseAdapter(adapter).claim(_data);
+        uint256 withdrawnAmount = IBaseAdapter(adapter).claim(_data);
         require(
             _getAssetWithdrawAmount(availableBalance + withdrawnAmount) >=
                 getFreeBalance(),
@@ -169,7 +169,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalDelegated() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IIBaseAdapter(_adapters.at(i)).getTotalDeposited();
+            total += IBaseAdapter(_adapters.at(i)).getTotalDeposited();
         }
         return total;
     }
@@ -178,7 +178,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         address adapter,
         address vault
     ) external view returns (uint256) {
-        return IIBaseAdapter(adapter).getDeposited(vault);
+        return IBaseAdapter(adapter).getDeposited(vault);
     }
 
     function getFreeBalance() public view returns (uint256 total) {
@@ -191,13 +191,13 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getPendingWithdrawals(
         address adapter
     ) public view returns (uint256) {
-        return IIBaseAdapter(adapter).inactiveBalance();
+        return IBaseAdapter(adapter).inactiveBalance();
     }
 
     function getTotalPendingWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IIBaseAdapter(_adapters.at(i)).inactiveBalance();
+            total += IBaseAdapter(_adapters.at(i)).inactiveBalance();
         }
         return total;
     }
