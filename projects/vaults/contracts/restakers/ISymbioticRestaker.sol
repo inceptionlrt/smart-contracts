@@ -19,11 +19,11 @@ import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract ISymbioticRestaker is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC165Upgradeable,
-    OwnableUpgradeable,
-    IISymbioticRestaker
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+ERC165Upgradeable,
+OwnableUpgradeable,
+IISymbioticRestaker
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -66,7 +66,6 @@ contract ISymbioticRestaker is
             if (IVault(vaults[i]).collateral() != address(asset))
                 revert InvalidCollateral();
             if (_symbioticVaults.contains(vaults[i])) revert AlreadyAdded();
-
             _symbioticVaults.add(vaults[i]);
             emit VaultAdded(vaults[i]);
         }
@@ -81,10 +80,10 @@ contract ISymbioticRestaker is
         address vaultAddress,
         uint256 amount
     )
-        external
-        onlyTrustee
-        whenNotPaused
-        returns (uint256 depositedAmount, uint256 mintedShares)
+    external
+    onlyTrustee
+    whenNotPaused
+    returns (uint256 depositedAmount, uint256 mintedShares)
     {
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         _asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -166,7 +165,7 @@ contract ISymbioticRestaker is
         return total;
     }
 
-    function claimableAmount() external view returns (uint256) {
+    function claimableAmount() external pure returns (uint256) {
         return 0;
     }
 

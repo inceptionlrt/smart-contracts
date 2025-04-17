@@ -73,9 +73,9 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _operator = operatorAddress;
         inceptionToken = _inceptionToken;
 
-        withdrawMinAmount = 1e4;
-        depositMinAmount = 1e4;
-        flashMinAmount = 1e4;
+        withdrawMinAmount = 1e16;
+        depositMinAmount = 1e16;
+        flashMinAmount = 1e16;
 
         protocolFee = 50 * 1e8;
 
@@ -367,37 +367,34 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
-        //        uint256 targetCapacity = _getTargetCapacity();
-        //
-        //        return
-        //            InceptionLibrary.calculateDepositBonus(
-        //                amount,
-        //                getFlashCapacity(),
-        //                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
-        //                optimalBonusRate,
-        //                maxBonusRate,
-        //                targetCapacity
-        //            );
-        return 0;
+        uint256 targetCapacity = _getTargetCapacity();
+        return
+            InceptionLibrary.calculateDepositBonus(
+            amount,
+            getFlashCapacity(),
+            (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+            optimalBonusRate,
+            maxBonusRate,
+            targetCapacity
+        );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
     function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
-        //        uint256 capacity = getFlashCapacity();
-        //        if (amount > capacity) revert InsufficientCapacity(capacity);
-        //        uint256 targetCapacity = _getTargetCapacity();
-        //        return
-        //            InceptionLibrary.calculateWithdrawalFee(
-        //                amount,
-        //                capacity,
-        //                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-        //                optimalWithdrawalRate,
-        //                maxFlashFeeRate,
-        //                targetCapacity
-        //            );
-        return 0;
+        uint256 capacity = getFlashCapacity();
+        if (amount > capacity) revert InsufficientCapacity(capacity);
+        uint256 targetCapacity = _getTargetCapacity();
+        return
+            InceptionLibrary.calculateWithdrawalFee(
+            amount,
+            capacity,
+            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+            optimalWithdrawalRate,
+            maxFlashFeeRate,
+            targetCapacity
+        );
     }
 
     /*//////////////////////////////
@@ -497,23 +494,20 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
+
         uint256 amount = convertToAssets(shares);
         uint256 capacity = getFlashCapacity();
         uint256 targetCapacity = _getTargetCapacity();
         uint256 flash = amount <= capacity ? capacity : amount;
 
-        return amount;
-
-//        return
-//            amount -
-//            InceptionLibrary.calculateWithdrawalFee(
-//                amount,
-//                flash,
-//                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-//                optimalWithdrawalRate,
-//                maxFlashFeeRate,
-//                targetCapacity
-//            );
+        return amount - InceptionLibrary.calculateWithdrawalFee(
+            amount,
+            flash,
+            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+            optimalWithdrawalRate,
+            maxFlashFeeRate,
+            targetCapacity
+        );
     }
 
     /*//////////////////////////////
