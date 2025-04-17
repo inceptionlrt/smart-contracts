@@ -33,7 +33,6 @@ contract InceptionMellowAdapterV3 is IMellowAdapter, InceptionBaseAdapter {
     mapping(address => uint256) public allocations;
     uint256 public totalAllocations;
 
-    address public ethWrapper;
     address public claimer;
     address public withdrawalQueue;
 
@@ -110,10 +109,7 @@ contract InceptionMellowAdapterV3 is IMellowAdapter, InceptionBaseAdapter {
             uint256 allocation = allocations[address(vaults[i])];
             if (allocation > 0) {
                 uint256 localBalance = (amount * allocation) / allocationsTotal;
-                IERC20(_asset).safeIncreaseAllowance(
-                    address(ethWrapper),
-                    localBalance
-                );
+                IERC20(_asset).safeIncreaseAllowance(address(vaults[i]), localBalance);
                 uint256 lpAmount = IERC4626(address(vaults[i])).deposit(
                     localBalance,
                     address(this)
@@ -324,15 +320,6 @@ contract InceptionMellowAdapterV3 is IMellowAdapter, InceptionBaseAdapter {
         IMellowVault mellowVault
     ) public view returns (uint256) {
         return IERC4626(address(mellowVault)).convertToAssets(lpAmount);
-    }
-
-    function setEthWrapper(address newEthWrapper) external onlyOwner {
-        if (!Address.isContract(newEthWrapper)) revert NotContract();
-        if (newEthWrapper == address(0)) revert ZeroAddress();
-
-        address oldWrapper = ethWrapper;
-        ethWrapper = newEthWrapper;
-        emit EthWrapperChanged(oldWrapper, newEthWrapper);
     }
 
     function setClaimer(address newClaimer) external onlyOwner {
