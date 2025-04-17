@@ -10,7 +10,6 @@ const
   VaultName = "inUSBDVault_S",
   TokenName = "Inception Symbiotic Restaked USBD",
   TokenSymbol = "inUSBDs",
-  SymbioticVaults = [],
   MellowVaults = ["0x7DD12E437C226018A374Bfa2BdAf48340B9942bC"],
   FlashCap = "500000000000000000"; // 0.5%
 
