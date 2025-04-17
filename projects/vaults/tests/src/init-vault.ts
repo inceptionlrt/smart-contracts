@@ -172,7 +172,7 @@ export async function initVault(assetData, options?: { initAdapters?: boolean, i
   };
 };
 
-export async function initVaultEL(assetData) {
+export async function initVaultEL(assetData, contractName) {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
   console.log("... Initialization of Inception ....");
@@ -215,7 +215,8 @@ export async function initVaultEL(assetData) {
 
   console.log("- EigenLayer Adapter");
   let [deployer] = await ethers.getSigners();
-  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
+  // const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
+  const eigenLayerAdapterFactory = await ethers.getContractFactory(contractName);
   let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
     await deployer.getAddress(),
     assetData.rewardsCoordinator,

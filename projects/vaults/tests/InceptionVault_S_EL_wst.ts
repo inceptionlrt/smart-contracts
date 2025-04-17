@@ -46,7 +46,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     [iToken, iVault, ratioFeed, asset, iVaultOperator, eigenLayerAdapter, withdrawalQueue] =
-      await initVaultEL(assetData);
+      await initVaultEL(assetData, 'InceptionEigenAdapterWrap');
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 
