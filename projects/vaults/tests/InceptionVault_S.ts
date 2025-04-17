@@ -8,13 +8,13 @@ import { stETH } from "./data/assets/inception-vault-s";
 import { mellowVaults } from "./data/assets/mellow-vauts";
 import { symbioticVaults } from "./data/assets/symbiotic-vaults";
 import {
-    calculateRatio,
-    e18,
-    getRandomStaker,
-    randomAddress,
-    randomBI,
-    randomBIMax,
-    toWei
+  calculateRatio,
+  e18,
+  getRandomStaker,
+  randomAddress,
+  randomBI,
+  randomBIMax,
+  toWei
 } from "./helpers/utils";
 import { emptyBytes } from "./src/constants";
 import { abi, initVault, MAX_TARGET_PERCENT } from "./src/init-vault";
@@ -22,7 +22,6 @@ const { ethers, upgrades, network } = hardhat;
 
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
-  this.timeout(150000);
   let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue;
   let iVaultOperator, deployer, staker, staker2, staker3, treasury;
   let ratioErr, transactErr;
@@ -64,9 +63,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   after(async function () {
-    if (iVault) {
-      await iVault.removeAllListeners();
-    }
+    await iVault?.removeAllListeners();
   });
 
   describe("iVault getters and setters", function () {
@@ -2275,7 +2272,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
         let tx = await iVault
           .connect(staker)
-          ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
+        ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
         const receipt = await tx.wait();
         const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
         expect(withdrawEvent.length).to.be.eq(1);
