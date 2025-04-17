@@ -1,15 +1,10 @@
-/////////////////////////////////////////////////
-///// Run with the default network, hardhat ////
-///////////////////////////////////////////////
-
-// const { ethers, upgrades } = require("hardhat");
-// const { expect } = require("chai");
 import hardhat from "hardhat";
 const { ethers, upgrades } = hardhat;
 import { expect } from "chai";
+// import { e18 } from "./helpers/utils";
 
-const e18 = "1000000000000000000",
-  amount = "10000000";
+const e18 = "1000000000000000000";
+const amount = "10000000";
 
 let iToken, staker1, staker2, owner;
 
