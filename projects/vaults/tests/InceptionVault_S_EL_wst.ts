@@ -12,7 +12,6 @@ import {
 import { wstETH } from "./data/assets/stETH-lido";
 import { abi, initVaultEL } from "./src/init-vault";
 
-// const assets = [wstETH];
 const assetData = wstETH;
 
 const eigenLayerVaults = [
@@ -31,7 +30,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   );
   const delegateData = [ethers.ZeroHash, encodedSignatureWithExpiry];
 
-  let iToken, iVault, ratioFeed, asset, eigenLayerAdapter, iLibrary, withdrawalQueue;
+  let iToken, iVault, ratioFeed, asset, eigenLayerAdapter, withdrawalQueue;
   let iVaultOperator, deployer, staker, staker2, staker3, treasury;
   let ratioErr, transactErr;
   let snapshot;
@@ -62,9 +61,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   after(async function () {
-    if (iVault) {
-      await iVault.removeAllListeners();
-    }
+    await iVault?.removeAllListeners();
   });
 
   describe("InceptionEigenAdapter", function () {
@@ -146,8 +143,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], 0n, delegateData);
 
       await expect(adapter.connect(staker).withdraw(ZeroAddress, amount / 2n, [], false)).to.be.revertedWithCustomError(
-        adapter,
-        "NotVaultOrTrusteeManager",
+        adapter, "NotVaultOrTrusteeManager",
       );
     });
 
@@ -181,7 +177,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   describe("EigenLayer | Base flow no flash", function () {
-    let totalDeposited = 0n;
     let delegatedEL = 0n;
     let tx;
     let undelegateEpoch;
@@ -201,7 +196,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("User can deposit to iVault", async function () {
-      totalDeposited += toWei(20);
+      const totalDeposited = toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
       const receipt = await tx.wait();
@@ -343,8 +338,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         shares: [withdrawalQueuedEvent["shares"]],
       };
 
-      console.log(wData);
-
       // Encode the data
       const _data = [
         coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
@@ -362,9 +355,9 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
 
-      console.log(`Total deposited after claim:\t\t\t${totalDepositedBefore.format()}`);
-      console.log(`Total delegated after claim:\t\t\t${totalDelegatedBefore.format()}`);
-      console.log(`Total assets after claim:\t\t\t${totalAssetsBefore.format()}`);
+      console.log(`Total deposited after claim:\t\t\t${totalDepositedBefore.format()}
+      Total delegated after claim:\t\t\t${totalDelegatedBefore.format()}
+      Total assets after claim:\t\t\t${totalAssetsBefore.format()}`);
     });
 
     it("Staker is able to redeem", async function () {
@@ -545,4 +538,3 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
   });
 });
-
