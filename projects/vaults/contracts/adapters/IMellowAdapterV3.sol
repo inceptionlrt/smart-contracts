@@ -349,7 +349,6 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
     }
 
     function setClaimer(address newClaimer) external onlyOwner {
-        if (!Address.isContract(newClaimer)) revert NotContract();
         if (newClaimer == address(0)) revert ZeroAddress();
 
         emit ClaimerChanged(claimer, newClaimer);

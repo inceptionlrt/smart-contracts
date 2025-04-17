@@ -36,7 +36,7 @@ export const CONFIG = {
     hardhat: {
       forking: {
         url: `${process.env.MAINNET_RPC}`,
-        blockNumber: 22276903,
+        blockNumber: 22287875,
       },
     },
   },
