@@ -370,13 +370,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
-            amount,
-            getFlashCapacity(),
-            (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
-            optimalBonusRate,
-            maxBonusRate,
-            targetCapacity
-        );
+                amount,
+                getFlashCapacity(),
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+                optimalBonusRate,
+                maxBonusRate,
+                targetCapacity
+            );
     }
 
     /// @dev Function to calculate flash withdrawal fee based on the utilization rate
@@ -388,13 +388,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
-            amount,
-            capacity,
-            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-            optimalWithdrawalRate,
-            maxFlashFeeRate,
-            targetCapacity
-        );
+                amount,
+                capacity,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
@@ -501,13 +501,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         uint256 flash = amount <= capacity ? capacity : amount;
 
         return amount - InceptionLibrary.calculateWithdrawalFee(
-            amount,
-            flash,
-            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-            optimalWithdrawalRate,
-            maxFlashFeeRate,
-            targetCapacity
-        );
+                amount,
+                flash,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////

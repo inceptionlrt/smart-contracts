@@ -10,9 +10,9 @@ import {IInceptionVault_EL} from "../interfaces/eigenlayer-vault/IInceptionVault
 /// @title The InceptionToken contract
 /// @dev Specifically, this includes pausable functions and minting from the vault
 contract InceptionToken is
-OwnableUpgradeable,
-ERC20Upgradeable,
-IInceptionToken
+    OwnableUpgradeable,
+    ERC20Upgradeable,
+    IInceptionToken
 {
     IInceptionVault_EL public vault;
 

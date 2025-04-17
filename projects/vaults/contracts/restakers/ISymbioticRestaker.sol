@@ -19,11 +19,11 @@ import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
 contract ISymbioticRestaker is
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-ERC165Upgradeable,
-OwnableUpgradeable,
-IISymbioticRestaker
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC165Upgradeable,
+    OwnableUpgradeable,
+    IISymbioticRestaker
 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -80,10 +80,10 @@ IISymbioticRestaker
         address vaultAddress,
         uint256 amount
     )
-    external
-    onlyTrustee
-    whenNotPaused
-    returns (uint256 depositedAmount, uint256 mintedShares)
+        external
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 depositedAmount, uint256 mintedShares)
     {
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
         _asset.safeTransferFrom(msg.sender, address(this), amount);

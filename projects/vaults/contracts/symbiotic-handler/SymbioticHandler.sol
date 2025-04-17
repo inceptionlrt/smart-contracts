@@ -119,10 +119,10 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev claims completed withdrawals from Mellow Protocol, if they exist
     function claimCompletedWithdrawalsMellow()
-    public
-    onlyOperator
-    whenNotPaused
-    nonReentrant
+        public
+        onlyOperator
+        whenNotPaused
+        nonReentrant
     {
         uint256 availableBalance = getFreeBalance();
 
@@ -211,9 +211,9 @@ contract SymbioticHandler is InceptionAssetsHandler, ISymbioticHandler {
 
     /// @dev returns the total amount of pending withdrawals from Mellow LRT
     function getPendingWithdrawalAmountFromMellow()
-    public
-    view
-    returns (uint256)
+        public
+        view
+        returns (uint256)
     {
         uint256 pendingWithdrawal = mellowRestaker.pendingWithdrawalAmount();
         uint256 mellowClaimable = mellowRestaker.claimableWithdrawalAmount();
