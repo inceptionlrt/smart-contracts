@@ -1,16 +1,16 @@
 
-import hardhat from "hardhat";
-import { e18, impersonateWithEth } from "../helpers/utils";
-import { mellowVaults as mellowVaultsData } from "./test-data/assets/mellow-vauts";
-import { symbioticVaults as symbioticVaultsData } from "./test-data/assets/symbiotic-vaults";
-const { ethers, upgrades, network } = hardhat;
-import { emptyBytes } from './constants';
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import hardhat from "hardhat";
+import { mellowVaults as mellowVaultsData } from "../data/assets/mellow-vauts";
+import { symbioticVaults as symbioticVaultsData } from "../data/assets/symbiotic-vaults";
+import { e18, impersonateWithEth } from "../helpers/utils";
+import { emptyBytes } from './constants';
+const { ethers, upgrades, network } = hardhat;
 
 export let symbioticVaults = [...symbioticVaultsData];
 export let mellowVaults = [...mellowVaultsData];
 
-export async function initVault(assetData, options?: { initAdapters?: boolean }) {
+export async function initVault(assetData, options?: { initAdapters?: boolean, initEigenLayer?: boolean }) {
   const block = await ethers.provider.getBlock("latest");
   console.log(`Starting at block number: ${block.number}`);
   console.log("... Initialization of Inception ....");
@@ -58,7 +58,7 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
   console.log("- iVault operator");
   const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
 
-  let mellowAdapter, symbioticAdapter;
+  let mellowAdapter, symbioticAdapter; //eigenLayerAdapter;
   if (options?.initAdapters) {
     console.log("- Mellow Adapter");
     const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
@@ -103,6 +103,25 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
 
   await iVault.setRatioFeed(ratioFeed.address);
 
+  // if (options?.initEigenLayer) {
+  //   let [deployer] = await ethers.getSigners();
+  //   const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
+  //   eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+  //     await deployer.getAddress(),
+  //     assetData.rewardsCoordinator,
+  //     assetData.delegationManager,
+  //     assetData.strategyManager,
+  //     assetData.assetStrategy,
+  //     assetData.assetAddress,
+  //     assetData.iVaultOperator,
+  //     iVault.address,
+  //   ]);
+  //   eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
+  
+  //   await iVault.addAdapter(eigenLayerAdapter.address);
+  //   await eigenLayerAdapter.setInceptionVault(iVault.address);
+  // }
+
   if (options?.initAdapters) {
     await iVault.addAdapter(symbioticAdapter.address);
     await iVault.addAdapter(mellowAdapter.address);
@@ -136,8 +155,6 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
         .map(log => mellowAdapter.interface.parseLog(log));
       let claimer = adapterEvents[0].args["claimer"];
 
-      // await mellowAdapter.withdraw(mellowVaultAddress, amount, ["0x"]);
-      // await mellowVaults[0].curator.processWithdrawals([mellowAdapter.address]);
 
       await helpers.time.increase(1209900);
       const params = abi.encode(["address", "address"], [mellowVaultAddress, claimer]);
@@ -151,8 +168,88 @@ export async function initVault(assetData, options?: { initAdapters?: boolean })
 
   return {
     iToken, iVault, ratioFeed, asset, iVaultOperator, iLibrary, withdrawalQueue,
-    mellowAdapter, symbioticAdapter,
+    mellowAdapter, symbioticAdapter, //eigenLayerAdapter,
   };
+};
+
+export async function initVaultEL(assetData) {
+  const block = await ethers.provider.getBlock("latest");
+  console.log(`Starting at block number: ${block.number}`);
+  console.log("... Initialization of Inception ....");
+
+  console.log("- Asset");
+  const asset = await ethers.getContractAt(assetData.assetName, assetData.assetAddress);
+  asset.address = await asset.getAddress();
+
+  /// =============================== Inception Vault ===============================
+  console.log("- iToken");
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
+  iToken.address = await iToken.getAddress();
+
+  console.log("- iVault operator");
+  const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
+
+  console.log("- Ratio feed");
+  const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
+  const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
+  await ratioFeed.updateRatioBatch([iToken.address], [e18]); //Set initial ratio e18
+  ratioFeed.address = await ratioFeed.getAddress();
+
+  console.log("- InceptionLibrary");
+  const iLibrary = await ethers.deployContract("InceptionLibrary");
+  await iLibrary.waitForDeployment();
+
+  console.log("- iVault");
+  const iVaultFactory = await ethers.getContractFactory(assetData.vaultFactory, {
+    libraries: { InceptionLibrary: await iLibrary.getAddress() },
+  });
+  const iVault = await upgrades.deployProxy(
+    iVaultFactory,
+    [assetData.vaultName, assetData.iVaultOperator, assetData.assetAddress, iToken.address],
+    {
+      unsafeAllowLinkedLibraries: true,
+    },
+  );
+  iVault.address = await iVault.getAddress();
+
+  console.log("- EigenLayer Adapter");
+  let [deployer] = await ethers.getSigners();
+  const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapterWrap");
+  let eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+    await deployer.getAddress(),
+    assetData.rewardsCoordinator,
+    assetData.delegationManager,
+    assetData.strategyManager,
+    assetData.assetStrategy,
+    assetData.assetAddress,
+    assetData.iVaultOperator,
+    iVault.address,
+  ]);
+  eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
+
+  console.log("- Withdrawal Queue");
+  const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
+  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
+  withdrawalQueue.address = await withdrawalQueue.getAddress();
+
+  await iVault.setRatioFeed(ratioFeed.address);
+  await iVault.addAdapter(eigenLayerAdapter.address);
+  await iVault.setWithdrawalQueue(withdrawalQueue.address);
+  await eigenLayerAdapter.setInceptionVault(iVault.address);
+  await iToken.setVault(iVault.address);
+
+  console.log("... iVault initialization completed ....");
+
+  return [
+    iToken,
+    iVault,
+    ratioFeed,
+    asset,
+    iVaultOperator,
+    eigenLayerAdapter,
+    withdrawalQueue,
+  ];
 };
 
 export const abi = ethers.AbiCoder.defaultAbiCoder();

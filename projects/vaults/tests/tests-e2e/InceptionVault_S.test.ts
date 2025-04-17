@@ -1,18 +1,18 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import hardhat from "hardhat";
-const { ethers, network } = hardhat;
 import { expect } from "chai";
+import hardhat from "hardhat";
+import { stETH } from "../data/assets/inception-vault-s";
+import { mellowVaults } from "../data/assets/mellow-vauts";
+import { symbioticVaults } from "../data/assets/symbiotic-vaults";
 import {
-  setBlockTimestamp,
-  calculateRatio,
-  toWei,
-  e18,
+    calculateRatio,
+    e18,
+    setBlockTimestamp,
+    toWei,
 } from "../helpers/utils";
-import { stETH } from "../src/test-data/assets/inception-vault-s";
 import { emptyBytes } from "../src/constants";
-import { mellowVaults } from "../src/test-data/assets/mellow-vauts";
-import { symbioticVaults } from "../src/test-data/assets/symbiotic-vaults";
-import { initVault, abi, MAX_TARGET_PERCENT } from "../src/init-vault";
+import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault";
+const { ethers, network } = hardhat;
 
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function () {
