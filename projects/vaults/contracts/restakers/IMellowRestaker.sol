@@ -94,20 +94,18 @@ contract IMellowRestaker is
     ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
-        return
-            IEthWrapper(ethWrapper).deposit(
-                address(_asset),
-                amount,
-                mellowVault,
-                address(this),
-                referral
-            );
+        return IEthWrapper(ethWrapper).deposit(address(_asset), amount, mellowVault, address(this), referral);
     }
 
     function delegate(
         uint256 amount,
         address referral
-    ) external onlyTrustee whenNotPaused returns (uint256 lpAmount) {
+    )
+        external
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 lpAmount)
+    {
         uint256 allocationsTotal = totalAllocations;
         _asset.safeTransferFrom(msg.sender, address(this), amount);
 
@@ -115,17 +113,9 @@ contract IMellowRestaker is
             uint256 allocation = allocations[address(mellowVaults[i])];
             if (allocation > 0) {
                 uint256 localBalance = (amount * allocation) / allocationsTotal;
-                IERC20(_asset).safeIncreaseAllowance(
-                    address(ethWrapper),
-                    localBalance
-                );
-                lpAmount += IEthWrapper(ethWrapper).deposit(
-                    address(_asset),
-                    localBalance,
-                    address(mellowVaults[i]),
-                    address(this),
-                    referral
-                );
+                IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), localBalance);
+                lpAmount += IEthWrapper(ethWrapper).deposit(address(_asset), localBalance, address(mellowVaults[i]), address(this), referral);
+
             }
         }
 
@@ -139,21 +129,18 @@ contract IMellowRestaker is
         uint256 amount
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         uint256 balanceState = _asset.balanceOf(address(this));
-        IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
-
+        IERC4626(_mellowVault).withdraw(amount,address(this), address(this));
+        
         return (_asset.balanceOf(address(this)) - balanceState);
     }
 
     function claimPending() external returns (uint256) {
+
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            IMellowSymbioticVault(address(mellowVaults[i])).claim(
-                address(this),
-                address(this),
-                type(uint256).max
-            );
+            IMellowSymbioticVault(address(mellowVaults[i])).claim(address(this), address(this), type(uint256).max);
         }
     }
-
+    
     function claimableAmount() external view returns (uint256) {
         return _asset.balanceOf(address(this));
     }
@@ -171,7 +158,9 @@ contract IMellowRestaker is
         return amount;
     }
 
-    function addMellowVault(address mellowVault) external onlyOwner {
+    function addMellowVault(
+        address mellowVault
+    ) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
@@ -185,9 +174,12 @@ contract IMellowRestaker is
         emit VaultAdded(mellowVault);
     }
 
-    function setEthWrapper(address newEthWrapper) external onlyOwner {
-        if (newEthWrapper == address(0)) revert ZeroAddress();
+    function setEthWrapper(
+        address newEthWrapper
+    ) external onlyOwner {
 
+        if (newEthWrapper == address(0)) revert ZeroAddress();
+        
         address oldWrapper = ethWrapper;
         ethWrapper = newEthWrapper;
 
@@ -231,19 +223,14 @@ contract IMellowRestaker is
     function claimableWithdrawalAmount() external view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
-                .claimableAssetsOf(address(this));
+            total += IMellowSymbioticVault(address(mellowVaults[i])).claimableAssetsOf(address(this));
         }
         return total;
     }
 
-    function claimableWithdrawalAmount(
-        address _mellowVault
-    ) external view returns (uint256) {
-        return
-            IMellowSymbioticVault(_mellowVault).claimableAssetsOf(
-                address(this)
-            );
+    function claimableWithdrawalAmount(address _mellowVault) external view returns (uint256) {
+
+        return IMellowSymbioticVault(_mellowVault).claimableAssetsOf(address(this));
     }
 
     function pendingMellowRequest(
@@ -255,18 +242,16 @@ contract IMellowRestaker is
     function pendingWithdrawalAmount() external view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
-            total += IMellowSymbioticVault(address(mellowVaults[i]))
-                .pendingAssetsOf(address(this));
+
+            total += IMellowSymbioticVault(address(mellowVaults[i])).pendingAssetsOf(address(this));
         }
 
         return total;
     }
 
-    function pendingWithdrawalAmount(
-        address _mellowVault
-    ) external view returns (uint256) {
-        return
-            IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
+    function pendingWithdrawalAmount(address _mellowVault) external view returns (uint256) {
+
+        return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
     }
 
     function getDeposited(address _mellowVault) public view returns (uint256) {
@@ -283,9 +268,7 @@ contract IMellowRestaker is
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
             if (balance > 0) {
-                total += IERC4626(address(mellowVaults[i])).previewRedeem(
-                    balance
-                );
+                total += IERC4626(address(mellowVaults[i])).previewRedeem(balance);
             }
         }
         return total;

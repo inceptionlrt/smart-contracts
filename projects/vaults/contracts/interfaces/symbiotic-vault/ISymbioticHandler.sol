@@ -2,9 +2,8 @@
 pragma solidity ^0.8.20;
 
 interface IMellowHandler {
-    event UndelegatedFrom(
-        address indexed adapter,
-        address indexed vault,
+    event StartMellowWithdrawal(
+        address indexed stakerAddress,
         uint256 indexed actualAmounts
     );
 
@@ -25,7 +24,7 @@ interface IMellowHandler {
     );
 }
 
-interface IAdapterHandler is IMellowHandler {
+interface ISymbioticHandler is IMellowHandler {
     /// @dev Epoch represents the period of the rebalancing process
     /// @dev Receiver is a receiver of assets in claim()
     /// @dev Amount represents the exact amount of the asset to be claimed
@@ -41,13 +40,11 @@ interface IAdapterHandler is IMellowHandler {
         uint256 amount
     );
 
-    event WithdrawalClaimed(address adapter, uint256 totalAmount);
+    event WithdrawalClaimed(uint256 totalAmount);
 
     event TargetCapacityChanged(uint256 prevValue, uint256 newValue);
 
-    event SymbioticAdapterAdded(address indexed newValue);
+    event SymbioticRestakerAdded(address indexed newValue);
 
-    event AdapterAdded(address);
-
-    event AdapterRemoved(address);
+    event MellowRestakerAdded(address indexed newValue);
 }
