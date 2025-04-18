@@ -19,7 +19,6 @@ const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iVault, asset, mellowAdapter, symbioticAdapter, withdrawalQueue;
   let iVaultOperator, deployer, staker, staker2, staker3, treasury;
-  let ratioErr, transactErr;
   let snapshot;
 
   before(async function () {
@@ -31,20 +30,15 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       }
     }
 
-    await network.provider.send("hardhat_reset", [
-      {
-        forking: {
-          jsonRpcUrl: assetData.url ? assetData.url : network.config.forking.url,
-          blockNumber: assetData.blockNumber ? assetData.blockNumber : network.config.forking.blockNumber,
-        },
+    await network.provider.send("hardhat_reset", [{
+      forking: {
+        jsonRpcUrl: network.config.forking.url,
+        blockNumber: assetData.blockNumber ? assetData.blockNumber : network.config.forking.blockNumber,
       },
-    ]);
+    }]);
 
     ({ iVault, asset, iVaultOperator, mellowAdapter, symbioticAdapter, withdrawalQueue }
       = await initVault(assetData, { initAdapters: true }));
-
-    ratioErr = assetData.ratioErr;
-    transactErr = assetData.transactErr;
 
     [deployer, staker, staker2, staker3] = await ethers.getSigners();
 

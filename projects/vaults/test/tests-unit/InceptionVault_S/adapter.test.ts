@@ -1,7 +1,6 @@
 // Tests for InceptionVault_S contract;
 // The S in name does not mean only Symbiotic; this file contains tests for Symbiotic and Mellow adapters
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
 import { stETH } from "../../data/assets/inception-vault-s";
@@ -14,9 +13,7 @@ const { ethers, network } = hardhat;
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, mellowAdapter, symbioticAdapter;
-  let iVaultOperator, deployer, staker, staker2, staker3, treasury;
-  let ratioErr, transactErr;
-  let snapshot;
+  let iVaultOperator, staker, staker2, staker3;
 
   before(async function () {
     if (process.env.ASSETS) {
@@ -30,7 +27,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     await network.provider.send("hardhat_reset", [
       {
         forking: {
-          jsonRpcUrl: assetData.url ? assetData.url : network.config.forking.url,
+          jsonRpcUrl: network.config.forking.url,
           blockNumber: assetData.blockNumber ? assetData.blockNumber : network.config.forking.blockNumber,
         },
       },
@@ -39,17 +36,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ({ iToken, iVault, iVaultOperator, mellowAdapter, symbioticAdapter }
       = await initVault(assetData, { initAdapters: true }));
 
-    ratioErr = assetData.ratioErr;
-    transactErr = assetData.transactErr;
-
-    [deployer, staker, staker2, staker3] = await ethers.getSigners();
+    [, staker, staker2, staker3] = await ethers.getSigners();
 
     staker = await assetData.impersonateStaker(staker, iVault);
     staker2 = await assetData.impersonateStaker(staker2, iVault);
     staker3 = await assetData.impersonateStaker(staker3, iVault);
-    treasury = await iVault.treasury(); //deployer
-
-    snapshot = await helpers.takeSnapshot();
   });
 
   after(async function () {

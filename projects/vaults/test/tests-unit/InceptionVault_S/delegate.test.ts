@@ -42,7 +42,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 
-    [staker, staker2, staker3] = (await ethers.getSigners()).slice(1, 4);
+    [, staker, staker2, staker3] = await ethers.getSigners();
 
     staker = await assetData.impersonateStaker(staker, iVault);
     staker2 = await assetData.impersonateStaker(staker2, iVault);

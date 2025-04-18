@@ -16,7 +16,7 @@ const { ethers, network } = hardhat;
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, ratioFeed, asset, mellowAdapter, withdrawalQueue;
-  let iVaultOperator, deployer, staker, staker2, staker3, treasury;
+  let iVaultOperator, deployer, staker, staker2, staker3;
   let ratioErr, transactErr;
   let snapshot;
   let params;
@@ -50,7 +50,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     staker = await assetData.impersonateStaker(staker, iVault);
     staker2 = await assetData.impersonateStaker(staker2, iVault);
     staker3 = await assetData.impersonateStaker(staker3, iVault);
-    treasury = await iVault.treasury(); //deployer
 
     snapshot = await helpers.takeSnapshot();
   });
@@ -68,13 +67,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     it("addMellowVault reverts when already added", async function () {
       const mellowVault = mellowVaults[0].vaultAddress;
-      const wrapper = mellowVaults[0].wrapperAddress;
+      // const wrapper = mellowVaults[0].wrapperAddress;
       await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "AlreadyAdded");
     });
 
     it("addMellowVault vault is 0 address", async function () {
       const mellowVault = ethers.ZeroAddress;
-      const wrapper = mellowVaults[1].wrapperAddress;
+      // const wrapper = mellowVaults[1].wrapperAddress;
       await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "ZeroAddress");
     });
 
@@ -152,7 +151,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   describe("undelegateFromMellow: request withdrawal from mellow vault", function () {
-    let ratio, ratioDiff, totalDeposited, assets1, assets2, rewards, vault1Delegated, vault2Delegated;
+    let totalDeposited, assets1, assets2, vault1Delegated, vault2Delegated;
 
     before(async function () {
       await snapshot.restore();
@@ -603,7 +602,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   describe("Redeem: retrieves assets after they were received from Mellow", function () {
-    let ratio, stakerAmount, staker2Amount, stakerUnstakeAmount1, stakerUnstakeAmount2, staker2UnstakeAmount;
+    let ratio, stakerAmount, staker2Amount, stakerUnstakeAmount1, staker2UnstakeAmount;
     before(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
