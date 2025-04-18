@@ -64,6 +64,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     uint256 public MAX_GAP_BETWEEN_EPOCH;
 
+    /**
+     * @dev Initializes the vault with basic parameters
+     * @param vaultName Name of the vault
+     * @param operatorAddress Address of the operator
+     * @param assetAddress Address of the underlying asset
+     * @param _inceptionToken Address of the Inception token
+     */
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
@@ -102,6 +109,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ////// Deposit functions //////
     ////////////////////////////*/
 
+    /**
+     * @dev Validates deposit parameters before processing
+     * @param receiver Address receiving the deposit
+     * @param amount Amount to be deposited
+     */
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
@@ -109,14 +121,20 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (targetCapacity == 0) revert InceptionOnPause();
     }
 
+    /**
+     * @dev Validates deposit result
+     * @param iShares Amount of shares minted
+     */
     function __afterDeposit(uint256 iShares) internal pure {
         if (iShares == 0) revert DepositInconsistentResultedState();
     }
 
-    /// @dev Transfers the msg.sender's assets to the vault.
-    /// @dev Mints Inception tokens in accordance with the current ratio.
-    /// @dev Issues the tokens to the specified receiver address.
-    /** @dev See {IERC4626-deposit}. */
+    /**
+     * @dev Deposits assets into the vault and mints shares
+     * @param amount Amount of assets to deposit
+     * @param receiver Address to receive the shares
+     * @return Amount of shares minted
+     */
     function deposit(
         uint256 amount,
         address receiver
@@ -124,7 +142,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return _deposit(amount, msg.sender, receiver);
     }
 
-    /// @notice The deposit function but with a referral code
+    /**
+     * @dev Deposits assets with a referral code
+     * @param amount Amount of assets to deposit
+     * @param receiver Address to receive the shares
+     * @param code Referral code
+     * @return Amount of shares minted
+     */
     function depositWithReferral(
         uint256 amount,
         address receiver,
@@ -134,6 +158,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return _deposit(amount, msg.sender, receiver);
     }
 
+    /**
+     * @dev Internal deposit function
+     * @param amount Amount to deposit
+     * @param sender Address sending the assets
+     * @param receiver Address receiving the shares
+     * @return Amount of shares minted
+     */
     function _deposit(
         uint256 amount,
         address sender,
@@ -164,7 +195,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return iShares;
     }
 
-    /** @dev See {IERC4626-mint}. */
+    /**
+     * @dev Mints shares for assets
+     * @param shares Amount of shares to mint
+     * @param receiver Address to receive the shares
+     * @return Amount of assets deposited
+     */
     function mint(
         uint256 shares,
         address receiver
@@ -183,6 +219,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
 
+    /**
+     * @dev Validates withdrawal parameters
+     * @param receiver Address receiving the withdrawal
+     * @param iShares Amount of shares to withdraw
+     */
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
         if (iShares == 0) revert ValueZero();
         if (receiver == address(0)) revert InvalidAddress();
@@ -190,9 +231,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (targetCapacity == 0) revert NullParams();
     }
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @dev Withdraws assets from the vault
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     */
     function withdraw(
         uint256 iShares,
         address receiver
@@ -203,10 +246,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         if (amount < withdrawMinAmount)
             revert LowerMinAmount(withdrawMinAmount);
 
-        // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        // update global state and claimer's state
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
@@ -245,6 +286,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return assets;
     }
 
+    /**
+     * @dev Redeems available withdrawals for a claimer
+     * @param receiver Address to redeem withdrawals for
+     */
     function redeem(address receiver) external whenNotPaused nonReentrant {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
@@ -260,7 +305,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             uint256 withdrawalNum = availableWithdrawals[i];
             Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
             uint256 amount = request.amount;
-            // update the genRequest and the global state
             genRequest.amount -= amount;
 
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
@@ -273,7 +317,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         withdrawals[receiver] -= withdrawalsBuffer;
 
-        // let's update the lowest epoch associated with the claimer
         genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
 
         _transferAssetTo(receiver, redeemedAmount);
@@ -286,9 +329,13 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ///////// Flash Withdrawal functions /////////
     ///////////////////////////////////////////*/
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @dev Performs a flash withdrawal
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     * @param minOut Minimum amount of assets to receive
+     * @return Amount of assets withdrawn
+     */
     function flashWithdraw(
         uint256 iShares,
         address receiver,
@@ -306,6 +353,15 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return amount;
     }
 
+    /**
+     * @dev Internal flash withdrawal function
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     * @param owner Address owning the shares
+     * @param minOut Minimum amount of assets to receive
+     * @return amount Amount of assets withdrawn
+     * @return fee Fee charged for the withdrawal
+     */
     function _flashWithdraw(
         uint256 iShares,
         address receiver,
@@ -316,7 +372,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         if (amount < flashMinAmount) revert LowerMinAmount(flashMinAmount);
 
-        // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
@@ -325,33 +380,39 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
-        /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _transferAssetTo(treasury, protocolWithdrawalFee);
         if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
-        /// @notice instant transfer amount to the receiver
         _transferAssetTo(receiver, amount);
 
         return (amount, fee);
     }
 
-    /// @notice Function to calculate deposit bonus based on the utilization rate
+    /**
+     * @dev Calculates deposit bonus based on utilization
+     * @param amount Amount of assets to deposit
+     * @return Amount of bonus tokens
+     */
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateDepositBonus(
-            amount,
-            getFlashCapacity(),
-            (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
-            optimalBonusRate,
-            maxBonusRate,
-            targetCapacity
-        );
+                amount,
+                getFlashCapacity(),
+                (targetCapacity * depositUtilizationKink) / MAX_PERCENT,
+                optimalBonusRate,
+                maxBonusRate,
+                targetCapacity
+            );
     }
 
-    /// @dev Function to calculate flash withdrawal fee based on the utilization rate
+    /**
+     * @dev Calculates flash withdrawal fee
+     * @param amount Amount of assets to withdraw
+     * @return Amount of fee charged
+     */
     function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
@@ -360,23 +421,28 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 targetCapacity = _getTargetCapacity();
         return
             InceptionLibrary.calculateWithdrawalFee(
-            amount,
-            capacity,
-            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-            optimalWithdrawalRate,
-            maxFlashFeeRate,
-            targetCapacity
-        );
+                amount,
+                capacity,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
 
+    /**
+     * @dev Checks if withdrawals can be redeemed
+     * @param claimer Address to check
+     * @return able Whether withdrawals can be redeemed
+     * @return availableWithdrawals Array of withdrawal indices
+     */
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool able, uint256[] memory) {
-        // get the general request
         uint256 index;
         uint256 rEpoch = recentEpoch[claimer];
 
@@ -397,7 +463,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
                 ++index;
             }
         }
-        // decrease arrays
         if (availableWithdrawals.length - index > 0)
             assembly {
                 mstore(availableWithdrawals, index)
@@ -406,32 +471,56 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return (able, availableWithdrawals);
     }
 
+    /**
+     * @dev Gets the current ratio from the ratio feed
+     * @return Current ratio value
+     */
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
+    /**
+     * @dev Gets pending withdrawal amount for a claimer
+     * @param claimer Address to check
+     * @return Amount of pending withdrawals
+     */
     function getPendingWithdrawalOf(
         address claimer
     ) external view returns (uint256) {
         return _claimerWithdrawals[claimer].amount;
     }
 
-    /** @dev See {IERC20Metadata-decimals}. */
+    /**
+     * @dev Gets the decimals of the inception token
+     * @return Number of decimals
+     */
     function decimals() public view returns (uint8) {
         return IERC20Metadata(address(inceptionToken)).decimals();
     }
 
-    /** @dev See {IERC4626-maxDeposit}. */
+    /**
+     * @dev Gets maximum deposit amount for a receiver
+     * @param receiver Address to check
+     * @return Maximum deposit amount
+     */
     function maxDeposit(address receiver) public view returns (uint256) {
         return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
-    /** @dev See {IERC4626-maxMint}. */
+    /**
+     * @dev Gets maximum mint amount for a receiver
+     * @param receiver Address to check
+     * @return Maximum mint amount
+     */
     function maxMint(address receiver) public view returns (uint256) {
         return type(uint256).max;
     }
 
-    /** @dev See {IERC4626-maxRedeem}. */
+    /**
+     * @dev Gets maximum redeem amount for an owner
+     * @param owner Address to check
+     * @return Maximum redeem amount
+     */
     function maxRedeem(address owner) public view returns (uint256) {
         if (paused()) {
             return 0;
@@ -444,7 +533,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         }
     }
 
-    /** @dev See {IERC4626-previewDeposit}. */
+    /**
+     * @dev Previews deposit result
+     * @param assets Amount of assets to deposit
+     * @return Amount of shares to be minted
+     */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         uint256 depositBonus;
@@ -457,47 +550,62 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         return convertToShares(assets + depositBonus);
     }
 
-    /** @dev See {IERC4626-previewMint}. */
+    /**
+     * @dev Previews mint result
+     * @param shares Amount of shares to mint
+     * @return Amount of assets required
+     */
     function previewMint(uint256 shares) public view returns (uint256) {
-
         uint256 assets = Convert.multiplyAndDivideCeil(shares, 1e18, ratio());
         if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         return assets;
     }
 
-    /** @dev See {IERC4626-previewRedeem}. */
+    /**
+     * @dev Previews redeem result
+     * @param shares Amount of shares to redeem
+     * @return assets Amount of assets to be received
+     */
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
         if (shares == 0) revert NullParams();
-
+        
         uint256 amount = convertToAssets(shares);
         uint256 capacity = getFlashCapacity();
         uint256 targetCapacity = _getTargetCapacity();
         uint256 flash = amount <= capacity ? capacity : amount;
 
         return amount - InceptionLibrary.calculateWithdrawalFee(
-            amount,
-            flash,
-            (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
-            optimalWithdrawalRate,
-            maxFlashFeeRate,
-            targetCapacity
-        );
+                amount,
+                flash,
+                (targetCapacity * withdrawUtilizationKink) / MAX_PERCENT,
+                optimalWithdrawalRate,
+                maxFlashFeeRate,
+                targetCapacity
+            );
     }
 
     /*//////////////////////////////
     ////// Convert functions //////
     ////////////////////////////*/
 
-    /** @dev See {IERC4626-convertToShares}. */
+    /**
+     * @dev Converts assets to shares
+     * @param assets Amount of assets
+     * @return shares Amount of shares
+     */
     function convertToShares(
         uint256 assets
     ) public view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    /** @dev See {IERC4626-convertToAssets}. */
+    /**
+     * @dev Converts shares to assets
+     * @param iShares Amount of shares
+     * @return assets Amount of assets
+     */
     function convertToAssets(
         uint256 iShares
     ) public view returns (uint256 assets) {
@@ -508,6 +616,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ////// SET functions //////
     ////////////////////////*/
 
+    /**
+     * @dev Sets deposit bonus parameters
+     * @param newMaxBonusRate Maximum bonus rate
+     * @param newOptimalBonusRate Optimal bonus rate
+     * @param newDepositUtilizationKink Utilization kink point
+     */
     function setDepositBonusParams(
         uint64 newMaxBonusRate,
         uint64 newOptimalBonusRate,
@@ -532,6 +646,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         );
     }
 
+    /**
+     * @dev Sets flash withdrawal fee parameters
+     * @param newMaxFlashFeeRate Maximum fee rate
+     * @param newOptimalWithdrawalRate Optimal withdrawal rate
+     * @param newWithdrawUtilizationKink Utilization kink point
+     */
     function setFlashWithdrawFeeParams(
         uint64 newMaxFlashFeeRate,
         uint64 newOptimalWithdrawalRate,
@@ -557,6 +677,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         );
     }
 
+    /**
+     * @dev Sets the protocol fee
+     * @param newProtocolFee New protocol fee value
+     */
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
@@ -565,6 +689,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         protocolFee = newProtocolFee;
     }
 
+    /**
+     * @dev Sets the treasury address
+     * @param newTreasury New treasury address
+     */
     function setTreasuryAddress(address newTreasury) external onlyOwner {
         if (newTreasury == address(0)) revert NullParams();
 
@@ -572,6 +700,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         treasury = newTreasury;
     }
 
+    /**
+     * @dev Sets the ratio feed contract
+     * @param newRatioFeed New ratio feed address
+     */
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
@@ -579,6 +711,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         ratioFeed = newRatioFeed;
     }
 
+    /**
+     * @dev Sets the operator address
+     * @param newOperator New operator address
+     */
     function setOperator(address newOperator) external onlyOwner {
         if (newOperator == address(0)) revert NullParams();
 
@@ -586,30 +722,50 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         _operator = newOperator;
     }
 
+    /**
+     * @dev Sets the minimum withdrawal amount
+     * @param newMinAmount New minimum amount
+     */
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the minimum deposit amount
+     * @param newMinAmount New minimum amount
+     */
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the minimum flash withdrawal amount
+     * @param newMinAmount New minimum amount
+     */
     function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the maximum gap between epochs
+     * @param newGap New maximum gap value
+     */
     function setMaxGap(uint256 newGap) external onlyOwner {
         if (newGap == 0) revert NullParams();
         emit MaxGapSet(MAX_GAP_BETWEEN_EPOCH, newGap);
         MAX_GAP_BETWEEN_EPOCH = newGap;
     }
 
+    /**
+     * @dev Sets the vault name
+     * @param newVaultName New vault name
+     */
     function setName(string memory newVaultName) external onlyOwner {
         if (bytes(newVaultName).length == 0) revert NullParams();
 
@@ -617,28 +773,23 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         name = newVaultName;
     }
 
-    /// @dev Temporary function. Meant for upgrade only since we introduced 'withdrawals'
+    /**
+     * @dev Adjusts withdrawals for upgrade
+     */
     function adjustWithdrawals() external onlyOwner {
-
         uint256 queueLength = claimerWithdrawalsQueue.length;
 
-        // Duplicate queue
         address[] memory queue = new address[](queueLength);
 
-        // Copy Address to new Array
         for (uint256 i = 0; i < queueLength; i++) {
             queue[i] = claimerWithdrawalsQueue[i].receiver;
         }
 
-        // Traverse through the addresses
         for (uint256 i = 0; i < queueLength; i++) {
-
-            // Means fulfilled
             if (queue[i] == address(0)) continue;
 
             bool skipElement;
             for (uint256 j = 0; j < i; j++) {
-
                 if (queue[j] == queue[i]) {
                     skipElement = true;
                     break;
@@ -649,7 +800,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
             uint256 numWithdrawal;
             for (uint256 k = i; k < queue.length; k++) {
-
                 if (queue[i] == queue[k]) numWithdrawal++;
             }
 
@@ -661,10 +811,16 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     ////// Pausable functions //////
     /////////////////////////////*/
 
+    /**
+     * @dev Pauses the contract
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @dev Unpauses the contract
+     */
     function unpause() external onlyOwner {
         _unpause();
     }

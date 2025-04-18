@@ -14,7 +14,7 @@ import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/I
 import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 /**
- * @title The InceptionMellowAdapter Contract
+ * @title InceptionMellowAdapter
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
@@ -43,6 +43,12 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         _disableInitializers();
     }
 
+    /**
+     * @dev Initializes the Mellow adapter
+     * @param _mellowVaults Array of Mellow vault addresses to support
+     * @param asset Address of the asset token
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         IMellowVault[] memory _mellowVaults,
         IERC20 asset,
@@ -62,6 +68,13 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         totalAllocations = totalAllocations_;
     }
 
+    /**
+     * @dev Delegates assets to a Mellow vault or distributes them automatically
+     * @param mellowVault Address of the Mellow vault
+     * @param amount Amount of assets to delegate
+     * @param _data Additional data containing referral address and auto-delegation flag
+     * @return depositedAmount Amount of assets actually deposited
+     */
     function delegate(
         address mellowVault,
         uint256 amount,
@@ -82,6 +95,13 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         else return _delegateAuto(amount, referral);
     }
 
+    /**
+     * @dev Internal function to delegate assets to a specific vault
+     * @param mellowVault Address of the Mellow vault
+     * @param amount Amount of assets to delegate
+     * @param referral Address of the referral
+     * @return depositedAmount Amount of assets actually deposited
+     */
     function _delegate(
         address mellowVault,
         uint256 amount,
@@ -112,6 +132,12 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         depositedAmount = lpAmountToAmount(lpAmount, IMellowVault(mellowVault));
     }
 
+    /**
+     * @dev Internal function to automatically distribute assets across all vaults
+     * @param amount Amount of assets to delegate
+     * @param referral Address of the referral
+     * @return depositedAmount Amount of assets actually deposited
+     */
     function _delegateAuto(
         uint256 amount,
         address referral
@@ -142,6 +168,12 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         if (left != 0) _asset.safeTransfer(_inceptionVault, left);
     }
 
+    /**
+     * @dev Withdraws assets from a Mellow vault
+     * @param _mellowVault Address of the Mellow vault
+     * @param amount Amount of assets to withdraw
+     * @return withdrawnAmount Amount of assets actually withdrawn
+     */
     function withdraw(
         address _mellowVault,
         uint256 amount,
@@ -153,6 +185,9 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         return (_asset.balanceOf(address(this)) - balanceState);
     }
 
+    /**
+     * @dev Claims rewards from all Mellow vaults
+     */
     function claim(
         bytes[] calldata /*_data */
     ) external override onlyTrustee whenNotPaused returns (uint256) {
@@ -164,6 +199,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
 
         return amount;
     }
+
+    /**
+     * @dev Internal function to claim pending rewards from all vaults
+     */
     function _claimPending() private {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             IMellowSymbioticVault(address(mellowVaults[i])).claim(
@@ -174,6 +213,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         }
     }
 
+    /**
+     * @dev Adds a new Mellow vault to the supported vaults list
+     * @param mellowVault Address of the vault to add
+     */
     function addMellowVault(address mellowVault) external onlyOwner {
         if (mellowVault == address(0)) revert ZeroAddress();
 
@@ -186,6 +229,11 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         emit VaultAdded(mellowVault);
     }
 
+    /**
+     * @dev Changes the allocation for a specific vault
+     * @param mellowVault Address of the vault
+     * @param newAllocation New allocation value
+     */
     function changeAllocation(
         address mellowVault,
         uint256 newAllocation
@@ -205,6 +253,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
     }
 
+    /**
+     * @dev Returns the total amount of claimable assets across all vaults
+     * @return total Total amount of claimable assets
+     */
     function claimableWithdrawalAmount() public view returns (uint256 total) {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             total += IMellowSymbioticVault(address(mellowVaults[i]))
@@ -212,6 +264,11 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         }
     }
 
+    /**
+     * @dev Returns the amount of claimable assets for a specific vault
+     * @param _mellowVault Address of the vault
+     * @return amount Amount of claimable assets
+     */
     function claimableWithdrawalAmount(
         address _mellowVault
     ) external view returns (uint256) {
@@ -221,6 +278,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
             );
     }
 
+    /**
+     * @dev Returns the total amount of pending withdrawals across all vaults
+     * @return total Total amount of pending withdrawals
+     */
     function pendingWithdrawalAmount()
         public
         view
@@ -233,6 +294,11 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         }
     }
 
+    /**
+     * @dev Returns the amount of pending withdrawals for a specific vault
+     * @param _mellowVault Address of the vault
+     * @return amount Amount of pending withdrawals
+     */
     function pendingWithdrawalAmount(
         address _mellowVault
     ) external view returns (uint256) {
@@ -240,6 +306,11 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
             IMellowSymbioticVault(_mellowVault).pendingAssetsOf(address(this));
     }
 
+    /**
+     * @dev Returns the amount of assets deposited in a specific vault
+     * @param _mellowVault Address of the vault
+     * @return amount Amount of deposited assets
+     */
     function getDeposited(
         address _mellowVault
     ) public view override returns (uint256) {
@@ -250,6 +321,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         return IERC4626(address(mellowVault)).previewRedeem(balance);
     }
 
+    /**
+     * @dev Returns the total amount of assets deposited across all vaults
+     * @return total Total amount of deposited assets
+     */
     function getTotalDeposited() public view override returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < mellowVaults.length; i++) {
@@ -262,6 +337,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         return total;
     }
 
+    /**
+     * @dev Returns the total inactive balance (pending withdrawals + claimable amount)
+     * @return balance Total inactive balance
+     */
     function inactiveBalance() public view override returns (uint256) {
         return
             pendingWithdrawalAmount() +
@@ -269,6 +348,12 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
             claimableAmount();
     }
 
+    /**
+     * @dev Converts amount to LP token amount for a specific vault
+     * @param amount Amount of assets
+     * @param mellowVault Address of the vault
+     * @return lpAmount Amount of LP tokens
+     */
     function amountToLpAmount(
         uint256 amount,
         IMellowVault mellowVault
@@ -276,6 +361,12 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         return IERC4626(address(mellowVault)).convertToShares(amount);
     }
 
+    /**
+     * @dev Converts LP token amount to asset amount for a specific vault
+     * @param lpAmount Amount of LP tokens
+     * @param mellowVault Address of the vault
+     * @return amount Amount of assets
+     */
     function lpAmountToAmount(
         uint256 lpAmount,
         IMellowVault mellowVault
@@ -283,6 +374,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         return IERC4626(address(mellowVault)).convertToAssets(lpAmount);
     }
 
+    /**
+     * @dev Sets the ETH wrapper address
+     * @param newEthWrapper Address of the new ETH wrapper
+     */
     function setEthWrapper(address newEthWrapper) external onlyOwner {
         if (!Address.isContract(newEthWrapper)) revert NotContract();
         if (newEthWrapper == address(0)) revert ZeroAddress();
@@ -292,6 +387,10 @@ contract InceptionMellowAdapter is IMellowAdapter, InceptionBaseAdapter {
         emit EthWrapperChanged(oldWrapper, newEthWrapper);
     }
 
+    /**
+     * @dev Returns the contract version
+     * @return version Contract version
+     */
     function getVersion() external pure override returns (uint256) {
         return 3;
     }

@@ -65,8 +65,8 @@ abstract contract InceptionBaseAdapter is
     }
 
     /**
-     * @notice Returns the amount of tokens available for withdrawal
-     * @return Amount of available tokens
+     * @dev Returns the amount of tokens available for withdrawal
+     * @return amount Amount of available tokens
      */
     function claimableAmount() public view virtual override returns (uint256) {
         return _asset.balanceOf(address(this));

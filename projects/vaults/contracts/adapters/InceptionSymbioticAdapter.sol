@@ -35,6 +35,11 @@ contract InceptionSymbioticAdapter is ISymbioticAdapter, InceptionBaseAdapter {
         _disableInitializers();
     }
 
+    /**
+     * @dev Initializes the symbiotic adapter
+     * @param asset Address of the asset token
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         address[] memory vaults,
         IERC20 asset,
@@ -50,6 +55,14 @@ contract InceptionSymbioticAdapter is ISymbioticAdapter, InceptionBaseAdapter {
         }
     }
 
+    /**
+     * @dev Deposits assets into the symbiotic protocol
+     * @param amount Amount of assets to deposit
+     * 
+     * Requirements:
+     * - Can only be called by trustee
+     * - Contract must not be paused
+     */
     function delegate(
         address vaultAddress,
         uint256 amount,
@@ -75,6 +88,14 @@ contract InceptionSymbioticAdapter is ISymbioticAdapter, InceptionBaseAdapter {
         return depositedAmount;
     }
 
+    /**
+     * @dev Withdraws assets from the symbiotic protocol
+     * @param amount Amount of assets to withdraw
+     * 
+     * Requirements:
+     * - Can only be called by trustee
+     * - Contract must not be paused
+     */
     function withdraw(
         address vaultAddress,
         uint256 amount,
@@ -184,5 +205,22 @@ contract InceptionSymbioticAdapter is ISymbioticAdapter, InceptionBaseAdapter {
         _symbioticVaults.remove(vaultAddress);
 
         emit VaultRemoved(vaultAddress);
+    }
+
+    /**
+     * @dev Returns the total value of assets in the protocol
+     * @return value Total value of assets
+     */
+    function totalValue() external view returns (uint256) {
+        // Implement symbiotic protocol total value calculation here
+        return _asset.balanceOf(address(this));
+    }
+
+    /**
+     * @dev Returns the contract version
+     * @return version Contract version
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 1;
     }
 }
