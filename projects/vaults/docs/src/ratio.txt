@@ -1,0 +1,59 @@
+
+participant User #LightBlue
+participant InceptionVault_S as Vault <<.sol>>
+participant IOperator <<.sol>>
+participant AdapterHandler as AdHandler <<.sol>>
+
+@startuml
+
+title Base flow
+
+== Deposit ==
+
+group "Deposit Process"
+User -> Vault: //deposit(assets)// 10 ETH
+note left: <color:gray>or <color:black>//depositWithReferral(assets, code)//\n<color:gray>or <color:black>//mint(shares)//
+Vault -> Vault: //totalAssets// = 10, <i>supply</i> = 10
+note left: totalAssets is vault balance
+Vault -> Vault: Calc bonus
+Vault -> User: //mint()// shares
+
+IOperator -> AdHandler: //delegate()// 10 ETH
+AdHandler -> AdHandler: totalAssets = 0, totalDelegated = 10
+group end
+
+
+== Withdrawal ==
+
+User -> Vault: withdraw 5 ETH 
+Vault -> Vault: supply = 5, totalSharesToWithdraw = 5
+
+IOperator -> AdHandler: undelegate 5 ETH
+AdHandler -> AdHandler: totalDelegated = 5, totalSharesToWithdraw = 0
+
+IOperator -> AdHandler: claim 5 ETH
+AdHandler -> AdHandler: redeemReservedAmount = 5; vaultBalance = 5;
+
+User -> Vault: redeem 5 ETH
+Vault -> Vault: redeemReservedAmount = 0; vaultBalnace = 0;
+
+
+== Emergency Flow ==
+
+IOperator -> AdHandler: emergencyUndelegate 2 ETH
+AdHandler -> AdHandler: totalDelegated = 3, emergencyPendingWithdrawals = 2
+
+IOperator -> AdHandler: emergencyClaim 2 ETH
+AdHandler -> AdHandler: emergencyPendingWithdrawals = 0; vaultBalance = 2
+
+User -> Vault: withdraw 1.5 ETH 
+Vault -> Vault: supply = 3.5, totalSharesToWithdraw = 1.5
+
+IOperator -> AdHandler: force undelegateAndClaim 1.5 ETH
+AdHandler -> AdHandler: redeemReservedAmount = 1.5, totalSharesToWithdraw = 0
+
+
+User -> Vault: redeem 1.5 ETH
+Vault -> Vault: redeemReservedAmount = 0; vaultBalance = 0.5
+
+@enduml
