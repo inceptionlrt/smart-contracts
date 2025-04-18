@@ -32,7 +32,7 @@ async function main() {
   /// 2. upgrade the Beacon's implementation for the vaults
 
   try {
-    for (const [vaultAddress, vaultRestakers] of restakers.entries()) {
+    for (const [vaultAddress, vaultRestakers] of adapters.entries()) {
       if (!vaultAddress || !Array.isArray(vaultRestakers)) continue;
 
       const iVault = await iVaultOldFactory.attach(vaultAddress);
@@ -47,26 +47,26 @@ async function main() {
   /// 3. set rewardsCoordinator
 
   console.log(
-    `We're going to set rewardsCoordinator(${addresses.RewardsCoordinator}) for all previously deployed Restakers`,
+    `We're going to set rewardsCoordinator(${addresses.RewardsCoordinator}) for all previously deployed Adapters`,
   );
 
   try {
     for (const [vaultAddress, vaultRestakers] of restakers.entries()) {
       if (!vaultAddress || !Array.isArray(vaultRestakers)) continue;
 
-      for (const restakerAddr of vaultRestakers) {
-        if (!restakerAddr) continue;
+      for (const adapterAddr of vaultRestakers) {
+        if (!adapterAddr) continue;
 
-        const restaker = BeaconProxyPatternV2.attach(restakerAddr);
-        tx = await restaker.setRewardsCoordinator(addresses.RewardsCoordinator);
+        const adapter = BeaconProxyPatternV2.attach(adapterAddr);
+        tx = await adapter.setRewardsCoordinator(addresses.RewardsCoordinator);
         await tx.wait();
         console.log(
-          `Restaker(${await restaker.getAddress()}) for ${vaultAddress} was updated with the RewardsCoordinator:`,
+          `Adapter(${await adapter.getAddress()}) for ${vaultAddress} was updated with the RewardsCoordinator:`,
         );
       }
     }
   } catch (error) {
-    console.error("Error processing restakers:", error);
+    console.error("Error processing adapters:", error);
   }
 }
 

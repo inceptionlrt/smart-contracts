@@ -6,7 +6,7 @@
 // import {IStrategyManager, IStrategy} from "../interfaces/IStrategyManager.sol";
 // import {IDelegationManager} from "../interfaces/IDelegationManager.sol";
 // import {IEigenLayerHandler} from "../interfaces/IEigenLayerHandler.sol";
-// import {IInceptionRestaker} from "../interfaces/IInceptionRestaker.sol";
+// import {IInceptionAdapter} from "../interfaces/IInceptionAdapter.sol";
 
 // /// @author The InceptionLRT team
 // /// @title The EigenLayerStrategyBaseHandler contract
@@ -43,8 +43,8 @@
 //     uint256 public redeemReservedAmount;
 
 //     /// @dev EigenLayer operator -> inception staker
-//     mapping(address => address) internal _operatorRestakers;
-//     address[] public restakers;
+//     mapping(address => address) internal _operatorAdapters;
+//     address[] public adapters;
 
 //     uint256 public depositBonusAmount;
 
@@ -87,23 +87,23 @@
 
 //     /// @dev deposits asset to the corresponding strategy
 //     function _depositAssetIntoStrategy(
-//         address restaker,
+//         address adapter,
 //         uint256 amount
 //     ) internal {
-//         _asset.approve(restaker, amount);
-//         IInceptionRestaker(restaker).depositAssetIntoStrategy(amount);
+//         _asset.approve(adapter, amount);
+//         IInceptionAdapter(adapter).depositAssetIntoStrategy(amount);
 
-//         emit DepositedToEL(restaker, amount);
+//         emit DepositedToEL(adapter, amount);
 //     }
 
 //     /// @dev delegates assets held in the strategy to the EL operator.
 //     function _delegateToOperator(
-//         address restaker,
+//         address adapter,
 //         address elOperator,
 //         bytes32 approverSalt,
 //         IDelegationManager.SignatureWithExpiry memory approverSignatureAndExpiry
 //     ) internal {
-//         IInceptionRestaker(restaker).delegateToOperator(
+//         IInceptionAdapter(adapter).delegateToOperator(
 //             elOperator,
 //             approverSalt,
 //             approverSignatureAndExpiry
@@ -120,11 +120,11 @@
 //         address elOperatorAddress,
 //         uint256 amount
 //     ) external whenNotPaused nonReentrant onlyOperator {
-//         address staker = _operatorRestakers[elOperatorAddress];
+//         address staker = _operatorAdapters[elOperatorAddress];
 //         if (staker == address(0)) revert OperatorNotRegistered();
 //         if (staker == _MOCK_ADDRESS) revert NullParams();
 
-//         IInceptionRestaker(staker).withdrawFromEL(_undelegate(amount, staker));
+//         IInceptionAdapter(staker).withdrawFromEL(_undelegate(amount, staker));
 //     }
 
 //     /// @dev performs creating a withdrawal request from EigenLayer
@@ -182,7 +182,7 @@
 
 //     /// @dev claims completed withdrawals from EigenLayer, if they exist
 //     function claimCompletedWithdrawals(
-//         address restaker,
+//         address adapter,
 //         IDelegationManager.Withdrawal[] calldata withdrawals
 //     ) public whenNotPaused nonReentrant {
 //         uint256 withdrawalsNum = withdrawals.length;
@@ -199,7 +199,7 @@
 //         uint256 availableBalance = getFreeBalance();
 
 //         uint256 withdrawnAmount;
-//         if (restaker == address(this)) {
+//         if (adapter == address(this)) {
 //             withdrawnAmount = _claimCompletedWithdrawalsForVault(
 //                 withdrawals,
 //                 tokens,
@@ -207,8 +207,8 @@
 //                 receiveAsTokens
 //             );
 //         } else {
-//             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
-//             withdrawnAmount = IInceptionRestaker(restaker).claimWithdrawals(
+//             if (!_adapterExists(adapter)) revert AdapterNotRegistered();
+//             withdrawnAmount = IInceptionAdapter(adapter).claimWithdrawals(
 //                 withdrawals,
 //                 tokens,
 //                 middlewareTimesIndexes,
@@ -283,12 +283,12 @@
 //         }
 //     }
 
-//     function _restakerExists(
-//         address restakerAddress
+//     function _adapterExists(
+//         address adapterAddress
 //     ) internal view returns (bool) {
-//         uint256 numOfRestakers = restakers.length;
-//         for (uint256 i = 0; i < numOfRestakers; ++i) {
-//             if (restakerAddress == restakers[i]) return true;
+//         uint256 numOfAdapters = adapters.length;
+//         for (uint256 i = 0; i < numOfAdapters; ++i) {
+//             if (adapterAddress == adapters[i]) return true;
 //         }
 //         return false;
 //     }
@@ -307,10 +307,10 @@
 //     }
 
 //     function getTotalDelegated() public view returns (uint256 total) {
-//         uint256 stakersNum = restakers.length;
+//         uint256 stakersNum = adapters.length;
 //         for (uint256 i = 0; i < stakersNum; ++i) {
-//             if (restakers[i] == address(0)) continue;
-//             total += strategy.userUnderlyingView(restakers[i]);
+//             if (adapters[i] == address(0)) continue;
+//             total += strategy.userUnderlyingView(adapters[i]);
 //         }
 //         return total + strategy.userUnderlyingView(address(this));
 //     }
@@ -364,15 +364,15 @@
 
 //     function forceUndelegateRecovery(
 //         uint256 amount,
-//         address restaker
+//         address adapter
 //     ) external onlyOperator {
-//         if (restaker == address(0)) revert NullParams();
-//         for (uint256 i = 0; i < restakers.length; ++i) {
+//         if (adapter == address(0)) revert NullParams();
+//         for (uint256 i = 0; i < adapters.length; ++i) {
 //             if (
-//                 restakers[i] == restaker &&
-//                 !delegationManager.isDelegated(restakers[i])
+//                 adapters[i] == adapter &&
+//                 !delegationManager.isDelegated(adapters[i])
 //             ) {
-//                 restakers[i] == _MOCK_ADDRESS;
+//                 adapters[i] == _MOCK_ADDRESS;
 //                 break;
 //             }
 //         }

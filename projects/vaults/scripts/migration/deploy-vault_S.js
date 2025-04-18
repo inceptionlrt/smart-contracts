@@ -1,7 +1,16 @@
 const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 
-const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowWrappers, mellowVaults, asset, ratioFeed) => {
+const deployVault = async (
+  addresses,
+  vaultName,
+  tokenName,
+  tokenSymbol,
+  mellowWrappers,
+  mellowVaults,
+  asset,
+  ratioFeed,
+) => {
   const [deployer] = await ethers.getSigners();
 
   console.log(`Deploying ${vaultName} with the account: ${deployer.address}`);
@@ -17,9 +26,13 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 
   const iTokenImplAddress = await upgrades.erc1967.getImplementationAddress(iTokenAddress);
 
-  // 2. Mellow restaker
+  // 2. Mellow Restaker
   const mellowRestakerFactory = await hre.ethers.getContractFactory("IMellowRestaker");
-  const mr = await upgrades.deployProxy(mellowRestakerFactory, [mellowWrappers, mellowVaults, asset, addresses.Operator], { kind: "transparent" });
+  const mr = await upgrades.deployProxy(
+    mellowRestakerFactory,
+    [mellowWrappers, mellowVaults, asset, addresses.Operator],
+    { kind: "transparent" },
+  );
   await mr.waitForDeployment();
   const mrAddress = await mr.getAddress();
   console.log(`MellowRestaker address: ${mrAddress}`);
@@ -40,20 +53,15 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
   const libAddress = await lib.getAddress();
   console.log("InceptionLibrary address:", libAddress);
 
-  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, 
-    {
+  const InceptionVaultFactory = await hre.ethers.getContractFactory(vaultFactory, {
     libraries: {
-      InceptionLibrary: libAddress
+      InceptionLibrary: libAddress,
     },
-  }
-);
+  });
   const iVault = await upgrades.deployProxy(
     InceptionVaultFactory,
     [vaultName, addresses.Operator, asset, iTokenAddress, mrAddress],
-    { kind: "transparent" , 
-      unsafeAllowLinkedLibraries: true,
-      unsafeSkipStorageCheck: true,
-    }
+    { kind: "transparent", unsafeAllowLinkedLibraries: true, unsafeSkipStorageCheck: true },
   );
   await iVault.waitForDeployment();
   const iVaultAddress = await iVault.getAddress();
@@ -96,3 +104,4 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol, mellowW
 module.exports = {
   deployVault,
 };
+
