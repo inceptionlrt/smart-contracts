@@ -1,35 +1,15 @@
-/////////////////////////////////////////////////
-///// Run with the default network, hardhat ////
-///////////////////////////////////////////////
-
-// const { ethers, upgrades } = require("hardhat");
-// const { expect } = require("chai");
 import hardhat from "hardhat";
 const { ethers, upgrades } = hardhat;
 import { expect } from "chai";
-
-const e18 = "1000000000000000000",
-  amount = "10000000";
-
-let iToken, staker1, staker2, owner;
-
-const initInceptionToken = async () => {
-  console.log(`... Initialization of Inception Token ...`);
-
-  [owner, staker1, staker2] = await ethers.getSigners();
-
-  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
-  iToken = await upgrades.deployProxy(iTokenFactory, ["Test Token", "TT"]);
-
-  await iToken.setVault(owner.address);
-  console.log(`... iToken initialization completed ....`);
-};
+import { e18 } from "./helpers/utils";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("Inception token", function () {
-  this.timeout(150000);
+  const amount = "10000000";
+  let iToken: any, staker1: HardhatEthersSigner, staker2: HardhatEthersSigner, owner: HardhatEthersSigner;
 
-  before(async function () {
-    await initInceptionToken();
+  before(async () => {
+    ({ iToken, staker1, staker2, owner } = await initInceptionToken());
   });
 
   describe("Pausable functionality", function () {
@@ -95,3 +75,12 @@ describe("Inception token", function () {
     });
   });
 });
+
+async function initInceptionToken() {
+  console.log(`Initialization of Inception Token ...`);
+  const [owner, staker1, staker2] = await ethers.getSigners();
+  const iTokenFactory = await ethers.getContractFactory("InceptionToken");
+  const iToken = await upgrades.deployProxy(iTokenFactory, ["Test Token", "TT"]);
+  await iToken.setVault(owner.address);
+  return { iToken, owner, staker1, staker2 }
+};
