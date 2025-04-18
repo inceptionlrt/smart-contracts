@@ -21,16 +21,34 @@ import {InceptionBaseAdapter, IBaseAdapter} from "./InceptionBaseAdapter.sol";
 contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
+    /// @notice The strategy contract for EigenLayer
     IStrategy internal _strategy;
+    /// @notice The strategy manager contract for EigenLayer
     IStrategyManager internal _strategyManager;
+    /// @notice The delegation manager contract for EigenLayer
     IDelegationManager internal _delegationManager;
+    /// @notice The rewards coordinator contract for EigenLayer
     IRewardsCoordinator public rewardsCoordinator;
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
+    /**
+     * @dev Constructor with initializer disabled to prevent initialization during deployment
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
     constructor() payable {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the contract with EigenLayer and asset parameters
+     * @param claimer The address authorized to claim rewards
+     * @param rewardCoordinator The address of the rewards coordinator contract
+     * @param delegationManager The address of the delegation manager contract
+     * @param strategyManager The address of the strategy manager contract
+     * @param strategy The address of the strategy contract
+     * @param asset The address of the ERC20 asset token (wstETH)
+     * @param trusteeManager The address of the trustee manager
+     * @param inceptionVault The address of the Inception vault
+     */
     function initialize(
         address claimer,
         address rewardCoordinator,
@@ -57,6 +75,13 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         );
     }
 
+    /**
+     * @notice Delegates assets to an operator or deposits into a strategy
+     * @param operator The address of the operator to delegate to (or zero for strategy deposit)
+     * @param amount The amount of assets to delegate or deposit
+     * @param _data Encoded data for delegation parameters
+     * @return The amount of assets deposited (for strategy deposit) or 0 (for delegation)
+     */
     function delegate(
         address operator,
         uint256 amount,
@@ -96,6 +121,12 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         return 0;
     }
 
+    /**
+     * @notice Queues a withdrawal of shares from the strategy
+     * @param shares The number of shares to withdraw
+     * @param _data Additional data (must be empty)
+     * @return The amount of underlying assets for the shares
+     */
     function withdraw(
         address /*operator*/,
         uint256 shares,
@@ -136,6 +167,11 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         return _strategy.sharesToUnderlying(shares);
     }
 
+    /**
+     * @notice Claims a queued withdrawal and transfers assets to the vault
+     * @param _data Encoded data for withdrawal parameters
+     * @return The amount of assets claimed and wrapped
+     */
     function claim(
         bytes[] calldata _data
     ) external override onlyTrustee whenNotPaused returns (uint256) {
@@ -174,6 +210,10 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         return wrapped;
     }
 
+    /**
+     * @notice Returns the total pending withdrawal amount
+     * @return total Always returns 0 (not implemented)
+     */
     function pendingWithdrawalAmount()
         public
         pure
@@ -183,32 +223,61 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         return 0;
     }
 
+    /**
+     * @notice Returns the total inactive balance (pending and claimable)
+     * @return The total inactive balance
+     */
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableAmount();
     }
 
+    /**
+     * @notice Returns the total deposited assets for an operator
+     * @return The total deposited assets
+     */
     function getDeposited(
         address /*operatorAddress*/
     ) external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
+    /**
+     * @notice Returns the total deposited shares in the strategy
+     * @return The total deposited shares
+     */
     function getDepositedShares() external view returns (uint256) {
         return _strategyManager.stakerStrategyShares(address(this), _strategy);
     }
 
+    /**
+     * @notice Returns the total deposited assets
+     * @return The total deposited assets
+     */
     function getTotalDeposited() external view override returns (uint256) {
         return _strategy.userUnderlyingView(address(this));
     }
 
+    /**
+     * @notice Returns the address of the delegated operator
+     * @return The operator address
+     */
     function getOperatorAddress() public view returns (address) {
         return _delegationManager.delegatedTo(address(this));
     }
 
+    /**
+     * @notice Returns the version of the adapter
+     * @return The version number (3)
+     */
     function getVersion() external pure override returns (uint256) {
         return 3;
     }
 
+    /**
+     * @notice Updates the rewards coordinator and claimer
+     * @param newRewardsCoordinator The new rewards coordinator address
+     * @param claimer The new claimer address
+     */
     function setRewardsCoordinator(
         address newRewardsCoordinator,
         address claimer
@@ -216,6 +285,11 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IEigenLayerAdapter {
         _setRewardsCoordinator(newRewardsCoordinator, claimer);
     }
 
+    /**
+     * @dev Internal function to set the rewards coordinator and claimer
+     * @param newRewardsCoordinator The new rewards coordinator address
+     * @param claimer The new claimer address
+     */
     function _setRewardsCoordinator(
         address newRewardsCoordinator,
         address claimer
