@@ -16,7 +16,7 @@ import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStak
 import {InceptionBaseAdapter, IBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 /**
- * @title The ISymbioticAdapter Contract
+ * @title The InceptionSymbioticAdapter Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.

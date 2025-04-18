@@ -14,7 +14,7 @@ import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/I
 import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 /**
- * @title The MellowAdapter Contract
+ * @title The InceptionMellowAdapter Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
