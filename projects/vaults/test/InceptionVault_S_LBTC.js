@@ -1409,11 +1409,11 @@ assets.forEach(function (a) {
                 if (_amount > 0n && fromUtilization <= utilization && utilization < toUtilization) {
                   const fromPercent = await feeFunc.fromPercent();
                   const toPercent = await feeFunc.toPercent();
-                  const upperBound = (toUtilization * BigInt(1e8)) / MAX_PERCENT;
+                  const upperBound = (toUtilization * targetCapacity) / MAX_PERCENT;
                   const replenished = upperBound > flashCapacity + _amount ? _amount : upperBound - flashCapacity;
                   const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
                   const bonusPercent =
-                    fromPercent + (slope * (flashCapacity + replenished / 2n)) / BigInt(1e8);
+                    fromPercent + (slope * (flashCapacity + replenished / 2n)) / targetCapacity;
                   const bonus = (replenished * bonusPercent) / MAX_PERCENT;
                   console.log(`Replenished:\t\t\t${replenished.format()}`);
                   console.log(`Bonus percent:\t\t\t${bonusPercent.format()}`);
@@ -1621,11 +1621,11 @@ assets.forEach(function (a) {
                   console.log(`Utilization:\t\t\t${utilization.format()}`);
                   const fromPercent = await feeFunc.fromPercent();
                   const toPercent = await feeFunc.toPercent();
-                  const lowerBound = (fromUtilization * BigInt(1e8)) / MAX_PERCENT;
+                  const lowerBound = (fromUtilization * targetCapacity) / MAX_PERCENT;
                   const replenished = lowerBound > flashCapacity - _amount ? flashCapacity - lowerBound : _amount;
                   const slope = ((toPercent - fromPercent) * MAX_PERCENT) / (toUtilization - fromUtilization);
                   const withdrawFeePercent =
-                    fromPercent + (slope * (flashCapacity - replenished / 2n)) / BigInt(1e8);
+                    fromPercent + (slope * (flashCapacity - replenished / 2n)) / targetCapacity;
                   const fee = (replenished * withdrawFeePercent) / MAX_PERCENT;
                   console.log(`Replenished:\t\t\t${replenished.format()}`);
                   console.log(`Fee percent:\t\t\t${withdrawFeePercent.format()}`);
