@@ -162,17 +162,7 @@ const initVault = async a => {
   for (const sVaultInfo of symbioticVaults) {
     console.log(`- Symbiotic ${sVaultInfo.name}`);
     sVaultInfo.vault = await ethers.getContractAt("IVault", sVaultInfo.vaultAddress);
-
-    // const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mVaultInfo.bondStrategyAddress]);
-    // mellowVaultOperatorMock.address = await mellowVaultOperatorMock.getAddress();
-    // await network.provider.send("hardhat_setCode", [mVaultInfo.curatorAddress, await mellowVaultOperatorMock.getDeployedCode()]);
-    // //Copy storage values
-    // for (let i = 0; i < 5; i++) {
-    //   const slot = "0x" + i.toString(16);
-    //   const value = await network.provider.send("eth_getStorageAt", [mellowVaultOperatorMock.address, slot, "latest"]);
-    //   await network.provider.send("hardhat_setStorageAt", [mVaultInfo.curatorAddress, slot, value]);
-    // }
-    // mVaultInfo.curator = await ethers.getContractAt("OperatorMock", mVaultInfo.curatorAddress);
+    await helpers.setStorageAt(sVaultInfo.vaultAddress, 4, 10000 * 1e18);
   }
 
   /// =============================== Inception Vault ===============================
@@ -1274,7 +1264,6 @@ assets.forEach(function (a) {
     });
     */
 
-    /*
     describe("Deposit bonus params setter and calculation", function() {
       let targetCapacityPercent, MAX_PERCENT, localSnapshot;
       before(async function() {
@@ -1399,7 +1388,7 @@ assets.forEach(function (a) {
         amounts.forEach(function(amount) {
           it(`calculateDepositBonus for ${amount.name}`, async function() {
             await localSnapshot.restore();
-            const deposited = BigInt(10 * 1e8);
+            const deposited = BigInt(100 * 1e8);
             targetCapacityPercent = BigInt(1e18);
             const targetCapacity = (deposited * targetCapacityPercent) / MAX_TARGET_PERCENT;
             await iVault.connect(staker).deposit(deposited, staker.address);
@@ -1489,6 +1478,7 @@ assets.forEach(function (a) {
       });
     });
 
+    /*
     describe("Withdraw fee params setter and calculation", function() {
       let targetCapacityPercent, MAX_PERCENT, localSnapshot;
       before(async function() {
