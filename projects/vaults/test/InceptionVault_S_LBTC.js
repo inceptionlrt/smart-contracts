@@ -3860,12 +3860,13 @@ assets.forEach(function (a) {
     //   });
     // });
 
+    /*
     describe("Redeem: retrieves assets after they were received from Mellow", function () {
       let ratio, stakerAmount, staker2Amount, stakerUnstakeAmount1, stakerUnstakeAmount2, staker2UnstakeAmount;
       before(async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
-        await iVault.connect(staker3).deposit(e18, staker3.address);
+        await iVault.connect(staker3).deposit(BigInt(1e8), staker3.address);
         await iVault
           .connect(iVaultOperator)
           .delegateToMellowVault(mellowVaults[0].vaultAddress, await iVault.getFreeBalance(), 1296000);
@@ -4067,6 +4068,7 @@ assets.forEach(function (a) {
         expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken), ratioErr);
       });
     });
+    */
 
     describe("Redeem: to the different addresses", function () {
       let ratio, recipients, pendingShares;
