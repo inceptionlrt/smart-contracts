@@ -476,7 +476,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param adapter Address of the adapter to remove
      */
     function removeAdapter(address adapter) external onlyOwner {
-        if (!Address.isContract(adapter)) revert NotContract();
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
