@@ -3,19 +3,24 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {SymbioticHandler, IIMellowRestaker, IISymbioticRestaker, IERC20} from "../../symbiotic-handler/SymbioticHandler.sol";
+import {AdapterHandler, IERC20} from "../../adapter-handler/AdapterHandler.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-/// @author The InceptionLRT team
-/// @title The InceptionVault_S contract
-/// @notice Aims to maximize the profit of asset.
-contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
+/**
+ * @author The InceptionLRT team
+ * @title The InceptionVault_S contract
+ * @notice Aims to maximize the profit of deposited asset.
+ * @dev Handles deposits and withdrawal requests within the Inception protocol.
+ */
+contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
@@ -54,20 +59,26 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     uint256 public flashMinAmount;
     uint256 public depositMinAmount;
 
+    mapping(address => uint256) public withdrawals;
+    mapping(address => uint256) public recentEpoch;
+
+    uint256 public MAX_GAP_BETWEEN_EPOCH;
+
+    /**
+     * @dev Initializes the vault with basic parameters
+     * @param vaultName Name of the vault
+     * @param operatorAddress Address of the operator
+     * @param assetAddress Address of the underlying asset
+     * @param _inceptionToken Address of the Inception token
+     */
     function __InceptionVault_init(
         string memory vaultName,
         address operatorAddress,
         IERC20 assetAddress,
-        IInceptionToken _inceptionToken,
-        IIMellowRestaker _mellowRestaker,
-        IISymbioticRestaker _symbioticRestaker
+        IInceptionToken _inceptionToken
     ) internal {
         __Ownable2Step_init();
-        __SymbioticHandler_init(
-            assetAddress,
-            _mellowRestaker,
-            _symbioticRestaker
-        );
+        __AdapterHandler_init(assetAddress);
 
         name = vaultName;
         _operator = operatorAddress;
@@ -90,12 +101,19 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         optimalWithdrawalRate = 5 * 1e7;
 
         treasury = msg.sender;
+
+        MAX_GAP_BETWEEN_EPOCH = 20;
     }
 
     /*//////////////////////////////
     ////// Deposit functions //////
     ////////////////////////////*/
 
+    /**
+     * @dev Validates deposit parameters before processing
+     * @param receiver Address receiving the deposit
+     * @param amount Amount to be deposited
+     */
     function __beforeDeposit(address receiver, uint256 amount) internal view {
         if (receiver == address(0)) revert NullParams();
         if (amount < depositMinAmount) revert LowerMinAmount(depositMinAmount);
@@ -103,14 +121,20 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (targetCapacity == 0) revert InceptionOnPause();
     }
 
+    /**
+     * @dev Validates deposit result
+     * @param iShares Amount of shares minted
+     */
     function __afterDeposit(uint256 iShares) internal pure {
         if (iShares == 0) revert DepositInconsistentResultedState();
     }
 
-    /// @dev Transfers the msg.sender's assets to the vault.
-    /// @dev Mints Inception tokens in accordance with the current ratio.
-    /// @dev Issues the tokens to the specified receiver address.
-    /** @dev See {IERC4626-deposit}. */
+    /**
+     * @dev Deposits assets into the vault and mints shares
+     * @param amount Amount of assets to deposit
+     * @param receiver Address to receive the shares
+     * @return Amount of shares minted
+     */
     function deposit(
         uint256 amount,
         address receiver
@@ -118,7 +142,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return _deposit(amount, msg.sender, receiver);
     }
 
-    /// @notice The deposit function but with a referral code
+    /**
+     * @dev Deposits assets with a referral code
+     * @param amount Amount of assets to deposit
+     * @param receiver Address to receive the shares
+     * @param code Referral code
+     * @return Amount of shares minted
+     */
     function depositWithReferral(
         uint256 amount,
         address receiver,
@@ -128,6 +158,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return _deposit(amount, msg.sender, receiver);
     }
 
+    /**
+     * @dev Internal deposit function
+     * @param amount Amount to deposit
+     * @param sender Address sending the assets
+     * @param receiver Address receiving the shares
+     * @return Amount of shares minted
+     */
     function _deposit(
         uint256 amount,
         address sender,
@@ -137,7 +174,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
-        uint256 depositedBefore = totalAssets();
         uint256 depositBonus;
         uint256 availableBonusAmount = depositBonusAmount;
         if (availableBonusAmount > 0) {
@@ -152,7 +188,6 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         }
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
-        amount = totalAssets() - depositedBefore;
         uint256 iShares = convertToShares(amount + depositBonus);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
@@ -160,79 +195,47 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return iShares;
     }
 
-    /** @dev See {IERC4626-mint}. */
+    /**
+     * @dev Mints shares for assets
+     * @param shares Amount of shares to mint
+     * @param receiver Address to receive the shares
+     * @return Amount of assets deposited
+     */
     function mint(
         uint256 shares,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        uint256 maxShares = maxMint(msg.sender);
+        uint256 maxShares = maxMint(receiver);
         if (shares > maxShares)
             revert ExceededMaxMint(receiver, shares, maxShares);
 
-        uint256 assetsAmount = convertToAssets(shares);
-        _deposit(assetsAmount, msg.sender, receiver);
+        uint256 assetsAmount = previewMint(shares);
+        if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
 
         return assetsAmount;
-    }
-
-    /*/////////////////////////////////
-    ////// Delegation functions //////
-    ///////////////////////////////*/
-
-    /// @dev Sends underlying to a single symbiotic vault
-    function delegateToSymbioticVault(
-        address vault,
-        uint256 amount
-    ) external nonReentrant whenNotPaused onlyOperator {
-        if (vault == address(0) || amount == 0) revert NullParams();
-
-        _beforeDeposit(amount);
-        _depositAssetIntoSymbiotic(amount, vault);
-
-        emit DelegatedTo(address(symbioticRestaker), vault, amount);
-        return;
-    }
-
-    /// @dev Sends underlying to a single mellow vault
-    function delegateToMellowVault(
-        address mellowVault,
-        uint256 amount,
-        address referral
-    ) external nonReentrant whenNotPaused onlyOperator {
-        if (mellowVault == address(0) || amount == 0) revert NullParams();
-
-        _beforeDeposit(amount);
-        _depositAssetIntoMellow(amount, mellowVault, referral);
-
-        emit DelegatedTo(address(mellowRestaker), mellowVault, amount);
-        return;
-    }
-
-    /// @dev Sends all underlying to all mellow vaults based on allocation
-    function delegateAutoMellow(
-        address referral
-    ) external nonReentrant whenNotPaused onlyOperator {
-        uint256 balance = getFreeBalance();
-        _asset.safeIncreaseAllowance(address(mellowRestaker), balance);
-        uint256 lpAmount = mellowRestaker.delegate(balance, referral);
-
-        emit Delegated(address(mellowRestaker), balance, lpAmount);
     }
 
     /*///////////////////////////////////////
     ///////// Withdrawal functions /////////
     /////////////////////////////////////*/
 
+    /**
+     * @dev Validates withdrawal parameters
+     * @param receiver Address receiving the withdrawal
+     * @param iShares Amount of shares to withdraw
+     */
     function __beforeWithdraw(address receiver, uint256 iShares) internal view {
-        if (iShares == 0) revert NullParams();
-        if (receiver == address(0)) revert NullParams();
+        if (iShares == 0) revert ValueZero();
+        if (receiver == address(0)) revert InvalidAddress();
 
-        if (targetCapacity == 0) revert InceptionOnPause();
+        if (targetCapacity == 0) revert NullParams();
     }
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @dev Withdraws assets from the vault
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     */
     function withdraw(
         uint256 iShares,
         address receiver
@@ -243,17 +246,21 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (amount < withdrawMinAmount)
             revert LowerMinAmount(withdrawMinAmount);
 
-        // burn Inception token in view of the current ratio
         inceptionToken.burn(claimer, iShares);
 
-        // update global state and claimer's state
         totalAmountToWithdraw += amount;
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         genRequest.amount += _getAssetReceivedAmount(amount);
 
+        if (recentEpoch[receiver] - genRequest.epoch > MAX_GAP_BETWEEN_EPOCH) revert MaxGapReached();
+
+        uint256 queueLength = claimerWithdrawalsQueue.length;
+        if (withdrawals[receiver] == 0) genRequest.epoch = queueLength;
+        withdrawals[receiver]++;
+        recentEpoch[receiver] = queueLength;
         claimerWithdrawalsQueue.push(
             Withdrawal({
-                epoch: claimerWithdrawalsQueue.length,
+                epoch: queueLength,
                 receiver: receiver,
                 amount: _getAssetReceivedAmount(amount)
             })
@@ -270,9 +277,8 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ) external nonReentrant whenNotPaused returns (uint256 assets) {
         if (owner != msg.sender) revert MsgSenderIsNotOwner();
         __beforeWithdraw(receiver, shares);
-        assets = convertToAssets(shares);
         uint256 fee;
-        (assets, fee) = _flashWithdraw(shares, receiver, owner);
+        (assets, fee) = _flashWithdraw(shares, receiver, owner, 0);
 
         emit Withdraw(owner, receiver, owner, assets, shares);
         emit WithdrawalFee(fee);
@@ -280,6 +286,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return assets;
     }
 
+    /**
+     * @dev Redeems available withdrawals for a claimer
+     * @param receiver Address to redeem withdrawals for
+     */
     function redeem(address receiver) external whenNotPaused nonReentrant {
         (bool isAble, uint256[] memory availableWithdrawals) = isAbleToRedeem(
             receiver
@@ -287,31 +297,31 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         if (!isAble) revert IsNotAbleToRedeem();
 
         uint256 numOfWithdrawals = availableWithdrawals.length;
-        uint256[] memory redeemedWithdrawals = new uint256[](numOfWithdrawals);
 
         Withdrawal storage genRequest = _claimerWithdrawals[receiver];
         uint256 redeemedAmount;
+        uint256 withdrawalsBuffer;
         for (uint256 i = 0; i < numOfWithdrawals; ++i) {
             uint256 withdrawalNum = availableWithdrawals[i];
             Withdrawal storage request = claimerWithdrawalsQueue[withdrawalNum];
             uint256 amount = request.amount;
-            // update the genRequest and the global state
             genRequest.amount -= amount;
 
             totalAmountToWithdraw -= _getAssetWithdrawAmount(amount);
             redeemReservedAmount -= amount;
             redeemedAmount += amount;
-            redeemedWithdrawals[i] = withdrawalNum;
+            withdrawalsBuffer++;
 
             delete claimerWithdrawalsQueue[availableWithdrawals[i]];
         }
 
-        // let's update the lowest epoch associated with the claimer
+        withdrawals[receiver] -= withdrawalsBuffer;
+
         genRequest.epoch = availableWithdrawals[numOfWithdrawals - 1];
 
         _transferAssetTo(receiver, redeemedAmount);
 
-        emit RedeemedRequests(redeemedWithdrawals);
+        emit RedeemedRequests(availableWithdrawals);
         emit Redeem(msg.sender, receiver, redeemedAmount);
     }
 
@@ -319,33 +329,49 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ///////// Flash Withdrawal functions /////////
     ///////////////////////////////////////////*/
 
-    /// @dev Performs burning iToken from mgs.sender
-    /// @dev Creates a withdrawal requests based on the current ratio
-    /// @param iShares is measured in Inception token(shares)
+    /**
+     * @dev Performs a flash withdrawal
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     * @param minOut Minimum amount of assets to receive
+     * @return Amount of assets withdrawn
+     */
     function flashWithdraw(
         uint256 iShares,
-        address receiver
-    ) external whenNotPaused nonReentrant {
+        address receiver,
+        uint256 minOut
+    ) external whenNotPaused nonReentrant returns (uint256) {
         __beforeWithdraw(receiver, iShares);
         address claimer = msg.sender;
         (uint256 amount, uint256 fee) = _flashWithdraw(
             iShares,
             receiver,
-            claimer
+            claimer,
+            minOut
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
+        return amount;
     }
 
+    /**
+     * @dev Internal flash withdrawal function
+     * @param iShares Amount of shares to withdraw
+     * @param receiver Address to receive the assets
+     * @param owner Address owning the shares
+     * @param minOut Minimum amount of assets to receive
+     * @return amount Amount of assets withdrawn
+     * @return fee Fee charged for the withdrawal
+     */
     function _flashWithdraw(
         uint256 iShares,
         address receiver,
-        address owner
+        address owner,
+        uint256 minOut
     ) private returns (uint256, uint256) {
         uint256 amount = convertToAssets(iShares);
 
         if (amount < flashMinAmount) revert LowerMinAmount(flashMinAmount);
 
-        // burn Inception token in view of the current ratio
         inceptionToken.burn(owner, iShares);
 
         uint256 fee = calculateFlashWithdrawFee(amount);
@@ -354,16 +380,19 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         amount -= fee;
         depositBonusAmount += (fee - protocolWithdrawalFee);
 
-        /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _transferAssetTo(treasury, protocolWithdrawalFee);
-        /// @notice instant transfer amount to the receiver
+        if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
         _transferAssetTo(receiver, amount);
 
         return (amount, fee);
     }
 
-    /// @notice Function to calculate deposit bonus based on the utilization rate
+    /**
+     * @dev Calculates deposit bonus based on utilization
+     * @param amount Amount of assets to deposit
+     * @return Amount of bonus tokens
+     */
     function calculateDepositBonus(
         uint256 amount
     ) public view returns (uint256) {
@@ -379,7 +408,11 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
             );
     }
 
-    /// @dev Function to calculate flash withdrawal fee based on the utilization rate
+    /**
+     * @dev Calculates flash withdrawal fee
+     * @param amount Amount of assets to withdraw
+     * @return Amount of fee charged
+     */
     function calculateFlashWithdrawFee(
         uint256 amount
     ) public view returns (uint256) {
@@ -401,25 +434,35 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ////// Factory functions //////
     ////////////////////////////*/
 
+    /**
+     * @dev Checks if withdrawals can be redeemed
+     * @param claimer Address to check
+     * @return able Whether withdrawals can be redeemed
+     * @return availableWithdrawals Array of withdrawal indices
+     */
     function isAbleToRedeem(
         address claimer
     ) public view returns (bool able, uint256[] memory) {
-        // get the general request
         uint256 index;
-        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
-        uint256[] memory availableWithdrawals = new uint256[](
-            epoch - genRequest.epoch
-        );
-        if (genRequest.amount == 0) return (false, availableWithdrawals);
+        uint256 rEpoch = recentEpoch[claimer];
 
-        for (uint256 i = 0; i < epoch; ++i) {
+        uint256[] memory availableWithdrawals;
+        Withdrawal memory genRequest = _claimerWithdrawals[claimer];
+        if (claimer == address(0)) return (false, availableWithdrawals);
+        if (genRequest.amount == 0) return (false, availableWithdrawals);
+        if (rEpoch < genRequest.epoch) return (false, availableWithdrawals);
+
+        availableWithdrawals = new uint256[](withdrawals[claimer]);
+
+        rEpoch = rEpoch >= epoch ? epoch : ++rEpoch;
+
+        for (uint256 i = genRequest.epoch; i < rEpoch; ++i) {
             if (claimerWithdrawalsQueue[i].receiver == claimer) {
                 able = true;
                 availableWithdrawals[index] = i;
                 ++index;
             }
         }
-        // decrease arrays
         if (availableWithdrawals.length - index > 0)
             assembly {
                 mstore(availableWithdrawals, index)
@@ -428,44 +471,56 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return (able, availableWithdrawals);
     }
 
+    /**
+     * @dev Gets the current ratio from the ratio feed
+     * @return Current ratio value
+     */
     function ratio() public view returns (uint256) {
         return ratioFeed.getRatioFor(address(inceptionToken));
     }
 
-    function getDelegatedToMellow(
-        address vault
-    ) external view returns (uint256) {
-        return mellowRestaker.getDeposited(vault);
-    }
-
-    function getDelegatedToSymbiotic(
-        address vault
-    ) external view returns (uint256) {
-        return symbioticRestaker.getDeposited(vault);
-    }
-
+    /**
+     * @dev Gets pending withdrawal amount for a claimer
+     * @param claimer Address to check
+     * @return Amount of pending withdrawals
+     */
     function getPendingWithdrawalOf(
         address claimer
     ) external view returns (uint256) {
         return _claimerWithdrawals[claimer].amount;
     }
 
-    /** @dev See {IERC20Metadata-decimals}. */
+    /**
+     * @dev Gets the decimals of the inception token
+     * @return Number of decimals
+     */
     function decimals() public view returns (uint8) {
         return IERC20Metadata(address(inceptionToken)).decimals();
     }
 
-    /** @dev See {IERC4626-maxDeposit}. */
+    /**
+     * @dev Gets maximum deposit amount for a receiver
+     * @param receiver Address to check
+     * @return Maximum deposit amount
+     */
     function maxDeposit(address receiver) public view returns (uint256) {
         return !paused() ? _asset.balanceOf(receiver) : 0;
     }
 
-    /** @dev See {IERC4626-maxMint}. */
+    /**
+     * @dev Gets maximum mint amount for a receiver
+     * @param receiver Address to check
+     * @return Maximum mint amount
+     */
     function maxMint(address receiver) public view returns (uint256) {
-        return !paused() ? convertToShares(_asset.balanceOf(receiver)) : 0;
+        return type(uint256).max;
     }
 
-    /** @dev See {IERC4626-maxRedeem}. */
+    /**
+     * @dev Gets maximum redeem amount for an owner
+     * @param owner Address to check
+     * @return Maximum redeem amount
+     */
     function maxRedeem(address owner) public view returns (uint256) {
         if (paused()) {
             return 0;
@@ -478,8 +533,13 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         }
     }
 
-    /** @dev See {IERC4626-previewDeposit}. */
+    /**
+     * @dev Previews deposit result
+     * @param assets Amount of assets to deposit
+     * @return Amount of shares to be minted
+     */
     function previewDeposit(uint256 assets) public view returns (uint256) {
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(assets);
@@ -490,11 +550,27 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         return convertToShares(assets + depositBonus);
     }
 
-    /** @dev See {IERC4626-previewRedeem}. */
+    /**
+     * @dev Previews mint result
+     * @param shares Amount of shares to mint
+     * @return Amount of assets required
+     */
+    function previewMint(uint256 shares) public view returns (uint256) {
+        uint256 assets = Convert.multiplyAndDivideCeil(shares, 1e18, ratio());
+        if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+        return assets;
+    }
+
+    /**
+     * @dev Previews redeem result
+     * @param shares Amount of shares to redeem
+     * @return assets Amount of assets to be received
+     */
     function previewRedeem(
         uint256 shares
     ) public view returns (uint256 assets) {
-
+        if (shares == 0) revert NullParams();
+        
         uint256 amount = convertToAssets(shares);
         uint256 capacity = getFlashCapacity();
         uint256 targetCapacity = _getTargetCapacity();
@@ -514,14 +590,22 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ////// Convert functions //////
     ////////////////////////////*/
 
-    /** @dev See {IERC4626-convertToShares}. */
+    /**
+     * @dev Converts assets to shares
+     * @param assets Amount of assets
+     * @return shares Amount of shares
+     */
     function convertToShares(
         uint256 assets
     ) public view returns (uint256 shares) {
         return Convert.multiplyAndDivideFloor(assets, ratio(), 1e18);
     }
 
-    /** @dev See {IERC4626-convertToAssets}. */
+    /**
+     * @dev Converts shares to assets
+     * @param iShares Amount of shares
+     * @return assets Amount of assets
+     */
     function convertToAssets(
         uint256 iShares
     ) public view returns (uint256 assets) {
@@ -532,6 +616,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
     ////// SET functions //////
     ////////////////////////*/
 
+    /**
+     * @dev Sets deposit bonus parameters
+     * @param newMaxBonusRate Maximum bonus rate
+     * @param newOptimalBonusRate Optimal bonus rate
+     * @param newDepositUtilizationKink Utilization kink point
+     */
     function setDepositBonusParams(
         uint64 newMaxBonusRate,
         uint64 newOptimalBonusRate,
@@ -556,6 +646,12 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         );
     }
 
+    /**
+     * @dev Sets flash withdrawal fee parameters
+     * @param newMaxFlashFeeRate Maximum fee rate
+     * @param newOptimalWithdrawalRate Optimal withdrawal rate
+     * @param newWithdrawUtilizationKink Utilization kink point
+     */
     function setFlashWithdrawFeeParams(
         uint64 newMaxFlashFeeRate,
         uint64 newOptimalWithdrawalRate,
@@ -581,6 +677,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         );
     }
 
+    /**
+     * @dev Sets the protocol fee
+     * @param newProtocolFee New protocol fee value
+     */
     function setProtocolFee(uint64 newProtocolFee) external onlyOwner {
         if (newProtocolFee >= MAX_PERCENT)
             revert ParameterExceedsLimits(newProtocolFee);
@@ -589,6 +689,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         protocolFee = newProtocolFee;
     }
 
+    /**
+     * @dev Sets the treasury address
+     * @param newTreasury New treasury address
+     */
     function setTreasuryAddress(address newTreasury) external onlyOwner {
         if (newTreasury == address(0)) revert NullParams();
 
@@ -596,6 +700,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         treasury = newTreasury;
     }
 
+    /**
+     * @dev Sets the ratio feed contract
+     * @param newRatioFeed New ratio feed address
+     */
     function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
         if (address(newRatioFeed) == address(0)) revert NullParams();
 
@@ -603,6 +711,10 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         ratioFeed = newRatioFeed;
     }
 
+    /**
+     * @dev Sets the operator address
+     * @param newOperator New operator address
+     */
     function setOperator(address newOperator) external onlyOwner {
         if (newOperator == address(0)) revert NullParams();
 
@@ -610,24 +722,50 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         _operator = newOperator;
     }
 
+    /**
+     * @dev Sets the minimum withdrawal amount
+     * @param newMinAmount New minimum amount
+     */
     function setWithdrawMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit WithdrawMinAmountChanged(withdrawMinAmount, newMinAmount);
         withdrawMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the minimum deposit amount
+     * @param newMinAmount New minimum amount
+     */
     function setDepositMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit DepositMinAmountChanged(depositMinAmount, newMinAmount);
         depositMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the minimum flash withdrawal amount
+     * @param newMinAmount New minimum amount
+     */
     function setFlashMinAmount(uint256 newMinAmount) external onlyOwner {
         if (newMinAmount == 0) revert NullParams();
         emit FlashMinAmountChanged(flashMinAmount, newMinAmount);
         flashMinAmount = newMinAmount;
     }
 
+    /**
+     * @dev Sets the maximum gap between epochs
+     * @param newGap New maximum gap value
+     */
+    function setMaxGap(uint256 newGap) external onlyOwner {
+        if (newGap == 0) revert NullParams();
+        emit MaxGapSet(MAX_GAP_BETWEEN_EPOCH, newGap);
+        MAX_GAP_BETWEEN_EPOCH = newGap;
+    }
+
+    /**
+     * @dev Sets the vault name
+     * @param newVaultName New vault name
+     */
     function setName(string memory newVaultName) external onlyOwner {
         if (bytes(newVaultName).length == 0) revert NullParams();
 
@@ -635,14 +773,54 @@ contract InceptionVault_S is SymbioticHandler, IInceptionVault_S {
         name = newVaultName;
     }
 
+    /**
+     * @dev Adjusts withdrawals for upgrade
+     */
+    function adjustWithdrawals() external onlyOwner {
+        uint256 queueLength = claimerWithdrawalsQueue.length;
+
+        address[] memory queue = new address[](queueLength);
+
+        for (uint256 i = 0; i < queueLength; i++) {
+            queue[i] = claimerWithdrawalsQueue[i].receiver;
+        }
+
+        for (uint256 i = 0; i < queueLength; i++) {
+            if (queue[i] == address(0)) continue;
+
+            bool skipElement;
+            for (uint256 j = 0; j < i; j++) {
+                if (queue[j] == queue[i]) {
+                    skipElement = true;
+                    break;
+                }
+            }
+
+            if (skipElement) continue;
+
+            uint256 numWithdrawal;
+            for (uint256 k = i; k < queue.length; k++) {
+                if (queue[i] == queue[k]) numWithdrawal++;
+            }
+
+            withdrawals[queue[i]] = numWithdrawal;
+        }
+    }
+
     /*///////////////////////////////
     ////// Pausable functions //////
     /////////////////////////////*/
 
+    /**
+     * @dev Pauses the contract
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @dev Unpauses the contract
+     */
     function unpause() external onlyOwner {
         _unpause();
     }
