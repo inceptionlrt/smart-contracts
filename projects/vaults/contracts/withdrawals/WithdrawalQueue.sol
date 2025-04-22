@@ -62,7 +62,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         address[] calldata legacyWithdrawalAddresses,
         uint256[] calldata legacyWithdrawalAmounts,
         uint256 legacyClaimedAmount
-    ) internal initializer {
+    ) internal onlyInitializing {
         require(legacyWithdrawalAddresses.length == legacyWithdrawalAmounts.length, ValueZero());
         if (legacyWithdrawalAddresses.length == 0) {
             return;
