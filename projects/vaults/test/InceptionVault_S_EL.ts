@@ -13,16 +13,17 @@ import {
 } from "./helpers/utils";
 import { abi, initVaultEL } from "./src/init-vault";
 import { wstETH } from "./data/assets/stETH-lido";
+import { eigenLayerVaults } from './data/assets/eigenlayer-vaults';
 
 const assetData = wstETH;
 
-const eigenLayerVaults = [
-  "0x78FDDe7a5006cC64E109aeD99cA7B0Ad3d8687bb",
-  "0x1B71f18fc496194b21D0669B5ADfE299a8cFEc42",
-  "0x4Dbfa8bcccb1740d8044E1A093F9A078A88E45FE",
-  "0x5B9A8c72B29Ee17e72ba8B9626Bf43a75B15FB3d",
-  "0x139A091BcAad0ee1DAabe93cbBd194736B197FB6",
-];
+// const eigenLayerVaults = [
+//   "0x78FDDe7a5006cC64E109aeD99cA7B0Ad3d8687bb",
+//   "0x1B71f18fc496194b21D0669B5ADfE299a8cFEc42",
+//   "0x4Dbfa8bcccb1740d8044E1A093F9A078A88E45FE",
+//   "0x5B9A8c72B29Ee17e72ba8B9626Bf43a75B15FB3d",
+//   "0x139A091BcAad0ee1DAabe93cbBd194736B197FB6",
+// ];
 
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   const coder = abi;

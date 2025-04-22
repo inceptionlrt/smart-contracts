@@ -53,3 +53,5 @@ export const wstETHWrapped = {
     return staker;
   },
 };
+
+export type AssetData = typeof wstETH | typeof wstETHWrapped;
