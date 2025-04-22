@@ -326,13 +326,15 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /**
      * @notice Returns the total amount deposited across all strategies
-     * @return Total deposited amount including pending withdrawals and excluding bonus
+     * @return Total deposited amount including pending withdrawals and excluding bonus, redeem reserved
      */
     function getTotalDeposited() public view returns (uint256) {
         return
             getTotalDelegated() +
             totalAssets() +
-            getTotalPendingWithdrawals() -
+            getTotalPendingWithdrawals() +
+            getTotalPendingEmergencyWithdrawals() -
+            redeemReservedAmount() -
             depositBonusAmount;
     }
 
