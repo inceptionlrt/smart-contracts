@@ -225,12 +225,10 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
             _removePendingClaimer(claimer);
         }
 
-        MellowAdapterClaimer(
+        uint256 amount = MellowAdapterClaimer(
             claimer
         ).claim(_mellowVault, address(this), type(uint256).max);
 
-
-        uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
         _asset.safeTransfer(_inceptionVault, amount);
 
