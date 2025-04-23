@@ -8,6 +8,7 @@ import { mellowVaults } from "../../data/assets/mellow-vauts";
 import { symbioticVaults } from "../../data/assets/symbiotic-vaults";
 import { emptyBytes } from "../../src/constants";
 import { initVault } from "../../src/init-vault";
+import { Adapter } from "../../../constants";
 const { ethers, network } = hardhat;
 
 const assetData = stETH;
@@ -34,7 +35,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({ iToken, iVault, iVaultOperator, mellowAdapter, symbioticAdapter }
-      = await initVault(assetData, { initAdapters: true }));
+      = await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
 
     [, staker, staker2, staker3] = await ethers.getSigners();
 

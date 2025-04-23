@@ -13,6 +13,7 @@ import {
 } from "../../helpers/utils";
 import { emptyBytes } from "../../src/constants";
 import { initVault, MAX_TARGET_PERCENT } from "../../src/init-vault";
+import { Adapter } from "../../../constants";
 const { ethers, network } = hardhat;
 
 const assetData = stETH;
@@ -38,7 +39,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     }]);
 
     ({ iVault, asset, iVaultOperator, mellowAdapter, symbioticAdapter, withdrawalQueue }
-      = await initVault(assetData, { initAdapters: true }));
+      = await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
 
     [deployer, staker, staker2, staker3] = await ethers.getSigners();
 

@@ -9,6 +9,7 @@ import { mellowVaults } from "../../data/assets/mellow-vauts";
 import { calculateRatio, e18, getRandomStaker, randomBI, toWei } from "../../helpers/utils";
 import { emptyBytes } from "../../src/constants";
 import { initVault } from "../../src/init-vault";
+import { Adapter } from "../../../constants";
 const { ethers, network } = hardhat;
 
 const assetData = stETH;
@@ -37,7 +38,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, withdrawalQueue }
-      = await initVault(assetData, { initAdapters: true }));
+      = await initVault(assetData, { adapters: [Adapter.Mellow] }));
 
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
