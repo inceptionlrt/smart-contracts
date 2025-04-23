@@ -1270,7 +1270,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         //Undelegate from Mellow
         const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
         const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
-        await iVault.withdrawFromMellowAndClaim(withdrawalQueue, mellowVaults[0].vaultAddress, undelegateAmount);
+        await iVault.withdrawFromMellowAndClaim(mellowVaults[0].vaultAddress, undelegateAmount);
         //flashWithdraw
         const ratioBefore = await iVault.ratio();
         console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
@@ -1327,7 +1327,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         //Undelegate from Mellow
         const undelegatePercent = arg.poolCapacity(targetCapacityPercent);
         const undelegateAmount = (deposited * undelegatePercent) / MAX_TARGET_PERCENT;
-        await iVault.withdrawFromMellowAndClaim(withdrawalQueue, mellowVaults[0].vaultAddress, undelegateAmount);
+        await iVault.withdrawFromMellowAndClaim(mellowVaults[0].vaultAddress, undelegateAmount);
 
         //flashWithdraw
         const ratioBefore = await iVault.ratio();

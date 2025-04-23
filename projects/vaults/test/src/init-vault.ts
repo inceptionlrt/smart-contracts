@@ -34,9 +34,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   const asset = await ethers.getContractAt(assetData.assetName, assetData.assetAddress);
   asset.address = await asset.getAddress();
 
-  /// =============================== Mellow Vaults ===============================
   if (options?.adapters?.includes(adapters.Mellow)) {
-
     for (const mVaultInfo of mellowVaults) {
       console.log(`- MellowVault ${mVaultInfo.name} and curator`);
       mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
@@ -58,7 +56,6 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
     }
   }
 
-  /// =============================== Symbiotic Vaults ===============================
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     for (const sVaultInfo of symbioticVaults) {
       console.log(`- Symbiotic ${sVaultInfo.name}`);
@@ -66,19 +63,17 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
     }
   }
 
-  /// =============================== Inception Vault ===============================
-  console.log("- iToken");
   const iTokenFactory = await ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
   iToken.address = await iToken.getAddress();
 
-  console.log("- iVault operator");
   const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
 
-  let mellowAdapter, symbioticAdapter, eigenLayerAdapter;
+  let mellowAdapter: any,
+    symbioticAdapter: any,
+    eigenLayerAdapter: any;
 
   if (options?.adapters?.includes(adapters.Mellow)) {
-    console.log("- Mellow Adapter");
     const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
       [mellowVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
@@ -88,7 +83,6 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
-    console.log("- Symbiotic Adapter");
     const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
       [symbioticVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
@@ -96,7 +90,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
     symbioticAdapter.address = await symbioticAdapter.getAddress();
   }
 
-  console.log("- Ratio feed");
+  // ratio
   const iRatioFeedFactory = await ethers.getContractFactory("InceptionRatioFeed");
   const ratioFeed = await upgrades.deployProxy(iRatioFeedFactory, []);
   await ratioFeed.updateRatioBatch([iToken.address], [e18]); //Set initial ratio e18
@@ -131,14 +125,10 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
       iVault.address,
     ]);
     eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
-
-    // await iVault.addAdapter(eigenLayerAdapter.address);
-    // await eigenLayerAdapter.setInceptionVault(iVault.address);
   }
 
-
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
-  let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
+  const withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
   await iVault.setRatioFeed(ratioFeed.address);
@@ -147,26 +137,12 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
     await iVault.addAdapter(mellowAdapter.address);
     await mellowAdapter.setInceptionVault(iVault.address);
     await mellowAdapter.setEthWrapper("0x7A69820e9e7410098f766262C326E211BFa5d1B1");
-  }
-  if (options?.adapters?.includes(adapters.Symbiotic)) {
-    await iVault.addAdapter(symbioticAdapter.address);
-    await symbioticAdapter.setInceptionVault(iVault.address);
-  }
-  if (options?.adapters?.includes(adapters.EigenLayer)) {
-    await iVault.addAdapter(eigenLayerAdapter.address);
-    await eigenLayerAdapter.setInceptionVault(iVault.address);
-  }
 
-  await iVault.setWithdrawalQueue(withdrawalQueue.address);
-
-  await iToken.setVault(iVault.address);
-
-  if (options?.adapters?.includes(adapters.Mellow)) {
     // await emergencyClaimer.approveSpender(assetData.assetAddress, mellowAdapter.address);
     MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
     console.log("... iVault initialization completed ....");
 
-    iVault.withdrawFromMellowAndClaim = async function (withdrawalQueue, mellowVaultAddress, amount) {
+    iVault.withdrawFromMellowAndClaim = async function (mellowVaultAddress, amount) {
       const tx = await this.connect(iVaultOperator).emergencyUndelegate(
         [await mellowAdapter.getAddress()], [mellowVaultAddress], [amount], [emptyBytes],
       );
@@ -189,6 +165,17 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
       }
     }
   }
+  if (options?.adapters?.includes(adapters.Symbiotic)) {
+    await iVault.addAdapter(symbioticAdapter.address);
+    await symbioticAdapter.setInceptionVault(iVault.address);
+  }
+  if (options?.adapters?.includes(adapters.EigenLayer)) {
+    await iVault.addAdapter(eigenLayerAdapter.address);
+    await eigenLayerAdapter.setInceptionVault(iVault.address);
+  }
+
+  await iVault.setWithdrawalQueue(withdrawalQueue.address);
+  await iToken.setVault(iVault.address);
 
   return {
     iToken, iVault, ratioFeed, asset, iVaultOperator, iLibrary, withdrawalQueue,
