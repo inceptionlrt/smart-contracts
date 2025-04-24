@@ -3,9 +3,9 @@
 
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { emptyBytes, adapters } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
 import { vaults } from "../../data/vaults";
+import { adapters, emptyBytes } from "../../src/constants";
 import { initVault } from "../../src/init-vault";
 const { ethers, network } = hardhat;
 

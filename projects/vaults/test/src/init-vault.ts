@@ -4,7 +4,7 @@ import hardhat from "hardhat";
 import { AssetData } from "../data/assets/stETH";
 import { vaults } from "../data/vaults";
 import { e18, impersonateWithEth } from "../helpers/utils";
-import { adapters, emptyBytes, Adapter } from '../../constants';
+import { Adapter, adapters, emptyBytes } from './constants';
 const { ethers, upgrades, network } = hardhat;
 
 let symbioticVaults = vaults.symbiotic;

@@ -4,10 +4,10 @@ import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
 import { stETH } from "./data/assets/inception-vault-s";
+import { vaults } from './data/vaults';
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
-import { adapters, emptyBytes } from '../constants';
+import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault";
-import {vaults} from './data/vaults';
 
 const mellowVaults = vaults.mellow;
 const symbioticVaults = vaults.symbiotic;

@@ -4,11 +4,11 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { emptyBytes, adapters } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
-import { calculateRatio, e18, getRandomStaker, randomBI, toWei } from "../../helpers/utils";
-import { initVault } from "../../src/init-vault";
 import { vaults } from "../../data/vaults";
+import { calculateRatio, e18, getRandomStaker, randomBI, toWei } from "../../helpers/utils";
+import { adapters, emptyBytes } from "../../src/constants";
+import { initVault } from "../../src/init-vault";
 
 const mellowVaults = vaults.mellow;
 const { ethers, network } = hardhat;

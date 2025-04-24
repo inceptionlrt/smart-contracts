@@ -3,7 +3,6 @@ import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import hardhat from "hardhat";
-import { adapters } from "../constants";
 import { wstETH } from "./data/assets/stETH";
 import { vaults } from './data/vaults';
 import {
@@ -13,6 +12,7 @@ import {
   mineBlocks,
   toWei,
 } from "./helpers/utils";
+import { adapters } from "./src/constants";
 import { abi, initVault } from "./src/init-vault";
 
 const { ethers, upgrades, network } = hardhat;

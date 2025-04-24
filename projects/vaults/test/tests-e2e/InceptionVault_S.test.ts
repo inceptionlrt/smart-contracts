@@ -1,7 +1,6 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { adapters, emptyBytes } from "../../constants";
 import { stETH } from "../data/assets/inception-vault-s";
 import { vaults } from "../data/vaults";
 import {
@@ -10,6 +9,7 @@ import {
   setBlockTimestamp,
   toWei,
 } from "../helpers/utils";
+import { adapters, emptyBytes } from "../src/constants";
 import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault";
 
 const symbioticVaults = vaults.symbiotic;
