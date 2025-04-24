@@ -1,24 +1,14 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
-import { mellowVaults as mellowVaultsData } from "../data/assets/mellow-vauts";
-import { symbioticVaults as symbioticVaultsData } from "../data/assets/symbiotic-vaults";
+import { AssetData } from "../data/assets/stETH";
+import { vaults } from "../data/vaults";
 import { e18, impersonateWithEth } from "../helpers/utils";
-import { emptyBytes } from './constants';
-import { AssetData } from "../data/assets/stETH-lido";
+import { adapters, emptyBytes, Adapter } from '../../constants';
 const { ethers, upgrades, network } = hardhat;
 
-export let symbioticVaults = [...symbioticVaultsData];
-export let mellowVaults = [...mellowVaultsData];
-
-// type Adapter = 'EigenLayer' | 'Mellow' | 'Symbiotic';
-const adapters = {
-  EigenLayer: 'EigenLayer',
-  Mellow: 'Mellow',
-  Symbiotic: 'Symbiotic',
-};
-
-type Adapter = typeof adapters[keyof typeof adapters];
+let symbioticVaults = vaults.symbiotic;
+let mellowVaults = vaults.mellow;
 
 export async function initVault(assetData: AssetData, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
   if (options?.adapters?.includes(adapters.EigenLayer) && !options.eigenAdapterContractName) {

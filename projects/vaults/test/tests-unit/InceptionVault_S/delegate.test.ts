@@ -4,15 +4,16 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
+import { emptyBytes, adapters } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
-import { mellowVaults } from "../../data/assets/mellow-vauts";
 import { calculateRatio, e18, getRandomStaker, randomBI, toWei } from "../../helpers/utils";
-import { emptyBytes } from "../../src/constants";
 import { initVault } from "../../src/init-vault";
-import { Adapter } from "../../../constants";
-const { ethers, network } = hardhat;
+import { vaults } from "../../data/vaults";
 
+const mellowVaults = vaults.mellow;
+const { ethers, network } = hardhat;
 const assetData = stETH;
+
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, ratioFeed, asset, mellowAdapter, withdrawalQueue;
   let iVaultOperator, staker, staker2, staker3;
@@ -38,7 +39,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, withdrawalQueue }
-      = await initVault(assetData, { adapters: [Adapter.Mellow] }));
+      = await initVault(assetData, { adapters: [adapters.Mellow] }));
 
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;

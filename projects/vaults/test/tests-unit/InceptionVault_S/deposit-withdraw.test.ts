@@ -1,8 +1,8 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
+import { adapters, emptyBytes } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
-import { mellowVaults } from "../../data/assets/mellow-vauts";
 import {
   calculateRatio,
   e18,
@@ -11,12 +11,12 @@ import {
   randomBIMax,
   toWei
 } from "../../helpers/utils";
-import { emptyBytes } from "../../src/constants";
 import { initVault, MAX_TARGET_PERCENT } from "../../src/init-vault";
-import { Adapter } from "../../../constants";
-const { ethers, network } = hardhat;
+import {vaults} from "../../data/vaults";
 
+const { ethers, network } = hardhat;
 const assetData = stETH;
+const mellowVaults = vaults.mellow;
 
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, ratioFeed, asset, mellowAdapter, withdrawalQueue;
@@ -43,7 +43,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, withdrawalQueue }
-      = await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
+      = await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
 
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;

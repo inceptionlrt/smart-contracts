@@ -3,14 +3,14 @@
 
 import { expect } from "chai";
 import hardhat from "hardhat";
+import { emptyBytes, adapters } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
-import { mellowVaults } from "../../data/assets/mellow-vauts";
-import { symbioticVaults } from "../../data/assets/symbiotic-vaults";
-import { emptyBytes } from "../../src/constants";
+import { vaults } from "../../data/vaults";
 import { initVault } from "../../src/init-vault";
-import { Adapter } from "../../../constants";
 const { ethers, network } = hardhat;
 
+const symbioticVaults = vaults.symbiotic;
+const mellowVaults = vaults.mellow;
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, mellowAdapter, symbioticAdapter;
@@ -35,7 +35,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({ iToken, iVault, iVaultOperator, mellowAdapter, symbioticAdapter }
-      = await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
+      = await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
 
     [, staker, staker2, staker3] = await ethers.getSigners();
 

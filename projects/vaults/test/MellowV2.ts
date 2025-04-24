@@ -42,9 +42,7 @@ describe('Mellow v2', function () {
   });
 
   describe('test #1', function () {
-
     before(async function () {
-
       // FORKING
       await network.provider.request({
         method: "hardhat_reset",

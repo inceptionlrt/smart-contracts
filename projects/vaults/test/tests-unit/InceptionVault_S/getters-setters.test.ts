@@ -4,17 +4,18 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
+import { adapters, emptyBytes } from "../../../constants";
 import { stETH } from "../../data/assets/inception-vault-s";
-import { mellowVaults } from "../../data/assets/mellow-vauts";
 import {
   e18,
   randomBI,
   toWei
 } from "../../helpers/utils";
-import { emptyBytes } from "../../src/constants";
 import { initVault, MAX_TARGET_PERCENT } from "../../src/init-vault";
-import { Adapter } from "../../../constants";
+import { vaults } from "../../data/vaults";
+
 const { ethers, network } = hardhat;
+const mellowVaults = vaults.mellow;
 
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
@@ -39,7 +40,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     }]);
 
     ({ iVault, asset, iVaultOperator, mellowAdapter, symbioticAdapter, withdrawalQueue }
-      = await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
+      = await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
 
     [deployer, staker, staker2, staker3] = await ethers.getSigners();
 

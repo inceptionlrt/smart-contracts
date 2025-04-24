@@ -5,11 +5,13 @@ import { expect } from "chai";
 import hardhat from "hardhat";
 import { stETH } from "./data/assets/inception-vault-s";
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
-import { emptyBytes } from "./src/constants";
-import { abi, initVault, mellowVaults, symbioticVaults } from "./src/init-vault";
-import { Adapter } from "../constants";
-const { ethers, network, upgrades } = hardhat;
+import { adapters, emptyBytes } from '../constants';
+import { abi, initVault } from "./src/init-vault";
+import {vaults} from './data/vaults';
 
+const mellowVaults = vaults.mellow;
+const symbioticVaults = vaults.symbiotic;
+const { ethers, network, upgrades } = hardhat;
 const assets = [stETH];
 
 async function skipEpoch(symbioticVault) {
@@ -58,7 +60,7 @@ describe("Symbiotic Vault Slashing", function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
-      await initVault(assetData, { adapters: [Adapter.Mellow, Adapter.Symbiotic] }));
+      await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 

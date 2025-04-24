@@ -1,22 +1,23 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import hardhat from "hardhat";
-const { ethers, upgrades, network } = hardhat;
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
+import hardhat from "hardhat";
+import { adapters } from "../constants";
+import { wstETH } from "./data/assets/stETH";
+import { vaults } from './data/vaults';
 import {
   addRewardsToStrategy,
   calculateRatio,
-  toWei,
-  mineBlocks,
   e18,
+  mineBlocks,
+  toWei,
 } from "./helpers/utils";
 import { abi, initVault } from "./src/init-vault";
-import { wstETH } from "./data/assets/stETH-lido";
-import { eigenLayerVaults } from './data/assets/eigenlayer-vaults';
-import { Adapter } from "../constants";
 
+const { ethers, upgrades, network } = hardhat;
 const assetData = wstETH;
+const eigenLayerVaults = vaults.eigenLayer;
 
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   const coder = abi;
@@ -41,7 +42,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     ]);
 
     ({iToken, iVault, ratioFeed, asset, iVaultOperator, eigenLayerAdapter, withdrawalQueue} =
-      await initVault(assetData, { adapters: [Adapter.EigenLayer], eigenAdapterContractName: 'InceptionEigenAdapter' }));
+      await initVault(assetData, { adapters: [adapters.EigenLayer], eigenAdapterContractName: 'InceptionEigenAdapter' }));
       
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
