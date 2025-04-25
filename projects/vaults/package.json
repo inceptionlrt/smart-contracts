@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --timeout 15000",
     "format": "prettier --write scripts/*.js tasks/*.js tests/*.js",
-    "test:actual": "npx hardhat test tests/InceptionToken.ts tests/InceptionVault_S_EL.ts tests/InceptionVault_S_slashing.ts tests/InceptionVault_S.ts tests/InceptionVault_S_EL_wst.ts tests/tests-e2e/* tests/tests-unit/* tests/MellowV2.js",
+    "test": "npx hardhat test",
     "coverage": "npx hardhat coverage",
     "coverage:vault": "npx hardhat coverage --sources vaults/Symbiotic/InceptionVault_S.sol",
     "slither:vault": "slither ./contracts/vaults/Symbiotic/InceptionVault_S.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin"

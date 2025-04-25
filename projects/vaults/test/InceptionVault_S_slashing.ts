@@ -4,11 +4,14 @@ import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
 import { stETH } from "./data/assets/inception-vault-s";
+import { vaults } from './data/vaults';
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
-import { emptyBytes } from "./src/constants";
-import { abi, initVault, mellowVaults, symbioticVaults } from "./src/init-vault";
-const { ethers, network, upgrades } = hardhat;
+import { adapters, emptyBytes } from './src/constants';
+import { abi, initVault } from "./src/init-vault";
 
+const mellowVaults = vaults.mellow;
+const symbioticVaults = vaults.symbiotic;
+const { ethers, network, upgrades } = hardhat;
 const assets = [stETH];
 
 async function skipEpoch(symbioticVault) {
@@ -57,7 +60,7 @@ describe("Symbiotic Vault Slashing", function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
-      await initVault(assetData, { initAdapters: true }));
+      await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 
