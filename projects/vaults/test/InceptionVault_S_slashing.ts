@@ -1,14 +1,17 @@
 // Just slashing tests for all adapters
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import hardhat from "hardhat";
-const { ethers, network, upgrades } = hardhat;
 import { expect } from "chai";
-import { impersonateWithEth, setBlockTimestamp, calculateRatio, toWei, e18 } from "./helpers/utils";
-import { initVault, abi, MAX_TARGET_PERCENT, symbioticVaults, mellowVaults } from "./src/init-vault";
-import { stETH } from "./src/test-data/assets/inception-vault-s";
-import { emptyBytes } from "./src/constants";
+import hardhat from "hardhat";
+import { stETH } from "./data/assets/inception-vault-s";
+import { vaults } from './data/vaults';
+import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
+import { adapters, emptyBytes } from './src/constants';
+import { abi, initVault } from "./src/init-vault";
 
+const mellowVaults = vaults.mellow;
+const symbioticVaults = vaults.symbiotic;
+const { ethers, network, upgrades } = hardhat;
 const assets = [stETH];
 
 async function skipEpoch(symbioticVault) {
@@ -57,7 +60,7 @@ describe("Symbiotic Vault Slashing", function () {
     ]);
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
-      await initVault(assetData, { initAdapters: true }));
+      await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 
