@@ -57,7 +57,12 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     mapping(address => uint256) private __deprecated_withdrawals;
 
-    function __InceptionVault_init(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() payable {
+        _disableInitializers();
+    }
+
+    function initialize(
         string memory vaultName,
         address operatorAddress,
         IERC20 assetAddress,
