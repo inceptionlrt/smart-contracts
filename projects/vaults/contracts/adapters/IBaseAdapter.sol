@@ -43,7 +43,7 @@ IIBaseAdapter
     function __IBaseAdapter_init(
         IERC20 asset,
         address trusteeManager
-    ) internal initializer {
+    ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
