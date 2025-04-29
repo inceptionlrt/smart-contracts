@@ -390,7 +390,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
      * @return Sum of pending withdrawals, claimable withdrawals, and claimable amount
      */
     function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableWithdrawalAmount();
+        return pendingWithdrawalAmount() + claimableWithdrawalAmount() + claimableAmount();
     }
 
     /**
