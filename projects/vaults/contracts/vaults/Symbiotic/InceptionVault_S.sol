@@ -67,7 +67,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         address operatorAddress,
         IERC20 assetAddress,
         IInceptionToken _inceptionToken
-    ) internal {
+    ) public initializer {
         __Ownable2Step_init();
         __AdapterHandler_init(assetAddress);
 
