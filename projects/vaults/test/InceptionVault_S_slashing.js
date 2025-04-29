@@ -27,7 +27,7 @@ const assets = [
     assetName: "stETH",
     assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
     vaultName: "InstEthVault",
-    vaultFactory: "InVault_S_E2",
+    vaultFactory: "InceptionVault_S",
     iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
     rewardsCoordinator: "0x7750d328b314EfFa365A0402CcfD489B80B0adda",
     delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
@@ -246,8 +246,8 @@ async function skipEpoch(symbioticVault) {
 
 async function symbioticClaimParams(symbioticVault, claimer) {
   return abi.encode(
-    ["address", "uint256", "address"],
-    [symbioticVault.vaultAddress, (await symbioticVault.vault.currentEpoch()) - 1n, claimer],
+    ["address", "address"],
+    [symbioticVault.vaultAddress, claimer],
   );
 }
 

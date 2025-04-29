@@ -14,7 +14,7 @@ const {
 const assets = [
   {
     vaultName: "InstEthVault",
-    vaultFactory: "InVault_S_E2",
+    vaultFactory: "InceptionVault_S",
     assetName: "stETH",
     assetAddress: "0x8d09a4502cc8cf1547ad300e066060d043f6982d",
     assetPoolName: "LidoMockPool",

@@ -29,11 +29,11 @@ const config: HardhatUserConfig = {
         blockNumber: 21861027, // 21861027 //3338549
       },
     },
-  },
-  mocha: {
-    timeout: 120_000,
-    retries: 1,
   }
+  // mocha: {
+  //   timeout: 120_000,
+  //   retries: 1,
+  // }
 };
 
 export default config;
