@@ -4,6 +4,7 @@ import importSync from 'import-sync';
 import { stETH } from './stETH';
 import { impersonateWithEth, toWei } from '../../../helpers/utils';
 import hardhat from "hardhat";
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 
 const { ethers } = hardhat;
 
@@ -41,6 +42,33 @@ assetData.impersonateStaker = async function (staker, iVault) {
   await wstEth.connect(donor).transfer(staker.address, wstAmount);
   await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
   return staker;
+};
+
+assetData.addRewardsMellowVault = async function (amount, mellowVault) {
+  const donor = await impersonateWithEth(this.asset.donor, toWei(1));
+  const stEth = await ethers.getContractAt("stETH", assetData.asset.nonWrappedAssetAddress);
+  await stEth.connect(donor).approve(this.asset.address, amount);
+
+  const wstEth = await ethers.getContractAt("IWSteth", this.asset.address);
+  const balanceBefore = await wstEth.balanceOf(donor);
+  await wstEth.connect(donor).wrap(amount);
+  const balanceAfter = await wstEth.balanceOf(donor);
+  const wstAmount = balanceAfter - balanceBefore;
+  await wstEth.connect(donor).transfer(mellowVault, wstAmount);
+};
+
+assetData.applySymbioticSlash = async function (symbioticVault, slashAmount) {
+  const slasherAddressStorageIndex = 3;
+
+  const [deployer] = await ethers.getSigners();
+
+  await helpers.setStorageAt(
+    await symbioticVault.getAddress(),
+    slasherAddressStorageIndex,
+    ethers.AbiCoder.defaultAbiCoder().encode(["address"], [await deployer.getAddress()]),
+  );
+
+  await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
 };
 
 export { assetData };
