@@ -1,15 +1,10 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
-// import { AssetData } from "../data/assets/stETH";
 import { assetDataNew } from "../data/assets/new/stETH";
-import { vaults } from "../data/vaults";
 import { e18, impersonateWithEth } from "../helpers/utils";
 import { Adapter, adapters, emptyBytes } from './constants';
 const { ethers, upgrades, network } = hardhat;
-
-let symbioticVaults = vaults.symbiotic;
-let mellowVaults = vaults.mellow;
 
 export async function initVault(assetData: typeof assetDataNew, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
   if (options?.adapters?.includes(adapters.EigenLayer) && !options.eigenAdapterContractName) {
@@ -26,7 +21,8 @@ export async function initVault(assetData: typeof assetDataNew, options?: { adap
   asset.address = await asset.getAddress();
 
   if (options?.adapters?.includes(adapters.Mellow)) {
-    for (const mVaultInfo of mellowVaults) {
+    // for (const mVaultInfo of mellowVaults) {
+    for (const mVaultInfo of assetData.adapters.mellow) {
       console.log(`- MellowVault ${mVaultInfo.name} and curator`);
       mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
 
@@ -48,7 +44,8 @@ export async function initVault(assetData: typeof assetDataNew, options?: { adap
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
-    for (const sVaultInfo of symbioticVaults) {
+    // for (const sVaultInfo of symbioticVaults) {
+    for (const sVaultInfo of assetData.adapters.symbiotic) {
       console.log(`- Symbiotic ${sVaultInfo.name}`);
       sVaultInfo.vault = await ethers.getContractAt("IVault", sVaultInfo.vaultAddress);
     }
@@ -67,7 +64,8 @@ export async function initVault(assetData: typeof assetDataNew, options?: { adap
   if (options?.adapters?.includes(adapters.Mellow)) {
     const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
-      [mellowVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      // [mellowVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      [assetData.adapters.mellow[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
     ]);
 
     mellowAdapter.address = await mellowAdapter.getAddress();
@@ -76,7 +74,8 @@ export async function initVault(assetData: typeof assetDataNew, options?: { adap
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
-      [symbioticVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      // [symbioticVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      [assetData.adapters.symbiotic[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
     ]);
     symbioticAdapter.address = await symbioticAdapter.getAddress();
   }

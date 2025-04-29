@@ -3,17 +3,14 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-// import { stETH } from "./data/assets/inception-vault-s";
-import { vaults } from './data/vaults';
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
 import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault-new";
-import { stETH, assetDataNew } from "./data/assets/new/stETH";
+import { assetDataNew } from "./data/assets/new/stETH";
 
-const mellowVaults = vaults.mellow;
-const symbioticVaults = vaults.symbiotic;
+const mellowVaults = assetDataNew.adapters.mellow;
+const symbioticVaults = assetDataNew.adapters.symbiotic;
 const { ethers, network, upgrades } = hardhat;
-// const assets = [stETH];
 
 async function skipEpoch(symbioticVault) {
   let epochDuration = await symbioticVault.vault.epochDuration();
@@ -31,8 +28,6 @@ async function symbioticClaimParams(symbioticVault, claimer) {
 async function mellowClaimParams(mellowVault, claimer) {
   return abi.encode(["address", "address"], [mellowVault.vaultAddress, claimer]);
 }
-
-const assetData = stETH;
 
 let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue;
 let iVaultOperator, deployer, staker, staker2, staker3, treasury;
@@ -62,14 +57,14 @@ describe("Symbiotic Vault Slashing", function () {
 
     ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, symbioticAdapter, iLibrary, withdrawalQueue } =
       await initVault(assetDataNew, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
-    ratioErr = assetData.ratioErr;
-    transactErr = assetData.transactErr;
+    ratioErr = assetDataNew.ratioErr;
+    transactErr = assetDataNew.transactErr;
 
     [deployer, staker, staker2, staker3] = await ethers.getSigners();
 
-    staker = await assetData.impersonateStaker(staker, iVault);
-    staker2 = await assetData.impersonateStaker(staker2, iVault);
-    staker3 = await assetData.impersonateStaker(staker3, iVault);
+    staker = await assetDataNew.impersonateStaker(staker, iVault);
+    staker2 = await assetDataNew.impersonateStaker(staker2, iVault);
+    staker3 = await assetDataNew.impersonateStaker(staker3, iVault);
     treasury = await iVault.treasury(); //deployer
 
     snapshot = await helpers.takeSnapshot();
@@ -234,7 +229,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1111111111111111111n, ratioErr);
@@ -347,7 +342,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       console.log("pending withdrawals", await iVault.getTotalPendingWithdrawals());
 
@@ -410,7 +405,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -506,7 +501,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -525,7 +520,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1238424970834390498n, ratioErr);
@@ -611,7 +606,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -691,7 +686,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -769,7 +764,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1034482758620689656n, ratioErr);
@@ -820,7 +815,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1111111111111111111n, ratioErr);
@@ -866,7 +861,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -929,7 +924,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       const totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -1103,7 +1098,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1053370378591850307n, ratioErr);
@@ -1159,7 +1154,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       console.log("total delegated before", await iVault.getTotalDelegated());
 
-      await assetData.addRewardsMellowVault(toWei(5), mellowVaults[0].vaultAddress);
+      await assetDataNew.addRewardsMellowVault(toWei(5), mellowVaults[0].vaultAddress);
 
       console.log("total delegated after", await iVault.getTotalDelegated());
       console.log("request shares", await iVault.convertToAssets(toWei(5)));
@@ -1233,7 +1228,7 @@ describe("Symbiotic Vault Slashing", function () {
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
 
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112752741401218766n, ratioErr);
@@ -1320,7 +1315,7 @@ describe("Symbiotic Vault Slashing", function () {
       // ----------------
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake * 10n / 100n);
       let ratio = await calculateRatio(iVault, iToken);
       expect(ratio).to.be.closeTo(1112746792749504069n, ratioErr);
 
@@ -1391,7 +1386,7 @@ describe("Symbiotic Vault Slashing", function () {
       let totalStake = await symbioticVaults[0].vault.totalStake();
 
       // slash half of the stake
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake / 2n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake / 2n);
       // const totalDelegated2 = await iVault.getTotalDelegated();
       // console.log("totalDelegated", totalDelegated);
       // console.log("totalDelegated2", totalDelegated2);
@@ -1757,7 +1752,7 @@ describe("Symbiotic Vault Slashing", function () {
       console.log("total delegated before", await iVault.getTotalDelegated());
 
       // await assetData.addRewardsMellowVault(totalStake, mellowVaults[0].vaultAddress);
-      await assetData.addRewardsMellowVault(toWei(10000), mellowVaults[0].vaultAddress);
+      await assetDataNew.addRewardsMellowVault(toWei(10000), mellowVaults[0].vaultAddress);
       let ratio = await calculateRatio(iVault, iToken);
       console.log("total delegated after", await iVault.getTotalDelegated());
 
