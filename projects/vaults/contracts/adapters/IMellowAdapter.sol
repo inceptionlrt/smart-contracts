@@ -204,7 +204,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                 _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
         }
 
-        if (amount - claimableAmount == 0) {
+        if (amount - claimedAmount == 0) {
             _removePendingClaimer(claimer);
         }
 
