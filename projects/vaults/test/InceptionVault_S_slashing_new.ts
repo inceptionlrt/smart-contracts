@@ -6,7 +6,9 @@ import hardhat from "hardhat";
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
 import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault-new";
-import { assetDataNew } from "./data/assets/new/stETH";
+import {testrunConfig} from './testrun.config';
+
+const assetDataNew = testrunConfig.assetData;
 
 const mellowVaults = assetDataNew.adapters.mellow;
 const symbioticVaults = assetDataNew.adapters.symbiotic;
@@ -38,14 +40,6 @@ let params;
 describe("Symbiotic Vault Slashing", function () {
 
   before(async function () {
-    // if (process.env.ASSETS) {
-    //   const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
-    //   if (!assets.includes(assetData.assetName.toLowerCase())) {
-    //     console.log(`${assetData.assetName} is not in the list, going to skip`);
-    //     this.skip();
-    //   }
-    // }
-
     await network.provider.send("hardhat_reset", [
       {
         forking: {

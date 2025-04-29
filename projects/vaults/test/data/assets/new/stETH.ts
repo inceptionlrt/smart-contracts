@@ -86,3 +86,5 @@ export const assetDataNew = {
     await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
   },
 };
+
+export default assetDataNew;
