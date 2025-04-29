@@ -209,7 +209,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
-                middlewareTimesIndexes,
                 receiveAsTokens
             );
         } else {
@@ -238,7 +237,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
     function _claimCompletedWithdrawalsForVault(
         IDelegationManager.Withdrawal[] memory withdrawals,
         IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) internal returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -246,7 +244,6 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
