@@ -185,6 +185,11 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
 
+        // emergency claim available only for emergency queued withdrawals
+        if (emergency) {
+            require(_emergencyQueuedWithdrawals[withdrawal.nonce] == true, OnlyEmergency());
+        }
+
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
 

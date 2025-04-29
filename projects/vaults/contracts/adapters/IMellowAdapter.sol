@@ -223,9 +223,13 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         require(_data.length > 0, ValueZero());
 
         (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
-
         if (!emergency) {
             _removePendingClaimer(claimer);
+        }
+
+        // emergency claim available only for emergency claimer
+        if (emergency && _emergencyClaimer != claimer) {
+            revert OnlyEmergency();
         }
 
         uint256 amount = MellowAdapterClaimer(
