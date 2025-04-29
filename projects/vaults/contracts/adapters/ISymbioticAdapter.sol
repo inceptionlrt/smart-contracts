@@ -226,7 +226,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
 
     /**
      * @notice Returns the total inactive balance
-     * @return Sum of pending withdrawals and claimable amounts
+     * @return Pending withdrawals
      */
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount();
