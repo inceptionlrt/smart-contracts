@@ -296,6 +296,31 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         return amount;
     }
 
+    function redeem(address receiver, uint256 userEpochIndex) external onlyVault returns (uint256 amount) {
+        uint256[] storage epochs = userEpoch[receiver];
+        require(userEpochIndex < epochs.length, "Invalid epoch index");
+
+        WithdrawalEpoch storage withdrawal = withdrawals[epochs[userEpochIndex]];
+        if (!withdrawal.ableRedeem || withdrawal.userShares[receiver] == 0) {
+            return 0;
+        }
+
+        amount = _getRedeemAmount(withdrawal, receiver);
+        withdrawal.userShares[receiver] = 0;
+
+        epochs[userEpochIndex] = epochs[epochs.length - 1];
+        epochs.pop();
+
+        if (epochs.length == 0) {
+            delete userEpoch[receiver];
+        }
+
+        // Update global state
+        totalAmountRedeem -= amount;
+
+        return amount;
+    }
+
     /// @notice Calculates the redeemable amount for a user in an epoch
     /// @param withdrawal The storage reference to the withdrawal epoch
     /// @param receiver The address of the user
