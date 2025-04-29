@@ -5,7 +5,7 @@ import { impersonateWithEth, toWei } from '../../../helpers/utils';
 const { ethers } = hardhat;
 const stETHAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84'; // Lido stETH
 
-export const assetDataNew = {
+export const stETH = {
   blockNumber: 21850700,
   ratioErr: 3n,
   transactErr: 5n,
@@ -17,6 +17,7 @@ export const assetDataNew = {
 
   asset: {
     name: "stETH", // assetName
+    nonWrappedAssetAddress: stETHAddress,
     address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", // assetAddress, wstETH, collateral
     strategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3", // assetStrategy
     donor: "0x43594da5d6A03b2137a04DF5685805C676dEf7cB",
@@ -44,6 +45,7 @@ export const assetDataNew = {
       }
     ]
   },
+  // TODO: move away from assets
   impersonateStaker: async function (staker, iVault) {
     const donor = await impersonateWithEth(this.asset.donor, toWei(1));
     const stEth = await ethers.getContractAt("stETH", stETHAddress);
@@ -86,5 +88,3 @@ export const assetDataNew = {
     await symbioticVault.connect(deployer).onSlash(slashAmount, await symbioticVault.currentEpochStart());
   },
 };
-
-export default assetDataNew;

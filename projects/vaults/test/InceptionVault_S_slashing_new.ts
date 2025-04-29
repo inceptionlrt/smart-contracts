@@ -6,7 +6,7 @@ import hardhat from "hardhat";
 import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
 import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault-new";
-import {testrunConfig} from './testrun.config';
+import { testrunConfig } from './testrun.config';
 
 const assetDataNew = testrunConfig.assetData;
 
