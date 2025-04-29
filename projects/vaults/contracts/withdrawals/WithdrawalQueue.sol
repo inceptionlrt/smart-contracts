@@ -230,7 +230,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 claimedAmount
     ) internal {
         require(withdrawal.adapterUndelegated[adapter][vault] > 0, ClaimUnknownAdapter());
-        require(withdrawal.adapterUndelegated[adapter][vault] >= claimedAmount, ClaimedExceedUndelegated());
 
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
