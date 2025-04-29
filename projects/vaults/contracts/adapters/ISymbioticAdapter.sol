@@ -30,7 +30,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     EnumerableSet.AddressSet internal _symbioticVaults;
 
     /// @notice Mapping of vault addresses to their withdrawal epochs
-    mapping(address => uint256) public withdrawals;
+    mapping(address => mapping(address => uint256)) public withdrawals;
     mapping(address => address) internal claimerVaults;
 
     address internal _emergencyClaimer;
@@ -110,17 +110,13 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         bool emergency
     ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
-        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
-        if (
-            withdrawals[vaultAddress] != vault.currentEpoch() + 1 &&
-            withdrawals[vaultAddress] > 0
-        ) revert WithdrawalInProgress();
+        require(_symbioticVaults.contains(vaultAddress), InvalidVault());
 
         address claimer = _getOrCreateClaimer(emergency);
-        (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(claimer, amount);
+        require(withdrawals[vaultAddress][claimer] == 0, WithdrawalInProgress());
 
-        uint256 epoch = vault.currentEpoch() + 1;
-        withdrawals[vaultAddress] = epoch;
+        (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(claimer, amount);
+        withdrawals[vaultAddress][claimer] = vault.currentEpoch() + 1;
         claimerVaults[claimer] = vaultAddress;
 
         emit SymbioticWithdrawn(burnedShares, mintedShares, claimer);
@@ -140,25 +136,18 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         if (_data.length > 1) revert InvalidDataLength(1, _data.length);
-
-        (address vaultAddress, uint256 sEpoch, address claimer) = abi.decode(
-            _data[0],
-            (address, uint256, address)
-        );
-
+        (address vaultAddress, address claimer) = abi.decode(_data[0], (address, address));
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
-        if (withdrawals[vaultAddress] == 0) revert NothingToClaim();
-        if (sEpoch >= IVault(vaultAddress).currentEpoch()) revert InvalidEpoch();
-        if (sEpoch != withdrawals[vaultAddress]) revert WrongEpoch();
+        if (withdrawals[vaultAddress][claimer] == 0) revert NothingToClaim();
 
-        delete withdrawals[vaultAddress];
-
+        uint256 epoch = withdrawals[vaultAddress][claimer];
+        delete withdrawals[vaultAddress][claimer];
         if (!emergency) {
             _removePendingClaimer(claimer);
         }
 
         return SymbioticAdapterClaimer(claimer).claim(
-            vaultAddress, _inceptionVault, sEpoch
+            vaultAddress, _inceptionVault, epoch
         );
     }
 
@@ -215,9 +204,9 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     {
         if (emergency) {
             for (uint256 i = 0; i < _symbioticVaults.length(); i++) {
-                if (withdrawals[_symbioticVaults.at(i)] != 0) {
+                if (withdrawals[_symbioticVaults.at(i)][_emergencyClaimer] != 0) {
                     total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
-                        withdrawals[_symbioticVaults.at(i)],
+                        withdrawals[_symbioticVaults.at(i)][_emergencyClaimer],
                         _emergencyClaimer
                     );
                 }
@@ -229,7 +218,7 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
             address _claimer = pendingClaimers.at(i);
             address _vault = claimerVaults[_claimer];
-            total += IVault(_vault).withdrawalsOf(withdrawals[_vault], _claimer);
+            total += IVault(_vault).withdrawalsOf(withdrawals[_vault][_claimer], _claimer);
         }
 
         return total;
