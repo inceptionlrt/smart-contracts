@@ -1,8 +1,6 @@
 import 'dotenv/config';
 import { assetData } from './data/assets/new';
 
-console.log(assetData);
-
 const rpcURL = process.env.RPC;
 if (!rpcURL) throw new Error("RPC variable is required. Please set it in your .env file");
 

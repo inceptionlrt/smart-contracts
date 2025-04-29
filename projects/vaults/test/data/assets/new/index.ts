@@ -72,4 +72,3 @@ assetData.applySymbioticSlash = async function (symbioticVault, slashAmount) {
 };
 
 export { assetData };
-console.log(assetData);
