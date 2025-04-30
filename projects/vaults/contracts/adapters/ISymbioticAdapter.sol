@@ -152,6 +152,17 @@ contract ISymbioticAdapter is IISymbioticAdapter, IBaseAdapter {
     }
 
     /**
+     * @notice Claim rewards from Symbiotic protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        (address symbioticFarm, bytes memory farmData) = abi.decode(rewardsData, (address, bytes));
+        IStakerRewards(symbioticFarm).claimRewards(_inceptionVault, rewardToken, farmData);
+    }
+
+    /**
      * @notice Checks if a vault is supported by the adapter
      * @param vaultAddress Address of the vault to check
      * @return bool indicating if vault is supported

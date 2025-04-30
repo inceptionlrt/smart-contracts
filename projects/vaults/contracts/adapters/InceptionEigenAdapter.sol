@@ -95,7 +95,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
         // delegate to EL
-            _delegationManager.delegateTo(
+        _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
@@ -285,6 +285,10 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return 3;
     }
 
+    /*******************************************************************************
+                        Rewards
+    *******************************************************************************/
+
     /**
      * @notice Updates the rewards coordinator address
      * @dev Can only be called by the owner
@@ -313,5 +317,16 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+    }
+
+    /**
+     * @notice Claim rewards from Eigenlayer protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
+        IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
     }
 }

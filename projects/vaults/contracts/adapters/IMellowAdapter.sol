@@ -11,6 +11,7 @@ import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/I
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
+import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 import {IBaseAdapter} from "./IBaseAdapter.sol";
 import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol";
@@ -280,6 +281,17 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         totalAllocations = totalAllocations + newAllocation - oldAllocation;
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
+    }
+
+    /**
+     * @notice Claim rewards from Mellow protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        (address farm, bytes memory farmData) = abi.decode(rewardsData, (address, bytes));
+        IStakerRewards(farm).claimRewards(_inceptionVault, rewardToken, farmData);
     }
 
     /**

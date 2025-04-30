@@ -87,6 +87,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     IWithdrawalQueue public withdrawalQueue;
 
     /**
+     * @dev Address of treasury which holds rewards.
+     */
+    address public rewardsTreasury;
+
+    /**
      * @dev Reserved storage gap to allow for future upgrades without shifting storage layout.
      * @notice Occupies 38 slots (50 total slots minus 12 used).
      */
@@ -329,6 +334,49 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         IIBaseAdapter(adapter).claimFreeBalance();
     }
 
+    /**
+     * @notice Claim rewards from given adapter.
+     * @dev Can only be called by an operator, when the contract is not paused, and is non-reentrant.
+     * @param adapter The address of the adapter contract from which to claim rewards.
+     * @param token Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimAdapterRewards(address adapter, address token, bytes calldata rewardsData) external onlyOperator nonReentrant {
+        IERC20 rewardToken = IERC20(token);
+        uint256 rewardAmount = rewardToken.balanceOf(address(this));
+
+        // claim rewards from protocol
+        IIBaseAdapter(adapter).claimRewards(token, rewardsData);
+
+        rewardAmount = rewardToken.balanceOf(address(this)) - rewardAmount;
+        require(rewardAmount > 0, "Reward amount is zero");
+
+        rewardToken.safeTransfer(rewardsTreasury, rewardAmount);
+
+        emit RewardsClaimed(adapter, token, rewardAmount);
+    }
+
+    /**
+     * @notice Adds new rewards to the contract, starting a new rewards timeline.
+     * @dev The function allows the operator to deposit asset as rewards.
+     * It verifies that the previous rewards timeline is over before accepting new rewards.
+     */
+    function addRewards(uint256 amount) external nonReentrant {
+        /// @dev verify whether the prev timeline is over
+        if (currentRewards > 0) {
+            uint256 totalDays = rewardsTimeline / 1 days;
+            uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+            if (dayNum < totalDays) revert TimelineNotOver();
+        }
+
+        _transferAssetFrom(_operator, amount);
+        
+        currentRewards += amount;
+        startTimeline = block.timestamp;
+
+        emit RewardsAdded(amount, startTimeline);
+    }
+
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
@@ -488,5 +536,14 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
+    }
+
+    /**
+     * @notice Set rewards treasury address
+     * @param treasury Address of the treasury which holds rewards
+     */
+    function setRewardsTreasury(address treasury) external onlyOwner {
+        emit SetRewardsTreasury(rewardsTreasury);
+        rewardsTreasury = treasury;
     }
 }

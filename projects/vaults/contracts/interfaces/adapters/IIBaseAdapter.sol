@@ -75,4 +75,6 @@ interface IIBaseAdapter {
     function claim(bytes[] calldata _data, bool emergency) external returns (uint256);
 
     function claimFreeBalance() external;
+
+    function claimRewards(address rewardToken, bytes memory rewardData) external;
 }
