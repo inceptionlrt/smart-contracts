@@ -29,3 +29,5 @@ jobs:
         env:
           MAINNET_RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
           RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
+          ASSET_NAME: stETH
+          NETWORK: mainnet
