@@ -54,6 +54,14 @@ IIBaseAdapter
     }
 
     /**
+     * @notice Claims the free balance held by this contract and transfers it to the Inception Vault.
+     * @dev Can only be called by a trustee.
+     */
+    function claimFreeBalance() external onlyTrustee() {
+        _asset.safeTransfer(_inceptionVault, claimableAmount());
+    }
+
+    /**
      * @notice Returns the amount of tokens that can be claimed
      * @return Amount of claimable tokens for the adapter
      */

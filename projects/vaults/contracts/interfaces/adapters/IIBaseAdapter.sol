@@ -73,4 +73,6 @@ interface IIBaseAdapter {
     ) external returns (uint256 undelegated, uint256 claimed);
 
     function claim(bytes[] calldata _data, bool emergency) external returns (uint256);
+
+    function claimFreeBalance() external;
 }
