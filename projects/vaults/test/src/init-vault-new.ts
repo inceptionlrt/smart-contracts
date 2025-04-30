@@ -1,12 +1,12 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
-import { assetDataNew } from "../data/assets/new/stETH";
+import { stETH } from "../data/assets/new/stETH";
 import { e18, impersonateWithEth } from "../helpers/utils";
 import { Adapter, adapters, emptyBytes } from './constants';
 const { ethers, upgrades, network } = hardhat;
 
-export async function initVault(assetData: typeof assetDataNew, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
+export async function initVault(assetData: typeof stETH, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
   if (options?.adapters?.includes(adapters.EigenLayer) && !options.eigenAdapterContractName) {
     throw new Error("EigenLayer adapter requires eigenAdapterContractName");
   }
