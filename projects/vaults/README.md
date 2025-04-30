@@ -131,4 +131,4 @@ To run tests for the Inception Protocol, please follow these instructions:
 
 - `Error: Trying to initialize a provider with block X but the current block is Y`
 
-Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC provider correctly.
+Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC url correctly.
