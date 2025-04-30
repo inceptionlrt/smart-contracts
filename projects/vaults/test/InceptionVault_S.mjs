@@ -3763,7 +3763,7 @@ assets.forEach(function(a) {
           .map(log => mellowAdapter.interface.parseLog(log));
         undelegateClaimer1 = events[0].args["claimer"];
 
-        expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[0].vaultAddress)).to.be.equal(
+        expect(await mellowAdapter["pendingWithdrawalAmount(address,bool)"](mellowVaults[0].vaultAddress,false)).to.be.equal(
           assets1,
         );
 
@@ -3880,7 +3880,7 @@ assets.forEach(function(a) {
         //   return true;
         // });
 
-        expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[1].vaultAddress)).to.be.equal(
+        expect(await mellowAdapter["pendingWithdrawalAmount(address,bool)"](mellowVaults[1].vaultAddress,false)).to.be.equal(
           undelegatedAmount,
         );
 
