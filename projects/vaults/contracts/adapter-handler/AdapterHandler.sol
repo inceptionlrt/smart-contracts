@@ -225,7 +225,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             withdrawalQueue.getRequestedShares(undelegatedEpoch)
         );
 
-        if (getFreeBalance() < requestedAmount) revert InsufficientFreeBalance();
+        if (getFlashCapacity() < requestedAmount) revert InsufficientFreeBalance();
         withdrawalQueue.forceUndelegateAndClaim(undelegatedEpoch, requestedAmount);
     }
 
