@@ -343,11 +343,15 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     /**
      * @notice Returns pending withdrawal amount for a specific vault
      * @param _mellowVault Address of the vault to check
+     * @param emergency Emergency claimer
      * @return total Amount of pending withdrawals for the vault
      */
     function pendingWithdrawalAmount(
-        address _mellowVault
+        address _mellowVault, bool emergency
     ) external view returns (uint256 total) {
+        if (emergency) {
+            return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(_emergencyClaimer);
+        }
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
             total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(pendingClaimers.at(i));
         }
