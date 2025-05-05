@@ -1,5 +1,6 @@
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers, network } = require("hardhat");
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { ethers, network } from "hardhat";
+
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
 };
@@ -33,44 +34,26 @@ const addRewardsToStrategy = async (strategyAddress, amount, staker) => {
   // await bEigen.connect(staker).transfer(strategyAddress, amount);
 };
 
-const calculateRatio = async (vault, token, queue) => {
+const calculateRatio = async (vault, token) => {
   const totalDelegated = await vault.getTotalDelegated();
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
-  // const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const emergencyPendingWithdrawals = await vault.getTotalPendingEmergencyWithdrawals();
-  const totalDeposited = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount;
   const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
 
+  // shares
   const numeral = totalSupply + totalSharesToWithdraw;
+  // tokens/assets
   const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount - redeemReservedAmount;
 
-  // console.log("ratio{");
-  // console.log("totalSupply: " + totalSupply);
-  // console.log("totalSharesToWithdraw: " + totalSharesToWithdraw);
-  // console.log("totalDelegated: ", totalDelegated);
-  // console.log("totalAssets: " + totalAssets);
-  // console.log("emergencyPendingWithdrawals: " + emergencyPendingWithdrawals);
-  // console.log("depositBonusAmount: " + depositBonusAmount);
-  // console.log("redeemReservedAmount: " + redeemReservedAmount);
-  // console.log("}");
-
   if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 0n)) {
-    console.log("iToken supply is 0, so the ration is going to be 1e18");
+    console.log("iToken supply is 0, so the ratio is going to be 1e18");
     return e18;
   }
 
-  // if(emergencyPendingWithdrawals === 0n && totalSupply === 0n) {
-  //   return e18;
-  // }
-
   const ratio = (numeral * e18) / denominator;
-  // if ((numeral * e18) % denominator !== 0n) {
-  //   return ratio + 1n;
-  // }
-
   return ratio;
 };
 
@@ -166,12 +149,10 @@ const randomAddress = () => ethers.Wallet.createRandom().address;
 const format = (bi) => bi.toLocaleString("de-DE");
 
 const e18 = 1000_000_000_000_000_000n;
-const e9 = 1000_000_000n;
-const zeroWithdrawalData = [ethers.ZeroAddress, ethers.ZeroAddress, ethers.ZeroAddress, 0, 1, [ethers.ZeroAddress], [0]];
 
 const day = 86400n;
 
-module.exports = {
+export {
   addRewardsToStrategy,
   addRewardsToStrategyWrap,
   withdrawDataFromTx,

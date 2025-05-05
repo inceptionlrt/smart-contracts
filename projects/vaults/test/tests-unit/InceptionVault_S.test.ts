@@ -1,42 +1,44 @@
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { e18, toWei } from "../helpers/utils.js";
+import { e18, toWei } from "../helpers/utils";
+import { initVault } from "../src/init-vault-new";
 const { ethers, network } = hardhat;
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import { stETH } from '../src/test-data/assets/inception-vault-s.ts';
-import { initVault } from "../src/init-vault.ts";
+import { testrunConfig } from '../testrun.config';
 
-const assetInfo = stETH;
+const assetData = testrunConfig.assetData;
 
-describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
-  let iVault, asset;
-  let deployer, staker, staker2;
-  let transactErr;
-  let snapshot;
+describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
+  let iVault;
+  let asset;
+  let staker: HardhatEthersSigner, staker2: HardhatEthersSigner;
+  let transactErr: bigint;
+  let snapshot: helpers.SnapshotRestorer
 
   before(async function () {
     if (process.env.ASSETS) {
       const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
-      if (!assets.includes(assetInfo.assetName.toLowerCase())) {
-        console.log(`Asset "${assetInfo.assetName}" is not in test data, skip`);
+      if (!assets.includes(assetData.asset.name.toLowerCase())) {
+        console.log(`Asset "${assetData.asset.name}" is not in test data, skip`);
         this.skip();
       }
     }
 
     await network.provider.send("hardhat_reset", [{
       forking: {
-        jsonRpcUrl: assetInfo.url || network.config.forking.url,
-        blockNumber: assetInfo.blockNumber || network.config.forking.blockNumber,
+        jsonRpcUrl: network.config.forking.url,
+        blockNumber: assetData.blockNumber || network.config.forking.blockNumber,
       },
     }]);
 
-    ({ iVault, asset } = await initVault(assetInfo));
-    transactErr = assetInfo.transactErr;
+    ({ iVault, asset } = await initVault(assetData));
+    transactErr = assetData.transactErr;
 
-    [deployer, staker, staker2] = await ethers.getSigners();
+    [, staker, staker2] = await ethers.getSigners();
 
-    staker = await assetInfo.impersonateStaker(staker, iVault);
-    staker2 = await assetInfo.impersonateStaker(staker2, iVault);
+    staker = await assetData.impersonateStaker(staker, iVault);
+    staker2 = await assetData.impersonateStaker(staker2, iVault);
 
     snapshot = await helpers.takeSnapshot();
   });
@@ -91,7 +93,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount + 1n;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -107,7 +109,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -123,7 +125,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount - 1n;
 
       // act
-      const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       await expect(withdrawalTx).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
 
       // assert
