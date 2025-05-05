@@ -526,6 +526,11 @@
     "@ethersproject/properties" "^5.7.0"
     "@ethersproject/strings" "^5.7.0"
 
+"@httptoolkit/esm@^3.3.1":
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/@httptoolkit/esm/-/esm-3.3.1.tgz#4869136f1170caeccea7287ee23968f829be250c"
+  integrity sha512-XvWsT5qskZQoiHgg0kEoIonB+Zj/0T/W0rosjzyPuY++iBwO5c9fMfgvPBCffwY3cTrTD4KYpTPUEtLD0I1lmQ==
+
 "@jridgewell/resolve-uri@^3.0.3":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz#7a0ee601f60f99a20c7c7c5ff0c80388c1189bd6"
@@ -3914,6 +3919,13 @@ immutable@^4.0.0-rc.12:
   version "4.3.0"
   resolved "https://registry.yarnpkg.com/immutable/-/immutable-4.3.0.tgz#eb1738f14ffb39fd068b1dbe1296117484dd34be"
   integrity sha512-0AOCmOip+xgJwEVTQj1EfiDDOkPmuyllDuTuEX+DDXUgapLAsBIfkg3sxCYyCEA8mQqZrrxPUGjcOQ2JS3WLkg==
+
+import-sync@^2.2.3:
+  version "2.2.3"
+  resolved "https://registry.yarnpkg.com/import-sync/-/import-sync-2.2.3.tgz#09602878c91703e8b4ab2da293d917a739b1d7af"
+  integrity sha512-ZnF84+eGjetsXwYEuFZADO4eCYr1ngBo6UK476Oq4q6dkiDM1TN+6D5iQ5/e3erCyjo7O6xT3xHE6xdtCgDYhw==
+  dependencies:
+    "@httptoolkit/esm" "^3.3.1"
 
 imul@^1.0.0:
   version "1.0.1"

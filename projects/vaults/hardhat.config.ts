@@ -10,6 +10,7 @@ import 'solidity-coverage';
 import "./tasks/get-free-balances";
 import "./tasks/get-inception-vaults";
 import "./tasks/deposit-extra";
+import 'dotenv/config';
 
 const config: HardhatUserConfig = {
   ...(CONFIG as HardhatUserConfig),
@@ -26,13 +27,14 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: `${process.env.RPC}`,
-        blockNumber: 21861027, // 21861027 //3338549
+        blockNumber: 21861027,
       },
     },
   },
   mocha: {
     timeout: 120_000,
     retries: 1,
+    // bail: true,
   }
 };
 

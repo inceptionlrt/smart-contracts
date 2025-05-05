@@ -39,6 +39,7 @@
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-storage-layout": "^0.1.7",
     "hardhat-tracer": "^2.6.0",
+    "import-sync": "^2.2.3",
     "prettier": "3.3.2",
     "solidity-coverage": "^0.8.14",
     "ts-node": ">=8.0.0",
