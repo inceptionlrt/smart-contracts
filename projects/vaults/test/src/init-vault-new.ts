@@ -75,6 +75,7 @@ export async function initVault(assetData: typeof stETH, options?: { adapters?: 
     const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
       // [symbioticVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      // TODO: get from config
       [assetData.adapters.symbiotic[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
     ]);
     symbioticAdapter.address = await symbioticAdapter.getAddress();

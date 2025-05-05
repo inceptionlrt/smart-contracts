@@ -55,7 +55,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
 
   const iTokenFactory = await ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
-  iToken.address = await iToken.getAddress();
+  iToken.address = await iToken.getAddress(); // TODO: specify adddress
 
   const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
 

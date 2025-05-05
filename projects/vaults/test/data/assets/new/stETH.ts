@@ -14,11 +14,13 @@ export const stETH = {
     name: "stETH",
     nonWrappedAssetAddress: stETHAddress,
     address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", // wstETH, collateral
+    // TODO: move to EL adapter
     strategy: "0x7D704507b76571a51d9caE8AdDAbBFd0ba0e63d3",
     donor: "0x43594da5d6A03b2137a04DF5685805C676dEf7cB",
   },
 
   adapters: {
+    // TODO: vaults:
     mellow: [
       {
         name: "P2P",
