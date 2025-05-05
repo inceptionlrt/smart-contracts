@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import importSync from 'import-sync';
-// import fs from 'fs';
 import { stETH } from './stETH';
 import { impersonateWithEth, toWei } from '../../../helpers/utils';
 import hardhat from "hardhat";
@@ -11,15 +10,21 @@ const { ethers } = hardhat;
 const assetName = process.env.ASSET_NAME;
 if (!assetName) throw new Error("ASSET_NAME variable is required. Please set it in your .env file");
 
+type AssetData = typeof stETH & {
+  impersonateStaker: (staker: any, iVault: any) => Promise<any>;
+  addRewardsMellowVault: (amount: any, mellowVault: any) => Promise<void>;
+  applySymbioticSlash: (symbioticVault: any, slashAmount: any) => Promise<void>;
+};
+
 const filePath = `./${assetName}.ts`;
-let assetData: typeof stETH;
+let assetData: AssetData;
 try {
   const importedModule = importSync(filePath);
   const importedModuleKeys = Object.keys(importedModule);
   if (importedModuleKeys.length === 0) {
     throw new Error(`No exports found in ${filePath}`);
   }
-  assetData = importedModule[importedModuleKeys[0]] as typeof stETH;
+  assetData = importedModule[importedModuleKeys[0]] as AssetData;
 } catch (error) {
   // const filesInDir = fs.readdirSync(`${process.cwd()}/test/data/assets/new/${assetName}`);
   // const availableAssetNames = filesInDir.map(file => file.replace('.ts', '')).filter(name => name !== 'index');
