@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import importSync from 'import-sync';
-// import fs from 'fs';
 import { stETH } from './stETH';
 import { impersonateWithEth, toWei } from '../../../helpers/utils';
 import hardhat from "hardhat";

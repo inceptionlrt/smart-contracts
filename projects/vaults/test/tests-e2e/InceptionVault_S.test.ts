@@ -11,7 +11,6 @@ import { adapters, emptyBytes } from "../src/constants";
 import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault-new";
 import { testrunConfig } from '../testrun.config';
 
-
 const { ethers, network } = hardhat;
 const assetData = testrunConfig.assetData;
 const symbioticVaults = assetData.adapters.symbiotic;
