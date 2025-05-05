@@ -1,18 +1,20 @@
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { e18, toWei } from "../helpers/utils.js";
+import { stETH } from '../data/assets/inception-vault-s';
+import { e18, toWei } from "../helpers/utils";
+import { initVault } from "../src/init-vault";
 const { ethers, network } = hardhat;
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import { stETH } from '../src/test-data/assets/inception-vault-s.ts';
-import { initVault } from "../src/init-vault.ts";
 
 const assetInfo = stETH;
 
 describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
-  let iVault, asset;
-  let deployer, staker, staker2;
-  let transactErr;
-  let snapshot;
+  let iVault;
+  let asset;
+  let staker: HardhatEthersSigner, staker2: HardhatEthersSigner;
+  let transactErr: bigint;
+  let snapshot: helpers.SnapshotRestorer
 
   before(async function () {
     if (process.env.ASSETS) {
@@ -33,7 +35,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
     ({ iVault, asset } = await initVault(assetInfo));
     transactErr = assetInfo.transactErr;
 
-    [deployer, staker, staker2] = await ethers.getSigners();
+    [, staker, staker2] = await ethers.getSigners();
 
     staker = await assetInfo.impersonateStaker(staker, iVault);
     staker2 = await assetInfo.impersonateStaker(staker2, iVault);
@@ -91,7 +93,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount + 1n;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -107,7 +109,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -123,7 +125,7 @@ describe(`Inception Symbiotic Vault ${assetInfo.assetName}`, function () {
       const withdrawalAmount = flashMinAmount - 1n;
 
       // act
-      const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address);
+      const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
       await expect(withdrawalTx).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
 
       // assert

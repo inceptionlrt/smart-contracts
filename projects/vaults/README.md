@@ -127,3 +127,8 @@ To run tests for the Inception Protocol, please follow these instructions:
     - Supported vaults = [MEV: 0x5fD13359Ba15A84B76f7F87568309040176167cd]
 
         
+# Troubleshooting
+
+- `Error: Trying to initialize a provider with block X but the current block is Y`
+
+Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC provider correctly.
