@@ -532,4 +532,65 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
     });
   });
+
+  describe("Emergency undelegate cannot finish normal undelegation flow", function() {
+    it("deposit & delegate & undelegate", async function() {
+      const elVault = eigenLayerVaults[0];
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+
+      // deposit & delegate 10
+      await iVault.connect(staker).deposit(toWei(10), staker.address);
+      await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, elVault, 0n, delegateData);
+      await iVault.connect(iVaultOperator).delegate(await eigenLayerAdapter.getAddress(), ZeroAddress, toWei(9), []);
+
+      // withdraw 3
+      await iVault.connect(staker).withdraw(toWei(3), staker.address);
+
+      // emergency undelegate 5
+      await iVault.connect(iVaultOperator).emergencyUndelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(5)], [[]]);
+      // normal undelegate 3
+      let tx = await iVault.connect(iVaultOperator).undelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(3)], [[]]);
+
+      // get emergency claimer
+      const receipt = await tx.wait();
+
+      const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+      let withdrawalQueuedEvent;
+      receipt.logs.forEach(log => {
+        try {
+          const parsedLog = eigenLayerAdapterFactory.interface.parseLog(log);
+          if (parsedLog) {
+            console.log("🔹 Event Detected:");
+            withdrawalQueuedEvent = parsedLog.args;
+            return;
+          }
+        } catch (error) {
+        }
+      });
+
+      const wData = {
+        staker1: withdrawalQueuedEvent["stakerAddress"],
+        staker2: elVault,
+        staker3: eigenLayerAdapter.address,
+        nonce1: withdrawalQueuedEvent["nonce"],
+        nonce2: withdrawalQueuedEvent["withdrawalStartBlock"],
+        tokens: [withdrawalQueuedEvent["strategy"]],
+        shares: [withdrawalQueuedEvent["shares"]],
+      };
+
+      // Encode the data
+      const _data = [
+        coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
+        coder.encode(["address[][]"], [[[assetData.assetAddress]]]),
+        coder.encode(["bool[]"], [[true]]),
+      ];
+
+      await mineBlocks(50);
+
+      // claim
+      await expect(iVault.connect(iVaultOperator).emergencyClaim([eigenLayerAdapter.address], [elVault], [_data]))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "OnlyEmergency");
+    });
+  });
 });
