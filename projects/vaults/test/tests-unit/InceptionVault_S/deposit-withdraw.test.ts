@@ -820,6 +820,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await iVault.pause();
       const maxMint = await iVault.maxMint(staker);
       const maxDeposit = await iVault.maxDeposit(staker);
+      expect(maxMint).to.be.eq(0n);
       expect(maxDeposit).to.be.eq(0n);
     });
 
