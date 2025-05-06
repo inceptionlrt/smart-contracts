@@ -578,6 +578,19 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         emit WithdrawalQueueChanged(address(withdrawalQueue));
     }
 
+    function migrateDepositBonus(address newVault) external onlyOwner {
+        require(getTotalDelegated() == 0, ValueZero());
+        require(newVault != address(0), InvalidAddress());
+        require(depositBonusAmount > 0, NullParams());
+
+        uint256 amount = depositBonusAmount;
+        depositBonusAmount = 0;
+
+        _transferAssetTo(newVault, amount);
+
+        emit DepositBonusTransferred(newVault, depositBonusAmount);
+    }
+
     /*///////////////////////////////
     ////// Pausable functions //////
     /////////////////////////////*/
