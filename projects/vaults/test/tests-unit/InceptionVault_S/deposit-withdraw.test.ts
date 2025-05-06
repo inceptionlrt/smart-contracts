@@ -1517,4 +1517,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.maxRedeem(staker)).to.be.eq(0n);
     });
   });
+
+  describe("Deposit slippage", function() {
+    it("Deposited less shares than min out", async function() {
+      await iVault.setTargetFlashCapacity(1n);
+      await expect(
+        iVault.connect(staker)["deposit(uint256,address,uint256)"](toWei(1), staker.address, toWei(100))
+      ).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
+    });
+  });
 });
