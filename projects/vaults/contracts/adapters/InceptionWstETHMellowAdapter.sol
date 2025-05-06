@@ -17,12 +17,12 @@ import {IBaseAdapter} from "./IBaseAdapter.sol";
 import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol";
 
 /**
- * @title The MellowAdapter Contract
+ * @title The InceptionWstETHMellowAdapter Contract
  * @author The InceptionLRT team
- * @dev Handles delegation and withdrawal requests within the Mellow protocol.
- * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
  */
-contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
