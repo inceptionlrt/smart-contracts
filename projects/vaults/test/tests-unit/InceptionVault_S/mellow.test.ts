@@ -200,7 +200,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     let undelegateClaimer1;
 
-    it("undelegateFromMellow from mellowVault#1 by operator", async function () {
+    it("undelegateFromMellow from mellowVault#1 by operator", async function() {
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       const pendingWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
       const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
@@ -210,12 +210,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [assets1], [emptyBytes]);
       const receipt = await tx.wait();
 
-      const events = receipt.logs
-        ?.filter(log => log.address === mellowAdapter.address)
+      const events = receipt.logs?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
       undelegateClaimer1 = events[0].args["claimer"];
 
-      expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[0].vaultAddress)).to.be.equal(
+      expect(await mellowAdapter["pendingWithdrawalAmount(address,bool)"](mellowVaults[0].vaultAddress,false)).to.be.equal(
         assets1,
       );
 
@@ -299,9 +298,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     let undelegateClaimer2;
 
-    it("undelegateFromMellow all from mellowVault#2", async function () {
+    it("undelegateFromMellow all from mellowVault#2", async function() {
       const pendingMellowWithdrawalsBefore = await mellowAdapter.pendingWithdrawalAmount();
-      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
+      const totalPendingMellowWithdrawalsBefore = await iVault.getPendingWithdrawals(
+        await mellowAdapter.getAddress(),
+      );
 
       //Amount can slightly exceed delegatedTo, but final number will be corrected
       //undelegateFromMellow fails when deviation is too big
@@ -318,8 +319,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         );
 
       const receipt = await tx.wait();
-      const events = receipt.logs
-        ?.filter(log => log.address === mellowAdapter.address)
+      const events = receipt.logs?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
       receipt.logs?.filter(log => console.log(log.address));
       undelegateClaimer2 = events[0].args["claimer"];
@@ -331,7 +331,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       //   return true;
       // });
 
-      expect(await mellowAdapter["pendingWithdrawalAmount(address)"](mellowVaults[1].vaultAddress)).to.be.equal(
+      expect(await mellowAdapter["pendingWithdrawalAmount(address,bool)"](mellowVaults[1].vaultAddress,false)).to.be.equal(
         undelegatedAmount,
       );
 

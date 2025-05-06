@@ -22,8 +22,8 @@ async function skipEpoch(symbioticVault) {
 
 async function symbioticClaimParams(symbioticVault, claimer) {
   return abi.encode(
-    ["address", "uint256", "address"],
-    [symbioticVault.vaultAddress, (await symbioticVault.vault.currentEpoch()) - 1n, claimer],
+    ["address", "address"],
+    [symbioticVault.vaultAddress, claimer],
   );
 }
 

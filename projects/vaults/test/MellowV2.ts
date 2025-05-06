@@ -195,7 +195,7 @@ describe('Mellow v2', function () {
       this.timeout(150000000);
 
       // Factory
-      const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2",
+      const VaultFactory = await hre.ethers.getContractFactory("InceptionVault_S",
         {
           libraries: {
             InceptionLibrary: "0xF6940A8e7334Ab2a7781AF6f9E5aeD8EFB55116A"
@@ -216,7 +216,7 @@ describe('Mellow v2', function () {
       await proxyAdminRestaker.connect(deployer).upgradeAndCall("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", await restakerImp.getAddress(), "0x");
 
       let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
-      let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
+      let vault = await ethers.getContractAt("InceptionVault_S", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
       const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
       let withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [await vault.getAddress(), [], [], 0]);
@@ -255,7 +255,7 @@ describe('Mellow v2', function () {
       this.timeout(150000000);
 
       // Factory
-      const VaultFactory = await hre.ethers.getContractFactory("InVault_S_E2",
+      const VaultFactory = await hre.ethers.getContractFactory("InceptionVault_S",
         {
           libraries: {
             InceptionLibrary: "0xF6940A8e7334Ab2a7781AF6f9E5aeD8EFB55116A"
@@ -276,7 +276,7 @@ describe('Mellow v2', function () {
       await proxyAdminRestaker.connect(deployer).upgradeAndCall("0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", await restakerImp.getAddress(), "0x");
 
       let inceptionToken = await ethers.getContractAt("InceptionToken", "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552");
-      let vault = await ethers.getContractAt("InVault_S_E2", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
+      let vault = await ethers.getContractAt("InceptionVault_S", "0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97");
 
       console.log("3==== All mellowvaults are using mellowv2");
       console.log("Setting ethWrapper");

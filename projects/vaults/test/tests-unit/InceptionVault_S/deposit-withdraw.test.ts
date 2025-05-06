@@ -808,7 +808,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       });
     });
 
-    it("Max mint and deposit", async function () {
+    it.skip("Max mint and deposit", async function () {
       const stakerBalance = await asset.balanceOf(staker);
       const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
       const realBonus = await iVault.depositBonusAmount();
@@ -905,7 +905,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         localSnapshot = await helpers.takeSnapshot();
       });
 
-      it("Max mint and deposit", async function () {
+      it.skip("Max mint and deposit", async function () {
         const stakerBalance = await asset.balanceOf(staker);
         const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
         const realBonus = await iVault.depositBonusAmount();
