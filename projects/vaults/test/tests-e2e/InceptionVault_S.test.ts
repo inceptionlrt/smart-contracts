@@ -718,6 +718,19 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       );
     });
 
+    it("getTotalDeposited includes redeemable amount", async function() {
+      const totalDeposited = await iVault.getTotalDeposited();
+      const totalDelegated = await iVault.getTotalDelegated();
+      const totalAssets = await iVault.totalAssets();
+      const totalPendingWithdrawals = await iVault.getTotalPendingWithdrawals();
+      const totalPendingEmergencyWithdrawals = await iVault.getTotalPendingEmergencyWithdrawals();
+      const redeemable = await iVault.redeemReservedAmount();
+
+      expect(totalDeposited).to.be.eq(
+        totalDelegated + totalAssets + totalPendingWithdrawals + totalPendingEmergencyWithdrawals - redeemable
+      );
+    });
+
     it("Staker is able to redeem", async function () {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();

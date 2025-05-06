@@ -1213,6 +1213,19 @@ describe("Symbiotic Vault Slashing", function () {
       await tx.wait();
       // ----------------
 
+      // check totalDelegated
+      const totalDeposited = await iVault.getTotalDeposited();
+      const totalDelegated = await iVault.getTotalDelegated();
+      const totalAssets = await iVault.totalAssets();
+      const totalPendingWithdrawals = await iVault.getTotalPendingWithdrawals();
+      const totalPendingEmergencyWithdrawals = await iVault.getTotalPendingEmergencyWithdrawals();
+      const redeemable = await iVault.redeemReservedAmount();
+
+      expect(totalDeposited).to.be.eq(
+        totalDelegated + totalAssets + totalPendingWithdrawals + totalPendingEmergencyWithdrawals - redeemable,
+      );
+      // ----------------
+
       // emergency undelegate
       tx = await iVault.connect(iVaultOperator)
         .emergencyUndelegate(
