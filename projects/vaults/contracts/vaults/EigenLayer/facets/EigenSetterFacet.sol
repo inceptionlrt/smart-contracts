@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {IRewardsCoordinator} from "../../../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
 import "../InceptionVaultStorage_EL.sol";
 
@@ -156,5 +157,9 @@ contract EigenSetterFacet is InceptionVaultStorage_EL {
             newRewardsCoordinator
         );
         rewardsCoordinator = newRewardsCoordinator;
+    }
+
+    function setRewardsClaimer() external {
+        IRewardsCoordinator(rewardsCoordinator).setClaimerFor(owner());
     }
 }

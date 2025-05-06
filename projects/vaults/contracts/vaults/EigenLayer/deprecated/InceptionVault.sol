@@ -3,22 +3,22 @@ pragma solidity ^0.8.24;
 
 import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IOwnable} from "../../interfaces/common/IOwnable.sol";
-import {IInceptionVault_EL} from "../../interfaces/eigenlayer-vault/IInceptionVault_EL.sol";
-import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
-import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
-import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
-import {IRewardsCoordinator} from "../../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
+import {IOwnable} from "../../../interfaces/common/IOwnable.sol";
+import {IInceptionVault} from "../../../interfaces/eigenlayer-vault/deprecated/IInceptionVault.sol";
+import {IInceptionToken} from "../../../interfaces/common/IInceptionToken.sol";
+import {IDelegationManager} from "../../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IInceptionRatioFeed} from "../../../interfaces/common/IInceptionRatioFeed.sol";
+import {IRewardsCoordinator} from "../../../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
-import {Convert} from "../../lib/Convert.sol";
-import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
+import {Convert} from "../../../lib/Convert.sol";
+import {InceptionLibrary} from "../../../lib/InceptionLibrary.sol";
 
-import "../../eigenlayer-handler/EigenLayerHandler.sol";
+import "./EigenLayerHandler.sol";
 
 /// @author The InceptionLRT team
 /// @title The InceptionVault contract
 /// @notice Aims to maximize the profit of EigenLayer for a certain asset.
-contract InceptionVault is IInceptionVault_EL, EigenLayerHandler {
+contract InceptionVault is IInceptionVault, EigenLayerHandler {
     /// @dev Inception restaking token
     IInceptionToken public inceptionToken;
 

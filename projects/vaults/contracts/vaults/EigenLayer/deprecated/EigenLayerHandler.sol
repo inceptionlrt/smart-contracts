@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
+import {InceptionAssetsHandler, IERC20} from "./InceptionAssetsHandler.sol";
 
-import {IStrategyManager, IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
-import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
-import {IEigenLayerHandler} from "../interfaces/eigenlayer-vault/deprecated/IEigenLayerHandler.sol";
-import {IInceptionRestaker} from "../interfaces/eigenlayer-vault/deprecated/IInceptionRestaker.sol";
+import {IStrategyManager, IStrategy} from "../../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
+import {IDelegationManager} from "../../../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
+import {IEigenLayerHandler} from "../../../interfaces/eigenlayer-vault/deprecated/IEigenLayerHandler.sol";
+import {IInceptionRestaker} from "../../../interfaces/eigenlayer-vault/deprecated/IInceptionRestaker.sol";
 
 /// @author The InceptionLRT team
 /// @title The EigenLayerHandler contract

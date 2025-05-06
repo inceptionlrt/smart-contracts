@@ -49,7 +49,6 @@ interface IInceptionEigenRestaker {
     function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external returns (uint256);
 

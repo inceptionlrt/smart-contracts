@@ -121,7 +121,6 @@ contract InceptionEigenRestaker is
     function claimWithdrawals(
         IDelegationManager.Withdrawal[] calldata withdrawals,
         IERC20[][] calldata tokens,
-        uint256[] calldata middlewareTimesIndexes,
         bool[] calldata receiveAsTokens
     ) external onlyTrustee returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -129,7 +128,6 @@ contract InceptionEigenRestaker is
         _delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
