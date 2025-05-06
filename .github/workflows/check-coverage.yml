@@ -32,6 +32,7 @@ jobs:
           NETWORK: mainnet
 
       - name: Check coverage percentage
+        working-directory: projects/vaults
         run: bash ./check-coverage.sh
 
       # coverage dir to artifacts
