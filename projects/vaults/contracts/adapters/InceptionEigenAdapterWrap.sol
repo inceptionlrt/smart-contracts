@@ -358,4 +358,32 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
         IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
     }
+
+    /*
+     * @notice Undelegates the contract from the current operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits an `Undelegated` event upon successful undelegation.
+    */
+    function undelegate() external onlyTrustee whenNotPaused {
+        _delegationManager.undelegate(address(this));
+        emit Undelegated();
+    }
+
+    /*
+     * @notice Redelegates the contract to a new operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits a `RedelegatedTo` event upon successful redelegation.
+     * @param operator The address of the new operator to delegate to.
+     * @param newOperatorApproverSig The signature and expiry details for the new operator's approval.
+     * @param approverSalt A unique salt used for the approval process to prevent replay attacks.
+    */
+    function redelegate(
+        address operator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee whenNotPaused {
+        require(operator != address(0), ZeroAddress());
+        _delegationManager.redelegate(operator, newOperatorApproverSig, approverSalt);
+        emit RedelegatedTo(operator);
+    }
 }
