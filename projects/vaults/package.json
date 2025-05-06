@@ -35,6 +35,7 @@
     "ethers": "^6.4.0",
     "hardhat": "^2.22.19",
     "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-coverage": "^0.9.19",
     "hardhat-deploy": "^0.12.4",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-storage-layout": "^0.1.7",
