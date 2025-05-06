@@ -362,10 +362,10 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         return amount;
     }
 
-    /// @notice Checks if a claimer has redeemable withdrawals and their epoch indexes
+    /// @notice Checks if a claimer has redeemable withdrawals and their epoch indexes inside userEpoch mapping
     /// @param claimer The address to check
     /// @return able Whether there are redeemable withdrawals
-    /// @return withdrawalIndexes Array of epoch indexes with redeemable withdrawals
+    /// @return withdrawalIndexes Array of user epoch indexes with redeemable withdrawals
     function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes) {
         uint256 index;
 
