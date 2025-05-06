@@ -1,0 +1,39 @@
+# check coverage, manual job
+# prints output to PR comment
+
+name: Check coverage
+on:
+  workflow_dispatch:
+
+jobs:
+  check-coverage:
+    name: Check Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'node'
+
+      - name: Install deps
+        working-directory: projects/vaults
+        run: yarn install --frozen-lockfile && cd projects/vaults && yarn install --frozen-lockfile
+
+      - name: Run coverage
+        working-directory: projects/vaults
+        run: npm run coverage
+
+      - name: Check coverage percentage
+        run: bash ./check-coverage.sh
+
+      # coverage dir to artifacts
+      - name: Save coveage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage report
+          path: |
+            coverage

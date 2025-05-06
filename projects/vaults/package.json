@@ -5,8 +5,7 @@
   "scripts": {
     "format": "prettier --write scripts/*.js tasks/*.js tests/*.js",
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage",
-    "coverage:vault": "npx hardhat coverage --sources vaults/Symbiotic/InceptionVault_S.sol",
+    "coverage": "npx hardhat coverage --matrix",
     "slither:vault": "slither ./contracts/vaults/Symbiotic/InceptionVault_S.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin"
   },
   "license": "MIT",
