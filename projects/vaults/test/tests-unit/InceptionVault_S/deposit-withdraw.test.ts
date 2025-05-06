@@ -529,7 +529,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("maxDeposit: returns max amount that can be delegated to strategy", async function () {
-      expect(await iVault.maxDeposit(staker.address)).to.be.gt(0n);
+      expect(await iVault.maxDeposit(staker.address)).to.equal(2n ** 256n - 1n)
     });
 
     const args = [
