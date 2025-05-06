@@ -869,7 +869,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       console.log(`Shares:\t\t\t\t\t${shares.format()}`);
       console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
-      let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address, 0n);
+      let tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, receiver.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
       expect(withdrawEvent.length).to.be.eq(1);

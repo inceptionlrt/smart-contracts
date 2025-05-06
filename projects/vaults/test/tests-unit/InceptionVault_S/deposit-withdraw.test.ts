@@ -896,7 +896,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
           await iVault.setTargetFlashCapacity(targetCapacityPercent);
           await iVault.connect(staker3).deposit(toWei(1.5), staker3.address);
           const balanceOf = await iToken.balanceOf(staker3.address);
-          await iVault.connect(staker3).flashWithdraw(balanceOf, staker3.address, 0n);
+          await iVault.connect(staker3)["flashWithdraw(uint256,address,uint256)"](balanceOf, staker3.address, 0n);
           await iVault.setTargetFlashCapacity(1n);
         }
 
@@ -1292,7 +1292,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
         console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
-        let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address, 0n);
+        let tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, receiver.address, 0n);
         const receipt = await tx.wait();
         const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
         expect(withdrawEvent.length).to.be.eq(1);
@@ -1391,7 +1391,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     it("Reverts when capacity is not sufficient", async function () {
       const shares = await iToken.balanceOf(staker.address);
       const capacity = await iVault.getFlashCapacity();
-      await expect(iVault.connect(staker).flashWithdraw(shares, staker.address, 0n))
+      await expect(iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, staker.address, 0n))
         .to.be.revertedWithCustomError(iVault, "InsufficientCapacity")
         .withArgs(capacity);
     });
@@ -1399,7 +1399,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     it("Reverts when amount < min", async function () {
       const withdrawMinAmount = await iVault.withdrawMinAmount();
       const shares = (await iVault.convertToShares(withdrawMinAmount)) - 1n;
-      await expect(iVault.connect(staker).flashWithdraw(shares, staker.address, 0n))
+      await expect(iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, staker.address, 0n))
         .to.be.revertedWithCustomError(iVault, "LowerMinAmount")
         .withArgs(withdrawMinAmount);
     });
@@ -1416,7 +1416,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await iVault.connect(staker).deposit(e18, staker.address);
       await iVault.pause();
       const amount = await iVault.getFlashCapacity();
-      await expect(iVault.connect(staker).flashWithdraw(amount, staker.address, 0n)).to.be.revertedWith(
+      await expect(iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](amount, staker.address, 0n)).to.be.revertedWith(
         "Pausable: paused",
       );
       await expect(

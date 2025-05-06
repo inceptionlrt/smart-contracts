@@ -116,7 +116,19 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 amount,
         address receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        return _deposit(amount, msg.sender, receiver);
+        return _deposit(amount, msg.sender, receiver, 0);
+    }
+
+    /// @dev Transfers the msg.sender's assets to the vault.
+    /// @dev Mints Inception tokens in accordance with the current ratio.
+    /// @dev Issues the tokens to the specified receiver address.
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(
+        uint256 amount,
+        address receiver,
+        uint256 minOut
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        return _deposit(amount, msg.sender, receiver, minOut);
     }
 
     /// @notice The deposit function but with a referral code
@@ -126,13 +138,25 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         bytes32 code
     ) external nonReentrant whenNotPaused returns (uint256) {
         emit ReferralCode(code);
-        return _deposit(amount, msg.sender, receiver);
+        return _deposit(amount, msg.sender, receiver, 0);
+    }
+
+    /// @notice The deposit function but with a referral code
+    function depositWithReferral(
+        uint256 amount,
+        address receiver,
+        bytes32 code,
+        uint256 minOut
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        emit ReferralCode(code);
+        return _deposit(amount, msg.sender, receiver, minOut);
     }
 
     function _deposit(
         uint256 amount,
         address sender,
-        address receiver
+        address receiver,
+        uint256 minOut
     ) internal returns (uint256) {
         // transfers assets from the sender and returns the received amount
         // the actual received amount might slightly differ from the specified amount,
@@ -153,6 +177,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
         uint256 iShares = convertToShares(amount + depositBonus);
+        if (iShares < minOut) revert LowerMinAmount(minOut);
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
         emit Deposit(sender, receiver, amount, iShares);
@@ -169,7 +194,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             revert ExceededMaxMint(receiver, shares, maxShares);
 
         uint256 assetsAmount = previewMint(shares);
-        if (_deposit(assetsAmount, msg.sender, receiver) < shares) revert MintedLess();
+        if (_deposit(assetsAmount, msg.sender, receiver, 0) < shares) revert MintedLess();
 
         return assetsAmount;
     }
@@ -250,6 +275,24 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
             receiver,
             claimer,
             minOut
+        );
+        emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
+    }
+
+    /// @dev Performs burning iToken from mgs.sender
+    /// @dev Creates a withdrawal requests based on the current ratio
+    /// @param iShares is measured in Inception token(shares)
+    function flashWithdraw(
+        uint256 iShares,
+        address receiver
+    ) external whenNotPaused nonReentrant {
+        __beforeWithdraw(receiver, iShares);
+        address claimer = msg.sender;
+        (uint256 amount, uint256 fee) = _flashWithdraw(
+            iShares,
+            receiver,
+            claimer,
+            0
         );
         emit FlashWithdraw(claimer, receiver, claimer, amount, iShares, fee);
     }
