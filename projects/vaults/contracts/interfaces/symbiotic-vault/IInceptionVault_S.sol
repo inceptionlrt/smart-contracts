@@ -78,6 +78,8 @@ interface IInceptionVault_S {
 
     event WithdrawalQueueChanged(address queue);
 
+    event DepositBonusTransferred(address newVault, uint256 amount);
+
     function inceptionToken() external view returns (IInceptionToken);
 
     function ratio() external view returns (uint256);
