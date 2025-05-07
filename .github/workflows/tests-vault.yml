@@ -1,6 +1,8 @@
 name: Vault tests
 on:
-  pull_request:
+  # pull_request:
+  workflow_dispatch:
+    
 # cancel previous runs if a new one is triggered
 concurrency:
   group: vault-tests-${{github.event.pull_request.number}}
