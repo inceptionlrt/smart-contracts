@@ -2,7 +2,7 @@
 
 set -e
 
-REPORT_FILE="coverage/index.html"
+REPORT_FILE="./coverage/index.html"
 
 DEFAULT_THRESHOLD=90
 THRESHOLD_STATEMENTS=95
