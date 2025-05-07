@@ -153,56 +153,20 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         emit DelegatedTo(adapter, vault, amount);
     }
 
-//    /**
-//     * @notice Initiates undelegation from multiple adapters and vaults
-//     * @param adapters Array of adapter addresses
-//     * @param vaults Array of vault addresses
-//     * @param amounts Array of amounts to undelegate
-//     * @param _data Array of additional data required for undelegation
-//     * @dev Arrays must be of equal length
-//     */
-//    function undelegate(
-//        address[] calldata adapters,
-//        address[] calldata vaults,
-//        uint256[] calldata amounts,
-//        bytes[][] calldata _data
-//    ) external whenNotPaused nonReentrant onlyOperator {
-//        require(
-//            adapters.length == vaults.length &&
-//            vaults.length == amounts.length &&
-//            amounts.length == _data.length,
-//            ValueZero()
-//        );
-//
-//        uint256 undelegatedEpoch = withdrawalQueue.currentEpoch();
-//        if (adapters.length == 0) {
-//            return _undelegateAndClaim(undelegatedEpoch);
-//        }
-//
-//        uint256[] memory undelegatedAmounts = new uint256[](adapters.length);
-//        uint256[] memory claimedAmounts = new uint256[](adapters.length);
-//
-//        for (uint256 i = 0; i < adapters.length; i++) {
-//            // undelegate adapter
-//            (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
-//                adapters[i], vaults[i], amounts[i], _data[i], false
-//            );
-//
-//            emit UndelegatedFrom(
-//                adapters[i], vaults[i], undelegatedAmounts[i], claimedAmounts[i], undelegatedEpoch
-//            );
-//        }
-//
-//        // undelegate from queue
-//        withdrawalQueue.undelegate(
-//            undelegatedEpoch, adapters, vaults, undelegatedAmounts, claimedAmounts
-//        );
-//    }
-
+    /*
+     * Undelegates assets from specified vaults and adapters for a given epoch.
+     * @param undelegatedEpoch The epoch in which the undelegation occurs.
+     * @param requests An array of UndelegateRequest structs containing undelegation details.
+     * Each UndelegateRequest specifies the adapter, vault, amount, and additional data for undelegation.
+     */
     function undelegate(
         uint256 undelegatedEpoch,
         UndelegateRequest[] calldata requests
     ) external whenNotPaused nonReentrant onlyOperator {
+        if (requests.length == 0) {
+            return _undelegateAndClaim(undelegatedEpoch);
+        }
+
         uint256[] memory undelegatedAmounts = new uint256[](requests.length);
         uint256[] memory claimedAmounts = new uint256[](requests.length);
         address[] memory adapters = new address[](requests.length);
