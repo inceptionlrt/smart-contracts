@@ -25,7 +25,7 @@ jobs:
           node-version: 20.x
 
       - name: Install deps
-        run: yarn install --frozen-lockfile && cd ../.. yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile && cd ../.. && yarn install --frozen-lockfile
 
       - name: Run coverage
         run: npm run coverage
