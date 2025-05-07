@@ -20,7 +20,8 @@ THRESHOLD_LINES=${THRESHOLD_LINES:-$DEFAULT_THRESHOLD}
 
 REPORT_FILE="./coverage/index.html"
 
-echo "Thresholds: Lines:$THRESHOLD_LINES%, Statements:$THRESHOLD_STATEMENTS%, Functions:$THRESHOLD_FUNCTIONS%, Branches:$THRESHOLD_BRANCHES%"
+echo "Thresholds: Lines: $THRESHOLD_LINES%, Statements: $THRESHOLD_STATEMENTS%, Functions: $THRESHOLD_FUNCTIONS%, Branches: $THRESHOLD_BRANCHES%"
+echo # add empty line
 
 if [ ! -f "$REPORT_FILE" ]; then
   echo "❌ Coverage report not found at $REPORT_FILE"
