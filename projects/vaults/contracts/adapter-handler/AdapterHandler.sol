@@ -13,8 +13,6 @@ import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol"
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
