@@ -2,19 +2,23 @@
 
 set -e
 
-REPORT_FILE="./coverage/index.html"
 
+# the thresholds below are supposed to be cahnged (but only ^increased)
+#! DO NOT decrease the values, if coverage does not meet the threshold – write new tests 
 DEFAULT_THRESHOLD=90
 THRESHOLD_STATEMENTS=95
 THRESHOLD_BRANCHES=79
 THRESHOLD_FUNCTIONS=95
 THRESHOLD_LINES=96
 
-# Default thresholds (you can override via env vars)
+
 THRESHOLD_STATEMENTS=${THRESHOLD_STATEMENTS:-$DEFAULT_THRESHOLD}
 THRESHOLD_BRANCHES=${THRESHOLD_BRANCHES:-$DEFAULT_THRESHOLD}
 THRESHOLD_FUNCTIONS=${THRESHOLD_FUNCTIONS:-$DEFAULT_THRESHOLD}
 THRESHOLD_LINES=${THRESHOLD_LINES:-$DEFAULT_THRESHOLD}
+
+
+REPORT_FILE="./coverage/index.html"
 
 echo "Thresholds: Lines:$THRESHOLD_LINES%, Statements:$THRESHOLD_STATEMENTS%, Functions:$THRESHOLD_FUNCTIONS%, Branches:$THRESHOLD_BRANCHES%"
 
