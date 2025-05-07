@@ -936,7 +936,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       console.log("totalDElegated", amount);
       console.log("shares", shares);
       await iVault.withdrawFromMellowAndClaim(mellowVaults[0].vaultAddress, amount);
-      // await iVault.undelegate([], [], [], []);
+      // await iVault.undelegate(await withdrawalQueue.currentEpoch(), [])
       await iVault.connect(iVaultOperator).redeem(staker.address);
 
       console.log(`iVault total assets: ${await iVault.totalAssets()}`);

@@ -39,6 +39,7 @@ const calculateRatio = async (vault, token) => {
   const totalAssets = await vault.totalAssets();
   const depositBonusAmount = await vault.depositBonusAmount();
   const emergencyPendingWithdrawals = await vault.getTotalPendingEmergencyWithdrawals();
+  const pendingWithdrawals = await vault.getTotalPendingWithdrawals();
   const totalSharesToWithdraw = await vault.totalSharesToWithdraw();
   const redeemReservedAmount = await vault.redeemReservedAmount();
   const totalSupply = await token.totalSupply();
@@ -46,7 +47,7 @@ const calculateRatio = async (vault, token) => {
   // shares
   const numeral = totalSupply + totalSharesToWithdraw;
   // tokens/assets
-  const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount - redeemReservedAmount;
+  const denominator = totalDelegated + totalAssets + emergencyPendingWithdrawals + depositBonusAmount + pendingWithdrawals - redeemReservedAmount;
 
   if (denominator === 0n || numeral === 0n || (totalSupply === 0n && totalDelegated <= 0n)) {
     console.log("iToken supply is 0, so the ratio is going to be 1e18");

@@ -109,4 +109,18 @@ interface IAdapterHandler {
         address receiver;
         uint256 amount;
     }
+
+    /*
+     * Struct to define an undelegation request.
+     * @param adapter The address of the adapter contract handling the undelegation.
+     * @param vault The address of the vault from which assets are undelegated.
+     * @param amount The amount of assets to undelegate.
+     * @param data An array of bytes for additional parameters or instructions specific to the adapter.
+     */
+    struct UndelegateRequest {
+        address adapter;
+        address vault;
+        uint256 amount;
+        bytes[] data;
+    }
 }
