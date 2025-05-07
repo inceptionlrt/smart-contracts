@@ -52,13 +52,13 @@ check_threshold() {
   local threshold=$3
   local value_int=${value%.*}
 
-  echo "⚪ $type coverage: $value%"
+  # echo "$type coverage: $value%"
 
   if [ "$value_int" -lt "$threshold" ]; then
     echo "❌ $type coverage $value% is below threshold $threshold%"
     exit 1
-  # else
-  #   echo "✅ $type coverage meets threshold"
+  else
+    echo "✅ $type coverage meets threshold $threshold%"
   fi
 }
 
