@@ -1,13 +1,7 @@
 name: Check coverage
 on:
   workflow_dispatch:
-  # pull_request:
-    # branches:
-    #   - master
-    #   # TESTING ONLY
-    #   - tests/refactoring
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+  pull_request:
     branches:
       - master
       # TESTING ONLY
@@ -20,6 +14,8 @@ jobs:
     defaults:
       run:
         working-directory: projects/vaults
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout repo
