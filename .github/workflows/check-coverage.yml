@@ -26,26 +26,26 @@ jobs:
         with:
           node-version: 20.x
 
-      # - name: Install deps
-      #   run: yarn install --frozen-lockfile && cd ../.. && yarn install --frozen-lockfile
+      - name: Install deps
+        run: yarn install --frozen-lockfile && cd ../.. && yarn install --frozen-lockfile
 
-      # - name: Run coverage
-      #   run: npm run coverage
-      #   env:
-      #     RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
-      #     ASSET_NAME: stETH
-      #     NETWORK: mainnet
+      - name: Run coverage
+        run: npm run coverage
+        env:
+          RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
+          ASSET_NAME: stETH
+          NETWORK: mainnet
 
-      # - name: Check coverage percentage
-      #   run: |
-      #     bash ./check-coverage.sh
+      - name: Check coverage percentage
+        run: |
+          bash ./check-coverage.sh
 
-      # - name: Save coveage results
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: coverage report
-      #     path: |
-      #       coverage
+      - name: Save coveage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage report
+          path: |
+            coverage
       
       - name: Read logs file
         run: |
@@ -55,7 +55,7 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_ENV"
 
-      - name: Post raw file content as PR comment
+      - name: Post coverage result to PR comment
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
