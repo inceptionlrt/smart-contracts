@@ -1,7 +1,7 @@
 #!/bin/bash
 
+{
 set -e
-
 
 # the thresholds below are supposed to be cahnged (but only ^increased)
 #! DO NOT decrease the values, if coverage does not meet the threshold – write new tests 
@@ -70,3 +70,6 @@ check_threshold "Lines" "$LINES" "$THRESHOLD_LINES"
 check_threshold "Statements" "$STATEMENTS" "$THRESHOLD_STATEMENTS"
 check_threshold "Functions" "$FUNCTIONS" "$THRESHOLD_FUNCTIONS"
 check_threshold "Branches" "$BRANCHES" "$THRESHOLD_BRANCHES"
+
+# save output to file
+} 2>&1 | tee -a coverage_logs.txt

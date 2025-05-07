@@ -1,12 +1,11 @@
-# check coverage, manual job
-# prints output to PR comment
-
 name: Check coverage
 on:
   workflow_dispatch:
   pull_request:
     branches:
       - master
+      # TESTING ONLY
+      - tests/refactoring
 
 jobs:
   check-coverage:
@@ -44,3 +43,23 @@ jobs:
           name: coverage report
           path: |
             projects/vaults/coverage
+      
+      - name: Add content from 'coverage_logs.txt' file to PR comment
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          LOG_FILE: coverage_logs.txt
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync(process.env.LOG_FILE, 'utf8');
+            const comment = `### Coverage Report\n\`\`\`txt\n${content}\n\`\`\``;
+            const { data: { number } } = await github.rest.issues.get({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: comment,
+            });
