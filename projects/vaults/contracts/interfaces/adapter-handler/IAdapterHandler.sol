@@ -109,4 +109,11 @@ interface IAdapterHandler {
         address receiver;
         uint256 amount;
     }
+
+    struct UndelegateRequest {
+        address adapter;
+        address vault;
+        uint256 amount;
+        bytes[] data;
+    }
 }

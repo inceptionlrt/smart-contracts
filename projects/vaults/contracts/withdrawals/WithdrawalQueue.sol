@@ -6,6 +6,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+
 contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     using Math for uint256;
 
@@ -122,7 +124,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
     ) external onlyVault {
-        require(epoch == currentEpoch, UndelegateEpochMismatch());
+//        require(epoch == currentEpoch, UndelegateEpochMismatch());
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
 
         for (uint256 i = 0; i < adapters.length; i++) {
@@ -135,10 +137,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             );
         }
 
-        // update global state
-        totalSharesToWithdraw -= withdrawal.totalRequestedShares;
+        _afterUndelegate(epoch, withdrawal);
 
-        _afterUndelegate(withdrawal);
     }
 
     /// @notice Internal function to process undelegation for a specific adapter and vault
@@ -154,7 +154,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 undelegatedAmount,
         uint256 claimedAmount
     ) internal {
-        require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
+//        require(withdrawal.adapterUndelegated[adapter][vault] == 0, AdapterVaultAlreadyUndelegated());
         require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
 
         // update withdrawal data
@@ -173,19 +173,22 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /// @notice Finalizes undelegation by advancing the epoch if completed
+    /// @param undelegatedEpoch epoch
     /// @param withdrawal The storage reference to the withdrawal epoch
-    function _afterUndelegate(WithdrawalEpoch storage withdrawal) internal {
+    function _afterUndelegate(uint256 undelegatedEpoch, WithdrawalEpoch storage withdrawal) internal {
         uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
         uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
-        require(
-            requested >= totalUndelegated ?
-                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
-                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
-            UndelegateNotCompleted()
-        );
+//        require(
+//            requested >= totalUndelegated ?
+//                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
+//                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+//            UndelegateNotCompleted()
+//        );
 
-        currentEpoch++;
+        if (undelegatedEpoch == currentEpoch) {
+            currentEpoch++;
+        }
 
         if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
             withdrawal.ableRedeem = true;
@@ -234,16 +237,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
         withdrawal.adaptersClaimedCounter++;
-
-        // update global state
-        totalAmountRedeem += claimedAmount;
     }
 
     /// @notice Updates the redeemable status after a claim
     /// @param withdrawal The storage reference to the withdrawal epoch
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
-        withdrawal.ableRedeem = true;
+//        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
+        if (withdrawal.totalClaimedAmount >= IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares)) {
+            withdrawal.ableRedeem = true;
+            // update global state
+            totalAmountRedeem += withdrawal.totalClaimedAmount;
+            totalSharesToWithdraw -= withdrawal.totalRequestedShares;
+        }
     }
 
     /// @notice Forces undelegation and claims a specified amount for the current epoch.

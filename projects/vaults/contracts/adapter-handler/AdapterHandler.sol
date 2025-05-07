@@ -13,6 +13,8 @@ import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol"
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title The AdapterHandler contract
  * @author The InceptionLRT team
@@ -151,43 +153,72 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         emit DelegatedTo(adapter, vault, amount);
     }
 
-    /**
-     * @notice Initiates undelegation from multiple adapters and vaults
-     * @param adapters Array of adapter addresses
-     * @param vaults Array of vault addresses
-     * @param amounts Array of amounts to undelegate
-     * @param _data Array of additional data required for undelegation
-     * @dev Arrays must be of equal length
-     */
+//    /**
+//     * @notice Initiates undelegation from multiple adapters and vaults
+//     * @param adapters Array of adapter addresses
+//     * @param vaults Array of vault addresses
+//     * @param amounts Array of amounts to undelegate
+//     * @param _data Array of additional data required for undelegation
+//     * @dev Arrays must be of equal length
+//     */
+//    function undelegate(
+//        address[] calldata adapters,
+//        address[] calldata vaults,
+//        uint256[] calldata amounts,
+//        bytes[][] calldata _data
+//    ) external whenNotPaused nonReentrant onlyOperator {
+//        require(
+//            adapters.length == vaults.length &&
+//            vaults.length == amounts.length &&
+//            amounts.length == _data.length,
+//            ValueZero()
+//        );
+//
+//        uint256 undelegatedEpoch = withdrawalQueue.currentEpoch();
+//        if (adapters.length == 0) {
+//            return _undelegateAndClaim(undelegatedEpoch);
+//        }
+//
+//        uint256[] memory undelegatedAmounts = new uint256[](adapters.length);
+//        uint256[] memory claimedAmounts = new uint256[](adapters.length);
+//
+//        for (uint256 i = 0; i < adapters.length; i++) {
+//            // undelegate adapter
+//            (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
+//                adapters[i], vaults[i], amounts[i], _data[i], false
+//            );
+//
+//            emit UndelegatedFrom(
+//                adapters[i], vaults[i], undelegatedAmounts[i], claimedAmounts[i], undelegatedEpoch
+//            );
+//        }
+//
+//        // undelegate from queue
+//        withdrawalQueue.undelegate(
+//            undelegatedEpoch, adapters, vaults, undelegatedAmounts, claimedAmounts
+//        );
+//    }
+
     function undelegate(
-        address[] calldata adapters,
-        address[] calldata vaults,
-        uint256[] calldata amounts,
-        bytes[][] calldata _data
+        uint256 undelegatedEpoch,
+        UndelegateRequest[] calldata requests
     ) external whenNotPaused nonReentrant onlyOperator {
-        require(
-            adapters.length == vaults.length &&
-            vaults.length == amounts.length &&
-            amounts.length == _data.length,
-            ValueZero()
-        );
+        uint256[] memory undelegatedAmounts = new uint256[](requests.length);
+        uint256[] memory claimedAmounts = new uint256[](requests.length);
+        address[] memory adapters = new address[](requests.length);
+        address[] memory vaults = new address[](requests.length);
 
-        uint256 undelegatedEpoch = withdrawalQueue.currentEpoch();
-        if (adapters.length == 0) {
-            return _undelegateAndClaim(undelegatedEpoch);
-        }
-
-        uint256[] memory undelegatedAmounts = new uint256[](adapters.length);
-        uint256[] memory claimedAmounts = new uint256[](adapters.length);
-
-        for (uint256 i = 0; i < adapters.length; i++) {
+        for (uint256 i = 0; i < requests.length; i++) {
             // undelegate adapter
             (undelegatedAmounts[i], claimedAmounts[i]) = _undelegate(
-                adapters[i], vaults[i], amounts[i], _data[i], false
+                requests[i].adapter, requests[i].vault, requests[i].amount, requests[i].data, false
             );
 
+            adapters[i] = requests[i].adapter;
+            vaults[i] = requests[i].vault;
+
             emit UndelegatedFrom(
-                adapters[i], vaults[i], undelegatedAmounts[i], claimedAmounts[i], undelegatedEpoch
+                requests[i].adapter, requests[i].vault, undelegatedAmounts[i], claimedAmounts[i], undelegatedEpoch
             );
         }
 
@@ -370,7 +401,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         }
 
         _transferAssetFrom(_operator, amount);
-        
+
         currentRewards += amount;
         startTimeline = block.timestamp;
 
