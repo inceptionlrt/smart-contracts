@@ -514,7 +514,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("Force undelegate & claim", async function () {
-      await iVault.connect(iVaultOperator).undelegate([], [], [], []);
+      await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [])
 
       expect(await asset.balanceOf(iVault.address)).to.be.closeTo(toWei(5), transactErr);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.closeTo(toWei(2), transactErr);
