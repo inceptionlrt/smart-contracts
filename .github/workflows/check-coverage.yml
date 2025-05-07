@@ -11,6 +11,9 @@ jobs:
   check-coverage:
     name: Check Coverage
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/vaults
 
     steps:
       - name: Checkout repo
@@ -22,10 +25,9 @@ jobs:
           node-version: 20.x
 
       - name: Install deps
-        run: yarn install --frozen-lockfile && cd projects/vaults && yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile && cd ../.. yarn install --frozen-lockfile
 
       - name: Run coverage
-        working-directory: projects/vaults
         run: npm run coverage
         env:
           RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
@@ -33,7 +35,6 @@ jobs:
           NETWORK: mainnet
 
       - name: Check coverage percentage
-        working-directory: projects/vaults
         run: |
           bash ./check-coverage.sh
 
@@ -42,7 +43,7 @@ jobs:
         with:
           name: coverage report
           path: |
-            projects/vaults/coverage
+            coverage
       
       - name: Add content from 'coverage_logs.txt' file to PR comment
         if: ${{ github.event_name == 'pull_request' }}
