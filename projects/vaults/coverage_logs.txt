@@ -1,3 +1,0 @@
-Thresholds: Lines:96%, Statements:95%, Functions:95%, Branches:79%
-⚪ Lines coverage: 34.27%
-❌ Lines coverage 34.27% is below threshold 96%
