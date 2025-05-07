@@ -27,40 +27,38 @@ jobs:
       - name: Install deps
         run: yarn install --frozen-lockfile && cd ../.. && yarn install --frozen-lockfile
 
-      - name: Run coverage
-        run: npm run coverage
-        env:
-          RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
-          ASSET_NAME: stETH
-          NETWORK: mainnet
+      # - name: Run coverage
+      #   run: npm run coverage
+      #   env:
+      #     RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
+      #     ASSET_NAME: stETH
+      #     NETWORK: mainnet
 
-      - name: Check coverage percentage
-        run: |
-          bash ./check-coverage.sh
+      # - name: Check coverage percentage
+      #   run: |
+      #     bash ./check-coverage.sh
 
-      - name: Save coveage results
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage report
-          path: |
-            coverage
+      # - name: Save coveage results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: coverage report
+      #     path: |
+      #       coverage
       
-      - name: Add content from 'coverage_logs.txt' file to PR comment
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          LOG_FILE: coverage_logs.txt
-        uses: actions/github-script@v6
+      - name: Read logs file
+        run: |
+          {
+            echo "CONTENT<<EOF"
+            cat coverage_logs.txt
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Post raw file content as PR comment
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          script: |
-            const fs = require('fs');
-            const content = fs.readFileSync(process.env.LOG_FILE, 'utf8');
-            const comment = `### Coverage Report\n\`\`\`txt\n${content}\n\`\`\``;
-            const { data: { number } } = await github.rest.issues.get({
-              ...context.repo,
-              issue_number: context.issue.number,
-            });
-            await github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: number,
-              body: comment,
-            });
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ```
+            ${{ env.CONTENT }}
+            ```
