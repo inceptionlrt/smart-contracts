@@ -1,11 +1,17 @@
 name: Check coverage
 on:
   workflow_dispatch:
-  pull_request:
+  # pull_request:
     # branches:
     #   - master
     #   # TESTING ONLY
     #   - tests/refactoring
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches:
+      - master
+      # TESTING ONLY
+      - tests/refactoring
 
 jobs:
   check-coverage:
