@@ -33,7 +33,10 @@ jobs:
 
       - name: Check coverage percentage
         working-directory: projects/vaults
-        run: bash ./check-coverage.sh
+        run: |
+          ls
+          ls coverage
+          bash ./check-coverage.sh
 
       # coverage dir to artifacts
       - name: Save coveage results
