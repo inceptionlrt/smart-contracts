@@ -76,6 +76,12 @@ interface IDelegationManager {
 
     function delegatedTo(address staker) external view returns (address);
 
+    function redelegate(
+        address newOperator,
+        SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external returns (bytes32[] memory withdrawalRoots);
+
     function operatorShares(
         address operator,
         address strategy

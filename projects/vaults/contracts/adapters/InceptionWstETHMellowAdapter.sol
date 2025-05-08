@@ -11,17 +11,18 @@ import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/I
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
+import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
 import {IBaseAdapter} from "./IBaseAdapter.sol";
 import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol";
 
 /**
- * @title The MellowAdapter Contract
+ * @title The InceptionWstETHMellowAdapter Contract
  * @author The InceptionLRT team
- * @dev Handles delegation and withdrawal requests within the Mellow protocol.
- * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
  */
-contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -204,8 +205,11 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
                 _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
         }
 
-        emit MellowWithdrawn(amount - claimedAmount, claimedAmount, claimer);
+        if (amount - claimedAmount == 0) {
+            _removePendingClaimer(claimer);
+        }
 
+        emit MellowWithdrawn(amount - claimedAmount, claimedAmount, claimer);
         return (amount - claimedAmount, claimedAmount);
     }
 
@@ -220,17 +224,19 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         require(_data.length > 0, ValueZero());
 
         (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
-
         if (!emergency) {
             _removePendingClaimer(claimer);
         }
 
-        MellowAdapterClaimer(
+        // emergency claim available only for emergency claimer
+        if (emergency && _emergencyClaimer != claimer) {
+            revert OnlyEmergency();
+        }
+
+        uint256 amount = MellowAdapterClaimer(
             claimer
         ).claim(_mellowVault, address(this), type(uint256).max);
 
-
-        uint256 amount = _asset.balanceOf(address(this));
         if (amount == 0) revert ValueZero();
         _asset.safeTransfer(_inceptionVault, amount);
 
@@ -275,6 +281,17 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
         totalAllocations = totalAllocations + newAllocation - oldAllocation;
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
+    }
+
+    /**
+     * @notice Claim rewards from Mellow protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        (address farm, bytes memory farmData) = abi.decode(rewardsData, (address, bytes));
+        IStakerRewards(farm).claimRewards(_inceptionVault, rewardToken, farmData);
     }
 
     /**
@@ -338,11 +355,15 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
     /**
      * @notice Returns pending withdrawal amount for a specific vault
      * @param _mellowVault Address of the vault to check
+     * @param emergency Emergency claimer
      * @return total Amount of pending withdrawals for the vault
      */
     function pendingWithdrawalAmount(
-        address _mellowVault
+        address _mellowVault, bool emergency
     ) external view returns (uint256 total) {
+        if (emergency) {
+            return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(_emergencyClaimer);
+        }
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
             total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(pendingClaimers.at(i));
         }
@@ -382,7 +403,7 @@ contract IMellowAdapter is IIMellowAdapter, IBaseAdapter {
 
     /**
      * @notice Returns the total inactive balance
-     * @return Sum of pending withdrawals, claimable withdrawals, and claimable amount
+     * @return Sum of pending withdrawals, claimable withdrawals
      */
     function inactiveBalance() public view override returns (uint256) {
         return pendingWithdrawalAmount() + claimableWithdrawalAmount();
