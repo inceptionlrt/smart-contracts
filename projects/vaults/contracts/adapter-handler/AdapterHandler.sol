@@ -364,7 +364,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         _transferAssetFrom(_operator, amount);
 
-        currentRewards += amount;
+        currentRewards = amount;
         startTimeline = block.timestamp;
 
         emit RewardsAdded(amount, startTimeline);
