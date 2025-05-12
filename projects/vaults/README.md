@@ -103,20 +103,17 @@ To run tests for the Inception Protocol, please follow these instructions:
 2. Mellow Integration:
    
     1. Deposit flow
-        - `InceptionVault_S` via the `IMellowAdapter` deposits assets into mellow vaults proportional to assigned allocations
-        - `InceptionVault_S.delegateToMellowVault(address mellowVault, uint256 amount)` calls `IMellowAdapter.delegateMellow(uint256 amount, uint256 deadline, address mellowVault)` to forward assets to `IMellowAdapter`
-        - `IMellowAdapter` then calls `MellowWrapper.deposit(address to, address token, uint256 amount, uint256 minLpAmount, uint256 deadline)` to deposit assets to Mellow Vault
+        - `InceptionVault_S` via the `InceptionMellowAdapter` deposits assets into mellow vaults proportional to assigned allocations
+        - `InceptionVault_S.delegate(address adapter, address vault, uint256 amount, bytes[] calldata _data)` calls `InceptionMellowAdapter.delegate( address mellowVault, uint256 amount, bytes[] calldata _data )` to forward assets to `InceptionMellowAdapter`
+        - `InceptionMellowAdapter` then calls `MellowWrapper.deposit(address to, address token, uint256 amount, uint256 minLpAmount, uint256 deadline)` to deposit assets to Mellow Vault
     2. Withdraw flow
-        - `InceptionVault_S.undelegateFrom(address mellowVault, uint256 amount)` calls `IMellowAdapter.withdrawMellow(mellowVault, amount, true)` with `closePrevious` set to `true`
-        - `IMellowAdapter` then calls `registerWithdrawal(address to, uint256 lpAmount, uint256[] memory minAmounts, uint256 deadline, uint256 requestDeadline, bool closePrevious)` to generate withdrawal request
-    3. Emergency withdraw
-        - `InceptionVault_S` does support emergency withdraw using `undelegateForceFrom(address mellowVault, uint256 amount)`
-        - This inturn calls `IMellowAdapter.withdrawEmergencyMellow(address _mellowVault, uint256 amount)` which calls `mellowVault.function emergencyWithdraw(uint256[] memory minAmounts, uint256 deadline)`
-    4. Mellow rewards
+        - `InceptionVault_S.undelegate( address adapter, address vault, uint256 amount, bytes[] calldata _data )` calls `InceptionMellowAdapter.withdraw( address _mellowVault, uint256 amount, bytes[] calldata /*_data */ )`
+        - `InceptionMellowAdapter` then calls `withdraw(uint256 assets, address receiver, address owner))` to generate withdrawal request
+    3. Mellow rewards
         - Mellow staking rewards accumulation are reflected by `InceptionVault_S.ratio()` which takes into account the balance + rewards
-    5. Flash withdraw
+    4. Flash withdraw
         - `InceptionVault_S` does support flash withdrawal since withdrawal from mellow has withdrawal process delay
-        - `InceptionVault_S.flashWithdraw(uint256 iShares, address receiver)` allows the user to receive assets immediately on withdrawal transaction
+        - `InceptionVault_S.flashWithdraw(uint256 iShares, address receiver, uint256 minOut)` allows the user to receive assets immediately on withdrawal transaction
         - Flash withdrawal incurs additional flash fees, which are calculated by `InceptionLibrary` based on utilization and optimal rate
         - Part of fees go to Protocol and part are added to `depositBonusAmount` for depositors
 3. Mainnet params:
