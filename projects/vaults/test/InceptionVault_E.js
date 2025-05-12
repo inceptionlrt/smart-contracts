@@ -37,6 +37,8 @@ assets = [
     withdrawalDelayBlocks: 400,
     ratioErr: 2n,
     transactErr: 5n,
+    blockNumber: 2680454,
+    url: "https://rpc.ankr.com/eth_holesky",
     impersonateStaker: async (staker, iVault, asset, assetPool) => {
       const donor = await impersonateWithEth("0x570EDBd50826eb9e048aA758D4d78BAFa75F14AD", toWei(1));
       await asset.connect(donor).transfer(staker.address, toWei(1000));
@@ -4718,4 +4720,3 @@ assets.forEach(function (a) {
     });
   });
 });
-

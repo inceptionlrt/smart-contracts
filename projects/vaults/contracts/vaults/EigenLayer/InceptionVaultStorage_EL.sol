@@ -14,7 +14,7 @@ import {IDelegationManager} from "../../interfaces/eigenlayer-vault/eigen-core/I
 import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 
 import {IInceptionVaultErrors} from "../../interfaces/common/IInceptionVaultErrors.sol";
-import {IInceptionEigenRestaker, IInceptionEigenRestakerErrors} from "../../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
+import {IInceptionEigenRestaker} from "../../interfaces/eigenlayer-vault/IInceptionEigenRestaker.sol";
 import {IStrategyManager, IStrategy} from "../../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 
 import {Convert} from "../../lib/Convert.sol";

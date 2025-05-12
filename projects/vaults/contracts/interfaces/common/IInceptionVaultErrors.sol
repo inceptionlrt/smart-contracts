@@ -16,6 +16,8 @@ interface IInceptionVaultErrors {
 
     error InvalidTargetFlashCapacity();
 
+    error MintedLess();
+
     error InceptionOnPause();
 
     error InconsistentData();
@@ -25,6 +27,8 @@ interface IInceptionVaultErrors {
     error NullParams();
 
     error ParameterExceedsLimits(uint256 param);
+
+    error ParameterIsZero(uint256 param);
 
     error NotContract();
 
@@ -44,7 +48,11 @@ interface IInceptionVaultErrors {
 
     error IsNotAbleToRedeem();
 
+    error LowerThanMinOut(uint256 minOut);
+
     error LowerMinAmount(uint256 minAmount);
+
+    error MaxGapReached();
 
     error ZeroFlashWithdrawFee();
 
@@ -65,6 +73,14 @@ interface IInceptionVaultErrors {
     error InvalidAddress();
 
     error MoreThanMax();
-    
+
     error ValueZero();
+
+    error AdapterAlreadyAdded();
+
+    error AdapterNotFound();
+
+    error ClaimFailed();
+
+    error WithdrawalFailed();
 }

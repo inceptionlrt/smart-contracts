@@ -96,13 +96,13 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress, assetAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { unsafeAllowLinkedLibraries: true },
     );
   } else if (vaultFactory === "InVault_E1" || vaultFactory === "InVault_E2") {
     iVault = await upgrades.deployProxy(
       InceptionVaultFactory,
       [vaultName, addresses.Operator, addresses.StrategyManager, iTokenAddress, strategyAddress],
-      { unsafeAllowLinkedLibraries: true }
+      { unsafeAllowLinkedLibraries: true },
     );
   } else {
     console.error("Wrong iVaultFactory: ", vaultFactory);
@@ -161,3 +161,4 @@ const deployVault = async (addresses, vaultName, tokenName, tokenSymbol) => {
 module.exports = {
   deployVault,
 };
+
