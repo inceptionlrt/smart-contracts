@@ -184,7 +184,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
     ) public nonReentrant {
         uint256 withdrawalsNum = withdrawals.length;
         IERC20[][] memory tokens = new IERC20[][](withdrawalsNum);
-        uint256[] memory middlewareTimesIndexes = new uint256[](withdrawalsNum);
         bool[] memory receiveAsTokens = new bool[](withdrawalsNum);
 
         for (uint256 i = 0; i < withdrawalsNum; ++i) {
@@ -200,18 +199,12 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
             withdrawnAmount = _claimCompletedWithdrawalsForVault(
                 withdrawals,
                 tokens,
-                middlewareTimesIndexes,
                 receiveAsTokens
             );
         } else {
             if (!_restakerExists(restaker)) revert RestakerNotRegistered();
             withdrawnAmount = IInceptionEigenRestaker(restaker)
-                .claimWithdrawals(
-                    withdrawals,
-                    tokens,
-                    middlewareTimesIndexes,
-                    receiveAsTokens
-                );
+                .claimWithdrawals(withdrawals, tokens, receiveAsTokens);
         }
 
         emit WithdrawalClaimed(withdrawnAmount);
@@ -230,7 +223,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
     function _claimCompletedWithdrawalsForVault(
         IDelegationManager.Withdrawal[] memory withdrawals,
         IERC20[][] memory tokens,
-        uint256[] memory middlewareTimesIndexes,
         bool[] memory receiveAsTokens
     ) internal returns (uint256) {
         uint256 balanceBefore = _asset.balanceOf(address(this));
@@ -238,7 +230,6 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
         delegationManager.completeQueuedWithdrawals(
             withdrawals,
             tokens,
-            middlewareTimesIndexes,
             receiveAsTokens
         );
 
