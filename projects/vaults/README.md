@@ -75,6 +75,27 @@ Before running tests create `.env` file in the root of the `vaults` project base
 
 To run tests for the Inception Protocol, please follow these instructions:
 
+## Coverage
+
+1. Generate coverage report.
+
+To run coverage, refer to the `package.json` scripts.
+
+It will generate a coverage report in the `coverage` folder. Open `index.html` in your browser to view the report.
+
+2. Check if coverage meets the minimum threshold.
+
+There is a `check-coverage.sh` script that will check if coverage meets the minimum threshold. The threshold for each coverage type could be set in the the `check-coverage.sh` file.
+If any of threshold is not met, the script will exit with a non-zero code (job will fail).
+After running coverage check, it will add the results as pull request comment.
+Also, CI job will generate the full report as artfact, download it and open `index.html` file.
+
+> Don't decrease the coverage threshold values in the script file, write more tests instead. Increasing the value is encouraged.
+
+## CI
+
+There is manually triggered job to run the coverage check.
+
 ## InceptionVault_S
 
 1. User flow:

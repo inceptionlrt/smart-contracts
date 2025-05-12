@@ -5,8 +5,11 @@
   "scripts": {
     "format": "prettier --write scripts/*.js tasks/*.js tests/*.js",
     "test": "npx hardhat test",
+    "// coverage": "Generates coverage report to 'coverage' dir",
     "coverage": "npx hardhat coverage",
-    "coverage:vault": "npx hardhat coverage --sources vaults/Symbiotic/InceptionVault_S.sol",
+    "coverage:check": "./check-coverage.sh",
+    "// coverage:matrix": "Generate a JSON object that maps which tests hit which lines of code",
+    "coverage:matrix": "npx hardhat coverage --matrix",
     "slither:vault": "slither ./contracts/vaults/Symbiotic/InceptionVault_S.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin"
   },
   "license": "MIT",
@@ -35,6 +38,7 @@
     "ethers": "^6.4.0",
     "hardhat": "^2.22.19",
     "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-coverage": "^0.9.19",
     "hardhat-deploy": "^0.12.4",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-storage-layout": "^0.1.7",
