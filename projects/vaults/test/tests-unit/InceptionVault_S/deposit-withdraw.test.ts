@@ -220,7 +220,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
               }
             }
           }
-          let contractBonus = await iVault.calculateDepositBonus(await amount.amount());
+          const contractBonus = await iVault.calculateDepositBonus(await amount.amount());
           console.log(`Expected deposit bonus:\t${depositBonus.format()}`);
           console.log(`Contract deposit bonus:\t${contractBonus.format()}`);
           expect(contractBonus).to.be.closeTo(depositBonus, 1n);
@@ -435,7 +435,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
               }
             }
           }
-          let contractFee = await iVault.calculateFlashWithdrawFee(await amount.amount());
+          const contractFee = await iVault.calculateFlashWithdrawFee(await amount.amount());
           console.log(`Expected withdraw fee:\t${withdrawFee.format()}`);
           console.log(`Contract withdraw fee:\t${contractFee.format()}`);
           expect(contractFee).to.be.closeTo(withdrawFee, 1n);
@@ -1292,7 +1292,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
         console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
-        let tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, receiver.address, 0n);
+        const tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, receiver.address, 0n);
         const receipt = await tx.wait();
         const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
         expect(withdrawEvent.length).to.be.eq(1);
@@ -1351,9 +1351,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         const expectedFee = await iVault.calculateFlashWithdrawFee(amount);
         console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
-        let tx = await iVault
-          .connect(staker)
-        ["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
+        const tx = await iVault.connect(staker)["redeem(uint256,address,address)"](shares, receiver.address, staker.address);
         const receipt = await tx.wait();
         const withdrawEvent = receipt.logs?.filter(e => e.eventName === "Withdraw");
         expect(withdrawEvent.length).to.be.eq(1);
@@ -1518,8 +1516,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
   });
 
-  describe("Deposit slippage", function() {
-    it("Deposited less shares than min out", async function() {
+  describe("Deposit slippage", function () {
+    it("Deposited less shares than min out", async function () {
       await iVault.setTargetFlashCapacity(1n);
       await expect(
         iVault.connect(staker)["deposit(uint256,address,uint256)"](toWei(1), staker.address, toWei(100))
