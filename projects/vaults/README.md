@@ -87,6 +87,10 @@ It will generate a coverage report in the `coverage` folder. Open `index.html` i
 
 There is a `check-coverage.sh` script that will check if coverage meets the minimum threshold. The threshold for each coverage type could be set in the the `check-coverage.sh` file.
 
+> Don't decrease the coverage threshold values, write more tests instead.
+
+After running coverage check, it will add the results to pull request comment.
+
 ## CI
 
 There is manually triggered job to run the coverage check.
