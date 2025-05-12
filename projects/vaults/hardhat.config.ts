@@ -20,15 +20,7 @@ const config: HardhatUserConfig = {
         runs: 100,
       },
     },
-  },
-  networks: {
-    hardhat: {
-      forking: {
-        url: `${process.env.MAINNET_RPC}`,
-        blockNumber: 21861027,
-      },
-    },
-  },
+  }
 };
 
 export default config;
