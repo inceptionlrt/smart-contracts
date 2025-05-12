@@ -4,8 +4,6 @@ on:
   pull_request:
     branches:
       - master
-      # TESTING ONLY
-      - tests/refactoring
 
 jobs:
   check-coverage:
