@@ -3,7 +3,7 @@ import { impersonateWithEth, toWei } from "../../helpers/utils";
 
 export const wstETH = {
     vaultName: "InstEthVault",
-    vaultFactory: "InVault_S_E2",
+    vaultFactory: "InceptionVault_S",
     assetName: "stETH",
     assetAddress: "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
     assetPoolName: "LidoMockPool",

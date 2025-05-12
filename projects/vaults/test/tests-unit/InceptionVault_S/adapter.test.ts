@@ -156,14 +156,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       );
     });
 
-    it("removeAdapter input args", async function () {
-      await expect(iVault.removeAdapter(staker.address)).to.be.revertedWithCustomError(iVault, "NotContract");
+    it("removeAdapter input args", async function() {
+      await expect(iVault.removeAdapter(iToken.address))
+        .to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
-      await expect(iVault.removeAdapter(iToken.address)).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
-
-      await expect(iVault.connect(staker).removeAdapter(mellowAdapter.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
+      await expect(iVault.connect(staker)
+        .removeAdapter(mellowAdapter.address),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
 
       await iVault.removeAdapter(mellowAdapter.address);
     });

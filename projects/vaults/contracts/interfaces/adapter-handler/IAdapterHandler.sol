@@ -68,6 +68,37 @@ interface IAdapterHandler {
     event AdapterRemoved(address adapter);
 
     /**
+     * @dev Emitted when new rewards treasury set.
+     * @param treasury The address of the new treasury.
+     */
+    event SetRewardsTreasury(address treasury);
+
+    /**
+     * @dev Emitted when rewards claimed from adapter.
+     * @param adapter The address of the removed adapter.
+     * @param token The address of reward token.
+     * @param amount Amount of reward.
+     */
+    event RewardsClaimed(address adapter, address token, uint256 amount);
+
+    /**
+     * @dev Emitted when rewards added to vault.
+     * @param amount Amount of reward.
+     * @param startTimeline timestamp of added rewards.
+     */
+    event RewardsAdded(uint256 amount, uint256 startTimeline);
+
+    /**
+     * @dev Emitted when rewards timeline changed.
+     * @param rewardsTimeline new rewards timeline.
+     * @param newTimelineInSeconds new rewards timeline in seconds.
+     */
+    event RewardsTimelineChanged(
+        uint256 rewardsTimeline,
+        uint256 newTimelineInSeconds
+    );
+
+    /**
      * @dev Deprecated structure representing a withdrawal request.
      * @param epoch The epoch in which the withdrawal was requested.
      * @param receiver The address receiving the withdrawn funds.
@@ -77,5 +108,19 @@ interface IAdapterHandler {
         uint256 epoch;
         address receiver;
         uint256 amount;
+    }
+
+    /*
+     * Struct to define an undelegation request.
+     * @param adapter The address of the adapter contract handling the undelegation.
+     * @param vault The address of the vault from which assets are undelegated.
+     * @param amount The amount of assets to undelegate.
+     * @param data An array of bytes for additional parameters or instructions specific to the adapter.
+     */
+    struct UndelegateRequest {
+        address adapter;
+        address vault;
+        uint256 amount;
+        bytes[] data;
     }
 }

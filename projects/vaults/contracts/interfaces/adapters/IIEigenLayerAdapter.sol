@@ -39,5 +39,9 @@ interface IIEigenLayerAdapter is IIBaseAdapter {
         address indexed newValue
     );
 
+    event Undelegated();
+
+    event RedelegatedTo(address operator);
+
     function setRewardsCoordinator(address newRewardCoordinator, address claimer) external;
 }

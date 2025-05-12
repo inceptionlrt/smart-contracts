@@ -64,7 +64,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
     eigenLayerAdapter: any;
 
   if (options?.adapters?.includes(adapters.Mellow)) {
-    const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
+    const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
       [mellowVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
     ]);

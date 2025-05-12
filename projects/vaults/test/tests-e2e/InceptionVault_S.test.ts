@@ -330,65 +330,40 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
     });
 
-    it("Claim Symbiotic withdrawal transfer funds from Symbiotic to the vault", async function () {
+    it("Claim Symbiotic withdrawal transfer funds from Symbiotic to the vault", async function() {
       const pendingWithdrawalsSymbiotic = await symbioticAdapter.pendingWithdrawalAmount();
       const totalAssetsBefore = await iVault.totalAssets();
       const adapterBalanceBefore = await asset.balanceOf(symbioticAdapter.address);
 
       // Vault 1
       params = abi.encode(
-        ["address", "uint256", "address"],
-        [await iVaultOperator.getAddress(), (await symbioticVaults[0].vault.currentEpoch()) - 1n, undelegateClaimer1],
+        ["address", "address"],
+        [await iVaultOperator.getAddress(), undelegateClaimer1],
       );
 
-      await expect(
-        iVault
-          .connect(iVaultOperator)
-          .claim(1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
+      await expect(iVault.connect(iVaultOperator).claim(
+        1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
 
       params = abi.encode(
-        ["address", "uint256", "address"],
-        [symbioticVaults[0].vaultAddress, await symbioticVaults[0].vault.currentEpoch(), undelegateClaimer2],
-      );
-
-      await expect(
-        iVault
-          .connect(iVaultOperator)
-          .claim(1, [await symbioticAdapter.getAddress()], [await iVaultOperator.getAddress()], [[params]]),
-      ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidEpoch");
-
-      // params = abi.encode(
-      //   ["address", "uint256"],
-      //   [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 2n],
-      // );
-
-      // await expect(iVault.connect(iVaultOperator).claim(await symbioticAdapter.getAddress(), [params])).to.be.revertedWithCustomError(symbioticAdapter, "AlreadyClaimed");
-
-      params = abi.encode(
-        ["address", "uint256", "address"],
-        [symbioticVaults[0].vaultAddress, (await symbioticVaults[0].vault.currentEpoch()) - 1n, undelegateClaimer1],
+        ["address", "address"],
+        [symbioticVaults[0].vaultAddress, undelegateClaimer1],
       );
 
       // Vault 2
       let params2 = abi.encode(
-        ["address", "uint256", "address"],
-        [symbioticVaults[1].vaultAddress, (await symbioticVaults[1].vault.currentEpoch()) - 1n, undelegateClaimer2],
+        ["address", "address"],
+        [symbioticVaults[1].vaultAddress, undelegateClaimer2],
       );
 
-      await iVault
-        .connect(iVaultOperator)
-        .claim(
-          1,
-          [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
-          [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
-          [[params], [params2]],
-        );
+      await iVault.connect(iVaultOperator).claim(1,
+        [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
+        [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
+        [[params], [params2]],
+      );
 
-      await expect(
-        iVault
-          .connect(iVaultOperator)
-          .claim(1, [await symbioticAdapter.getAddress()], [symbioticVaults[0].vaultAddress], [[params]]),
+      await expect(iVault.connect(iVaultOperator).claim(
+        1, [await symbioticAdapter.getAddress()], [symbioticVaults[0].vaultAddress], [[params]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "NothingToClaim");
 
       const totalAssetsAfter = await iVault.totalAssets();
@@ -742,6 +717,19 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       );
     });
 
+    it("getTotalDeposited includes redeemable amount", async function() {
+      const totalDeposited = await iVault.getTotalDeposited();
+      const totalDelegated = await iVault.getTotalDelegated();
+      const totalAssets = await iVault.totalAssets();
+      const totalPendingWithdrawals = await iVault.getTotalPendingWithdrawals();
+      const totalPendingEmergencyWithdrawals = await iVault.getTotalPendingEmergencyWithdrawals();
+      const redeemable = await iVault.redeemReservedAmount();
+
+      expect(totalDeposited).to.be.eq(
+        totalDelegated + totalAssets + totalPendingWithdrawals + totalPendingEmergencyWithdrawals - redeemable
+      );
+    });
+
     it("Staker is able to redeem", async function () {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
@@ -880,7 +868,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       console.log(`Shares:\t\t\t\t\t${shares.format()}`);
       console.log(`Expected fee:\t\t\t${expectedFee.format()}`);
 
-      let tx = await iVault.connect(staker).flashWithdraw(shares, receiver.address, 0n);
+      let tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](shares, receiver.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
       expect(withdrawEvent.length).to.be.eq(1);

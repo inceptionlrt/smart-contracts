@@ -1,10 +1,9 @@
-
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import hardhat from "hardhat";
 import { wstETH } from "./data/assets/stETH";
-import { vaults } from './data/vaults';
+import { vaults } from "./data/vaults";
 import {
   addRewardsToStrategy,
   calculateRatio,
@@ -12,14 +11,14 @@ import {
   mineBlocks,
   toWei,
 } from "./helpers/utils";
-import { adapters } from "./src/constants";
+import { adapters, emptyBytes } from "./src/constants";
 import { abi, initVault } from "./src/init-vault";
 
 const { ethers, upgrades, network } = hardhat;
 const assetData = wstETH;
 const eigenLayerVaults = vaults.eigenLayer;
 
-describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
+describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
   const coder = abi;
   const encodedSignatureWithExpiry = coder.encode(
     ["tuple(uint256 expiry, bytes signature)"], [{ expiry: 0, signature: ethers.ZeroHash }],
@@ -31,7 +30,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let ratioErr, transactErr;
   let snapshot;
 
-  before(async function () {
+  before(async function() {
     await network.provider.send("hardhat_reset", [
       {
         forking: {
@@ -41,9 +40,12 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       },
     ]);
 
-    ({iToken, iVault, ratioFeed, asset, iVaultOperator, eigenLayerAdapter, withdrawalQueue} =
-      await initVault(assetData, { adapters: [adapters.EigenLayer], eigenAdapterContractName: 'InceptionEigenAdapter' }));
-      
+    ({ iToken, iVault, ratioFeed, asset, iVaultOperator, eigenLayerAdapter, withdrawalQueue } =
+      await initVault(assetData, {
+        adapters: [adapters.EigenLayer],
+        eigenAdapterContractName: "InceptionEigenAdapter",
+      }));
+
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
 
@@ -57,16 +59,16 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     snapshot = await helpers.takeSnapshot();
   });
 
-  after(async function () {
+  after(async function() {
     if (iVault) {
       await iVault.removeAllListeners();
     }
   });
 
-  describe("InceptionEigenAdapter", function () {
+  describe("InceptionEigenAdapter", function() {
     let adapter, iVaultMock, trusteeManager;
 
-    beforeEach(async function () {
+    beforeEach(async function() {
       await snapshot.restore();
       iVaultMock = staker2;
       trusteeManager = staker3;
@@ -87,24 +89,24 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       ]);
     });
 
-    it("getOperatorAddress: equals 0 address before any delegation", async function () {
+    it("getOperatorAddress: equals 0 address before any delegation", async function() {
       expect(await adapter.getOperatorAddress()).to.be.eq(ethers.ZeroAddress);
     });
 
-    it("getOperatorAddress: reverts when _data length is < 2", async function () {
+    it("getOperatorAddress: reverts when _data length is < 2", async function() {
       const amount = toWei(0);
       console.log(`asset address: ${await asset.balanceOf(trusteeManager.address)}`);
       await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
       await expect(adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], amount, [])).to.be.revertedWithCustomError(adapter, "InvalidDataLength");
     });
 
-    it("getOperatorAddress: equals operator after delegation", async function () {
+    it("getOperatorAddress: equals operator after delegation", async function() {
       console.log(`asset address: ${await asset.balanceOf(trusteeManager.address)}`);
       await adapter.connect(trusteeManager).delegate(eigenLayerVaults[0], 0n, delegateData);
       expect(await adapter.getOperatorAddress()).to.be.eq(eigenLayerVaults[0]);
     });
 
-    it("delegateToOperator: reverts when called by not a trustee", async function () {
+    it("delegateToOperator: reverts when called by not a trustee", async function() {
       const amount = toWei(1);
       await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
       await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, []);
@@ -114,7 +116,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       ).to.be.revertedWithCustomError(adapter, "NotVaultOrTrusteeManager");
     });
 
-    it("delegateToOperator: reverts when delegates to 0 address", async function () {
+    it("delegateToOperator: reverts when delegates to 0 address", async function() {
       const amount = toWei(1);
       await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
       await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, []);
@@ -124,7 +126,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       ).to.be.revertedWithCustomError(adapter, "NullParams");
     });
 
-    it("delegateToOperator: reverts when delegates unknown operator", async function () {
+    it("delegateToOperator: reverts when delegates unknown operator", async function() {
       const amount = toWei(1);
       await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
       await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
@@ -135,7 +137,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         .to.be.revertedWithCustomError(iVault, "OperatorNotRegistered");
     });
 
-    it("withdrawFromEL: reverts when called by not a trustee", async function () {
+    it("withdrawFromEL: reverts when called by not a trustee", async function() {
       const amount = toWei(1);
       await asset.connect(trusteeManager).approve(await adapter.getAddress(), amount);
       await adapter.connect(trusteeManager).delegate(ZeroAddress, amount, delegateData);
@@ -147,21 +149,21 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       );
     });
 
-    it("getVersion: equals 3", async function () {
+    it("getVersion: equals 3", async function() {
       expect(await adapter.getVersion()).to.be.eq(3);
     });
 
-    it("pause(): only owner can", async function () {
+    it("pause(): only owner can", async function() {
       expect(await adapter.paused()).is.false;
       await adapter.connect(iVaultMock).pause();
       expect(await adapter.paused()).is.true;
     });
 
-    it("pause(): another address can not", async function () {
+    it("pause(): another address can not", async function() {
       await expect(adapter.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("unpause(): only owner can", async function () {
+    it("unpause(): only owner can", async function() {
       await adapter.connect(iVaultMock).pause();
       expect(await adapter.paused()).is.true;
 
@@ -169,24 +171,24 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await adapter.paused()).is.false;
     });
 
-    it("unpause(): another address can not", async function () {
+    it("unpause(): another address can not", async function() {
       await adapter.connect(iVaultMock).pause();
       expect(await adapter.paused()).is.true;
       await expect(adapter.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
-  describe("EigenLayer | Base flow no flash", function () {
+  describe("EigenLayer | Base flow no flash", function() {
     let delegatedEL = 0n;
     let tx;
     let undelegateEpoch;
 
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("Initial stats", async function () {
+    it("Initial stats", async function() {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -195,7 +197,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.getFreeBalance()).to.be.eq(0n);
     });
 
-    it("User can deposit to iVault", async function () {
+    it("User can deposit to iVault", async function() {
       const totalDeposited = toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -214,7 +216,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Delegate to EigenLayer#1", async function () {
+    it("Delegate to EigenLayer#1", async function() {
       const amount = (await iVault.getFreeBalance()) / 3n;
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -225,7 +227,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       delegatedEL += amount;
     });
 
-    it("Delegate all to eigenOperator#1", async function () {
+    it("Delegate all to eigenOperator#1", async function() {
       const amount = await iVault.getFreeBalance();
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -234,7 +236,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       delegatedEL += amount;
     });
 
-    it("Update ratio", async function () {
+    it("Update ratio", async function() {
       const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -242,7 +244,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.ratio()).eq(ratio);
     });
 
-    it("Update asset ratio", async function () {
+    it("Update asset ratio", async function() {
       console.log("totalDelegatedBefore", await iVault.getTotalDelegated());
       await addRewardsToStrategy(assetData.assetStrategy, e18, staker3);
       console.log("totalDelegatedAfter", await iVault.getTotalDelegated());
@@ -253,7 +255,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).lt(e18);
     });
 
-    it("User can withdraw all", async function () {
+    it("User can withdraw all", async function() {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -289,7 +291,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     //   expect(await iVault.ratio()).eq(calculatedRatio);
     // });
 
-    it("Undelegate from EigenLayer", async function () {
+    it("Undelegate from EigenLayer", async function() {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -311,7 +313,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
     });
 
-    it("Claim from EigenLayer", async function () {
+    it("Claim from EigenLayer", async function() {
       const receipt = await tx.wait();
 
       const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
@@ -362,7 +364,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       console.log(`Total assets after claim:\t\t\t${totalAssetsBefore.format()}`);
     });
 
-    it("Staker is able to redeem", async function () {
+    it("Staker is able to redeem", async function() {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -374,7 +376,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
     });
 
-    it("Redeem withdraw", async function () {
+    it("Redeem withdraw", async function() {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
@@ -408,15 +410,15 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
   });
 
-  describe("Emergency undelegate", function () {
+  describe("Emergency undelegate", function() {
     let undelegateTx;
 
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("Initial stats", async function () {
+    it("Initial stats", async function() {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -425,7 +427,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.getFreeBalance()).to.be.eq(0n);
     });
 
-    it("User can deposit to iVault", async function () {
+    it("User can deposit to iVault", async function() {
       let totalDeposited = toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -444,14 +446,14 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Delegate to EigenLayer#1", async function () {
+    it("Delegate to EigenLayer#1", async function() {
       const amount = await iVault.getFreeBalance();
       await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, ZeroAddress, amount, []);
       await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, eigenLayerVaults[0], 0n, delegateData);
       expect(await iVault.getTotalDelegated()).to.be.closeTo(toWei(20), transactErr);
     });
 
-    it("Emergency undelegate", async function () {
+    it("Emergency undelegate", async function() {
       undelegateTx = await iVault.connect(iVaultOperator)
         .emergencyUndelegate([eigenLayerAdapter.address], [eigenLayerVaults[0]], [toWei(5)], [[]]);
 
@@ -461,7 +463,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
     });
 
-    it("User withdraw", async function () {
+    it("User withdraw", async function() {
       const tx = await iVault.connect(staker).withdraw(toWei(2), staker);
       const receipt = await tx.wait();
       const events = receipt.logs?.filter(e => e.eventName === "Withdraw");
@@ -474,7 +476,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
     });
 
-    it("Emergency claim", async function () {
+    it("Emergency claim", async function() {
       const receipt = await undelegateTx.wait();
 
       const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
@@ -520,8 +522,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(toWei(1), ratioErr);
     });
 
-    it("Force undelegate & claim", async function () {
-      await iVault.connect(iVaultOperator).undelegate([], [], [], []);
+    it("Force undelegate & claim", async function() {
+      await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [])
 
       expect(await asset.balanceOf(iVault.address)).to.be.closeTo(toWei(5), transactErr);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.closeTo(toWei(2), transactErr);
@@ -529,7 +531,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       // ----------------
     });
 
-    it("Redeem", async function () {
+    it("Redeem", async function() {
       const tx = await iVault.connect(staker).redeem(staker.address);
       const receipt = await tx.wait();
       const events = receipt.logs?.filter(e => e.eventName === "Redeem");
@@ -540,16 +542,16 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
   });
 
-  describe("Two adapters", function () {
+  describe("Two adapters", function() {
     let eigenLayerAdapter2, undelegateEpoch, tx;
     let totalDeposited = 0n;
 
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("Add second adapter", async function () {
+    it("Add second adapter", async function() {
       let [deployer] = await ethers.getSigners();
       const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
 
@@ -568,7 +570,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await iVault.addAdapter(eigenLayerAdapter2.address);
     });
 
-    it("Initial stats", async function () {
+    it("Initial stats", async function() {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -577,7 +579,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await iVault.getFreeBalance()).to.be.eq(0n);
     });
 
-    it("User can deposit to iVault", async function () {
+    it("User can deposit to iVault", async function() {
       totalDeposited += toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -596,7 +598,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Delegate to EigenLayer", async function () {
+    it("Delegate to EigenLayer", async function() {
       await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, eigenLayerVaults[0], 0n, delegateData);
       await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, ZeroAddress, toWei(10), []);
 
@@ -606,7 +608,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("User can withdraw all", async function () {
+    it("User can withdraw all", async function() {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -632,7 +634,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(totalPW).to.be.closeTo(shares, transactErr);
     });
 
-    it("Undelegate from EigenLayer", async function () {
+    it("Undelegate from EigenLayer", async function() {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -654,7 +656,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
           [eigenLayerAdapter.address, eigenLayerAdapter2.address],     // all adapters
           [eigenLayerVaults[0], eigenLayerVaults[1]],                 // all vaults
           [delegatedTo1, delegatedTo2],                               // all amounts
-          [[], []]                                                   // all _data arrays
+          [[], []],                                                   // all _data arrays
         );
       const totalDepositedAfter = await iVault.getTotalDeposited();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -665,7 +667,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Claim from EigenLayer", async function () {
+    it("Claim from EigenLayer", async function() {
       const receipt = await tx.wait();
 
       const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
@@ -737,7 +739,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Staker is able to redeem", async function () {
+    it("Staker is able to redeem", async function() {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -749,7 +751,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
     });
 
-    it("Redeem withdraw", async function () {
+    it("Redeem withdraw", async function() {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
@@ -782,6 +784,67 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       expect(totalAssetsAfter).to.be.closeTo(0n, transactErr * 3n);
 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+    });
+  });
+
+  describe("Emergency undelegate cannot finish normal undelegation flow", function() {
+    it("deposit & delegate & undelegate", async function() {
+      const elVault = eigenLayerVaults[0];
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+
+      // deposit & delegate 10
+      await iVault.connect(staker).deposit(toWei(10), staker.address);
+      await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, elVault, 0n, delegateData);
+      await iVault.connect(iVaultOperator).delegate(await eigenLayerAdapter.getAddress(), ZeroAddress, toWei(9), []);
+
+      // withdraw 3
+      await iVault.connect(staker).withdraw(toWei(3), staker.address);
+
+      // emergency undelegate 5
+      await iVault.connect(iVaultOperator).emergencyUndelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(5)], [[]]);
+      // normal undelegate 3
+      let tx = await iVault.connect(iVaultOperator).undelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(3)], [[]]);
+
+      // get emergency claimer
+      const receipt = await tx.wait();
+
+      const eigenLayerAdapterFactory = await ethers.getContractFactory("InceptionEigenAdapter");
+      let withdrawalQueuedEvent;
+      receipt.logs.forEach(log => {
+        try {
+          const parsedLog = eigenLayerAdapterFactory.interface.parseLog(log);
+          if (parsedLog) {
+            console.log("🔹 Event Detected:");
+            withdrawalQueuedEvent = parsedLog.args;
+            return;
+          }
+        } catch (error) {
+        }
+      });
+
+      const wData = {
+        staker1: withdrawalQueuedEvent["stakerAddress"],
+        staker2: elVault,
+        staker3: eigenLayerAdapter.address,
+        nonce1: withdrawalQueuedEvent["nonce"],
+        nonce2: withdrawalQueuedEvent["withdrawalStartBlock"],
+        tokens: [withdrawalQueuedEvent["strategy"]],
+        shares: [withdrawalQueuedEvent["shares"]],
+      };
+
+      // Encode the data
+      const _data = [
+        coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [wData]),
+        coder.encode(["address[][]"], [[[assetData.assetAddress]]]),
+        coder.encode(["bool[]"], [[true]]),
+      ];
+
+      await mineBlocks(50);
+
+      // claim
+      await expect(iVault.connect(iVaultOperator).emergencyClaim([eigenLayerAdapter.address], [elVault], [_data]))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "OnlyEmergency");
     });
   });
 });

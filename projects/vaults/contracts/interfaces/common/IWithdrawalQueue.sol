@@ -72,6 +72,8 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     /// @return amount The total amount redeemed
     function redeem(address receiver) external returns (uint256 amount);
 
+    function redeem(address receiver, uint256 userEpochIndex) external returns (uint256 amount);
+
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/

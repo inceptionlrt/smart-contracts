@@ -95,13 +95,41 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
         // delegate to EL
-            _delegationManager.delegateTo(
+        _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
         );
 
         return 0;
+    }
+
+    /*
+     * @notice Undelegates the contract from the current operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits an `Undelegated` event upon successful undelegation.
+    */
+    function undelegate() external onlyTrustee whenNotPaused {
+        _delegationManager.undelegate(address(this));
+        emit Undelegated();
+    }
+
+    /*
+     * @notice Redelegates the contract to a new operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits a `RedelegatedTo` event upon successful redelegation.
+     * @param operator The address of the new operator to delegate to.
+     * @param newOperatorApproverSig The signature and expiry details for the new operator's approval.
+     * @param approverSalt A unique salt used for the approval process to prevent replay attacks.
+    */
+    function redelegate(
+        address operator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee whenNotPaused {
+        require(operator != address(0), ZeroAddress());
+        _delegationManager.redelegate(operator, newOperatorApproverSig, approverSalt);
+        emit RedelegatedTo(operator);
     }
 
     /**
@@ -172,6 +200,11 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
+
+        // emergency claim available only for emergency queued withdrawals
+        if (emergency) {
+            require(_emergencyQueuedWithdrawals[withdrawal.nonce] == true, OnlyEmergency());
+        }
 
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
@@ -280,6 +313,10 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         return 3;
     }
 
+    /*******************************************************************************
+                        Rewards
+    *******************************************************************************/
+
     /**
      * @notice Updates the rewards coordinator address
      * @dev Can only be called by the owner
@@ -308,5 +345,16 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+    }
+
+    /**
+     * @notice Claim rewards from Eigenlayer protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
+        IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
     }
 }

@@ -93,7 +93,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       const withdrawalAmount = flashMinAmount + 1n;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
+      const tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -109,7 +109,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       const withdrawalAmount = flashMinAmount;
 
       // act
-      const tx = await iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
+      const tx = await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](withdrawalAmount, staker.address, 0n);
       const receipt = await tx.wait();
       const withdrawEvent = receipt.logs?.filter(e => e.eventName === "FlashWithdraw");
 
@@ -123,9 +123,8 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       // arrange
       const assetBalanceBefore = await asset.balanceOf(staker);
       const withdrawalAmount = flashMinAmount - 1n;
-
       // act
-      const withdrawalTx = iVault.connect(staker).flashWithdraw(withdrawalAmount, staker.address, 0n);
+      const withdrawalTx = iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](withdrawalAmount, staker.address, 0n);
       await expect(withdrawalTx).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
 
       // assert

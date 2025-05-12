@@ -10,7 +10,7 @@ export const stETH = {
   assetName: "stETH",
   assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", // wstETH, collateral
   vaultName: "InstEthVault",
-  vaultFactory: "InVault_S_E2",
+  vaultFactory: "InceptionVault_S",
   iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
   ratioErr: 3n,
   transactErr: 5n,

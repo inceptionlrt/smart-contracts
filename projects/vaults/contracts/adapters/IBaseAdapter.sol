@@ -43,7 +43,7 @@ IIBaseAdapter
     function __IBaseAdapter_init(
         IERC20 asset,
         address trusteeManager
-    ) internal initializer {
+    ) internal onlyInitializing {
         __Pausable_init();
         __ReentrancyGuard_init();
         __Ownable_init();
@@ -51,6 +51,14 @@ IIBaseAdapter
 
         _asset = asset;
         _trusteeManager = trusteeManager;
+    }
+
+    /**
+     * @notice Claims the free balance held by this contract and transfers it to the Inception Vault.
+     * @dev Can only be called by a trustee.
+     */
+    function claimFreeBalance() external onlyTrustee() {
+        _asset.safeTransfer(_inceptionVault, claimableAmount());
     }
 
     /**
