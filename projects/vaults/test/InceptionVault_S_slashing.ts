@@ -1840,7 +1840,7 @@ describe("Symbiotic Vault Slashing", function() {
       // slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
       // slash half of the stake
-      await assetData.applySymbioticSlash(symbioticVaults[0].vault, totalStake / 2n);
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake / 2n);
       expect(await calculateRatio(iVault, iToken)).to.be.eq(1852573758880544819n);
 
       const pendingWithdrawal = await iVault.getPendingWithdrawals(symbioticAdapter.address);

@@ -228,14 +228,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
-
-        if (_isSlashed(withdrawal)) {
-            _refreshEpoch(withdrawal);
-            return;
-        }
-
-        _makeRedeemable(withdrawal);
+        _isSlashed(withdrawal) ? _refreshEpoch(withdrawal) : _makeRedeemable(withdrawal);
     }
 
     /*

@@ -62,7 +62,7 @@ export async function initVault(assetData: typeof stETH, options?: { adapters?: 
     eigenLayerAdapter: any;
 
   if (options?.adapters?.includes(adapters.Mellow)) {
-    const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapter");
+    const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
       // [mellowVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
       [assetData.adapters.mellow[0].vaultAddress], assetData.asset.address, assetData.vault.operator,

@@ -6,7 +6,7 @@ export const stETH = {
   transactErr: 5n,
   vault: {
     name: "InstEthVault",
-    contractName: "InVault_S_E2", // vaultFactory
+    contractName: "InceptionVault_S", // vaultFactory
     operator: '0xd87D15b80445EC4251e33dBe0668C335624e54b7', // iVaultOperator
   },
 
