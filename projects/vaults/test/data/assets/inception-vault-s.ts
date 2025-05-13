@@ -4,11 +4,11 @@ import { impersonateWithEth, toWei } from '../../helpers/utils';
 const { ethers } = hardhat;
 
 const donorAddress = '0x43594da5d6A03b2137a04DF5685805C676dEf7cB';
-const stETHAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
+const stETHAddress = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84'; // Lido stETH
 
 export const stETH = {
   assetName: "stETH",
-  assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+  assetAddress: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", // wstETH, collateral
   vaultName: "InstEthVault",
   vaultFactory: "InceptionVault_S",
   iVaultOperator: "0xd87D15b80445EC4251e33dBe0668C335624e54b7",
