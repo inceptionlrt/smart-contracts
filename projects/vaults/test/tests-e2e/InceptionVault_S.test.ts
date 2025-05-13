@@ -1,8 +1,6 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { stETH } from "../data/assets/inception-vault-s";
-import { vaults } from "../data/vaults";
 import {
   calculateRatio,
   e18,
@@ -10,14 +8,15 @@ import {
   toWei,
 } from "../helpers/utils";
 import { adapters, emptyBytes } from "../src/constants";
-import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault";
-
-const symbioticVaults = vaults.symbiotic;
-const mellowVaults = vaults.mellow;
+import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault-new";
+import { testrunConfig } from '../testrun.config';
 
 const { ethers, network } = hardhat;
-const assetData = stETH;
-describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function() {
+const assetData = testrunConfig.assetData;
+const symbioticVaults = assetData.adapters.symbiotic;
+const mellowVaults = assetData.adapters.mellow;
+
+describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function () {
   this.timeout(150000);
   let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, withdrawalQueue;
   let iVaultOperator, deployer, staker, staker2, staker3, treasury;
@@ -28,8 +27,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function(
   before(async function() {
     if (process.env.ASSETS) {
       const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
-      if (!assets.includes(assetData.assetName.toLowerCase())) {
-        console.log(`${assetData.assetName} is not in the list, going to skip`);
+      if (!assets.includes(assetData.asset.name.toLowerCase())) {
+        console.log(`${assetData.asset.name} is not in the list, going to skip`);
         this.skip();
       }
     }
@@ -37,7 +36,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function(
     await network.provider.send("hardhat_reset", [
       {
         forking: {
-          jsonRpcUrl: assetData.url ? assetData.url : network.config.forking.url,
+          jsonRpcUrl: network.config.forking.url,
           blockNumber: assetData.blockNumber ? assetData.blockNumber : network.config.forking.blockNumber,
         },
       },
