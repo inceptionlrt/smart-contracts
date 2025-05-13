@@ -13,7 +13,7 @@ const symbioticVaults = vaults.symbiotic;
 const mellowVaults = vaults.mellow;
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
-  let iToken, iVault, mellowAdapter, symbioticAdapter;
+  let iToken, iVault, mellowAdapter, symbioticAdapter, withdrawalQueue;
   let iVaultOperator, staker, staker2, staker3;
 
   before(async function () {
@@ -34,7 +34,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       },
     ]);
 
-    ({ iToken, iVault, iVaultOperator, mellowAdapter, symbioticAdapter }
+    ({ iToken, iVault, iVaultOperator, mellowAdapter, symbioticAdapter, withdrawalQueue }
       = await initVault(assetData, { adapters: [adapters.Mellow, adapters.Symbiotic] }));
 
     [, staker, staker2, staker3] = await ethers.getSigners();
@@ -67,38 +67,17 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await expect(
         iVault
           .connect(iVaultOperator)
-          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [], [emptyBytes]),
-      ).to.be.revertedWithCustomError(iVault, "ValueZero");
-
-      await expect(
-        iVault.connect(iVaultOperator).undelegate([], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
-      ).to.be.revertedWithCustomError(iVault, "ValueZero");
-
-      await expect(
-        iVault.connect(iVaultOperator).undelegate([await mellowAdapter.getAddress()], [], [1n], [emptyBytes]),
-      ).to.be.revertedWithCustomError(iVault, "ValueZero");
-
-      await expect(
-        iVault
-          .connect(iVaultOperator)
-          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [1n], []),
-      ).to.be.revertedWithCustomError(iVault, "ValueZero");
-
-      await expect(
-        iVault
-          .connect(iVaultOperator)
-          .undelegate(
-            ["0x0000000000000000000000000000000000000000"],
-            [mellowVaults[0].vaultAddress],
-            [1n],
-            [emptyBytes],
+          .undelegate(await withdrawalQueue.currentEpoch(),
+            [
+              ["0x0000000000000000000000000000000000000000", mellowVaults[0].vaultAddress, 1n, emptyBytes],
+            ]
           ),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
       await expect(
         iVault
           .connect(iVaultOperator)
-          .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+          .undelegate(await withdrawalQueue.currentEpoch(), [[await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, 0n, emptyBytes]]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
     });
 
@@ -173,7 +152,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await expect(
         iVault
           .connect(iVaultOperator)
-          .undelegate([await symbioticAdapter.getAddress()], [staker.address], [1n], [emptyBytes]),
+          .undelegate(await withdrawalQueue.currentEpoch(), [[await symbioticAdapter.getAddress(), staker.address, 1n, emptyBytes]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
     });
 

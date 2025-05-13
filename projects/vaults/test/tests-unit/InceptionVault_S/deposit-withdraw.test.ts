@@ -891,6 +891,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       it(`---Prepare state: ${state.name}`, async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1n);
         const deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
         if (state.withBonus) {
           await iVault.setTargetFlashCapacity(targetCapacityPercent);
@@ -1505,7 +1506,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         console.log(`expected Redeem:\t${expectedMaxRedeem.format()}`);
 
         if (maxRedeem > 0n) {
-          await iVault.connect(sharesOwner).redeem(maxRedeem, sharesOwner.address, sharesOwner.address);
+          await iVault.connect(sharesOwner)["redeem( uint256 shares, address receiver, address owner )"](maxRedeem, sharesOwner.address, sharesOwner.address);
         }
         expect(maxRedeem).to.be.eq(expectedMaxRedeem);
       });
@@ -1520,6 +1521,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
   describe("Deposit slippage", function() {
     it("Deposited less shares than min out", async function() {
+      await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
       await expect(
         iVault.connect(staker)["deposit(uint256,address,uint256)"](toWei(1), staker.address, toWei(100))
