@@ -1871,11 +1871,14 @@ describe("Symbiotic Vault Slashing", function() {
       // ----------------
 
       // undelegate #2
-      let undelegateAmount = await iVault.convertToAssets(epochShares) - (await withdrawalQueue.withdrawals(1))[2];
       tx = await iVault.connect(iVaultOperator)
-        .undelegate(1, [[mellowAdapter.address, mellowVaults[0].vaultAddress, undelegateAmount, []]]);
+        .emergencyUndelegate(
+          [mellowAdapter.address],
+          [mellowVaults[0].vaultAddress],
+          [toWei(5)],
+          [emptyBytes],
+        )
       receipt = await tx.wait();
-      events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
       adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
       claimer = adapterEvents[0].args["claimer"];
@@ -1884,15 +1887,16 @@ describe("Symbiotic Vault Slashing", function() {
 
       // claim #2
       await skipEpoch(symbioticVaults[0]);
-      tx = await iVault.connect(iVaultOperator)
-        .claim(events[0].args["epoch"], [mellowAdapter.address], [mellowVaults[0].vaultAddress], [[await mellowClaimParams(mellowVaults[0], claimer)]]);
-      await tx.wait();
-
-      expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(await iVault.convertToAssets(epochShares));
-      // expect(await asset.balanceOf(iVault.address)).to.be.eq(await iVault.convertToAssets(epochShares));
+      tx = await iVault.connect(iVaultOperator).emergencyClaim(
+        [mellowAdapter.address], [mellowVaults[0].vaultAddress], [[await mellowClaimParams(mellowVaults[0], claimer)]],
+      )
       // ----------------
 
       expect(await calculateRatio(iVault, iToken)).to.be.closeTo(1852573758880544819n, 10n);
+
+      // force undelegate and claim
+      await iVault.connect(iVaultOperator).undelegate(1, []);
+      // ----------------
 
       // redeem
       tx = await iVault.connect(staker).redeem(staker.address);

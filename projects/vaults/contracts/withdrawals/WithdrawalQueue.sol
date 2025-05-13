@@ -154,7 +154,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
 
         // update withdrawal data
-        withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
+        withdrawal.adapterUndelegated[adapter][vault] = undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
         withdrawal.adaptersUndelegatedCounter++;
 
@@ -191,7 +191,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] calldata claimedAmounts
     ) external onlyVault {
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        require(withdrawal.ableRedeem == false, EpochAlreadyRedeemable());
+        require(!withdrawal.ableRedeem, EpochAlreadyRedeemable());
 
         if (epoch == EMERGENCY_EPOCH) {
             // do nothing
@@ -226,12 +226,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /// @notice Updates the redeemable status after a claim
     /// @param withdrawal The storage reference to the withdrawal epoch
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        if (withdrawal.totalClaimedAmount < withdrawal.totalUndelegatedAmount) {
-            uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
-            if (currentAmount > withdrawal.totalClaimedAmount && currentAmount - withdrawal.totalClaimedAmount > MAX_CONVERT_THRESHOLD) {
-                withdrawal.totalUndelegatedAmount = withdrawal.totalClaimedAmount;
+        uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+
+        if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
+            if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
+                // slashed
+                _refreshEpoch(withdrawal);
                 return;
             }
+        } else if (currentAmount > withdrawal.totalClaimedAmount && currentAmount - withdrawal.totalClaimedAmount > MAX_CONVERT_THRESHOLD) {
+            // slashed
+            _refreshEpoch(withdrawal);
+            return;
         }
 
         _makeRedeemable(withdrawal);
@@ -250,23 +256,26 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
     }
 
+    function _refreshEpoch(WithdrawalEpoch storage withdrawal) internal {
+        withdrawal.totalClaimedAmount = 0;
+        withdrawal.totalUndelegatedAmount = 0;
+        withdrawal.adaptersClaimedCounter = 0;
+        withdrawal.adaptersUndelegatedCounter = 0;
+    }
+
     /// @notice Forces undelegation and claims a specified amount for the current epoch.
     /// @param epoch The epoch number to process, must match the current epoch.
     /// @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree.
     function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external onlyVault {
-        require(epoch == currentEpoch, UndelegateEpochMismatch());
+        require(epoch >= 0 && epoch <= currentEpoch, UndelegateEpochMismatch());
+
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        require(!withdrawal.ableRedeem, EpochAlreadyRedeemable());
 
         // update epoch state
-        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
-        withdrawal.ableRedeem = true;
         withdrawal.totalClaimedAmount = claimedAmount;
 
-        // update global state
-        totalAmountRedeem += claimedAmount;
-        totalSharesToWithdraw -= withdrawal.totalRequestedShares;
-
-        // update epoch
-        currentEpoch++;
+        _afterUndelegate(epoch, withdrawal);
     }
 
     /// @notice Redeems available amounts for a receiver across their epochs
