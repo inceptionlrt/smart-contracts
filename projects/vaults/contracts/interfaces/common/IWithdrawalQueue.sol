@@ -2,18 +2,13 @@
 pragma solidity ^0.8.28;
 
 interface IWithdrawalQueueErrors {
-    error UndelegateExceedRequested();
     error UndelegateEpochMismatch();
     error ClaimUnknownAdapter();
-    error AdapterVaultAlreadyUndelegated();
-    error AdapterAlreadyClaimed();
-    error ClaimedExceedUndelegated();
-    error UndelegateNotCompleted();
     error ValueZero();
     error OnlyVaultAllowed();
-    error InsufficientFreeReservedRedeemAmount();
     error EpochAlreadyRedeemable();
     error ClaimNotCompleted();
+    error InvalidEpoch();
 }
 
 interface IWithdrawalQueue is IWithdrawalQueueErrors {
