@@ -22,7 +22,11 @@ contract InceptionAssetsHandler is
 
     IERC20 internal _asset;
 
-    uint256[49] private __reserver;
+    uint256 public currentRewards;
+    uint256 public startTimeline;
+    uint256 public rewardsTimeline;
+
+    uint256[50 - 4] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
@@ -38,9 +42,19 @@ contract InceptionAssetsHandler is
         return address(_asset);
     }
 
-    /// @dev returns the balance of iVault in the asset
+    /**
+     * @notice Returns the total assets held by the vault.
+     * @return The total balance of the vault in the underlying asset.
+     */
     function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        uint256 dayNum = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (dayNum > totalDays) return _asset.balanceOf(address(this));
+
+        uint256 reservedRewards = (currentRewards / totalDays) *
+            (totalDays - dayNum);
+
+        return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
