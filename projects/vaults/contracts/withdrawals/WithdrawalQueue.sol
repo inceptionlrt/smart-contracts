@@ -223,24 +223,39 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         withdrawal.adaptersClaimedCounter++;
     }
 
-    /// @notice Updates the redeemable status after a claim
-    /// @param withdrawal The storage reference to the withdrawal epoch
+    /*
+    * @notice Updates the redeemable status after a claim
+    * @param withdrawal The storage reference to the withdrawal epoch
+    */
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
         uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
 
-        if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
-            if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
-                // slashed
-                _refreshEpoch(withdrawal);
-                return;
-            }
-        } else if (currentAmount > withdrawal.totalClaimedAmount && currentAmount - withdrawal.totalClaimedAmount > MAX_CONVERT_THRESHOLD) {
-            // slashed
+        if (_isSlashed(withdrawal)) {
             _refreshEpoch(withdrawal);
             return;
         }
 
         _makeRedeemable(withdrawal);
+    }
+
+    /*
+    * @notice Checks if a withdrawal epoch is considered slashed based on the difference between claimed and current amounts.
+    * @dev Compares the current asset value of requested shares against the total claimed amount, considering a maximum threshold.
+    * @param withdrawal The storage reference to the WithdrawalEpoch struct.
+    * @return bool True if the withdrawal is slashed, false otherwise.
+    */
+    function _isSlashed(WithdrawalEpoch storage withdrawal) internal returns (bool) {
+        uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+
+        if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
+            if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
+                return true;
+            }
+        } else if (currentAmount > withdrawal.totalClaimedAmount && currentAmount - withdrawal.totalClaimedAmount > MAX_CONVERT_THRESHOLD) {
+            return true;
+        }
+
+        return false;
     }
 
     /*
@@ -256,6 +271,11 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
     }
 
+    /*
+    * @notice Resets the state of a withdrawal epoch to its initial values.
+    * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
+    * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
+    */
     function _refreshEpoch(WithdrawalEpoch storage withdrawal) internal {
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
