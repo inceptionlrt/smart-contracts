@@ -27,11 +27,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 public totalSharesToWithdraw;
     uint256 public totalPendingClaimedAmounts;
 
-    /// @notice Initializes the contract with a vault address and legacy withdrawal data
-    /// @param _vault The address of the vault contract that will interact with this queue
-    /// @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
-    /// @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
-    /// @param legacyClaimedAmount Total claimed amount for the legacy epoch
+    modifier onlyVault() {
+        require(msg.sender == vaultOwner, OnlyVaultAllowed());
+        _;
+    }
+
+    /*
+    * @notice Initializes the contract with a vault address and legacy withdrawal data
+    * @param _vault The address of the vault contract that will interact with this queue
+    * @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
+    * @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
+    * @param legacyClaimedAmount Total claimed amount for the legacy epoch
+    */
     function initialize(
         address _vault,
         address[] calldata legacyWithdrawalAddresses,
@@ -49,15 +56,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         );
     }
 
-    modifier onlyVault() {
-        require(msg.sender == vaultOwner, OnlyVaultAllowed());
-        _;
-    }
-
-    /// @notice Initializes legacy withdrawal data for the first epoch
-    /// @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
-    /// @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
-    /// @param legacyClaimedAmount Total claimed amount for the legacy epoch
+    /*
+    * @notice Initializes legacy withdrawal data for the first epoch
+    * @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
+    * @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
+    * @param legacyClaimedAmount Total claimed amount for the legacy epoch
+    */
     function _initLegacyWithdrawals(
         address[] calldata legacyWithdrawalAddresses,
         uint256[] calldata legacyWithdrawalAmounts,
@@ -84,9 +88,11 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         currentEpoch++;
     }
 
-    /// @notice Requests a withdrawal for a receiver in the current epoch
-    /// @param receiver The address requesting the withdrawal
-    /// @param shares The number of shares to request for withdrawal
+    /*
+    * @notice Requests a withdrawal for a receiver in the current epoch
+    * @param receiver The address requesting the withdrawal
+    * @param shares The number of shares to request for withdrawal
+    */
     function request(address receiver, uint256 shares) external onlyVault {
         require(shares > 0, ValueZero());
         require(receiver != address(0), ValueZero());
@@ -99,9 +105,11 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         addUserEpoch(receiver, currentEpoch);
     }
 
-    /// @notice Adds an epoch to the user's list of epochs if not already present
-    /// @param receiver The address of the user
-    /// @param epoch The epoch number to add
+    /*
+    * @notice Adds an epoch to the user's list of epochs if not already present
+    * @param receiver The address of the user
+    * @param epoch The epoch number to add
+    */
     function addUserEpoch(address receiver, uint256 epoch) private {
         uint256[] storage receiverEpochs = userEpoch[receiver];
         if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
@@ -109,12 +117,14 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         }
     }
 
-    /// @notice Processes undelegation for multiple adapters and vaults in a given epoch
-    /// @param epoch The epoch to undelegate from (must match current epoch)
-    /// @param adapters Array of adapter addresses
-    /// @param vaults Array of vault addresses
-    /// @param undelegatedAmounts Array of undelegated amounts
-    /// @param claimedAmounts Array of claimed amounts
+    /*
+    * @notice Processes undelegation for multiple adapters and vaults in a given epoch
+    * @param epoch The epoch to undelegate from (must match current epoch)
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
+    * @param undelegatedAmounts Array of undelegated amounts
+    * @param claimedAmounts Array of claimed amounts
+    */
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
@@ -138,12 +148,14 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         _afterUndelegate(epoch, withdrawal);
     }
 
-    /// @notice Internal function to process undelegation for a specific adapter and vault
-    /// @param withdrawal The storage reference to the withdrawal epoch
-    /// @param adapter The adapter address
-    /// @param vault The vault address
-    /// @param undelegatedAmount The amount undelegated
-    /// @param claimedAmount The amount claimed
+    /*
+    * @notice Internal function to process undelegation for a specific adapter and vault
+    * @param withdrawal The storage reference to the withdrawal epoch
+    * @param adapter The adapter address
+    * @param vault The vault address
+    * @param undelegatedAmount The amount undelegated
+    * @param claimedAmount The amount claimed
+    */
     function _undelegate(
         WithdrawalEpoch storage withdrawal,
         address adapter,
@@ -167,23 +179,37 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         }
     }
 
-    /// @notice Finalizes undelegation by advancing the epoch if completed
-    /// @param withdrawal The storage reference to the withdrawal epoch
+    /*
+    * @notice Finalizes undelegation by advancing the epoch if completed
+    * @param withdrawal The storage reference to the withdrawal epoch
+    */
     function _afterUndelegate(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
-        if (epoch == currentEpoch) {
-            currentEpoch++;
-        }
+        uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+        uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
+
+        require(
+            requested >= totalUndelegated ?
+                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
+                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+            UndelegateNotCompleted()
+        );
 
         if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
             _makeRedeemable(withdrawal);
         }
+
+        if (epoch == currentEpoch) {
+            currentEpoch++;
+        }
     }
 
-    /// @notice Claims an amount for a specific adapter and vault in an epoch
-    /// @param epoch The epoch to claim from
-    /// @param adapters Array of adapter addresses
-    /// @param vaults Array of vault addresses
-    /// @param claimedAmounts Array of claimed amounts
+    /*
+    * @notice Claims an amount for a specific adapter and vault in an epoch
+    * @param epoch The epoch to claim from
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
+    * @param claimedAmounts Array of claimed amounts
+    */
     function claim(
         uint256 epoch,
         address[] calldata adapters,
@@ -205,11 +231,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         _afterClaim(withdrawal);
     }
 
-    /// @notice Claims an amount for a specific adapter and vault in an epoch
-    /// @param withdrawal The storage reference to the withdrawal epoch
-    /// @param adapter The adapter address
-    /// @param vault The vault address
-    /// @param claimedAmount The amount to claim
+    /*
+    * @notice Claims an amount for a specific adapter and vault in an epoch
+    * @param withdrawal The storage reference to the withdrawal epoch
+    * @param adapter The adapter address
+    * @param vault The vault address
+    * @param claimedAmount The amount to claim
+    */
     function _claim(
         WithdrawalEpoch storage withdrawal,
         address adapter,
@@ -228,7 +256,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        _isSlashed(withdrawal) ? _refreshEpoch(withdrawal) : _makeRedeemable(withdrawal);
+        _isSlashed(withdrawal) ? _resetEpoch(withdrawal) : _makeRedeemable(withdrawal);
     }
 
     /*
@@ -269,16 +297,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
     */
-    function _refreshEpoch(WithdrawalEpoch storage withdrawal) internal {
+    function _resetEpoch(WithdrawalEpoch storage withdrawal) internal {
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
         withdrawal.adaptersClaimedCounter = 0;
         withdrawal.adaptersUndelegatedCounter = 0;
     }
 
-    /// @notice Forces undelegation and claims a specified amount for the current epoch.
-    /// @param epoch The epoch number to process, must match the current epoch.
-    /// @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree.
+    /*
+    * @notice Forces undelegation and claims a specified amount for the current epoch
+    * @param epoch The epoch number to process, must match the current epoch
+    * @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree
+    */
     function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external onlyVault {
         require(epoch >= 0 && epoch <= currentEpoch, UndelegateEpochMismatch());
 
@@ -291,9 +321,11 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         _afterUndelegate(epoch, withdrawal);
     }
 
-    /// @notice Redeems available amounts for a receiver across their epochs
-    /// @param receiver The address to redeem for
-    /// @return amount The total amount redeemed
+    /*
+    * @notice Redeems available amounts for a receiver across their epochs
+    * @param receiver The address to redeem for
+    * @return amount The total amount redeemed
+    */
     function redeem(address receiver) external onlyVault returns (uint256 amount) {
         uint256[] storage epochs = userEpoch[receiver];
         uint256 i = 0;
@@ -322,6 +354,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         return amount;
     }
 
+    /*
+    * @notice Redeems available amounts for a receiver with given epoch index
+    * @param receiver The address to redeem for
+    * @param userEpochIndex user epoch index
+    * @return amount The total amount redeemed
+    */
     function redeem(address receiver, uint256 userEpochIndex) external onlyVault returns (uint256 amount) {
         uint256[] storage epochs = userEpoch[receiver];
         require(userEpochIndex < epochs.length, InvalidEpoch());
@@ -347,10 +385,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         return amount;
     }
 
-    /// @notice Calculates the redeemable amount for a user in an epoch
-    /// @param withdrawal The storage reference to the withdrawal epoch
-    /// @param receiver The address of the user
-    /// @return The calculated redeemable amount
+    /*
+    * @notice Calculates the redeemable amount for a user in an epoch quả
+    * @param withdrawal The storage reference to the withdrawal epoch
+    * @param receiver The address of the user
+    * @return The calculated redeemable amount
+    */
     function _getRedeemAmount(WithdrawalEpoch storage withdrawal, address receiver) internal view returns (uint256) {
         return withdrawal.totalClaimedAmount.mulDiv(
             withdrawal.userShares[receiver],
@@ -363,16 +403,20 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     //// GET functions ////
     ////////////////////*/
 
-    /// @notice Retrieves the total number of requested shares for a specific epoch.
-    /// @param epoch The epoch number for which to retrieve the requested shares.
-    /// @return The total number of shares requested in the specified epoch.
+    /*
+    * @notice Retrieves the total number of requested shares for a specific epoch
+    * @param epoch The epoch number for which to retrieve the requested shares
+    * @return The total number of shares requested in the specified epoch
+    */
     function getRequestedShares(uint256 epoch) external view returns (uint256) {
         return withdrawals[epoch].totalRequestedShares;
     }
 
-    /// @notice Returns the total pending withdrawal amount for a receiver
-    /// @param receiver The address to check
-    /// @return amount The total pending withdrawal amount
+    /*
+    * @notice Returns the total pending withdrawal amount for a receiver
+    * @param receiver The address to check
+    * @return amount The total pending withdrawal amount
+    */
     function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount) {
         uint256[] memory epochs = userEpoch[receiver];
         for (uint256 i = 0; i < epochs.length; i++) {
@@ -388,10 +432,12 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         return amount;
     }
 
-    /// @notice Checks if a claimer has redeemable withdrawals and their epoch indexes inside userEpoch mapping
-    /// @param claimer The address to check
-    /// @return able Whether there are redeemable withdrawals
-    /// @return withdrawalIndexes Array of user epoch indexes with redeemable withdrawals
+    /*
+    * @notice Checks if a claimer has redeemable withdrawals and their epoch indexes inside userEpoch mapping
+    * @param claimer The address to check
+    * @return able Whether there are redeemable withdrawals
+    * @return withdrawalIndexes Array of user epoch indexes with redeemable withdrawals
+    */
     function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes) {
         uint256 index;
 

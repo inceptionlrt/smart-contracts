@@ -2,13 +2,14 @@
 pragma solidity ^0.8.28;
 
 interface IWithdrawalQueueErrors {
-    error UndelegateEpochMismatch();
-    error ClaimUnknownAdapter();
     error ValueZero();
     error OnlyVaultAllowed();
-    error EpochAlreadyRedeemable();
-    error ClaimNotCompleted();
     error InvalidEpoch();
+    error EpochAlreadyRedeemable();
+    error UndelegateEpochMismatch();
+    error UndelegateNotCompleted();
+    error ClaimUnknownAdapter();
+    error ClaimNotCompleted();
 }
 
 interface IWithdrawalQueue is IWithdrawalQueueErrors {
@@ -26,17 +27,21 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint8 adaptersClaimedCounter;
     }
 
-    /// @notice Requests a withdrawal for a receiver in the current epoch
-    /// @param receiver The address requesting the withdrawal
-    /// @param shares The number of shares to request for withdrawal
+    /*
+    * @notice Requests a withdrawal for a receiver in the current epoch
+    * @param receiver The address requesting the withdrawal
+    * @param shares The number of shares to request for withdrawal
+    */
     function request(address receiver, uint256 shares) external;
 
-    /// @notice Processes undelegation for multiple adapters and vaults in a given epoch
-    /// @param epoch The epoch to undelegate from (must match current epoch)
-    /// @param adapters Array of adapter addresses
-    /// @param vaults Array of vault addresses
-    /// @param undelegatedAmounts Array of undelegated amounts
-    /// @param claimedAmounts Array of claimed amounts
+    /*
+    * @notice Processes undelegation for multiple adapters and vaults in a given epoch
+    * @param epoch The epoch to undelegate from (must match current epoch)
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
+    * @param undelegatedAmounts Array of undelegated amounts
+    * @param claimedAmounts Array of claimed amounts
+    */
     function undelegate(
         uint256 epoch,
         address[] calldata adapters,
@@ -45,11 +50,13 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint256[] calldata claimedAmounts
     ) external;
 
-    /// @notice Claims an amount for a specific adapter and vault in an epoch
-    /// @param epoch The epoch to claim from
-    /// @param adapters Array of adapter addresses
-    /// @param vaults Array of vault addresses
-    /// @param claimedAmounts Array of claimed amounts
+    /*
+    * @notice Claims an amount for a specific adapter and vault in an epoch
+    * @param epoch The epoch to claim from
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
+    * @param claimedAmounts Array of claimed amounts
+    */
     function claim(
         uint256 epoch,
         address[] calldata adapters,
@@ -57,51 +64,75 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
         uint256[] calldata claimedAmounts
     ) external;
 
-    /// @notice Forces undelegation and claims a specified amount for the current epoch.
-    /// @param epoch The epoch number to process, must match the current epoch.
-    /// @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree.
+    /*
+    * @notice Forces undelegation and claims a specified amount for the current epoch
+    * @param epoch The epoch number to process, must match the current epoch
+    * @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree
+    */
     function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external;
 
-    /// @notice Redeems available amounts for a receiver across their epochs
-    /// @param receiver The address to redeem for
-    /// @return amount The total amount redeemed
+    /*
+    * @notice Redeems available amounts for a receiver across their epochs
+    * @param receiver The address to redeem for
+    * @return amount The total amount redeemed
+    */
     function redeem(address receiver) external returns (uint256 amount);
 
+    /*
+    * @notice Redeems available amounts for a receiver with given epoch index
+    * @param receiver The address to redeem for
+    * @param userEpochIndex user epoch index
+    * @return amount The total amount redeemed
+    */
     function redeem(address receiver, uint256 userEpochIndex) external returns (uint256 amount);
 
     /*//////////////////////////
     ////// GET functions //////
     ////////////////////////*/
 
-    /// @notice Returns the emergency epoch number
-    /// @return The emergency epoch number
+    /*
+    * @notice Returns the emergency epoch number
+    * @return The emergency epoch number
+    */
     function EMERGENCY_EPOCH() external view returns (uint256);
 
-    /// @notice Returns the current epoch number
-    /// @return The current epoch number
+    /*
+    * @notice Returns the current epoch number
+    * @return The current epoch number
+    */
     function currentEpoch() external view returns (uint256);
 
-    /// @notice Returns the total shares queued for withdrawal
-    /// @return The total amount to withdraw
+    /*
+    * @notice Returns the total shares queued for withdrawal
+    * @return The total amount to withdraw
+    */
     function totalSharesToWithdraw() external view returns (uint256);
 
-    /// @notice Returns the total amount that has been redeemed
-    /// @return The total redeemed amount
+    /*
+    * @notice Returns the total amount that has been redeemed
+    * @return The total redeemed amount
+    */
     function totalAmountRedeem() external view returns (uint256);
 
-    /// @notice Returns the total pending withdrawal amount for a receiver
-    /// @param receiver The address to check
-    /// @return amount The total pending withdrawal amount
+    /*
+    * @notice Returns the total pending withdrawal amount for a receiver
+    * @param receiver The address to check
+    * @return amount The total pending withdrawal amount
+    */
     function getPendingWithdrawalOf(address receiver) external view returns (uint256 amount);
 
-    /// @notice Checks if a claimer has redeemable withdrawals and their epoch indexes
-    /// @param claimer The address to check
-    /// @return able Whether there are redeemable withdrawals
-    /// @return withdrawalIndexes Array of epoch indexes with redeemable withdrawals
+    /*
+    * @notice Checks if a claimer has redeemable withdrawals and their epoch indexes inside userEpoch mapping
+    * @param claimer The address to check
+    * @return able Whether there are redeemable withdrawals
+    * @return withdrawalIndexes Array of user epoch indexes with redeemable withdrawals
+    */
     function isRedeemable(address claimer) external view returns (bool able, uint256[] memory withdrawalIndexes);
 
-    /// @notice Retrieves the total number of requested shares for a specific epoch.
-    /// @param epoch The epoch number for which to retrieve the requested shares.
-    /// @return The total number of shares requested in the specified epoch.
+    /*
+    * @notice Retrieves the total number of requested shares for a specific epoch
+    * @param epoch The epoch number for which to retrieve the requested shares
+    * @return The total number of shares requested in the specified epoch
+    */
     function getRequestedShares(uint256 epoch) external view returns (uint256);
 }
