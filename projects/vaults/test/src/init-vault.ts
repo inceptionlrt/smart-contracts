@@ -21,7 +21,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   console.log(`Starting at block number: ${block.number}`);
   console.log("Initialization of Inception ....");
 
-  const asset = await ethers.getContractAt(assetData.assetName, assetData.assetAddress);
+  const asset = await ethers.getContractAt("IERC20", assetData.assetAddress);
   asset.address = await asset.getAddress();
 
   if (options?.adapters?.includes(adapters.Mellow)) {

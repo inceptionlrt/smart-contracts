@@ -17,7 +17,7 @@ export async function initVault(assetData: typeof stETH, options?: { adapters?: 
   console.log(`Starting at block number: ${block.number}`);
   console.log("Initialization of Inception ....");
 
-  const asset = await ethers.getContractAt(assetData.asset.name, assetData.asset.address);
+  const asset = await ethers.getContractAt("IERC20", assetData.asset.address);
   asset.address = await asset.getAddress();
 
   if (options?.adapters?.includes(adapters.Mellow)) {
