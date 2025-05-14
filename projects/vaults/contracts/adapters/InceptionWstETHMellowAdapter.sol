@@ -6,14 +6,14 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IInceptionMellowAdapter} from "../interfaces/adapters/IInceptionMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
-import {IBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol";
 
 /**
@@ -22,7 +22,7 @@ import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol
  * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
  */
-contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 

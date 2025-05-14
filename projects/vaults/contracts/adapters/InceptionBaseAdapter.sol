@@ -8,18 +8,18 @@ import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/intro
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
+import {IInceptionBaseAdapter} from "../interfaces/adapters/IInceptionBaseAdapter.sol";
 
 /**
- * @title The IBaseAdapter Contract
+ * @title The InceptionBaseAdapter.sol Contract
  * @author The InceptionLRT team
  */
-abstract contract IBaseAdapter is
+abstract contract InceptionBaseAdapter is
 PausableUpgradeable,
 ReentrancyGuardUpgradeable,
 ERC165Upgradeable,
 OwnableUpgradeable,
-IIBaseAdapter
+IInceptionBaseAdapter
 {
     using SafeERC20 for IERC20;
 

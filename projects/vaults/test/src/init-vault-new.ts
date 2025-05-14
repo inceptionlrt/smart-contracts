@@ -72,7 +72,7 @@ export async function initVault(assetData: typeof stETH, options?: { adapters?: 
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
-    const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
+    const symbioticAdapterFactory = await ethers.getContractFactory("InceptionSymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
       // [symbioticVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
       [assetData.adapters.symbiotic[0].vaultAddress], assetData.asset.address, assetData.vault.operator,

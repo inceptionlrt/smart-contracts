@@ -73,7 +73,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
-    const symbioticAdapterFactory = await ethers.getContractFactory("ISymbioticAdapter");
+    const symbioticAdapterFactory = await ethers.getContractFactory("InceptionSymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
       [symbioticVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
     ]);
