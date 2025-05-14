@@ -786,7 +786,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         _transferAssetTo(newVault, amount);
 
-        emit DepositBonusTransferred(newVault, depositBonusAmount);
+        emit DepositBonusTransferred(newVault, amount);
     }
 
     /*///////////////////////////////
