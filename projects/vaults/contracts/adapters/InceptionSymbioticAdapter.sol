@@ -292,12 +292,14 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
             vaults[i] = _symbioticVaults.at(i);
     }
 
-    /// @notice Retrieves or creates a claimer address based on the emergency condition.
-    /// @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
-    ///      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
-    ///      The returned claimer is added to the `pendingClaimers` set.
-    /// @param emergency Boolean indicating whether an emergency claimer is required.
-    /// @return claimer The address of the claimer to be used.
+    /*
+    * @notice Retrieves or creates a claimer address based on the emergency condition
+    * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
+    *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
+    *      The returned claimer is added to the `pendingClaimers` set
+    * @param emergency Boolean indicating whether an emergency claimer is required
+    * @return claimer The address of the claimer to be used
+    */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
             if (_emergencyClaimer == address(0)) {
@@ -317,18 +319,22 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         return claimer;
     }
 
-    /// @notice Removes a claimer from the pending list and recycles it to the available claimers.
-    /// @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`.
-    /// @param claimer The address of the claimer to be removed from pending status.
+    /*
+    * @notice Removes a claimer from the pending list and recycles it to the available claimers
+    * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
+    * @param claimer The address of the claimer to be removed from pending status
+    */
     function _removePendingClaimer(address claimer) internal {
         delete claimerVaults[claimer];
         pendingClaimers.remove(claimer);
         availableClaimers.push(claimer);
     }
 
-    /// @notice Deploys a new SymbioticAdapterClaimer contract instance.
-    /// @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter.
-    /// @return The address of the newly deployed SymbioticAdapterClaimer contract.
+    /*
+    * @notice Deploys a new SymbioticAdapterClaimer contract instance
+    * @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter
+    * @return The address of the newly deployed SymbioticAdapterClaimer contract
+    */
     function _deployClaimer() internal returns (address) {
         return address(new SymbioticAdapterClaimer(address(_asset)));
     }
