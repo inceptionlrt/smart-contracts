@@ -280,10 +280,10 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /*
-    * Marks a withdrawal epoch as redeemable once all adapters have completed their claims.
-    * @param withdrawal The storage reference to the WithdrawalEpoch struct being processed.
-    * Requires that the number of claimed adapters equals the number of undelegated adapters.
-    * Updates the withdrawal to be redeemable, adjusts the total redeemable amount, and reduces the total shares to withdraw.
+    * @notice Marks a withdrawal epoch as redeemable and updates global state
+    * @dev Ensures all adapters have completed claiming by checking if the claimed counter equals the undelegated counter.
+    *      Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
+    * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _makeRedeemable(WithdrawalEpoch storage withdrawal) internal {
         require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
@@ -310,7 +310,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree
     */
     function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external onlyVault {
-        require(epoch >= 0 && epoch <= currentEpoch, UndelegateEpochMismatch());
+        require(epoch <= currentEpoch, UndelegateEpochMismatch());
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(!withdrawal.ableRedeem, EpochAlreadyRedeemable());
@@ -331,25 +331,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 i = 0;
 
         while (i < epochs.length) {
-            WithdrawalEpoch storage withdrawal = withdrawals[epochs[i]];
-            if (!withdrawal.ableRedeem || withdrawal.userShares[receiver] == 0) {
+            uint256 redeemAmount = _redeem(receiver, epochs, i);
+            if (redeemAmount == 0) {
                 ++i;
                 continue;
             }
 
-            amount += _getRedeemAmount(withdrawal, receiver);
-            withdrawal.userShares[receiver] = 0;
-
-            epochs[i] = epochs[epochs.length - 1];
-            epochs.pop();
+            amount += redeemAmount;
         }
 
         if (epochs.length == 0) {
             delete userEpoch[receiver];
         }
-
-        // update global state
-        totalAmountRedeem -= amount;
 
         return amount;
     }
@@ -364,6 +357,26 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] storage epochs = userEpoch[receiver];
         require(userEpochIndex < epochs.length, InvalidEpoch());
 
+        uint256 amount = _redeem(receiver, epochs, userEpochIndex);
+
+        if (epochs.length == 0) {
+            delete userEpoch[receiver];
+        }
+
+        return amount;
+    }
+
+    /*
+    * @notice Redeems the available amount for a receiver in a specific epoch
+    * @dev Processes the redemption by checking if the withdrawal is redeemable and if the receiver has shares.
+    *      Calculates the redeemable amount, clears the receiver's shares, removes the epoch from the user's epoch list,
+    *      and updates the global total redeemed amount
+    * @param receiver The address of the user redeeming the amount
+    * @param epochs The storage array of epoch indexes for the user
+    * @param userEpochIndex The index of the epoch in the user's epoch list
+    * @return amount The amount redeemed for the receiver
+    */
+    function _redeem(address receiver, uint256[] storage epochs, uint256 userEpochIndex) internal returns (uint256 amount) {
         WithdrawalEpoch storage withdrawal = withdrawals[epochs[userEpochIndex]];
         if (!withdrawal.ableRedeem || withdrawal.userShares[receiver] == 0) {
             return 0;
@@ -375,11 +388,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         epochs[userEpochIndex] = epochs[epochs.length - 1];
         epochs.pop();
 
-        if (epochs.length == 0) {
-            delete userEpoch[receiver];
-        }
-
-        // Update global state
+        // update global state
         totalAmountRedeem -= amount;
 
         return amount;

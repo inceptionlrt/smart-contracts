@@ -225,6 +225,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         if (getFlashCapacity() < requestedAmount) revert InsufficientFreeBalance();
         withdrawalQueue.forceUndelegateAndClaim(undelegatedEpoch, requestedAmount);
+
+        emit ClaimFromVault(requestedAmount, undelegatedEpoch);
     }
 
     /**

@@ -204,25 +204,30 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // the actual received amount might slightly differ from the specified amount,
         // approximately by -2 wei
         __beforeDeposit(receiver, amount);
+
+        // calculate deposit bonus
         uint256 depositBonus;
-        uint256 availableBonusAmount = depositBonusAmount;
-        if (availableBonusAmount > 0) {
+        if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(amount);
-            if (depositBonus > availableBonusAmount) {
-                depositBonus = availableBonusAmount;
-                depositBonusAmount = 0;
-            } else {
-                depositBonusAmount -= depositBonus;
+            if (depositBonus > depositBonusAmount) {
+                depositBonus = depositBonusAmount;
             }
+
             emit DepositBonus(depositBonus);
         }
-        // get the amount from the sender
-        _transferAssetFrom(sender, amount);
+
+        // calculate share to mint
         uint256 iShares = convertToShares(amount + depositBonus);
         if (iShares < minOut) revert LowerMinAmount(minOut);
+        // update deposit bonus state
+        depositBonusAmount -= depositBonus;
+        // get the amount from the sender
+        _transferAssetFrom(sender, amount);
+        // mint new shares
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
         emit Deposit(sender, receiver, amount, iShares);
+
         return iShares;
     }
 
@@ -477,7 +482,16 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      * @return Current ratio value
      */
     function ratio() public view returns (uint256) {
-        return ratioFeed.getRatioFor(address(inceptionToken));
+        uint256 totalSupply = IERC20(address(inceptionToken)).totalSupply();
+
+        uint256 numeral = totalSupply + totalSharesToWithdraw();
+        uint256 denominator = getTotalDeposited();
+
+        if (denominator == 0 || numeral == 0) {
+            return 1e18;
+        }
+
+        return (numeral * 1e18) / denominator;
     }
 
     /**
@@ -614,7 +628,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /*//////////////////////////
     ////// SET functions //////
     ////////////////////////*/
-
 
     /**
      * @dev Sets deposit bonus parameters
@@ -786,7 +799,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         _transferAssetTo(newVault, amount);
 
-        emit DepositBonusTransferred(newVault, depositBonusAmount);
+        emit DepositBonusTransferred(newVault, amount);
     }
 
     /*///////////////////////////////
