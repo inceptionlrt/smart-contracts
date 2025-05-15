@@ -240,7 +240,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await iVault.setTargetFlashCapacity(100n);
     });
 
-    it('should migrate deposit bonus to a new vault and emit event', async () => {
+    it('should migrate deposit bonus to a new vault', async () => {
       // Arrange
       // set ratio to 1:1
       await ratioFeed.updateRatioBatch([iToken.address], [toWei(1)]);
@@ -268,11 +268,6 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
 
       const newVaultBalance = await asset.balanceOf(iVaultNew.address);
       expect(newVaultBalance, 'New vault balance should equal to transferred deposit bonus').to.be.eq(depositBonusAmount);
-
-      // Assert: event emitted
-      await expect(migrateTx)
-        .to.emit(iVault, 'DepositBonusTransferred')
-        .withArgs(iVaultNew.address, depositBonusAmount);
     });
 
     it('should revert if the new vault address is zero', async () => {
@@ -314,6 +309,28 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await expect(iVault.connect(staker).migrateDepositBonus(staker.address)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       );
+    });
+
+    it('should emit an event', async () => {
+      // Arrange
+      // deposit
+      let depositTx = await iVault.connect(staker).deposit(toWei(50), staker.address);
+      await depositTx.wait();
+
+      // flash withdraw (to generate deposit bonus)
+      let flashWithdrawTx =
+        await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](toWei(25), staker.address, 0n);
+      await flashWithdrawTx.wait();
+      const depositBonusAmount = await iVault.depositBonusAmount();
+
+      // Act
+      const { iVault: iVaultNew } = await initVault(assetData);
+      const migrateTx = await (await iVault.migrateDepositBonus(await iVaultNew.getAddress())).wait();
+
+      // Assert: event emitted
+      await expect(migrateTx)
+        .to.emit(iVault, 'DepositBonusTransferred')
+        .withArgs(iVaultNew.address, depositBonusAmount);
     });
   });
 });
