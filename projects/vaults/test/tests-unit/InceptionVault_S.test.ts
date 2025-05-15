@@ -237,7 +237,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
   describe('migrateDepositBonus method', () => {
     beforeEach(async function () {
       await snapshot.restore();
-      await iVault.setTargetFlashCapacity(100n);
+      await iVault.setTargetFlashCapacity(e18);
     });
 
     it('should migrate deposit bonus to a new vault', async () => {
@@ -260,7 +260,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
 
       // Act
       const { iVault: iVaultNew } = await initVault(assetData);
-      const migrateTx = await (await iVault.migrateDepositBonus(await iVaultNew.getAddress())).wait();
+      await (await iVault.migrateDepositBonus(await iVaultNew.getAddress())).wait();
 
       // Assert: bonus migrated
       const oldDepositBonus = await iVault.depositBonusAmount();
@@ -289,11 +289,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       const depositAmount = toWei(10);
       await (await iVault.connect(staker).deposit(depositAmount, staker.address)).wait();
       await (await iVault.connect(iVaultOperator)
-        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes)).wait();
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(5), emptyBytes)).wait();
 
       // flash withdraw (to generate deposit bonus)
       let flashWithdrawTx =
-        await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](toWei(9), staker.address, 0n);
+        await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](toWei(1), staker.address, 0n);
       await flashWithdrawTx.wait();
 
       const depositBonusAmount = await iVault.depositBonusAmount();
