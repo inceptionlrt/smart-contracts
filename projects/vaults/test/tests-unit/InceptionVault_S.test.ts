@@ -235,7 +235,6 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
   });
 
   describe('migrateDepositBonus method', () => {
-    // beforeEach(async function () {
     before(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(100n);
