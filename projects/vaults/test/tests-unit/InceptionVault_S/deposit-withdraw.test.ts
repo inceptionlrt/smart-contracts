@@ -808,13 +808,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       });
     });
 
-    it.skip("Max mint and deposit", async function () {
-      const stakerBalance = await asset.balanceOf(staker);
-      const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
-      const realBonus = await iVault.depositBonusAmount();
-      const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
-      expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
-    });
+    // it.skip("Max mint and deposit", async function () {
+    //   const stakerBalance = await asset.balanceOf(staker);
+    //   const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
+    //   const realBonus = await iVault.depositBonusAmount();
+    //   const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
+    //   expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
+    // });
 
     it("Max mint and deposit when iVault is paused equal 0", async function () {
       await iVault.pause();
