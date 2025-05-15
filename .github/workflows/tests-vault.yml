@@ -20,7 +20,12 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
-          node-version: 'node'
+          node-version: '22.x'
+      
+      - name: check node version
+        run: |
+          node --version
+          yarn --version
 
       - name: Install deps
         run: yarn install --frozen-lockfile && cd projects/vaults && yarn install --frozen-lockfile
