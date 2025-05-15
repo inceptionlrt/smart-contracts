@@ -235,7 +235,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
   });
 
   describe('migrateDepositBonus method', () => {
-    before(async function () {
+    beforeEach(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(100n);
     });
@@ -246,12 +246,12 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await ratioFeed.updateRatioBatch([iToken.address], [toWei(1)]);
 
       // deposit
-      let depositTx = await iVault.connect(staker).deposit(toWei(50), staker.address);
+      let depositTx = await iVault.connect(staker).deposit(toWei(10), staker.address);
       await depositTx.wait();
 
       // flash withdraw (to generate deposit bonus)
       let flashWithdrawTx =
-        await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](toWei(25), staker.address, 0n);
+        await iVault.connect(staker)["flashWithdraw(uint256,address,uint256)"](toWei(5), staker.address, 0n);
       await flashWithdrawTx.wait();
 
       // Assert: check deposit bonus
