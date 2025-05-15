@@ -49,6 +49,13 @@ interface IAdapterHandler {
     );
 
     /**
+    * @dev Emitted when a user forcefully undelegates their claim.
+    * @param amount The amount of tokens undelegated.
+    * @param epoch The epoch in which the undelegation occurs.
+    */
+    event ClaimFromVault(uint256 indexed amount, uint256 epoch);
+
+    /**
      * @dev Emitted when the target capacity of the system is changed.
      * @param prevValue The previous target capacity value.
      * @param newValue The new target capacity value.

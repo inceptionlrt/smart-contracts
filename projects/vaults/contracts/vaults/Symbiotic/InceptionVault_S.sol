@@ -219,18 +219,15 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // calculate share to mint
         uint256 iShares = convertToShares(amount + depositBonus);
         if (iShares < minOut) revert LowerMinAmount(minOut);
-
         // update deposit bonus state
         depositBonusAmount -= depositBonus;
-
         // get the amount from the sender
         _transferAssetFrom(sender, amount);
-
         // mint new shares
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
-
         emit Deposit(sender, receiver, amount, iShares);
+
         return iShares;
     }
 
