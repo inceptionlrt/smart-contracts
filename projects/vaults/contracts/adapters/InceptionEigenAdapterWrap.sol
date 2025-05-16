@@ -4,13 +4,13 @@ pragma solidity ^0.8.28;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IWStethInterface} from "../interfaces/common/IStEth.sol";
-import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
+import {IInceptionEigenLayerAdapter} from "../interfaces/adapters/IInceptionEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
-import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter, IInceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
@@ -19,7 +19,7 @@ import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
+contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;
@@ -185,6 +185,11 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
         bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
 
+        // emergency claim available only for emergency queued withdrawals
+        if (emergency) {
+            require(_emergencyQueuedWithdrawals[withdrawal.nonce] == true, OnlyEmergency());
+        }
+
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
 
@@ -309,6 +314,10 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         return 3;
     }
 
+    /*******************************************************************************
+                    Rewards
+    *******************************************************************************/
+
     /**
      * @notice Updates the rewards coordinator address
      * @dev Can only be called by the owner
@@ -337,5 +346,44 @@ contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+    }
+
+    /**
+     * @notice Claim rewards from Eigenlayer protocol.
+     * @dev Can only be called by trustee
+     * @param rewardToken Reward token.
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+        IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
+        IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
+    }
+
+    /*
+     * @notice Undelegates the contract from the current operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits an `Undelegated` event upon successful undelegation.
+    */
+    function undelegate() external onlyTrustee whenNotPaused {
+        _delegationManager.undelegate(address(this));
+        emit Undelegated();
+    }
+
+    /*
+     * @notice Redelegates the contract to a new operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits a `RedelegatedTo` event upon successful redelegation.
+     * @param operator The address of the new operator to delegate to.
+     * @param newOperatorApproverSig The signature and expiry details for the new operator's approval.
+     * @param approverSalt A unique salt used for the approval process to prevent replay attacks.
+    */
+    function redelegate(
+        address operator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee whenNotPaused {
+        require(operator != address(0), ZeroAddress());
+        _delegationManager.redelegate(operator, newOperatorApproverSig, approverSalt);
+        emit RedelegatedTo(operator);
     }
 }

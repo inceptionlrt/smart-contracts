@@ -1,16 +1,12 @@
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
-import { AssetData } from "../data/assets/stETH";
-import { vaults } from "../data/vaults";
+import { stETH } from "../data/assets/new/stETH";
 import { e18, impersonateWithEth } from "../helpers/utils";
 import { Adapter, adapters, emptyBytes } from './constants';
 const { ethers, upgrades, network } = hardhat;
 
-let symbioticVaults = vaults.symbiotic;
-let mellowVaults = vaults.mellow;
-
-export async function initVault(assetData: AssetData, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
+export async function initVault(assetData: typeof stETH, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
   if (options?.adapters?.includes(adapters.EigenLayer) && !options.eigenAdapterContractName) {
     throw new Error("EigenLayer adapter requires eigenAdapterContractName");
   }
@@ -21,11 +17,12 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   console.log(`Starting at block number: ${block.number}`);
   console.log("Initialization of Inception ....");
 
-  const asset = await ethers.getContractAt("IERC20", assetData.assetAddress);
+  const asset = await ethers.getContractAt("IERC20", assetData.asset.address);
   asset.address = await asset.getAddress();
 
   if (options?.adapters?.includes(adapters.Mellow)) {
-    for (const mVaultInfo of mellowVaults) {
+    // for (const mVaultInfo of mellowVaults) {
+    for (const mVaultInfo of assetData.adapters.mellow) {
       console.log(`- MellowVault ${mVaultInfo.name} and curator`);
       mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
 
@@ -47,7 +44,8 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
-    for (const sVaultInfo of symbioticVaults) {
+    // for (const sVaultInfo of symbioticVaults) {
+    for (const sVaultInfo of assetData.adapters.symbiotic) {
       console.log(`- Symbiotic ${sVaultInfo.name}`);
       sVaultInfo.vault = await ethers.getContractAt("IVault", sVaultInfo.vaultAddress);
     }
@@ -57,7 +55,7 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
   iToken.address = await iToken.getAddress();
 
-  const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
+  const iVaultOperator = await impersonateWithEth(assetData.vault.operator, e18);
 
   let mellowAdapter: any,
     symbioticAdapter: any,
@@ -66,7 +64,8 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   if (options?.adapters?.includes(adapters.Mellow)) {
     const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
-      [mellowVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
+      // [mellowVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      [assetData.adapters.mellow[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
     ]);
 
     mellowAdapter.address = await mellowAdapter.getAddress();
@@ -75,7 +74,8 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     const symbioticAdapterFactory = await ethers.getContractFactory("InceptionSymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
-      [symbioticVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
+      // [symbioticVaults[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
+      [assetData.adapters.symbiotic[0].vaultAddress], assetData.asset.address, assetData.vault.operator,
     ]);
     symbioticAdapter.address = await symbioticAdapter.getAddress();
   }
@@ -89,33 +89,33 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   const iLibrary = await ethers.deployContract("InceptionLibrary");
   await iLibrary.waitForDeployment();
 
-  const iVaultFactory = await ethers.getContractFactory(assetData.vaultFactory, {
+  const iVaultFactory = await ethers.getContractFactory(assetData.vault.contractName, {
     libraries: { InceptionLibrary: await iLibrary.getAddress() },
   });
   const iVault = await upgrades.deployProxy(
     iVaultFactory,
-    [assetData.vaultName, assetData.iVaultOperator, assetData.assetAddress, iToken.address],
+    [assetData.vault.name, assetData.vault.operator, assetData.asset.address, iToken.address],
     {
       unsafeAllowLinkedLibraries: true,
     },
   );
   iVault.address = await iVault.getAddress();
 
-  if (options?.adapters?.includes(adapters.EigenLayer) && options.eigenAdapterContractName) {
-    let [deployer] = await ethers.getSigners();
-    const eigenLayerAdapterFactory = await ethers.getContractFactory(options.eigenAdapterContractName);
-    eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
-      await deployer.getAddress(),
-      assetData.rewardsCoordinator,
-      assetData.delegationManager,
-      assetData.strategyManager,
-      assetData.assetStrategy,
-      assetData.assetAddress,
-      assetData.iVaultOperator,
-      iVault.address,
-    ]);
-    eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
-  }
+  // if (options?.adapters?.includes(adapters.EigenLayer) && options.eigenAdapterContractName) {
+  //   let [deployer] = await ethers.getSigners();
+  //   const eigenLayerAdapterFactory = await ethers.getContractFactory(options.eigenAdapterContractName);
+  //   eigenLayerAdapter = await upgrades.deployProxy(eigenLayerAdapterFactory, [
+  //     await deployer.getAddress(),
+  //     assetData.rewardsCoordinator,
+  //     assetData.delegationManager,
+  //     assetData.strategyManager,
+  //     assetData.assetStrategy,
+  //     assetData.assetAddress,
+  //     assetData.iVaultOperator,
+  //     iVault.address,
+  //   ]);
+  //   eigenLayerAdapter.address = await eigenLayerAdapter.getAddress();
+  // }
 
   const withdrawalQueueFactory = await ethers.getContractFactory("WithdrawalQueue");
   const withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);

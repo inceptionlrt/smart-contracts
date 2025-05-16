@@ -14,16 +14,22 @@ import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.
  * @dev Handles operations with the corresponding asset
  */
 contract InceptionAssetsHandler is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    Ownable2StepUpgradeable,
-    IInceptionVaultErrors
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+Ownable2StepUpgradeable,
+IInceptionVaultErrors
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
 
-    uint256[50 - 1] private __reserver;
+    uint256 public currentRewards;
+    /// @dev blockTime
+    uint256 public startTimeline;
+    /// @dev in seconds
+    uint256 public rewardsTimeline;
+
+    uint256[50 - 4] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
@@ -41,7 +47,11 @@ contract InceptionAssetsHandler is
 
     /// @dev returns the balance of iVault in the asset
     function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        uint256 elapsedDays = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (elapsedDays > totalDays) return _asset.balanceOf(address(this));
+        uint256 reservedRewards = (currentRewards / totalDays) * (totalDays - elapsedDays);
+        return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
     function _transferAssetFrom(address staker, uint256 amount) internal {
