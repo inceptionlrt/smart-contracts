@@ -142,3 +142,4 @@ There is manually triggered job to run the coverage check.
 
 Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC url correctly.
 
+Solution: set RPC env variable (which matches the network you are using).
