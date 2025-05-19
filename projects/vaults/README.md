@@ -67,68 +67,79 @@ Additionally, the corresponding _RateProviders_ were deployed for all LRT (Incep
 
 ## Testing
 
+Refer to `package.json` scripts to see all available test commands.
+
+Generally, you can run the tests with `npx hardhat test`.
+
+Before running tests create `.env` file in the root of the `vaults` project based on `.env.example` file.
+
 To run tests for the Inception Protocol, please follow these instructions:
 
-1. Set up a fork RPC:
+## Coverage
 
-- Windows: `export RPC_URL_ETHEREUM=""`
-- MacOs/LinuxOs: `RPC_URL_ETHEREUM=""`
+1. Generate coverage report.
 
-2. Set the `solidity.compilers[0].settings.runs: 0` before contracts compilation in hardhat.config.js,
-   otherwise may cause `Block not found` error.
+To run coverage, refer to the `package.json` scripts.
 
-3. Set any `DEPLOYER_PRIVATE_KEY` env or comment the line in hardhat.config.js.
+It will generate a coverage report in the `coverage` folder. Open `index.html` in your browser to view the report.
 
-4. Compile with `npx hardhat compile`.
+2. Check if coverage meets the minimum threshold.
 
-5. It's possible to run tests for specific LSTs or all supported:
+There is a `check-coverage.sh` script that will check if coverage meets the minimum threshold. The threshold for each coverage type could be set in the the `check-coverage.sh` file.
+If any of threshold is not met, the script will exit with a non-zero code (job will fail).
+After running coverage check, it will add the results as pull request comment.
+Also, CI job will generate the full report as artfact, download it and open `index.html` file.
 
-- Paricular LSTs case:
-  `ASSETS=athc,wbeth npx hardhat test`
+> Don't decrease the coverage threshold values in the script file, write more tests instead. Increasing the value is encouraged.
 
-- Running all tests at once:
-  `npx hardhat test`
+## CI
+
+There is manually triggered job to run the coverage check.
 
 ## InceptionVault_S
-1. User flow:
-   
-    1. Deposit
-        - Approve vault's underlying `InceptionVault_S.asset()` to the vault
-        - Call `deposit(uint256 amount, address receiver)`
-        - Receive inception token as vault shares
-    2. Redeem
-        - Call `redeem(uint256 shares, address receiver, address owner)`
-        - Vault burns inception tokens of `owner` equal to `shares`
-        - Corresponding vault's underlying `InceptionVault_S.asset()` are received by `receiver`
-2. Mellow Integration:
-   
-    1. Deposit flow
-        - `InceptionVault_S` via the `IMellowAdapter` deposits assets into mellow vaults proportional to assigned allocations
-        - `InceptionVault_S.delegateToMellowVault(address mellowVault, uint256 amount)` calls `IMellowAdapter.delegateMellow(uint256 amount, uint256 deadline, address mellowVault)` to forward assets to `IMellowAdapter`
-        - `IMellowAdapter` then calls `MellowWrapper.deposit(address to, address token, uint256 amount, uint256 minLpAmount, uint256 deadline)` to deposit assets to Mellow Vault
-    2. Withdraw flow
-        - `InceptionVault_S.undelegateFrom(address mellowVault, uint256 amount)` calls `IMellowAdapter.withdrawMellow(mellowVault, amount, true)` with `closePrevious` set to `true`
-        - `IMellowAdapter` then calls `registerWithdrawal(address to, uint256 lpAmount, uint256[] memory minAmounts, uint256 deadline, uint256 requestDeadline, bool closePrevious)` to generate withdrawal request
-    3. Emergency withdraw
-        - `InceptionVault_S` does support emergency withdraw using `undelegateForceFrom(address mellowVault, uint256 amount)`
-        - This inturn calls `IMellowAdapter.withdrawEmergencyMellow(address _mellowVault, uint256 amount)` which calls `mellowVault.function emergencyWithdraw(uint256[] memory minAmounts, uint256 deadline)`
-    4. Mellow rewards
-        - Mellow staking rewards accumulation are reflected by `InceptionVault_S.ratio()` which takes into account the balance + rewards
-    5. Flash withdraw
-        - `InceptionVault_S` does support flash withdrawal since withdrawal from mellow has withdrawal process delay
-        - `InceptionVault_S.flashWithdraw(uint256 iShares, address receiver)` allows the user to receive assets immediately on withdrawal transaction
-        - Flash withdrawal incurs additional flash fees, which are calculated by `InceptionLibrary` based on utilization and optimal rate
-        - Part of fees go to Protocol and part are added to `depositBonusAmount` for depositors
-3. Mainnet params:
-   
-    - Operator = 0xd87D15b80445EC4251e33dBe0668C335624e54b7
-    - withdrawUtilizationKink = 25 * 1e8
-    - optimalWithdrawalRate = 5 * 1e7
-    - Supported vaults = [MEV: 0x5fD13359Ba15A84B76f7F87568309040176167cd]
 
-        
+1. User flow:
+
+   1. Deposit
+      - Approve vault's underlying `InceptionVault_S.asset()` to the vault
+      - Call `deposit(uint256 amount, address receiver)`
+      - Receive inception token as vault shares
+   2. Redeem
+      - Call `redeem(uint256 shares, address receiver, address owner)`
+      - Vault burns inception tokens of `owner` equal to `shares`
+      - Corresponding vault's underlying `InceptionVault_S.asset()` are received by `receiver`
+
+2. Mellow Integration:
+
+   1. Deposit flow
+      - `InceptionVault_S` via the `IMellowAdapter` deposits assets into mellow vaults proportional to assigned allocations
+      - `InceptionVault_S.delegateToMellowVault(address mellowVault, uint256 amount)` calls `IMellowAdapter.delegateMellow(uint256 amount, uint256 deadline, address mellowVault)` to forward assets to `IMellowAdapter`
+      - `IMellowAdapter` then calls `MellowWrapper.deposit(address to, address token, uint256 amount, uint256 minLpAmount, uint256 deadline)` to deposit assets to Mellow Vault
+   2. Withdraw flow
+      - `InceptionVault_S.undelegateFrom(address mellowVault, uint256 amount)` calls `IMellowAdapter.withdrawMellow(mellowVault, amount, true)` with `closePrevious` set to `true`
+      - `IMellowAdapter` then calls `registerWithdrawal(address to, uint256 lpAmount, uint256[] memory minAmounts, uint256 deadline, uint256 requestDeadline, bool closePrevious)` to generate withdrawal request
+   3. Emergency withdraw
+      - `InceptionVault_S` does support emergency withdraw using `undelegateForceFrom(address mellowVault, uint256 amount)`
+      - This inturn calls `IMellowAdapter.withdrawEmergencyMellow(address _mellowVault, uint256 amount)` which calls `mellowVault.function emergencyWithdraw(uint256[] memory minAmounts, uint256 deadline)`
+   4. Mellow rewards
+      - Mellow staking rewards accumulation are reflected by `InceptionVault_S.ratio()` which takes into account the balance + rewards
+   5. Flash withdraw
+      - `InceptionVault_S` does support flash withdrawal since withdrawal from mellow has withdrawal process delay
+      - `InceptionVault_S.flashWithdraw(uint256 iShares, address receiver)` allows the user to receive assets immediately on withdrawal transaction
+      - Flash withdrawal incurs additional flash fees, which are calculated by `InceptionLibrary` based on utilization and optimal rate
+      - Part of fees go to Protocol and part are added to `depositBonusAmount` for depositors
+
+3. Mainnet params:
+
+   - Operator = 0xd87D15b80445EC4251e33dBe0668C335624e54b7
+   - withdrawUtilizationKink = 25 \* 1e8
+   - optimalWithdrawalRate = 5 \* 1e7
+   - Supported vaults = [MEV: 0x5fD13359Ba15A84B76f7F87568309040176167cd]
+
 # Troubleshooting
 
 - `Error: Trying to initialize a provider with block X but the current block is Y`
 
-Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC provider correctly.
+Looks like the RPC provider is not in sync with the network. Please make sure you set the RPC url correctly.
+
+Solution: set RPC env variable (which matches the network you are using).

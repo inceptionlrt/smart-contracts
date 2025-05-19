@@ -303,8 +303,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
       tx = await iVault
         .connect(iVaultOperator)
-        .undelegate(
-          [eigenLayerAdapter.address], [eigenLayerVaults[0]], [totalDelegatedBefore], [[]],
+        .undelegate(await withdrawalQueue.currentEpoch(),
+          [[eigenLayerAdapter.address, eigenLayerVaults[0], totalDelegatedBefore, []]],
         );
       const totalDepositedAfter = await iVault.getTotalDeposited();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
@@ -523,7 +523,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     });
 
     it("Force undelegate & claim", async function() {
-      await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [])
+      await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), []);
 
       expect(await asset.balanceOf(iVault.address)).to.be.closeTo(toWei(5), transactErr);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.closeTo(toWei(2), transactErr);
@@ -652,12 +652,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
       tx = await iVault
         .connect(iVaultOperator)
-        .undelegate(
-          [eigenLayerAdapter.address, eigenLayerAdapter2.address],     // all adapters
-          [eigenLayerVaults[0], eigenLayerVaults[1]],                 // all vaults
-          [delegatedTo1, delegatedTo2],                               // all amounts
-          [[], []],                                                   // all _data arrays
-        );
+        .undelegate(await withdrawalQueue.currentEpoch(),
+          [
+            [eigenLayerAdapter.address, eigenLayerVaults[0], delegatedTo1, []],
+            [eigenLayerAdapter2.address, eigenLayerVaults[1], delegatedTo2, []],
+          ]);
       const totalDepositedAfter = await iVault.getTotalDeposited();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
 
@@ -804,7 +803,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       // emergency undelegate 5
       await iVault.connect(iVaultOperator).emergencyUndelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(5)], [[]]);
       // normal undelegate 3
-      let tx = await iVault.connect(iVaultOperator).undelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(3)], [[]]);
+      let tx = await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [[await eigenLayerAdapter.getAddress(), elVault, toWei(3), []]]);
 
       // get emergency claimer
       const receipt = await tx.wait();

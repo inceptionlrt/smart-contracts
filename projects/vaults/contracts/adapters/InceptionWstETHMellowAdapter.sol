@@ -6,14 +6,14 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IInceptionMellowAdapter} from "../interfaces/adapters/IInceptionMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 import {IStakerRewards} from "../interfaces/symbiotic-vault/symbiotic-core/IStakerRewards.sol";
 
-import {IBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol";
 
 /**
@@ -22,7 +22,7 @@ import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol
  * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
  */
-contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
+contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -464,12 +464,14 @@ contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return 3;
     }
 
-    /// @notice Retrieves or creates a claimer address based on the emergency condition.
-    /// @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
-    ///      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
-    ///      The returned claimer is added to the `pendingClaimers` set.
-    /// @param emergency Boolean indicating whether an emergency claimer is required.
-    /// @return claimer The address of the claimer to be used.
+    /*
+    * @notice Retrieves or creates a claimer address based on the emergency condition
+    * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
+    *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
+    *      The returned claimer is added to the `pendingClaimers` set
+    * @param emergency Boolean indicating whether an emergency claimer is required
+    * @return claimer The address of the claimer to be used
+    */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
             if (_emergencyClaimer == address(0)) {
@@ -489,18 +491,22 @@ contract InceptionWstETHMellowAdapter is IIMellowAdapter, IBaseAdapter {
         return claimer;
     }
 
-    /// @notice Removes a claimer from the pending list and recycles it to the available claimers.
-    /// @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`.
-    /// @param claimer The address of the claimer to be removed from pending status.
+    /*
+    * @notice Removes a claimer from the pending list and recycles it to the available claimers
+    * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
+    * @param claimer The address of the claimer to be removed from pending status
+    */
     function _removePendingClaimer(address claimer) internal {
         delete claimerVaults[claimer];
         pendingClaimers.remove(claimer);
         availableClaimers.push(claimer);
     }
 
-    /// @notice Deploys a new MellowAdapterClaimer contract instance.
-    /// @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter.
-    /// @return The address of the newly deployed MellowAdapterClaimer contract.
+    /*
+    * @notice Deploys a new SymbioticAdapterClaimer contract instance
+    * @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter
+    * @return The address of the newly deployed SymbioticAdapterClaimer contract
+    */
     function _deployClaimer() internal returns (address) {
         return address(new MellowAdapterClaimer(address(_asset)));
     }

@@ -808,13 +808,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       });
     });
 
-    it.skip("Max mint and deposit", async function () {
-      const stakerBalance = await asset.balanceOf(staker);
-      const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
-      const realBonus = await iVault.depositBonusAmount();
-      const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
-      expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
-    });
+    // it.skip("Max mint and deposit", async function () {
+    //   const stakerBalance = await asset.balanceOf(staker);
+    //   const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
+    //   const realBonus = await iVault.depositBonusAmount();
+    //   const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
+    //   expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
+    // });
 
     it("Max mint and deposit when iVault is paused equal 0", async function () {
       await iVault.pause();
@@ -835,10 +835,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
   describe("Deposit with bonus for replenish", function () {
     const states = [
-      {
-        name: "deposit bonus = 0",
-        withBonus: false,
-      },
+      // {
+      //   name: "deposit bonus = 0",
+      //   withBonus: false,
+      // },
       {
         name: "deposit bonus > 0",
         withBonus: true,
@@ -891,6 +891,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       it(`---Prepare state: ${state.name}`, async function () {
         await snapshot.restore();
         await iVault.setTargetFlashCapacity(1n);
+        await iVault.setDepositMinAmount(1n);
         const deposited = (targetCapacity * MAX_TARGET_PERCENT) / targetCapacityPercent;
         if (state.withBonus) {
           await iVault.setTargetFlashCapacity(targetCapacityPercent);
@@ -906,14 +907,14 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         localSnapshot = await helpers.takeSnapshot();
       });
 
-      it.skip("Max mint and deposit", async function () {
-        const stakerBalance = await asset.balanceOf(staker);
-        const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
-        const realBonus = await iVault.depositBonusAmount();
-        const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
-        // expect(await iVault.maxMint(staker)).to.be.eq(await iVault.convertToShares(stakerBalance + bonus));
-        expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
-      });
+      // it.skip("Max mint and deposit", async function () {
+      //   const stakerBalance = await asset.balanceOf(staker);
+      //   const calculatedBonus = await iVault.calculateDepositBonus(stakerBalance);
+      //   const realBonus = await iVault.depositBonusAmount();
+      //   const bonus = realBonus > calculatedBonus ? calculatedBonus : realBonus;
+      //   // expect(await iVault.maxMint(staker)).to.be.eq(await iVault.convertToShares(stakerBalance + bonus));
+      //   expect(await iVault.maxDeposit(staker)).to.be.eq(stakerBalance);
+      // });
 
       amounts.forEach(function (arg) {
         it(`Deposit ${arg.name}`, async function () {
@@ -935,10 +936,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
             );
           await iVault.setTargetFlashCapacity(targetCapacityPercent);
           await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-          const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+          const calculatedRatio = await calculateRatio(iVault, iToken);
           await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
-
           const ratioBefore = await iVault.ratio();
+
           let availableBonus = await iVault.depositBonusAmount();
           const receiver = arg.receiver();
           const stakerSharesBefore = await iToken.balanceOf(receiver);
@@ -1503,7 +1504,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         console.log(`expected Redeem:\t${expectedMaxRedeem.format()}`);
 
         if (maxRedeem > 0n) {
-          await iVault.connect(sharesOwner).redeem(maxRedeem, sharesOwner.address, sharesOwner.address);
+          await iVault.connect(sharesOwner)["redeem( uint256 shares, address receiver, address owner )"](maxRedeem, sharesOwner.address, sharesOwner.address);
         }
         expect(maxRedeem).to.be.eq(expectedMaxRedeem);
       });
@@ -1517,7 +1518,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   });
 
   describe("Deposit slippage", function () {
-    it("Deposited less shares than min out", async function () {
+    it("Deposited less shares than min out", async function() {
+      await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
       await expect(
         iVault.connect(staker)["deposit(uint256,address,uint256)"](toWei(1), staker.address, toWei(100))

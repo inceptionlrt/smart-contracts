@@ -4,13 +4,13 @@ pragma solidity ^0.8.28;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IWStethInterface} from "../interfaces/common/IStEth.sol";
-import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
+import {IInceptionEigenLayerAdapter} from "../interfaces/adapters/IInceptionEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
 
-import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter, IInceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
 
 /**
@@ -19,7 +19,7 @@ import {IEmergencyClaimer} from "../interfaces/common/IEmergencyClaimer.sol";
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapterWrap is IBaseAdapter, IIEigenLayerAdapter {
+contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;

@@ -1,0 +1,64 @@
+name: Check coverage
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  check-coverage:
+    name: Check Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/vaults
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+
+      - name: Install deps
+        run: yarn install --frozen-lockfile && cd ../.. && yarn install --frozen-lockfile
+
+      - name: Run coverage
+        run: npm run coverage
+        env:
+          RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
+          ASSET_NAME: stETH
+          NETWORK: mainnet
+
+      - name: Check coverage percentage
+        run: |
+          bash ./check-coverage.sh
+
+      - name: Save coveage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report
+          path: |
+            projects/vaults/coverage
+      
+      - name: Read logs file
+        run: |
+          {
+            echo "CONTENT<<EOF"
+            cat coverage_logs.txt
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Post coverage result to PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ```
+            ${{ env.CONTENT }}
+            ```

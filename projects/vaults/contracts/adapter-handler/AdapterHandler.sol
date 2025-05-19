@@ -7,9 +7,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 import {IAdapterHandler} from "../interfaces/adapter-handler/IAdapterHandler.sol";
-import {IIBaseAdapter} from "../interfaces/adapters/IIBaseAdapter.sol";
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
-import {IISymbioticAdapter} from "../interfaces/adapters/IISymbioticAdapter.sol";
+import {IInceptionBaseAdapter} from "../interfaces/adapters/IInceptionBaseAdapter.sol";
+import {IInceptionMellowAdapter} from "../interfaces/adapters/IInceptionMellowAdapter.sol";
+import {IInceptionSymbioticAdapter} from "../interfaces/adapters/IInceptionSymbioticAdapter.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 import {InceptionAssetsHandler, IERC20} from "../assets-handler/InceptionAssetsHandler.sol";
 
@@ -36,7 +36,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @dev Instance of the Mellow adapter interface for interacting with Mellow-related functionality.
      */
-    IIMellowAdapter private __deprecated_mellowAdapter;
+    IInceptionMellowAdapter private __deprecated_mellowAdapter;
 
     /**
      * @dev Deprecated variable representing the total amount pending to be redeemed by claimers.
@@ -74,7 +74,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @dev Instance of the Symbiotic adapter interface for interacting with Symbiotic-related functionality.
      */
-    IISymbioticAdapter private __deprecated_symbioticAdapter;
+    IInceptionSymbioticAdapter private __deprecated_symbioticAdapter;
 
     /**
      * @dev Set of adapter addresses currently registered in the system.
@@ -146,7 +146,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
 
         _asset.safeIncreaseAllowance(address(adapter), amount);
-        IIBaseAdapter(adapter).delegate(vault, amount, _data);
+        IInceptionBaseAdapter(adapter).delegate(vault, amount, _data);
 
         emit DelegatedTo(adapter, vault, amount);
     }
@@ -211,7 +211,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (vault == address(0)) revert InvalidAddress();
         if (amount == 0) revert ValueZero();
         // undelegate from adapter
-        return IIBaseAdapter(adapter).withdraw(vault, amount, _data, emergency);
+        return IInceptionBaseAdapter(adapter).withdraw(vault, amount, _data, emergency);
     }
 
     /**
@@ -225,6 +225,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         if (getFlashCapacity() < requestedAmount) revert InsufficientFreeBalance();
         withdrawalQueue.forceUndelegateAndClaim(undelegatedEpoch, requestedAmount);
+
+        emit ClaimFromVault(requestedAmount, undelegatedEpoch);
     }
 
     /**
@@ -315,7 +317,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      */
     function _claim(address adapter, bytes[] calldata _data, bool emergency) internal returns (uint256) {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        return IIBaseAdapter(adapter).claim(_data, emergency);
+        return IInceptionBaseAdapter(adapter).claim(_data, emergency);
     }
 
     /**
@@ -324,7 +326,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param adapter The address of the adapter contract from which to claim the free balance.
      */
     function claimAdapterFreeBalance(address adapter) external onlyOperator whenNotPaused nonReentrant {
-        IIBaseAdapter(adapter).claimFreeBalance();
+        IInceptionBaseAdapter(adapter).claimFreeBalance();
     }
 
     /**
@@ -339,7 +341,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 rewardAmount = rewardToken.balanceOf(address(this));
 
         // claim rewards from protocol
-        IIBaseAdapter(adapter).claimRewards(token, rewardsData);
+        IInceptionBaseAdapter(adapter).claimRewards(token, rewardsData);
 
         rewardAmount = rewardToken.balanceOf(address(this)) - rewardAmount;
         require(rewardAmount > 0, "Reward amount is zero");
@@ -395,7 +397,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalDelegated() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IIBaseAdapter(_adapters.at(i)).getTotalDeposited();
+            total += IInceptionBaseAdapter(_adapters.at(i)).getTotalDeposited();
         }
         return total;
     }
@@ -410,7 +412,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         address adapter,
         address vault
     ) external view returns (uint256) {
-        return IIBaseAdapter(adapter).getDeposited(vault);
+        return IInceptionBaseAdapter(adapter).getDeposited(vault);
     }
 
     /**
@@ -431,7 +433,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getPendingWithdrawals(
         address adapter
     ) public view returns (uint256) {
-        return IIBaseAdapter(adapter).inactiveBalance();
+        return IInceptionBaseAdapter(adapter).inactiveBalance();
     }
 
     /**
@@ -441,7 +443,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalPendingWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IIBaseAdapter(_adapters.at(i)).inactiveBalance();
+            total += IInceptionBaseAdapter(_adapters.at(i)).inactiveBalance();
         }
         return total;
     }
@@ -453,7 +455,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalPendingEmergencyWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IIBaseAdapter(_adapters.at(i)).inactiveBalanceEmergency();
+            total += IInceptionBaseAdapter(_adapters.at(i)).inactiveBalanceEmergency();
         }
         return total;
     }

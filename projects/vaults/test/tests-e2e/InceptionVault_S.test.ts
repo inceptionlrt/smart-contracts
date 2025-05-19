@@ -1,8 +1,6 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { stETH } from "../data/assets/inception-vault-s";
-import { vaults } from "../data/vaults";
 import {
   calculateRatio,
   e18,
@@ -10,14 +8,15 @@ import {
   toWei,
 } from "../helpers/utils";
 import { adapters, emptyBytes } from "../src/constants";
-import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault";
-
-const symbioticVaults = vaults.symbiotic;
-const mellowVaults = vaults.mellow;
+import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault-new";
+import { testrunConfig } from '../testrun.config';
 
 const { ethers, network } = hardhat;
-const assetData = stETH;
-describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function () {
+const assetData = testrunConfig.assetData;
+const symbioticVaults = assetData.adapters.symbiotic;
+const mellowVaults = assetData.adapters.mellow;
+
+describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function () {
   this.timeout(150000);
   let iToken, iVault, ratioFeed, asset, mellowAdapter, symbioticAdapter, withdrawalQueue;
   let iVaultOperator, deployer, staker, staker2, staker3, treasury;
@@ -25,11 +24,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
   let snapshot;
   let params;
 
-  before(async function () {
+  before(async function() {
     if (process.env.ASSETS) {
       const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
-      if (!assets.includes(assetData.assetName.toLowerCase())) {
-        console.log(`${assetData.assetName} is not in the list, going to skip`);
+      if (!assets.includes(assetData.asset.name.toLowerCase())) {
+        console.log(`${assetData.asset.name} is not in the list, going to skip`);
         this.skip();
       }
     }
@@ -37,7 +36,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     await network.provider.send("hardhat_reset", [
       {
         forking: {
-          jsonRpcUrl: assetData.url ? assetData.url : network.config.forking.url,
+          jsonRpcUrl: network.config.forking.url,
           blockNumber: assetData.blockNumber ? assetData.blockNumber : network.config.forking.blockNumber,
         },
       },
@@ -59,23 +58,23 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     snapshot = await helpers.takeSnapshot();
   });
 
-  after(async function () {
+  after(async function() {
     if (iVault) {
       await iVault.removeAllListeners();
     }
   });
 
-  describe("Symbiotic Native | Base flow no flash", function () {
+  describe("Symbiotic Native | Base flow no flash", function() {
     let totalDeposited = 0n;
     let delegatedSymbiotic = 0n;
     let rewardsSymbiotic = 0n;
 
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("Initial stats", async function () {
+    it("Initial stats", async function() {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -86,7 +85,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await symbioticAdapter.isVaultSupported(symbioticVaults[0].vaultAddress)).to.be.eq(true);
     });
 
-    it("User can deposit to iVault", async function () {
+    it("User can deposit to iVault", async function() {
       totalDeposited += toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -105,7 +104,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Delegate to symbioticVault#1", async function () {
+    it("Delegate to symbioticVault#1", async function() {
       const amount = (await iVault.totalAssets()) / 3n;
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -144,7 +143,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
     });
 
-    it("Add new symbioticVault", async function () {
+    it("Add new symbioticVault", async function() {
       await expect(symbioticAdapter.addVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(
         symbioticAdapter,
         "ZeroAddress",
@@ -162,7 +161,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       );
     });
 
-    it("Delegate all to symbioticVault#2", async function () {
+    it("Delegate all to symbioticVault#2", async function() {
       const amount = await iVault.getFreeBalance();
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -196,7 +195,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
     });
 
-    it("Update ratio", async function () {
+    it("Update ratio", async function() {
       const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -204,7 +203,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.ratio()).eq(ratio);
     });
 
-    it("Add rewards to Symbiotic protocol and estimate ratio, it remains the same", async function () {
+    it("Add rewards to Symbiotic protocol and estimate ratio, it remains the same", async function() {
       const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
       const totalDelegatedToBefore = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -223,7 +222,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(totalDelegatedAfter - totalDelegatedBefore).to.be.eq(totalDelegatedToAfter - totalDelegatedToBefore);
     });
 
-    it("User can withdraw all", async function () {
+    it("User can withdraw all", async function() {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -246,7 +245,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(epochShares).to.be.closeTo(shares, transactErr);
     });
 
-    it("Update ratio after all shares burn", async function () {
+    it("Update ratio after all shares burn", async function() {
       const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
       console.log(`Calculated ratio:\t\t\t${calculatedRatio.format()}`);
       expect(calculatedRatio).to.be.eq(e18); //Because all shares have been burnt at this point
@@ -261,7 +260,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     let undelegateClaimer1;
     let undelegateClaimer2;
 
-    it("Undelegate from Symbiotic", async function () {
+    it("Undelegate from Symbiotic", async function() {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -273,12 +272,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       const amount2 = await symbioticAdapter.getDeposited(symbioticVaults[1].vaultAddress);
       const tx = await iVault
         .connect(iVaultOperator)
-        .undelegate(
-          [await symbioticAdapter.getAddress(), await symbioticAdapter.getAddress()],
-          [symbioticVaults[0].vaultAddress, symbioticVaults[1].vaultAddress],
-          [amount, amount2],
-          [emptyBytes, emptyBytes],
-        );
+        .undelegate(await withdrawalQueue.currentEpoch(), [
+          [await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, amount, emptyBytes],
+          [await symbioticAdapter.getAddress(), symbioticVaults[1].vaultAddress, amount2, emptyBytes],
+        ]);
 
       const receipt = await tx.wait();
       const events = receipt.logs
@@ -311,7 +308,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(pendingWithdrawalsSymbioticAfter).to.be.closeTo(amount + amount2, transactErr * 2n);
     });
 
-    it("Process request to transfers pending funds to symbioticAdapter", async function () {
+    it("Process request to transfers pending funds to symbioticAdapter", async function() {
       console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
       console.log(`current epoch of 2: ${await symbioticVaults[1].vault.currentEpoch()}`);
 
@@ -374,7 +371,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(adapterBalanceBefore).to.be.closeTo(adapterBalanceAfter, transactErr);
     });
 
-    it("Remove symbioticVault", async function () {
+    it("Remove symbioticVault", async function() {
       await expect(symbioticAdapter.removeVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(
         symbioticAdapter,
         "ZeroAddress",
@@ -392,7 +389,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       );
     });
 
-    it("Staker is able to redeem", async function () {
+    it("Staker is able to redeem", async function() {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -405,7 +402,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
     });
 
-    it("Redeem withdraw", async function () {
+    it("Redeem withdraw", async function() {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
@@ -434,18 +431,18 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
   });
 
-  describe("Base flow no flash", function () {
+  describe("Base flow no flash", function() {
     let totalDeposited = 0n;
     let delegatedMellow = 0n;
     let rewardsMellow = 0n;
     let undelegatedEpoch;
 
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("Initial stats", async function () {
+    it("Initial stats", async function() {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -454,7 +451,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.getFreeBalance()).to.be.eq(0n);
     });
 
-    it("User can deposit to iVault", async function () {
+    it("User can deposit to iVault", async function() {
       totalDeposited += toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -473,7 +470,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-    it("Delegate to mellowVault#1", async function () {
+    it("Delegate to mellowVault#1", async function() {
       const amount = (await iVault.getFreeBalance()) / 3n;
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -504,13 +501,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
     });
 
-    it("Add new mellowVault", async function () {
+    it("Add new mellowVault", async function() {
       await expect(mellowAdapter.addMellowVault(mellowVaults[1].vaultAddress))
         .to.emit(mellowAdapter, "VaultAdded")
         .withArgs(mellowVaults[1].vaultAddress);
     });
 
-    it("Delegate all to mellowVault#2", async function () {
+    it("Delegate all to mellowVault#2", async function() {
       const amount = await iVault.getFreeBalance();
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
@@ -538,7 +535,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
     });
 
-    it("Update ratio", async function () {
+    it("Update ratio", async function() {
       const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -546,7 +543,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.ratio()).eq(ratio);
     });
 
-    it("Add rewards to Mellow protocol and estimate ratio", async function () {
+    it("Add rewards to Mellow protocol and estimate ratio", async function() {
       const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
       const totalDelegatedToBefore = await iVault.getDelegatedTo(
         await mellowAdapter.getAddress(),
@@ -573,13 +570,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(totalDelegatedAfter - totalDelegatedBefore).to.be.eq(totalDelegatedToAfter - totalDelegatedToBefore);
     });
 
-    it("Estimate the amount that user can withdraw", async function () {
+    it("Estimate the amount that user can withdraw", async function() {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       expect(assetValue).closeTo(totalDeposited + rewardsMellow, transactErr * 10n);
     });
 
-    it("User can withdraw all", async function () {
+    it("User can withdraw all", async function() {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -615,7 +612,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     let undelegateClaimer1;
     let undelegateClaimer2;
 
-    it("Undelegate from Mellow", async function () {
+    it("Undelegate from Mellow", async function() {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -641,12 +638,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
 
       const tx = await iVault
         .connect(iVaultOperator)
-        .undelegate(
-          [await mellowAdapter.getAddress(), await mellowAdapter.getAddress()],
-          [mellowVaults[0].vaultAddress, mellowVaults[1].vaultAddress],
-          [assets1, assets2],
-          [emptyBytes, emptyBytes],
-        );
+        .undelegate(await withdrawalQueue.currentEpoch(), [
+          [await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, assets1, emptyBytes],
+          [await mellowAdapter.getAddress(), mellowVaults[1].vaultAddress, assets2, emptyBytes],
+        ]);
 
       const receipt = await tx.wait();
       const events = receipt.logs
@@ -689,7 +684,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       // expect(pendingWithdrawalsMellowAfter).to.be.closeTo(amount + amount2, transactErr * 2n);
     });
 
-    it("Claim Mellow withdrawal transfer funds from adapter to vault", async function () {
+    it("Claim Mellow withdrawal transfer funds from adapter to vault", async function() {
       await helpers.time.increase(1209900);
 
       const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
@@ -727,11 +722,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       const redeemable = await iVault.redeemReservedAmount();
 
       expect(totalDeposited).to.be.eq(
-        totalDelegated + totalAssets + totalPendingWithdrawals + totalPendingEmergencyWithdrawals - redeemable
+        totalDelegated + totalAssets + totalPendingWithdrawals + totalPendingEmergencyWithdrawals - redeemable,
       );
     });
 
-    it("Staker is able to redeem", async function () {
+    it("Staker is able to redeem", async function() {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -744,7 +739,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
     });
 
-    it("Redeem withdraw", async function () {
+    it("Redeem withdraw", async function() {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
@@ -773,25 +768,25 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
   });
 
-  describe("Base flow with flash withdraw", function () {
+  describe("Base flow with flash withdraw", function() {
     let targetCapacity, deposited, freeBalance, depositFees;
-    before(async function () {
+    before(async function() {
       await snapshot.restore();
       targetCapacity = e18;
       await iVault.setTargetFlashCapacity(targetCapacity); //1%
     });
 
-    it("Initial ratio is 1e18", async function () {
+    it("Initial ratio is 1e18", async function() {
       const ratio = await iVault.ratio();
       console.log(`Current ratio is:\t\t\t\t${ratio.format()}`);
       expect(ratio).to.be.eq(e18);
     });
 
-    it("Initial delegation is 0", async function () {
+    it("Initial delegation is 0", async function() {
       expect(await iVault.getTotalDelegated()).to.be.eq(0n);
     });
 
-    it("Deposit to Vault", async function () {
+    it("Deposit to Vault", async function() {
       // made by user
       deposited = toWei(10);
       freeBalance = (deposited * (MAX_TARGET_PERCENT - targetCapacity)) / MAX_TARGET_PERCENT;
@@ -816,7 +811,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.ratio()).to.be.eq(e18);
     });
 
-    it("Delegate freeBalance", async function () {
+    it("Delegate freeBalance", async function() {
       // made by operator
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const expectedFlashCapacity = (deposited * targetCapacity) / MAX_TARGET_PERCENT;
@@ -841,7 +836,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.ratio()).closeTo(e18, ratioErr);
     });
 
-    it("Update asset ratio", async function () {
+    it("Update asset ratio", async function() {
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
       const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
@@ -849,7 +844,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
       expect(await iVault.ratio()).lt(e18);
     });
 
-    it("Flash withdraw all capacity", async function () {
+    it("Flash withdraw all capacity", async function() {
       // made by user (flash capacity tests ends on this step)
       const sharesBefore = await iToken.balanceOf(staker);
       const assetBalanceBefore = await asset.balanceOf(staker);
@@ -905,7 +900,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
 
     // made by user (withdrawal of funds if something left after flash withdraw)
-    it("Withdraw all", async function () {
+    it("Withdraw all", async function() {
       const ratioBefore = await iVault.ratio();
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
@@ -936,7 +931,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
 
     let undelegateClaimer;
 
-    it("Undelegate from Mellow", async function () {
+    it("Undelegate from Mellow", async function() {
       // made by operator
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
@@ -950,7 +945,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
 
       const tx = await iVault
         .connect(iVaultOperator)
-        .undelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [amount], [emptyBytes]);
+        .undelegate(await withdrawalQueue.currentEpoch(), [[await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, amount, emptyBytes]]);
 
       const receipt = await tx.wait();
       const events = receipt.logs
@@ -981,7 +976,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
 
     // made by operator
-    it("Claim Mellow withdrawal transfer funds from adapter to vault", async function () {
+    it("Claim Mellow withdrawal transfer funds from adapter to vault", async function() {
       await helpers.time.increase(1209900);
 
       const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
@@ -1007,7 +1002,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
 
     // made by user
-    it("Staker is able to redeem", async function () {
+    it("Staker is able to redeem", async function() {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -1021,7 +1016,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName} e2e tests`, function 
     });
 
     // made by operator
-    it("Redeem withdraw", async function () {
+    it("Redeem withdraw", async function() {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
