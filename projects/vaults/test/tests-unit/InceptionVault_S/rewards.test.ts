@@ -10,6 +10,7 @@ import { toWei } from "../../helpers/utils";
 import { adapters, emptyBytes } from "../../src/constants";
 import { abi, initVault } from "../../src/init-vault";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import exp from "node:constants";
 
 const { ethers, network } = hardhat;
 const assetData = stETH;
@@ -129,6 +130,38 @@ describe("Farm rewards", function() {
 
       await iVault.connect(iVaultOperator).claimAdapterRewards(symbioticAdapter.address, assetData.assetAddress, farmData);
       expect(await asset.balanceOf(rewardsTreasury)).to.eq(claimable);
+    });
+  });
+
+  describe("Add rewards to vault", function () {
+    before(async function () {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+    });
+
+    it("set rewards timeline", async function () {
+      const timeline = 86400;
+
+      await iVault.connect(iVaultOperator).setRewardsTimeline(timeline);
+      expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
+    });
+
+    it("add rewards for the first time", async function() {
+      const rewardsAmount = toWei(10);
+
+      const totalAssetsBefore = await iVault.totalAssets();
+      await asset.connect(staker).transfer(iVaultOperator, rewardsAmount);
+      await asset.connect(iVaultOperator).approve(iVault.address, rewardsAmount);
+      await iVault.connect(iVaultOperator).addRewards(rewardsAmount);
+      const totalAssetsAfter = await iVault.totalAssets();
+
+      expect(await iVault.currentRewards()).to.eq(rewardsAmount);
+      expect(totalAssetsBefore - totalAssetsAfter).to.be.eq(0);
+    });
+
+    it("add rewards not available while timeline not over", async function() {
+      await expect(iVault.connect(iVaultOperator).addRewards(toWei(1)))
+        .to.be.revertedWithCustomError(iVault, "TimelineNotOver");
     });
   });
 });

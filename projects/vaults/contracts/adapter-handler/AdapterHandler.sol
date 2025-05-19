@@ -541,4 +541,17 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         emit SetRewardsTreasury(rewardsTreasury);
         rewardsTreasury = treasury;
     }
+
+    /**
+     * @notice Updates the duration of the rewards timeline.
+     * @dev The new timeline must be at least 1 day (86400 seconds)
+     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
+     */
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external {
+        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
+            revert InconsistentData();
+
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
+        rewardsTimeline = newTimelineInSeconds;
+    }
 }
