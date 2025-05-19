@@ -1,0 +1,23 @@
+name: Linter
+on:
+  pull_request:
+
+jobs:
+  linter:
+    name: Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+
+      - name: Install deps
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: npx eslint . --fix
