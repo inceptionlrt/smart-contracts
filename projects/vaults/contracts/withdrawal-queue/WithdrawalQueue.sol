@@ -274,6 +274,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             }
         } else if (currentAmount > withdrawal.totalClaimedAmount && currentAmount - withdrawal.totalClaimedAmount > MAX_CONVERT_THRESHOLD) {
             return true;
+        } else if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
+            return true;
         }
 
         return false;
