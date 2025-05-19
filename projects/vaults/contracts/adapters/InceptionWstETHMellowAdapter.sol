@@ -290,8 +290,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param rewardsData Adapter related bytes of data for rewards.
      */
     function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
-        (address farm, bytes memory farmData) = abi.decode(rewardsData, (address, bytes));
-        IStakerRewards(farm).claimRewards(_inceptionVault, rewardToken, farmData);
+        // Rewards distribution functionality is not yet available in the Mellow protocol.
+        return;
     }
 
     /**
