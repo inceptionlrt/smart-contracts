@@ -366,5 +366,29 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       const newEpoch = await withdrawalQueue.currentEpoch();
       expect(newEpoch).to.eq(currentEpoch + 1n);
     });
+
+    it('should revert if requested amount is greater than available capacity', async () => {
+      const depositAmount = toWei(10);
+      // deposit
+      let tx = await iVault.connect(staker).deposit(depositAmount, staker.address);
+      await tx.wait();
+
+      // delegate
+      tx = await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes);
+      await tx.wait();
+
+      // one withdraw
+      let shares = await iToken.balanceOf(staker.address);
+      tx = await iVault.connect(staker).withdraw(shares, staker.address);
+      await tx.wait();
+
+      // Act/Assert: undelegate and check revered with error
+      await expect(iVault.connect(iVaultOperator).undelegate(
+        await withdrawalQueue.currentEpoch(),
+        []
+      )).to.be.revertedWithCustomError(iVault, "InsufficientFreeBalance");
+
+    });
   });
 });
