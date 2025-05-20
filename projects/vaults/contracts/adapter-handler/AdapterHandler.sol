@@ -325,7 +325,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @dev Can only be called by an operator, when the contract is not paused, and is non-reentrant.
      * @param adapter The address of the adapter contract from which to claim the free balance.
      */
-    function claimAdapterFreeBalance(address adapter) external onlyOperator whenNotPaused nonReentrant {
+    function claimAdapterFreeBalance(address adapter) external onlyOperator nonReentrant {
         IInceptionBaseAdapter(adapter).claimFreeBalance();
     }
 
