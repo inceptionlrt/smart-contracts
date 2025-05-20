@@ -138,6 +138,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         if (_data.length > 1) revert InvalidDataLength(1, _data.length);
         (address vaultAddress, address claimer) = abi.decode(_data[0], (address, address));
         if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
+        if (emergency && _emergencyClaimer != claimer) revert OnlyEmergency();
         if (withdrawals[vaultAddress][claimer] == 0) revert NothingToClaim();
 
         uint256 epoch = withdrawals[vaultAddress][claimer];
