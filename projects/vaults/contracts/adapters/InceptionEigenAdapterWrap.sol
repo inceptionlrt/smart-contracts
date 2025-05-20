@@ -54,7 +54,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         address trusteeManager,
         address inceptionVault
     ) public initializer {
-        __IBaseAdapter_init(IERC20(asset), trusteeManager);
+        __InceptionBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);

@@ -40,7 +40,7 @@ IInceptionBaseAdapter
      * @param asset The ERC20 token used as the underlying asset
      * @param trusteeManager Address of the trustee manager
      */
-    function __IBaseAdapter_init(
+    function __InceptionBaseAdapter_init(
         IERC20 asset,
         address trusteeManager
     ) internal onlyInitializing {

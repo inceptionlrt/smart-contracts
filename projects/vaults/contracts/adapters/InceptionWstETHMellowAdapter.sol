@@ -63,7 +63,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         IERC20 asset,
         address trusteeManager
     ) public initializer {
-        __IBaseAdapter_init(asset, trusteeManager);
+        __InceptionBaseAdapter_init(asset, trusteeManager);
 
         uint256 totalAllocations_;
         for (uint256 i = 0; i < _mellowVaults.length; i++) {

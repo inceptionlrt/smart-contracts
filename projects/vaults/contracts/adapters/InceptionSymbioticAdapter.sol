@@ -53,7 +53,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         IERC20 asset,
         address trusteeManager
     ) public initializer {
-        __IBaseAdapter_init(asset, trusteeManager);
+        __InceptionBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
             if (IVault(vaults[i]).collateral() != address(asset))
