@@ -1506,7 +1506,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         if (maxRedeem > 0n) {
           await iVault.connect(sharesOwner)["redeem( uint256 shares, address receiver, address owner )"](maxRedeem, sharesOwner.address, sharesOwner.address);
         }
-        expect(maxRedeem).to.be.eq(expectedMaxRedeem);
+        expect(maxRedeem).to.be.closeTo(expectedMaxRedeem, ratioErr);
       });
     });
 

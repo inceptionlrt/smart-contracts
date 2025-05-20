@@ -123,7 +123,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
 
     it("addAdapter input args", async function () {
-      await expect(iVault.addAdapter(staker.address)).to.be.revertedWithCustomError(iVault, "NotContract");
+      await expect(iVault.addAdapter(ethers.Wallet.createRandom().address))
+        .to.be.revertedWithCustomError(iVault, "NotContract");
 
       await expect(iVault.addAdapter(mellowAdapter.address)).to.be.revertedWithCustomError(
         iVault,
@@ -173,7 +174,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         "Ownable: caller is not the owner",
       );
 
-      await expect(mellowAdapter.setEthWrapper(staker.address)).to.be.revertedWithCustomError(
+      await expect(mellowAdapter.setEthWrapper(ethers.Wallet.createRandom().address)).to.be.revertedWithCustomError(
         mellowAdapter,
         "NotContract",
       );
