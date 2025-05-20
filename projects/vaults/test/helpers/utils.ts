@@ -1,5 +1,6 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { ethers, network } from "hardhat";
+import { abi } from "../src/init-vault-new";
 
 BigInt.prototype.format = function() {
   return this.toLocaleString("de-DE");
@@ -154,6 +155,20 @@ const e18 = 1000_000_000_000_000_000n;
 
 const day = 86400n;
 
+
+async function skipEpoch(symbioticVault) {
+  let epochDuration = await symbioticVault.vault.epochDuration();
+  let nextEpochStart = await symbioticVault.vault.nextEpochStart();
+  await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
+}
+
+async function symbioticClaimParams(symbioticVault, claimer) {
+  return abi.encode(
+    ["address", "address"],
+    [symbioticVault.vaultAddress, claimer],
+  );
+}
+
 export {
   addRewardsToStrategy,
   addRewardsToStrategyWrap,
@@ -168,9 +183,12 @@ export {
   toBN,
   randomBI,
   randomBIMax,
+  skipEpoch,
   sleep,
   randomAddress,
+  symbioticClaimParams,
   format,
   e18,
   day,
 };
+

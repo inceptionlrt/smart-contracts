@@ -21,6 +21,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
   let iToken;
   let iVaultOperator;
   let symbioticAdapter;
+  let withdrawalQueue;
 
   before(async function () {
     if (process.env.ASSETS) {
@@ -38,7 +39,8 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       },
     }]);
 
-    ({ iToken, iVault, iVaultOperator, asset, ratioFeed, symbioticAdapter } = await initVault(assetData, { adapters: [adapters.Symbiotic] }));
+    ({ iToken, iVault, iVaultOperator, asset, ratioFeed, symbioticAdapter, withdrawalQueue } =
+      await initVault(assetData, { adapters: [adapters.Symbiotic] }));
     transactErr = assetData.transactErr;
 
     [, staker, staker2] = await ethers.getSigners();
@@ -331,6 +333,61 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await expect(migrateTx)
         .to.emit(iVault, 'DepositBonusTransferred')
         .withArgs(iVaultNew.address, depositBonusAmount);
+    });
+  });
+
+  describe('Undelegation', function () {
+    beforeEach(async function () {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+    });
+
+    it('epoch should be changed if undelegate current epoch', async () => {
+      // Arrange: deposit > delegate > withdraw
+      const depositAmount = toWei(10);
+
+      await (await iVault.connect(staker).deposit(depositAmount, staker.address)).wait();
+
+      await (await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes)).wait();
+
+      const tx = await iVault.connect(staker).withdraw(toWei(1), staker.address);
+      await tx.wait();
+
+      const currentEpoch = await withdrawalQueue.currentEpoch();
+
+      // Act: undelegate
+      let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
+      await (await iVault.connect(iVaultOperator)
+        .undelegate(await withdrawalQueue.currentEpoch(), [[symbioticAdapter.address, symbioticVaults[0].vaultAddress, epochShares, []]]))
+        .wait();
+
+      // Assert: epoch increased
+      const newEpoch = await withdrawalQueue.currentEpoch();
+      expect(newEpoch).to.eq(currentEpoch + 1n);
+    });
+
+    it('should revert if requested amount is greater than available capacity', async () => {
+      const depositAmount = toWei(10);
+      // deposit
+      let tx = await iVault.connect(staker).deposit(depositAmount, staker.address);
+      await tx.wait();
+
+      // delegate
+      tx = await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes);
+      await tx.wait();
+
+      // one withdraw
+      let shares = await iToken.balanceOf(staker.address);
+      tx = await iVault.connect(staker).withdraw(shares, staker.address);
+      await tx.wait();
+
+      // Act/Assert: undelegate and check revered with error
+      await expect(iVault.connect(iVaultOperator).undelegate(
+        await withdrawalQueue.currentEpoch(),
+        []
+      )).to.be.revertedWithCustomError(iVault, "InsufficientFreeBalance");
     });
   });
 });

@@ -3,7 +3,7 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { calculateRatio, setBlockTimestamp, toWei } from "./helpers/utils";
+import { calculateRatio, setBlockTimestamp, skipEpoch, toWei } from "./helpers/utils";
 import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault-new";
 import { testrunConfig } from './testrun.config';
@@ -14,12 +14,6 @@ const assetDataNew = testrunConfig.assetData;
 const mellowVaults = assetDataNew.adapters.mellow;
 const symbioticVaults = assetDataNew.adapters.symbiotic;
 const { ethers, network, upgrades } = hardhat;
-
-async function skipEpoch(symbioticVault) {
-  let epochDuration = await symbioticVault.vault.epochDuration();
-  let nextEpochStart = await symbioticVault.vault.nextEpochStart();
-  await setBlockTimestamp(Number(nextEpochStart + epochDuration + 1n));
-}
 
 async function symbioticClaimParams(symbioticVault, claimer) {
   return abi.encode(
