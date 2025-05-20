@@ -224,9 +224,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         require(_data.length > 0, ValueZero());
 
         (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
-        if (!emergency) {
-            _removePendingClaimer(claimer);
-        }
+        require(claimerVaults[claimer] == _mellowVault);
+        if (!emergency) _removePendingClaimer(claimer);
 
         // emergency claim available only for emergency claimer
         if (emergency && _emergencyClaimer != claimer) {
