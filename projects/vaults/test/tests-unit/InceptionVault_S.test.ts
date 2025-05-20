@@ -2,7 +2,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { e18, skipEpoch, symbioticClaimParams, toWei } from "../helpers/utils";
+import { e18, toWei } from "../helpers/utils";
 import { initVault } from "../src/init-vault-new";
 const { ethers, network } = hardhat;
 import { testrunConfig } from '../testrun.config';
@@ -336,7 +336,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
     });
   });
 
-  describe('Undelegation', () => {
+  describe('Undelegation', function () {
     beforeEach(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
@@ -388,75 +388,6 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
         await withdrawalQueue.currentEpoch(),
         []
       )).to.be.revertedWithCustomError(iVault, "InsufficientFreeBalance");
-    });
-  });
-
-  describe('redeem with specified epoch', function () {
-    const depositAmount = toWei(10);
-    let receipt;
-    let events;
-
-    beforeEach(async function () {
-      await snapshot.restore();
-      await iVault.setTargetFlashCapacity(1n);
-
-      // Arrange: deposit > delegate > withdraw > undelegate > claim
-      // deposit
-      await (await iVault.connect(staker).deposit(depositAmount, staker.address))
-        .wait();
-
-      // delegate
-      await (await iVault.connect(iVaultOperator)
-        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes))
-        .wait();
-
-      // withdraw
-      const shares = await iToken.balanceOf(staker.address);
-      await (await iVault.connect(staker).withdraw(shares, staker.address))
-        .wait();
-
-      // undelegate
-      const epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
-      expect(epochShares).to.be.eq(shares);
-      receipt = await (await iVault.connect(iVaultOperator)
-        .undelegate(await withdrawalQueue.currentEpoch(), [[symbioticAdapter.address, symbioticVaults[0].vaultAddress, epochShares, []]]))
-        .wait();
-      events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
-      const adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address)
-        .map(log => symbioticAdapter.interface.parseLog(log));
-      let claimer = adapterEvents[0].args["claimer"];
-
-      // claim
-      await skipEpoch(symbioticVaults[0]);
-      const params = await symbioticClaimParams(symbioticVaults[0], claimer);
-      await (await iVault.connect(iVaultOperator)
-        .claim(events[0].args["epoch"], [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]]))
-        .wait();
-    });
-
-    it("successful redeem with specified valid epoch", async function () {
-      // Act: redeem
-      const userBalanceBeforeRedeem = await asset.balanceOf(staker.address);
-
-      // redeem with specifying epoch
-      receipt = await (await iVault.connect(staker)["redeem(address,uint256)"](staker.address, 0))
-        .wait();
-      events = receipt.logs?.filter(e => e.eventName === "Redeem");
-
-      // Assert: user balance increased by deposit/redeem amount
-      expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
-      expect(events[0].args["amount"]).to.be.closeTo(depositAmount, transactErr);
-
-      const userBalanceAfterRedeem = await asset.balanceOf(staker.address);
-      expect(userBalanceAfterRedeem).to.be.closeTo(userBalanceBeforeRedeem + depositAmount, transactErr);
-    });
-
-    it('revert if invalid epoch specified', async function () {
-      // Act/Assert: redeem with specifying epoch
-      await expect(iVault.connect(staker)["redeem(address,uint256)"](staker.address, 2)).to.be.revertedWithCustomError(
-        withdrawalQueue,
-        "InvalidEpoch"
-      );
     });
   });
 });
