@@ -350,7 +350,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /*
-    * @notice Redeems available amounts for a receiver with given epoch index
+    * @notice Redeems available amounts for a receiver with given user epoch index
     * @param receiver The address to redeem for
     * @param userEpochIndex user epoch index
     * @return amount The total amount redeemed
@@ -369,7 +369,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /*
-    * @notice Redeems the available amount for a receiver in a specific epoch
+    * @notice Redeems the available amount for a receiver in a specific user epoch index
     * @dev Processes the redemption by checking if the withdrawal is redeemable and if the receiver has shares.
     *      Calculates the redeemable amount, clears the receiver's shares, removes the epoch from the user's epoch list,
     *      and updates the global total redeemed amount
@@ -397,7 +397,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /*
-    * @notice Calculates the redeemable amount for a user in an epoch quả
+    * @notice Calculates the redeemable amount for a user in an epoch
     * @param withdrawal The storage reference to the withdrawal epoch
     * @param receiver The address of the user
     * @return The calculated redeemable amount
