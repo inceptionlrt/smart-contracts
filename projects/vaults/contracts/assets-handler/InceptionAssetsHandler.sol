@@ -61,19 +61,4 @@ IInceptionVaultErrors
     function _transferAssetTo(address receiver, uint256 amount) internal {
         _asset.safeTransfer(receiver, amount);
     }
-
-    /// @dev The functions below serve the proper withdrawal and claiming operations
-    /// @notice Since a particular LST loses some wei on each transfer,
-    /// this needs to be taken into account
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
 }
