@@ -23,6 +23,8 @@ interface IInceptionMellowAdapter is IInceptionBaseAdapter {
 
     event VaultAdded(address indexed _mellowVault);
 
+    event VaultRemoved(address indexed _mellowVault);
+
     event DeactivatedMellowVault(address indexed _mellowVault);
 
     event EthWrapperChanged(address indexed _old, address indexed _new);

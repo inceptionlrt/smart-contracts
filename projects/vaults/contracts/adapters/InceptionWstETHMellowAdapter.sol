@@ -259,6 +259,37 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /**
+    * @notice Remove a Mellow vault from the adapter
+    * @param vault Address of the mellow vault to be removed
+    */
+    function removeVault(address vault) external onlyOwner {
+        require(vault != address(0), ZeroAddress());
+        require(
+            getDeposited(vault) == 0 &&
+            pendingWithdrawalAmount(vault, true) == 0 &&
+            pendingWithdrawalAmount(vault, false) == 0,
+            VaultNotEmpty()
+        );
+
+        uint256 index = type(uint256).max;
+        for (uint256 i = 0; i < mellowVaults.length; i++) {
+            if (address(mellowVaults[i]) == vault) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == type(uint256).max) {
+            revert InvalidVault();
+        }
+
+        mellowVaults[index] = mellowVaults[mellowVaults.length - 1];
+        mellowVaults.pop();
+
+        emit VaultRemoved(vault);
+    }
+
+    /**
      * @notice Changes allocation for a specific vault
      * @param mellowVault Address of the vault
      * @param newAllocation New allocation amount
@@ -290,7 +321,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      */
     function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
         // Rewards distribution functionality is not yet available in the Mellow protocol.
-        return;
+        revert("Mellow distribution rewards not implemented yet");
     }
 
     /**
@@ -359,7 +390,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      */
     function pendingWithdrawalAmount(
         address _mellowVault, bool emergency
-    ) external view returns (uint256 total) {
+    ) public view returns (uint256 total) {
         if (emergency) {
             return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(_emergencyClaimer);
         }

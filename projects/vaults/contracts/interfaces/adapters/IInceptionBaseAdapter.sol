@@ -34,6 +34,8 @@ interface IInceptionBaseAdapter {
 
     error OnlyEmergency();
 
+    error VaultNotEmpty();
+
     /************************************
      ************** Events **************
      ************************************/

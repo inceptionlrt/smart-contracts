@@ -12,6 +12,7 @@ import {
 } from "../../helpers/utils";
 import { adapters, emptyBytes } from "../../src/constants";
 import { abi, initVault } from "../../src/init-vault";
+import { ZeroAddress } from "ethers";
 
 const { ethers, network } = hardhat;
 const mellowVaults = vaults.mellow;
@@ -78,6 +79,24 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       const mellowVault = ethers.ZeroAddress;
       // const wrapper = mellowVaults[1].wrapperAddress;
       await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "ZeroAddress");
+    });
+
+    it("remove vault: reverts when vault is zero address", async function() {
+      await expect(mellowAdapter.removeVault(ZeroAddress)).to.be.revertedWithCustomError(mellowAdapter, "ZeroAddress");
+    });
+
+    it("remove vault: reverts when vault is not empty", async function() {
+      const vault = mellowVaults[0].vaultAddress;
+      // delegate vault to be non empty
+      await iVault.connect(staker).deposit(toWei(10), staker.address);
+      await iVault.connect(iVaultOperator).delegate(mellowAdapter.address, vault, toWei(2), emptyBytes);
+      // try to remove vault
+      await expect(mellowAdapter.removeVault(vault)).to.be.revertedWithCustomError(mellowAdapter, "VaultNotEmpty");
+    });
+
+    it("remove vault: success", async function() {
+      const vault = mellowVaults[0].vaultAddress;
+      await expect(mellowAdapter.removeVault(vault)).to.emit(mellowAdapter, "VaultRemoved");
     });
 
     // it("addMellowVault wrapper is 0 address", async function () {

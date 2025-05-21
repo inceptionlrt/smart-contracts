@@ -277,6 +277,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
         if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
+        if (getDeposited(vaultAddress) != 0) revert VaultNotEmpty();
 
         _symbioticVaults.remove(vaultAddress);
 
