@@ -1772,7 +1772,7 @@ describe("Symbiotic Vault Slashing", function() {
     //   await iVault.setTargetFlashCapacity(1n);
     // });
 
-    it("one slashed", async function() {
+    it("one claimed adapter slashed", async function() {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
 
@@ -1894,5 +1894,89 @@ describe("Symbiotic Vault Slashing", function() {
       // expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
       // ----------------
     });
+
+    it("one non-claimed adapter slashed", async function() {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+
+      // deposit
+      let tx = await iVault.connect(staker).deposit(toWei(100), staker.address);
+      await tx.wait();
+
+      // deposit
+      tx = await iVault.connect(staker2).deposit(toWei(10), staker2.address);
+      await tx.wait();
+
+      // delegate #1
+      tx = await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(100), emptyBytes);
+      await tx.wait();
+      // assert delegated amount
+      expect(await iVault.getTotalDelegated()).to.be.eq(toWei(100));
+
+      // delegate #2
+      tx = await iVault.connect(iVaultOperator)
+        .delegate(mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(9.5), emptyBytes);
+      await tx.wait();
+      // assert delegated amount
+      expect(await iVault.getTotalDelegated()).to.be.closeTo(toWei(109.5), transactErr);
+
+      // one withdraw
+      tx = await iVault.connect(staker).withdraw(toWei(5), staker.address);
+      await tx.wait();
+
+      // undelegate
+      let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
+      expect(epochShares).to.be.eq(toWei(5));
+      tx = await iVault.connect(iVaultOperator)
+        .undelegate(1, [[mellowAdapter.address, mellowVaults[0].vaultAddress, epochShares, []]]);
+      let receipt = await tx.wait();
+      let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
+      let adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      let claimer = adapterEvents[0].args["claimer"];
+
+      // assert balances
+      expect(events[0].args["epoch"]).to.be.eq(1);
+      expect(events[0].args["adapter"]).to.be.eq(mellowAdapter.address);
+      expect(events[0].args["actualAmounts"]).to.be.eq(toWei(5));
+      expect(await calculateRatio(iVault, iToken)).to.be.eq(toWei(1));
+      // ----------------
+
+      // slash
+      let totalStake = await symbioticVaults[0].vault.totalStake();
+      // slash half of the stake
+      await assetDataNew.applySymbioticSlash(symbioticVaults[0].vault, totalStake / 2n);
+      expect(await calculateRatio(iVault, iToken)).to.be.eq(1852573758880544819n);
+
+      const pendingWithdrawal = await iVault.getPendingWithdrawals(symbioticAdapter.address);
+
+      // claim
+      await skipEpoch(symbioticVaults[0]);
+      const params = await mellowClaimParams(mellowVaults[0], claimer);
+      tx = await iVault.connect(iVaultOperator)
+        .claim(events[0].args["epoch"], [mellowAdapter.address], [mellowVaults[0].vaultAddress], [[params]]);
+      await tx.wait();
+
+      expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
+      // ----------------
+
+      // force undelegate and claim
+      const redeemReservedBefore = await iVault.redeemReservedAmount();
+      await iVault.connect(iVaultOperator).undelegate(1, []);
+      const redeemReservedAfter = await iVault.redeemReservedAmount();
+      // ----------------
+
+      // redeem
+      tx = await iVault.connect(staker).redeem(staker.address);
+      receipt = await tx.wait();
+      events = receipt.logs?.filter(e => e.eventName === "Redeem");
+
+      expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
+
+      expect(events[0].args["amount"]).to.be.closeTo(redeemReservedAfter - redeemReservedBefore, transactErr);
+      expect(await calculateRatio(iVault, iToken)).to.be.eq(1852573758880544819n);
+      // ----------------
+    })
   });
 });

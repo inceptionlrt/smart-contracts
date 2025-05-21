@@ -13,6 +13,8 @@ interface IWithdrawalQueueErrors {
 }
 
 interface IWithdrawalQueue is IWithdrawalQueueErrors {
+    event EpochReset(uint256 indexed epoch);
+
     struct WithdrawalEpoch {
         bool ableRedeem;
 

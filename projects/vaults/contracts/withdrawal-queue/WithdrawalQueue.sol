@@ -228,7 +228,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             _claim(withdrawal, adapters[i], vaults[i], claimedAmounts[i]);
         }
 
-        _afterClaim(withdrawal);
+        _afterClaim(epoch, withdrawal);
     }
 
     /*
@@ -255,8 +255,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @notice Updates the redeemable status after a claim
     * @param withdrawal The storage reference to the withdrawal epoch
     */
-    function _afterClaim(WithdrawalEpoch storage withdrawal) internal {
-        _isSlashed(withdrawal) ? _resetEpoch(withdrawal) : _makeRedeemable(withdrawal);
+    function _afterClaim(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
+        _isSlashed(withdrawal) ? _resetEpoch(epoch, withdrawal) : _makeRedeemable(withdrawal);
     }
 
     /*
@@ -299,11 +299,13 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
     */
-    function _resetEpoch(WithdrawalEpoch storage withdrawal) internal {
+    function _resetEpoch(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
         withdrawal.adaptersClaimedCounter = 0;
         withdrawal.adaptersUndelegatedCounter = 0;
+
+        emit EpochReset(epoch);
     }
 
     /*
