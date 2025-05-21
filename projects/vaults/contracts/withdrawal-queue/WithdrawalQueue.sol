@@ -25,7 +25,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 public currentEpoch;
     uint256 public totalAmountRedeem;
     uint256 public totalSharesToWithdraw;
-    uint256 public totalPendingClaimedAmounts;
 
     modifier onlyVault() {
         require(msg.sender == vaultOwner, OnlyVaultAllowed());
