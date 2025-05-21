@@ -1523,7 +1523,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await iVault.setTargetFlashCapacity(1n);
       await expect(
         iVault.connect(staker)["deposit(uint256,address,uint256)"](toWei(1), staker.address, toWei(100))
-      ).to.be.revertedWithCustomError(iVault, "LowerMinAmount");
+      ).to.be.revertedWithCustomError(iVault, "SlippageMinOut");
     });
   });
 });

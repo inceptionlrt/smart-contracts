@@ -46,6 +46,8 @@ interface IInceptionVaultErrors {
 
     error LowerMinAmount(uint256 minAmount);
 
+    error SlippageMinOut(uint256 minOut, uint256 resultAmount);
+
     error ZeroFlashWithdrawFee();
 
     /// TVL errors

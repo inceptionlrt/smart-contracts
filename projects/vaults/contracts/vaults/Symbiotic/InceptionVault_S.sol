@@ -218,7 +218,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         // calculate share to mint
         uint256 iShares = convertToShares(amount + depositBonus);
-        if (minOut > 0 && iShares < minOut) revert LowerMinAmount(minOut);
+        if (minOut > 0 && iShares < minOut) revert SlippageMinOut(minOut, iShares);
         // update deposit bonus state
         depositBonusAmount -= depositBonus;
         // get the amount from the sender
