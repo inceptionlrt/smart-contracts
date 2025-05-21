@@ -105,4 +105,8 @@ interface IDelegationManager {
         address staker,
         IStrategy[] memory strategies
     ) external view returns (uint256[] memory withdrawableShares, uint256[] memory depositShares);
+
+    function getQueuedWithdrawal(
+        bytes32 withdrawalRoot
+    ) external view returns (Withdrawal memory withdrawal, uint256[] memory shares);
 }
