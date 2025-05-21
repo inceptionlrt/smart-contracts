@@ -323,6 +323,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
           const parsedLog = eigenLayerAdapterFactory.interface.parseLog(log);
           if (parsedLog) {
             console.log("🔹 Event Detected:");
+            console.log(parsedLog);
             withdrawalQueuedEvent = parsedLog.args;
             return;
           }
@@ -674,8 +675,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       receipt.logs.forEach(log => {
         try {
           const parsedLog = eigenLayerAdapterFactory.interface.parseLog(log);
-          if (parsedLog) {
-            console.log("🔹 Event Detected:");
+          if (parsedLog && parsedLog.name == "StartWithdrawal") {
             withdrawalQueuedEvent.push(parsedLog.args);
           }
         } catch (error) {

@@ -54,7 +54,7 @@ interface IDelegationManager {
         bytes32 approverSalt
     ) external;
 
-    function undelegate(address staker) external;
+    function undelegate(address staker) external returns (bytes32[] memory withdrawalRoots);
 
     event WithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal);
 

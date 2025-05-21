@@ -39,6 +39,8 @@ interface IInceptionEigenLayerAdapter is IInceptionBaseAdapter {
         address indexed newValue
     );
 
+    event WithdrawalsQueued(bytes32[] withdrawalRoots);
+
     event Undelegated();
 
     event RedelegatedTo(address operator);

@@ -110,7 +110,9 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
      * Emits an `Undelegated` event upon successful undelegation.
     */
     function undelegate() external onlyTrustee whenNotPaused {
-        _delegationManager.undelegate(address(this));
+        bytes32[] memory withdrawalRoots = _delegationManager.undelegate(address(this));
+
+        emit WithdrawalsQueued(withdrawalRoots);
         emit Undelegated();
     }
 
@@ -168,8 +170,9 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
         });
 
         // queue from EL
-        _delegationManager.queueWithdrawals(withdrawals);
+        bytes32[] memory withdrawalRoots = _delegationManager.queueWithdrawals(withdrawals);
 
+        emit WithdrawalsQueued(withdrawalRoots);
         emit StartWithdrawal(
             staker,
             _strategy,
