@@ -48,6 +48,8 @@ interface IDelegationManager {
         uint256[] shares;
     }
 
+    event WithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal);
+
     function delegateTo(
         address operator,
         SignatureWithExpiry memory approverSignatureAndExpiry,
@@ -55,8 +57,6 @@ interface IDelegationManager {
     ) external;
 
     function undelegate(address staker) external returns (bytes32[] memory withdrawalRoots);
-
-    event WithdrawalQueued(bytes32 withdrawalRoot, Withdrawal withdrawal);
 
     function completeQueuedWithdrawal(
         Withdrawal calldata withdrawal,
@@ -91,7 +91,7 @@ interface IDelegationManager {
         address staker
     ) external view returns (uint256);
 
-    function withdrawalDelayBlocks() external view returns (uint256);
+    function minWithdrawalDelayBlocks() external view returns (uint256);
 
     function isOperator(address operator) external view returns (bool);
 
@@ -109,4 +109,11 @@ interface IDelegationManager {
     function getQueuedWithdrawal(
         bytes32 withdrawalRoot
     ) external view returns (Withdrawal memory withdrawal, uint256[] memory shares);
+
+    /// @notice Returns a list of queued withdrawal roots for the `staker`.
+    /// NOTE that this only returns withdrawals queued AFTER the slashing release.
+    function getQueuedWithdrawalRoots(
+        address staker
+    ) external view returns (bytes32[] memory);
+
 }

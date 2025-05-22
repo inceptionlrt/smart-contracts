@@ -41,9 +41,9 @@ interface IInceptionEigenLayerAdapter is IInceptionBaseAdapter {
 
     event WithdrawalsQueued(bytes32[] withdrawalRoots);
 
-    event Undelegated();
+    event Undelegated(address operator);
 
-    event RedelegatedTo(address operator);
+    event RedelegatedTo(address operatorFrom, address operatorTo);
 
     function setRewardsCoordinator(address newRewardCoordinator, address claimer) external;
 }

@@ -117,28 +117,35 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
      * Emits an `Undelegated` event upon successful undelegation.
     */
     function undelegate() external onlyTrustee whenNotPaused {
+        address undelegatedFrom = getOperatorAddress();
         bytes32[] memory withdrawalRoots = _delegationManager.undelegate(address(this));
 
         emit WithdrawalsQueued(withdrawalRoots);
-        emit Undelegated();
+        emit Undelegated(undelegatedFrom);
     }
 
     /*
      * @notice Redelegates the contract to a new operator.
      * @dev Can only be called by the trustee when the contract is not paused.
      * Emits a `RedelegatedTo` event upon successful redelegation.
-     * @param operator The address of the new operator to delegate to.
+     * @param newOperator The address of the new operator to delegate to.
      * @param newOperatorApproverSig The signature and expiry details for the new operator's approval.
      * @param approverSalt A unique salt used for the approval process to prevent replay attacks.
     */
     function redelegate(
-        address operator,
+        address newOperator,
         IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
         bytes32 approverSalt
     ) external onlyTrustee whenNotPaused {
-        require(operator != address(0), ZeroAddress());
-        _delegationManager.redelegate(operator, newOperatorApproverSig, approverSalt);
-        emit RedelegatedTo(operator);
+        require(newOperator != address(0), ZeroAddress());
+
+        address undelegatedFrom = getOperatorAddress();
+        bytes32[] memory withdrawalRoots = _delegationManager.redelegate(
+            newOperator, newOperatorApproverSig, approverSalt
+        );
+
+        emit WithdrawalsQueued(withdrawalRoots);
+        emit RedelegatedTo(undelegatedFrom, newOperator);
     }
 
     /**
@@ -213,8 +220,8 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
 
         // prepare withdrawal
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
-        IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
-        bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
+        IERC20[] memory tokens = abi.decode(_data[1], (IERC20[][]))[0];
+        bool receiveAsTokens = abi.decode(_data[2], (bool[]))[0];
 
         // emergency claim available only for emergency queued withdrawals
         if (emergency) {
@@ -222,13 +229,16 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         }
 
         // claim from EL
-        _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
+        _delegationManager.completeQueuedWithdrawal(withdrawal, tokens, receiveAsTokens);
 
         // send tokens to the vault
-        uint256 withdrawnAmount = backedAsset.balanceOf(address(this)) - balanceBefore;
-        backedAsset.safeApprove(address(_asset), withdrawnAmount);
-        uint256 wrapped = wrappedAsset().wrap(withdrawnAmount);
-        _asset.safeTransfer(_inceptionVault, wrapped);
+        uint256 withdrawnAmount;
+        if (receiveAsTokens) {
+            withdrawnAmount = backedAsset.balanceOf(address(this)) - balanceBefore;
+            backedAsset.safeApprove(address(_asset), withdrawnAmount);
+            uint256 wrapped = wrappedAsset().wrap(withdrawnAmount);
+            _asset.safeTransfer(_inceptionVault, wrapped);
+        }
 
         // update emergency withdrawal state
         _emergencyQueuedWithdrawals[withdrawal.nonce] = false;
