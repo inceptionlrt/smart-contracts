@@ -390,4 +390,32 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       )).to.be.revertedWithCustomError(iVault, "InsufficientFreeBalance");
     });
   });
+
+  describe('claimAdapterFreeBalance', () => {
+    beforeEach(async () => {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+    });
+
+    it('should claim free balance for the adapter', async () => {
+      // Arrange
+      const amount = toWei(5);
+      await asset.connect(staker).transfer(symbioticAdapter.address, amount);
+
+      const vaultBalanceBefore = await iVault.totalAssets();
+      const adapterBalanceBefore = await asset.balanceOf(symbioticAdapter.address);
+
+      console.log(`Vault balance before: ${vaultBalanceBefore}`);
+      console.log(`Adapter balance before: ${adapterBalanceBefore}`);
+
+      // Act
+      await iVault.connect(iVaultOperator).claimAdapterFreeBalance(symbioticAdapter.address);
+
+      // Assert: assets transferred to vault
+      const adapterBalance = await asset.balanceOf(symbioticAdapter.address);
+      expect(adapterBalance).to.be.eq(0n);
+      const vaultBalanceAfter = await iVault.totalAssets();
+      expect(vaultBalanceAfter).to.be.eq(vaultBalanceBefore + amount);
+    });
+  });
 });
