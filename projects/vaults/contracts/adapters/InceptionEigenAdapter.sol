@@ -64,6 +64,22 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
     }
 
     /**
+    * @dev checks whether it's still possible to deposit into the strategy
+    * @param amount Amount of tokens to delegate/deposit
+    * @notice Be cautious when using this function, as certain strategies may not enforce TVL limits by inheritance.
+    */
+    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
+        (uint256 maxPerDeposit, uint256 maxTotalDeposits) = _strategy.getTVLLimits();
+
+        if (amount > maxPerDeposit)
+            revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
+
+        uint256 currentBalance = _asset.balanceOf(address(_strategy));
+        if (currentBalance + amount > maxTotalDeposits)
+            revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
+    }
+
+    /**
      * @notice Delegates funds to an operator or deposits into strategy
      * @dev If operator is zero address and amount > 0, deposits into strategy
      * @param operator Address of the operator to delegate to
@@ -78,6 +94,8 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
+            _beforeDepositAssetIntoStrategy(amount);
+
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
             // deposit the asset to the appropriate strategy

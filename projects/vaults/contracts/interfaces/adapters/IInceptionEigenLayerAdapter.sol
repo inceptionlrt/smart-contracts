@@ -8,16 +8,12 @@ import {IMellowVault} from "../symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IInceptionBaseAdapter} from "./IInceptionBaseAdapter.sol";
 
 interface IInceptionEigenAdapterErrors {
-    error OnlyTrusteeAllowed();
-
-    error InconsistentData();
-
-    error WrongClaimWithdrawalParams();
-
-    error NullParams();
+    /// TVL errors
+    error ExceedsMaxPerDeposit(uint256 max, uint256 amount);
+    error ExceedsMaxTotalDeposited(uint256 max, uint256 amount);
 }
 
-interface IInceptionEigenLayerAdapter is IInceptionBaseAdapter {
+interface IInceptionEigenLayerAdapter is IInceptionEigenAdapterErrors, IInceptionBaseAdapter {
     event StartWithdrawal(
         address indexed stakerAddress,
         IStrategy strategy,
