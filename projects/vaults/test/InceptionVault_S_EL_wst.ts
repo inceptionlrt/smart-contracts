@@ -593,4 +593,99 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         .to.be.revertedWithCustomError(eigenLayerAdapter, "OnlyEmergency");
     });
   });
+
+  describe("Eigenlayer: redelegate & undelegate", function() {
+    beforeEach(async function() {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+
+      // deposit
+      let tx = await iVault.connect(staker).deposit(toWei(10), staker.address);
+
+      // delegate
+      await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, ZeroAddress, toWei(5), []);
+      await iVault.connect(iVaultOperator).delegate(eigenLayerAdapter.address, eigenLayerVaults[0], 0n, delegateData);
+    });
+
+    it("should be able to re-delegate", async function() {
+      // redelegate to a new operator
+      let tx = await eigenLayerAdapter.connect(iVaultOperator).redelegate(vaults.eigenLayer[1], {
+        signature: "0x",
+        expiry: 0,
+      }, ethers.ZeroHash);
+      let receipt = await tx.wait();
+
+      // check that required events are emitted
+      expect(tx).to.be.emit(eigenLayerAdapter, "RedelegatedTo");
+      expect(tx).to.be.emit(eigenLayerAdapter, "WithdrawalsQueued");
+
+      // check that operator has been updated in EL
+      const delegationManager = await ethers.getContractAt("IDelegationManager", assetData.delegationManager);
+      expect(await delegationManager.delegatedTo(eigenLayerAdapter.address)).to.be.eq(vaults.eigenLayer[1]);
+
+      // check that queued withdrawal root exists
+      const withdrawalRoots = receipt.logs.filter(e => e.eventName === "WithdrawalsQueued")[0].args["withdrawalRoots"][0];
+      const queuedWithdrawalRoots = await delegationManager.getQueuedWithdrawalRoots(eigenLayerAdapter.address);
+      expect(queuedWithdrawalRoots.length).to.be.eq(1);
+      expect(queuedWithdrawalRoots[0]).to.be.eq(withdrawalRoots);
+
+      // check that total deposited zero
+      expect(await eigenLayerAdapter.getTotalDeposited()).to.be.eq(0n);
+
+      // claim withdrawals
+      const queuedWithdrawal = (await delegationManager.getQueuedWithdrawals(eigenLayerAdapter.address))[0][0];
+      const claimData = [
+        coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [queuedWithdrawal]),
+        coder.encode(["address[][]"], [[[assetData.assetAddress]]]),
+        coder.encode(["bool[]"], [[false]]),
+      ];
+
+      await mineBlocks(50);
+      await eigenLayerAdapter.connect(iVaultOperator).claim(claimData, false);
+      // ------------------------------
+
+      // Check that total deposited equal to previous
+      expect(await eigenLayerAdapter.getTotalDeposited()).to.be.closeTo(toWei(5), transactErr);
+    });
+
+    it("should be able to undelegate", async function() {
+      const vaultBalanceBefore = await iVault.totalAssets();
+
+      // undelegate operator
+      let tx = await eigenLayerAdapter.connect(iVaultOperator).undelegate();
+      let receipt = await tx.wait();
+
+      // check that required events are emitted
+      expect(tx).to.be.emit(eigenLayerAdapter, "RedelegatedTo");
+      expect(tx).to.be.emit(eigenLayerAdapter, "WithdrawalsQueued");
+
+      // check that operator has been updated in EL
+      const delegationManager = await ethers.getContractAt("IDelegationManager", assetData.delegationManager);
+      expect(await delegationManager.delegatedTo(eigenLayerAdapter.address)).to.be.eq(ZeroAddress);
+
+      // check that queued withdrawal root exists
+      const withdrawalRoots = receipt.logs.filter(e => e.eventName === "WithdrawalsQueued")[0].args["withdrawalRoots"][0];
+      const queuedWithdrawalRoots = await delegationManager.getQueuedWithdrawalRoots(eigenLayerAdapter.address);
+      expect(queuedWithdrawalRoots.length).to.be.eq(1);
+      expect(queuedWithdrawalRoots[0]).to.be.eq(withdrawalRoots);
+
+      // claim withdrawals
+      const queuedWithdrawal = (await delegationManager.getQueuedWithdrawals(eigenLayerAdapter.address))[0][0];
+      const claimData = [
+        coder.encode(["tuple(address staker1,address staker2,address staker3,uint256 nonce1,uint256 nonce2,address[] tokens,uint256[] shares)"], [queuedWithdrawal]),
+        coder.encode(["address[][]"], [[[assetData.backedAssetAddress]]]),
+        coder.encode(["bool[]"], [[true]]),
+      ];
+
+      await mineBlocks(50);
+      await eigenLayerAdapter.connect(iVaultOperator).claim(claimData, false);
+      // ------------------------------
+
+      // check that total deposited equal to zero
+      // check that vault balance increased
+      const vaultBalanceAfter = await iVault.totalAssets();
+      expect(await eigenLayerAdapter.getTotalDeposited()).to.be.eq(0);
+      expect(vaultBalanceAfter - vaultBalanceBefore).to.be.closeTo(toWei(5), transactErr);
+    });
+  });
 });
