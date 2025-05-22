@@ -199,18 +199,20 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         claimerVaults[claimer] = _mellowVault;
 
         uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
+        uint256 undelegatedAmount = amount - claimedAmount;
+
         if (claimedAmount > 0) {
             claimer == address(this) ?
                 _asset.safeTransfer(_inceptionVault, claimedAmount) :
                 _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
         }
 
-        if (amount - claimedAmount == 0) {
+        if (undelegatedAmount == 0) {
             _removePendingClaimer(claimer);
         }
 
-        emit MellowWithdrawn(amount - claimedAmount, claimedAmount, claimer);
-        return (amount - claimedAmount, claimedAmount);
+        emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
+        return (undelegatedAmount, claimedAmount);
     }
 
     /**
