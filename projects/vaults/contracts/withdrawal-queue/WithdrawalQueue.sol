@@ -32,7 +32,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     }
 
     /*
-    * @notice Initializes the contract with a vault address and legacy withdrawal data
+    * @notice Initializes the contract with a vault address and legacy withdrawal data.
+    *         Vault must be paused while deploying the new queue instance if it contains legacy withdrawals.
     * @param _vault The address of the vault contract that will interact with this queue
     * @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
     * @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
