@@ -634,6 +634,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      * @param newMaxBonusRate New maximum bonus rate
      * @param newOptimalBonusRate New optimal bonus rate
      * @param newDepositUtilizationKink New deposit utilization kink
+     * @notice Be careful: settings are not validated to conform to the expected curve.
      */
     function setDepositBonusParams(
         uint64 newMaxBonusRate,
@@ -664,6 +665,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      * @param newMaxFlashFeeRate New maximum flash fee rate
      * @param newOptimalWithdrawalRate New optimal withdrawal rate
      * @param newWithdrawUtilizationKink New withdrawal utilization kink
+     * @notice Be careful: settings are not validated to conform to the expected curve.
      */
     function setFlashWithdrawFeeParams(
         uint64 newMaxFlashFeeRate,
