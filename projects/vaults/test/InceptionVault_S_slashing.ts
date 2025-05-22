@@ -1690,6 +1690,8 @@ describe("Symbiotic Vault Slashing", function() {
       expect(await calculateRatio(iVault, iToken)).to.be.closeTo(toWei(1), ratioErr);
       // ----------------
 
+      expect(await mellowAdapter["pendingWithdrawalAmount(address,bool)"](mellowVaults[0].vaultAddress, true)).to.be.equal(toWei(5));
+
       // withdraw
       tx = await iVault.connect(staker).withdraw(toWei(2), staker.address);
       await tx.wait();
