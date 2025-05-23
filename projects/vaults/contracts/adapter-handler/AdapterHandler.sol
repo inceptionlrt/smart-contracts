@@ -339,7 +339,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         IInceptionBaseAdapter(adapter).claimRewards(token, rewardsData);
 
         rewardAmount = rewardToken.balanceOf(address(this)) - rewardAmount;
-        require(rewardAmount > 0, "Reward amount is zero");
+        require(rewardAmount > 0, ValueZero());
 
         rewardToken.safeTransfer(rewardsTreasury, rewardAmount);
 
