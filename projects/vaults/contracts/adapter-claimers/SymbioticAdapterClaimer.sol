@@ -5,6 +5,7 @@ import {IVault} from "../interfaces/symbiotic-vault/symbiotic-core/IVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SymbioticAdapterClaimer {
+    error OnlyAdapter();
     address internal immutable adapter;
 
     constructor(address asset) {
@@ -13,7 +14,7 @@ contract SymbioticAdapterClaimer {
     }
 
     function claim(address vault, address recipient, uint256 epoch) external returns (uint256) {
-        require(msg.sender == adapter);
+        require(msg.sender == adapter, OnlyAdapter());
         return IVault(vault).claim(recipient, epoch);
     }
 }
