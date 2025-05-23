@@ -181,9 +181,33 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         symbioticAdapter.connect(iVaultOperator).removeVault(symbioticVaults[0].vaultAddress),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
+
+    it("Symbiotic adapter", async function() {
+      await symbioticAdapter.pause();
+
+      await expect(symbioticAdapter.connect(iVaultOperator).delegate(ethers.ZeroAddress, 0n, []))
+        .to.be.revertedWith("Pausable: paused");
+
+      await expect(symbioticAdapter.connect(iVaultOperator).withdraw(ethers.ZeroAddress, 0n, [], false))
+        .to.be.revertedWith("Pausable: paused");
+
+      await expect(symbioticAdapter.connect(iVaultOperator).claim([], false))
+        .to.be.revertedWith("Pausable: paused");
+
+      await symbioticAdapter.unpause();
+    });
   });
 
   describe("MellowAdapter input args", function() {
+    it("claim input args", async function() {
+      await expect(mellowAdapter.connect(iVaultOperator).claim([], false))
+        .to.be.revertedWithCustomError(mellowAdapter, "ValueZero");
+
+      await expect(mellowAdapter.connect(iVaultOperator).claim(
+        [abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], true)
+      ).to.be.revertedWithCustomError(mellowAdapter, "OnlyEmergency");
+    });
+
     it("setEthWrapper input args", async function() {
       await expect(mellowAdapter.connect(iVaultOperator).setEthWrapper(staker.address)).to.be.revertedWith(
         "Ownable: caller is not the owner",
@@ -193,6 +217,21 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         mellowAdapter,
         "NotContract",
       );
+    });
+
+    it("unable to run while paused", async function() {
+      await mellowAdapter.pause();
+
+      await expect(mellowAdapter.connect(iVaultOperator).delegate(ethers.ZeroAddress, 0n, []))
+        .to.be.revertedWith("Pausable: paused");
+
+      await expect(mellowAdapter.connect(iVaultOperator).withdraw(ethers.ZeroAddress, 0n, [], false))
+        .to.be.revertedWith("Pausable: paused");
+
+      await expect(mellowAdapter.connect(iVaultOperator).claim([], false))
+        .to.be.revertedWith("Pausable: paused");
+
+      await mellowAdapter.unpause();
     });
   });
 
@@ -236,38 +275,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       const symbioticClaimer = await ethers.getContractAt("SymbioticAdapterClaimer", symbioticClaimerAddr);
       await expect(symbioticClaimer.claim(ethers.ZeroAddress, ethers.ZeroAddress, 0n))
         .to.be.revertedWithCustomError(symbioticClaimer, "OnlyAdapter");
-    });
-  });
-
-  describe("Paused adapters", function() {
-    it("Symbiotic adapter", async function() {
-      await symbioticAdapter.pause();
-
-      await expect(symbioticAdapter.connect(iVaultOperator).delegate(ethers.ZeroAddress, 0n, []))
-        .to.be.revertedWith("Pausable: paused");
-
-      await expect(symbioticAdapter.connect(iVaultOperator).withdraw(ethers.ZeroAddress, 0n, [], false))
-        .to.be.revertedWith("Pausable: paused");
-
-      await expect(symbioticAdapter.connect(iVaultOperator).claim([], false))
-        .to.be.revertedWith("Pausable: paused");
-
-      await symbioticAdapter.unpause();
-    });
-
-    it("Mellow adapter", async function() {
-      await mellowAdapter.pause();
-
-      await expect(mellowAdapter.connect(iVaultOperator).delegate(ethers.ZeroAddress, 0n, []))
-        .to.be.revertedWith("Pausable: paused");
-
-      await expect(mellowAdapter.connect(iVaultOperator).withdraw(ethers.ZeroAddress, 0n, [], false))
-        .to.be.revertedWith("Pausable: paused");
-
-      await expect(mellowAdapter.connect(iVaultOperator).claim([], false))
-        .to.be.revertedWith("Pausable: paused");
-
-      await mellowAdapter.unpause();
     });
   });
 });

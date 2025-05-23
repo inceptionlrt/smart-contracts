@@ -81,6 +81,16 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await expect(mellowAdapter.addMellowVault(mellowVault)).to.revertedWithCustomError(mellowAdapter, "ZeroAddress");
     });
 
+    it("remove vault: reverts when not an owner", async function() {
+      await expect(mellowAdapter.connect(staker).removeVault(ZeroAddress))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("remove vault: reverts when unknown vault", async function() {
+      await expect(mellowAdapter.removeVault(mellowVaults[2].vaultAddress))
+        .to.be.revertedWithCustomError(mellowAdapter, "InvalidVault");
+    });
+
     it("remove vault: reverts when vault is zero address", async function() {
       await expect(mellowAdapter.removeVault(ZeroAddress)).to.be.revertedWithCustomError(mellowAdapter, "ZeroAddress");
     });
