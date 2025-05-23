@@ -356,7 +356,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @dev The function allows the operator to deposit asset as rewards.
      * It verifies that the previous rewards timeline is over before accepting new rewards.
      */
-    function addRewards(uint256 amount) external nonReentrant {
+    function addRewards(uint256 amount) external onlyOwner nonReentrant {
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;
@@ -547,7 +547,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @dev The new timeline must be at least 1 day (86400 seconds)
      * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
      */
-    function setRewardsTimeline(uint256 newTimelineInSeconds) external {
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOwner {
         if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
             revert InconsistentData();
 
