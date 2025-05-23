@@ -148,6 +148,14 @@ describe("Farm rewards", function() {
       expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
     });
 
+    it("set rewards timeline: invalid data", async function() {
+      await expect(iVault.setRewardsTimeline(3600n))
+        .to.be.revertedWithCustomError(iVault, "InconsistentData");
+
+      await expect(iVault.setRewardsTimeline(90000n))
+        .to.be.revertedWithCustomError(iVault, "InconsistentData");
+    });
+
     it("set rewards timeline: only owner", async function() {
       await expect(iVault.connect(staker).setRewardsTimeline(1n))
         .to.be.revertedWith("Ownable: caller is not the owner");
