@@ -11,6 +11,7 @@ import { adapters, emptyBytes } from "../../src/constants";
 import { abi, initVault } from "../../src/init-vault";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import exp from "node:constants";
+import { ZeroAddress, ZeroHash } from "ethers";
 
 const { ethers, network } = hardhat;
 const assetData = stETH;
@@ -144,6 +145,16 @@ describe("Farm rewards", function() {
 
       await iVault.setRewardsTimeline(timeline);
       expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
+    });
+
+    it("set rewards timeline: only owner", async function() {
+      await expect(iVault.connect(staker).setRewardsTimeline(1n))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("set rewards treasury: only owner", async function() {
+      await expect(iVault.connect(staker).setRewardsTreasury(ZeroAddress))
+        .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("add rewards for the first time", async function() {
