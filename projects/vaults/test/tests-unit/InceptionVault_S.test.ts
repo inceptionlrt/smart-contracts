@@ -400,6 +400,9 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
     it("can be called only by operator", async() => {
       await expect(iVault.connect(staker).claimAdapterFreeBalance(symbioticAdapter.address))
         .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+
+      await expect(symbioticAdapter.claimFreeBalance())
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotVaultOrTrusteeManager");
     });
 
     it('should claim free balance for the adapter', async () => {
