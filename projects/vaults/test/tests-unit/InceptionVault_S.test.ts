@@ -397,6 +397,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await iVault.setTargetFlashCapacity(1n);
     });
 
+    it("can be called only by operator", async() => {
+      await expect(iVault.connect(staker).claimAdapterFreeBalance(symbioticAdapter.address))
+        .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+    });
+
     it('should claim free balance for the adapter', async () => {
       // Arrange
       const amount = toWei(5);
