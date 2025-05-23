@@ -105,7 +105,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     function withdraw(
         address vaultAddress,
         uint256 amount,
-        bytes[] calldata /* _data */ ,
+        bytes[] calldata /* _data */,
         bool emergency
     ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
@@ -207,7 +207,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     }
 
     /**
-     * @notice Internal function to calculate pending withdrawal amount for an address
+     * @notice Internal function to calculate pending withdrawal amount
      * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
@@ -230,6 +230,28 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
             address _claimer = pendingClaimers.at(i);
             address _vault = claimerVaults[_claimer];
             total += IVault(_vault).withdrawalsOf(withdrawals[_vault][_claimer], _claimer);
+        }
+
+        return total;
+    }
+
+    /**
+     * @notice Internal function to calculate pending withdrawal amount for an address
+     * @param vault Vault address
+     * @param emergency Emergency flag for claimer
+     * @return total Total pending withdrawal amount
+     */
+    function _pendingWithdrawalAmount(address vault, bool emergency) internal view returns (uint256 total)
+    {
+        if (emergency) {
+            return IVault(vault).withdrawalsOf(withdrawals[vault][_emergencyClaimer], _emergencyClaimer);
+        }
+
+        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+            address _claimer = pendingClaimers.at(i);
+            if (claimerVaults[_claimer] == vault) {
+                total += IVault(vault).withdrawalsOf(withdrawals[vault][_claimer], _claimer);
+            }
         }
 
         return total;
@@ -276,7 +298,11 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         if (vaultAddress == address(0)) revert ZeroAddress();
         if (!Address.isContract(vaultAddress)) revert NotContract();
         if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
-        if (getDeposited(vaultAddress) != 0) revert VaultNotEmpty();
+        if (
+            getDeposited(vaultAddress) != 0 ||
+            _pendingWithdrawalAmount(vaultAddress, false) > 0 ||
+            _pendingWithdrawalAmount(vaultAddress, true) > 0
+        ) revert VaultNotEmpty();
 
         _symbioticVaults.remove(vaultAddress);
 

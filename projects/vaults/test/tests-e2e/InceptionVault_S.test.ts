@@ -328,6 +328,15 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       console.log(`current epoch of 1: ${await symbioticVaults[0].vault.currentEpoch()}`);
     });
 
+    it("Cannot remove symbioticVault", async function() {
+      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress))
+        .to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
+      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress()))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+        .to.be.revertedWithCustomError(symbioticAdapter, "VaultNotEmpty");
+    });
+
     it("Claim Symbiotic withdrawal transfer funds from Symbiotic to the vault", async function() {
       const pendingWithdrawalsSymbiotic = await symbioticAdapter.pendingWithdrawalAmount();
       const totalAssetsBefore = await iVault.totalAssets();
@@ -372,21 +381,12 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Remove symbioticVault", async function() {
-      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress)).to.be.revertedWithCustomError(
-        symbioticAdapter,
-        "ZeroAddress",
-      );
-      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress())).to.be.revertedWithCustomError(
-        symbioticAdapter,
-        "NotContract",
-      );
       await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
         .to.emit(symbioticAdapter, "VaultRemoved")
         .withArgs(symbioticVaults[1].vaultAddress);
-      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress)).to.be.revertedWithCustomError(
-        symbioticAdapter,
-        "NotAdded",
-      );
+
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotAdded");
     });
 
     it("Staker is able to redeem", async function() {
