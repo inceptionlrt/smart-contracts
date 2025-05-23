@@ -180,4 +180,11 @@ describe("Farm rewards", function() {
         .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
     });
   });
+
+  describe("Claim rewards", function() {
+    it("Can be called only by operator", async function() {
+      await expect(iVault.connect(staker).claimAdapterRewards(symbioticAdapter.address, assetData.assetAddress, "0x"))
+        .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+    });
+  });
 });
