@@ -142,7 +142,7 @@ describe("Farm rewards", function() {
     it("set rewards timeline", async function () {
       const timeline = 86400;
 
-      await iVault.connect(iVaultOperator).setRewardsTimeline(timeline);
+      await iVault.setRewardsTimeline(timeline);
       expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
     });
 
