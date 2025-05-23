@@ -383,10 +383,9 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
     /**
      * @notice Claim rewards from Eigenlayer protocol.
      * @dev Can only be called by trustee
-     * @param rewardToken Reward token.
      * @param rewardsData Adapter related bytes of data for rewards.
      */
-    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+    function claimRewards(address /* rewardToken */, bytes memory rewardsData) external onlyTrustee {
         IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
         IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
     }

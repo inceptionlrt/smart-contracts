@@ -102,7 +102,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     * @param mellowVault The address of the vault to check
     * @return bool Returns true if the vault is found in the list, false otherwise
     **/
-    function _beforeDelegate(address mellowVault) internal returns (bool) {
+    function _beforeDelegate(address mellowVault) internal view returns (bool) {
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             if (mellowVault == address(mellowVaults[i])) {
                 return true;
@@ -181,21 +181,20 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @dev Can only be called by trustee when contract is not paused
      * @param _mellowVault Address of the Mellow vault to withdraw from
      * @param amount Amount to withdraw
-     * @param _data Additional withdrawal parameters
      * @param emergency Flag for emergency withdrawal
      * @return Tuple of (remaining amount to withdraw, amount claimed)
      */
     function withdraw(
         address _mellowVault,
         uint256 amount,
-        bytes[] calldata _data,
+        bytes[] calldata /*_data*/,
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         address claimer = _getOrCreateClaimer(emergency);
         uint256 balanceState = _asset.balanceOf(claimer);
 
         // claim from mellow
-        uint256 shares = IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
+        IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
         claimerVaults[claimer] = _mellowVault;
 
         uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
@@ -314,11 +313,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
 
     /**
      * @notice Claim rewards from Mellow protocol.
-     * @dev Can only be called by trustee
-     * @param rewardToken Reward token.
-     * @param rewardsData Adapter related bytes of data for rewards.
+     * @dev Rewards distribution functionality is not yet available in the Mellow protocol.
      */
-    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
+    function claimRewards(address /*rewardToken*/, bytes memory /*rewardsData*/) external onlyTrustee {
         // Rewards distribution functionality is not yet available in the Mellow protocol.
         revert("Mellow distribution rewards not implemented yet");
     }

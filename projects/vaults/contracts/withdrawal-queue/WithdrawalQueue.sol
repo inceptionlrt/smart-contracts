@@ -265,7 +265,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param withdrawal The storage reference to the WithdrawalEpoch struct.
     * @return bool True if the withdrawal is slashed, false otherwise.
     */
-    function _isSlashed(WithdrawalEpoch storage withdrawal) internal returns (bool) {
+    function _isSlashed(WithdrawalEpoch storage withdrawal) internal view returns (bool) {
         uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
 
         if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
@@ -361,7 +361,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256[] storage epochs = userEpoch[receiver];
         require(userEpochIndex < epochs.length, InvalidEpoch());
 
-        uint256 amount = _redeem(receiver, epochs, userEpochIndex);
+        amount = _redeem(receiver, epochs, userEpochIndex);
 
         if (epochs.length == 0) {
             delete userEpoch[receiver];

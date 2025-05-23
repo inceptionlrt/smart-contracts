@@ -99,14 +99,13 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @dev Can only be called by trustee when contract is not paused
      * @param vaultAddress Address of the vault to withdraw from
      * @param amount Amount to withdraw
-     * @param _data Additional withdrawal parameters
      * @param emergency Flag for emergency withdrawal
      * @return Tuple of (amount requested, 0)
      */
     function withdraw(
         address vaultAddress,
         uint256 amount,
-        bytes[] calldata _data,
+        bytes[] calldata /* _data */ ,
         bool emergency
     ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
         IVault vault = IVault(vaultAddress);
