@@ -73,13 +73,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         address vaultAddress,
         uint256 amount,
         bytes[] calldata /* _data */
-    )
-    external
-    override
-    onlyTrustee
-    whenNotPaused
-    returns (uint256 depositedAmount)
-    {
+    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
@@ -134,11 +128,11 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         bytes[] calldata _data,
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
-        if (_data.length > 1) revert InvalidDataLength(1, _data.length);
+        require(_data.length == 1, InvalidDataLength(1, _data.length));
         (address vaultAddress, address claimer) = abi.decode(_data[0], (address, address));
-        if (!_symbioticVaults.contains(vaultAddress)) revert InvalidVault();
-        if (emergency && _emergencyClaimer != claimer) revert OnlyEmergency();
-        if (withdrawals[vaultAddress][claimer] == 0) revert NothingToClaim();
+        require(_symbioticVaults.contains(vaultAddress), InvalidVault());
+        require(!emergency || _emergencyClaimer == claimer, OnlyEmergency());
+        require(withdrawals[vaultAddress][claimer] != 0, NothingToClaim());
 
         uint256 epoch = withdrawals[vaultAddress][claimer];
         delete withdrawals[vaultAddress][claimer];

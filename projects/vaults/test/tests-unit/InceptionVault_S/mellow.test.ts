@@ -182,6 +182,13 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await iVault.connect(staker).deposit(totalDeposited, staker.address);
     });
 
+
+    it("Unable to delegate to unknown vault", async function() {
+      await expect(iVault.connect(iVaultOperator)
+        .delegate(mellowAdapter.address, staker.address, 1n, emptyBytes)
+      ).to.be.revertedWithCustomError(mellowAdapter, "NotAdded");
+    });
+
     it("Delegate to mellowVault#1", async function() {
       vault1Delegated = (await iVault.getFreeBalance()) / 2n;
       await iVault
