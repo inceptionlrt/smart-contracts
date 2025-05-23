@@ -126,6 +126,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Deposits assets into the vault and mints Inception tokens. See {IERC4626-deposit}
+     * @notice It is recommended to use the deposit function with the `minOut` parameter to protect against slippage.
      * @param amount Amount of assets to deposit
      * @param receiver Address to receive the minted tokens
      * @return Amount of shares minted
