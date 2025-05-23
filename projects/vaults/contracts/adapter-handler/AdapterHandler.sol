@@ -118,7 +118,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      */
     function _beforeDeposit(uint256 amount) internal view {
         uint256 freeBalance = getFreeBalance();
-        if (amount > freeBalance) revert InsufficientCapacity(freeBalance);
+        require(amount <= freeBalance, InsufficientCapacity(freeBalance));
     }
 
     /**
@@ -137,8 +137,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ) external nonReentrant whenNotPaused onlyOperator {
         _beforeDeposit(amount);
 
-        if (adapter == address(0)) revert NullParams();
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        require(adapter != address(0), NullParams());
+        require(_adapters.contains(adapter), AdapterNotFound());
 
         _asset.safeIncreaseAllowance(address(adapter), amount);
         IInceptionBaseAdapter(adapter).delegate(vault, amount, _data);
@@ -156,9 +156,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 undelegatedEpoch,
         UndelegateRequest[] calldata requests
     ) external whenNotPaused nonReentrant onlyOperator {
-        if (requests.length == 0) {
-            return _undelegateAndClaim(undelegatedEpoch);
-        }
+        if (requests.length == 0) return _undelegateAndClaim(undelegatedEpoch);
+
 
         uint256[] memory undelegatedAmounts = new uint256[](requests.length);
         uint256[] memory claimedAmounts = new uint256[](requests.length);
@@ -202,9 +201,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         bytes[] calldata _data,
         bool emergency
     ) internal returns (uint256 undelegated, uint256 claimed) {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
-        if (vault == address(0)) revert InvalidAddress();
-        if (amount == 0) revert ValueZero();
+        require(_adapters.contains(adapter), AdapterNotFound());
+        require(vault != address(0), InvalidAddress());
+        require(amount > 0, ValueZero());
         // undelegate from adapter
         return IInceptionBaseAdapter(adapter).withdraw(vault, amount, _data, emergency);
     }
@@ -311,7 +310,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @return Amount of assets claimed
      */
     function _claim(address adapter, bytes[] calldata _data, bool emergency) internal returns (uint256) {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        require(_adapters.contains(adapter), AdapterNotFound());
         return IInceptionBaseAdapter(adapter).claim(_data, emergency);
     }
 

@@ -4,17 +4,25 @@ pragma solidity ^0.8.28;
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract MellowAdapterClaimer {
-    error OnlyAdapter();
-    address internal immutable adapter;
+import {IAdapterClaimer} from "../interfaces/adapter-claimer/IAdapterClaimer.sol";
 
-    constructor(address asset) {
-        adapter = msg.sender;
-        IERC20(asset).approve(adapter, type(uint256).max);
+/**
+ * @title MellowAdapterClaimer
+ * @author The InceptionLRT team
+ * @notice Adapter claimer for Mellow Vaults
+ * @notice In order to claim withdrawals multiple times
+ * @dev This contract is used to claim rewards from Mellow Vaults
+ */
+contract MellowAdapterClaimer is IAdapterClaimer {
+    address internal immutable _adapter;
+
+    constructor(address asset) payable {
+        _adapter = msg.sender;
+        require(IERC20(asset).approve(_adapter, type(uint256).max), ApprovalFailed());
     }
 
     function claim(address vault, address recipient, uint256 amount) external returns (uint256) {
-        require(msg.sender == adapter, OnlyAdapter());
+        require(msg.sender == _adapter, OnlyAdapter());
         return IMellowSymbioticVault(vault).claim(
             address(this), recipient, amount
         );

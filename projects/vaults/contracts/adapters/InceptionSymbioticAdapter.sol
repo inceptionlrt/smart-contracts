@@ -17,7 +17,7 @@ import {InceptionBaseAdapter, IInceptionBaseAdapter} from "./InceptionBaseAdapte
 import {SymbioticAdapterClaimer} from "../adapter-claimers/SymbioticAdapterClaimer.sol";
 
 /**
- * @title The InceptionSymbioticAdapter.sol Contract
+ * @title InceptionSymbioticAdapter
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
@@ -31,11 +31,11 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
 
     /// @notice Mapping of vault addresses to their withdrawal epochs
     mapping(address => mapping(address => uint256)) public withdrawals;
-    mapping(address => address) internal claimerVaults;
+    mapping(address => address) internal _claimerVaults;
 
     address internal _emergencyClaimer;
-    EnumerableSet.AddressSet internal pendingClaimers;
-    address[] internal availableClaimers;
+    EnumerableSet.AddressSet internal _pendingClaimers;
+    address[] internal _availableClaimers;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -56,9 +56,8 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         __InceptionBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
-            if (IVault(vaults[i]).collateral() != address(asset))
-                revert InvalidCollateral();
-            if (!_symbioticVaults.add(vaults[i])) revert AlreadyAdded();
+            require(IVault(vaults[i]).collateral() == address(asset), InvalidCollateral());
+            require(_symbioticVaults.add(vaults[i]), AlreadyAdded());
             emit VaultAdded(vaults[i]);
         }
     }
@@ -110,7 +109,7 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
 
         (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(claimer, amount);
         withdrawals[vaultAddress][claimer] = vault.currentEpoch() + 1;
-        claimerVaults[claimer] = vaultAddress;
+        _claimerVaults[claimer] = vaultAddress;
 
         emit SymbioticWithdrawn(burnedShares, mintedShares, claimer);
 
@@ -220,9 +219,9 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
             return total;
         }
 
-        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            address _claimer = pendingClaimers.at(i);
-            address _vault = claimerVaults[_claimer];
+        for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
+            address _claimer = _pendingClaimers.at(i);
+            address _vault = _claimerVaults[_claimer];
             total += IVault(_vault).withdrawalsOf(withdrawals[_vault][_claimer], _claimer);
         }
 
@@ -237,15 +236,15 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      */
     function _pendingWithdrawalAmount(address vault, bool emergency) internal view returns (uint256 total)
     {
-        if (emergency) {
+        if (emergency)
             return IVault(vault).withdrawalsOf(withdrawals[vault][_emergencyClaimer], _emergencyClaimer);
-        }
 
-        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            address _claimer = pendingClaimers.at(i);
-            if (claimerVaults[_claimer] == vault) {
+
+        for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
+            address _claimer = _pendingClaimers.at(i);
+            if (_claimerVaults[_claimer] == vault)
                 total += IVault(vault).withdrawalsOf(withdrawals[vault][_claimer], _claimer);
-            }
+
         }
 
         return total;
@@ -272,12 +271,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @param vaultAddress Address of the new vault
      */
     function addVault(address vaultAddress) external onlyOwner {
-        if (vaultAddress == address(0)) revert ZeroAddress();
-        if (!Address.isContract(vaultAddress)) revert NotContract();
-
-        if (_symbioticVaults.contains(vaultAddress)) revert AlreadyAdded();
-        if (IVault(vaultAddress).collateral() != address(_asset))
-            revert InvalidCollateral();
+        require(vaultAddress != address(0), ZeroAddress());
+        require(Address.isContract(vaultAddress), NotContract());
+        require(!_symbioticVaults.contains(vaultAddress), AlreadyAdded());
+        require(IVault(vaultAddress).collateral() == address(_asset), InvalidCollateral());
 
         _symbioticVaults.add(vaultAddress);
 
@@ -289,9 +286,9 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @param vaultAddress Address of the vault to remove
      */
     function removeVault(address vaultAddress) external onlyOwner {
-        if (vaultAddress == address(0)) revert ZeroAddress();
-        if (!Address.isContract(vaultAddress)) revert NotContract();
-        if (!_symbioticVaults.contains(vaultAddress)) revert NotAdded();
+        require(vaultAddress != address(0), ZeroAddress());
+        require(Address.isContract(vaultAddress), NotContract());
+        require(_symbioticVaults.contains(vaultAddress), NotAdded());
         if (
             getDeposited(vaultAddress) != 0 ||
             _pendingWithdrawalAmount(vaultAddress, false) > 0 ||
@@ -322,18 +319,17 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     * @return claimer The address of the claimer to be used
     */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
-        if (emergency) {
+        if (emergency)
             return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
-        }
 
-        if (availableClaimers.length > 0) {
-            claimer = availableClaimers[availableClaimers.length - 1];
-            availableClaimers.pop();
+        if (_availableClaimers.length > 0) {
+            claimer = _availableClaimers[_availableClaimers.length - 1];
+            _availableClaimers.pop();
         } else {
             claimer = _deployClaimer();
         }
 
-        pendingClaimers.add(claimer);
+        _pendingClaimers.add(claimer);
         return claimer;
     }
 
@@ -343,9 +339,9 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     * @param claimer The address of the claimer to be removed from pending status
     */
     function _removePendingClaimer(address claimer) internal {
-        delete claimerVaults[claimer];
-        pendingClaimers.remove(claimer);
-        availableClaimers.push(claimer);
+        delete _claimerVaults[claimer];
+        _pendingClaimers.remove(claimer);
+        _availableClaimers.push(claimer);
     }
 
     /*

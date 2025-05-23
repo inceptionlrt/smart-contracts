@@ -75,12 +75,10 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         (uint256 maxPerDeposit, uint256 maxTotalDeposits) = _strategy.getTVLLimits();
 
-        if (amount > maxPerDeposit)
-            revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
+        require(amount <= maxPerDeposit, ExceedsMaxPerDeposit(maxPerDeposit, amount));
 
         uint256 currentBalance = _asset.balanceOf(address(_strategy));
-        if (currentBalance + amount > maxTotalDeposits)
-            revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
+        require(currentBalance + amount <= maxTotalDeposits, ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance));
     }
 
     /**

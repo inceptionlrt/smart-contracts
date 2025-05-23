@@ -42,7 +42,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
 
     address public ethWrapper;
 
-    mapping(address => address) internal claimerVaults;
+    mapping(address => address) internal _claimerVaults;
     address internal _emergencyClaimer;
     EnumerableSet.AddressSet internal pendingClaimers;
     address[] internal availableClaimers;
@@ -104,9 +104,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     **/
     function _beforeDelegate(address mellowVault) internal view returns (bool) {
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) {
-                return true;
-            }
+            if (mellowVault == address(mellowVaults[i])) return true;
         }
 
         return false;
@@ -124,7 +122,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         uint256 amount,
         address referral
     ) internal returns (uint256) {
-        if (!_beforeDelegate(mellowVault)) revert NotAdded();
+        require(_beforeDelegate(mellowVault), NotAdded());
 
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
@@ -195,7 +193,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
 
         // claim from mellow
         IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
-        claimerVaults[claimer] = _mellowVault;
+        _claimerVaults[claimer] = _mellowVault;
 
         uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
         uint256 undelegatedAmount = amount - claimedAmount;
@@ -206,9 +204,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
                 _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
         }
 
-        if (undelegatedAmount == 0) {
-            _removePendingClaimer(claimer);
-        }
+        if (undelegatedAmount == 0) _removePendingClaimer(claimer);
+
 
         emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
         return (undelegatedAmount, claimedAmount);
@@ -226,15 +223,15 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
 
         (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
         // emergency claim available only for emergency claimer
-        if (emergency && _emergencyClaimer != claimer) revert OnlyEmergency();
-        if (!emergency && claimerVaults[claimer] != _mellowVault) revert InvalidVault();
+        require(emergency && _emergencyClaimer != claimer, OnlyEmergency());
+        require(!emergency && _claimerVaults[claimer] != _mellowVault, InvalidVault());
         if (!emergency) _removePendingClaimer(claimer);
 
         uint256 amount = MellowAdapterClaimer(
             claimer
         ).claim(_mellowVault, address(this), type(uint256).max);
 
-        if (amount == 0) revert ValueZero();
+        require(amount > 0, ValueZero());
         _asset.safeTransfer(_inceptionVault, amount);
 
         return amount;
@@ -245,10 +242,10 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param mellowVault Address of the new vault
      */
     function addMellowVault(address mellowVault) external onlyOwner {
-        if (mellowVault == address(0)) revert ZeroAddress();
+        require(mellowVault != address(0), ZeroAddress());
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) revert AlreadyAdded();
+            require(mellowVault != address(mellowVaults[i]), AlreadyAdded());
         }
 
         mellowVaults.push(IMellowVault(mellowVault));
@@ -277,9 +274,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
             }
         }
 
-        if (index == type(uint256).max) {
-            revert InvalidVault();
-        }
+        require(index != type(uint256).max, InvalidVault());
 
         mellowVaults[index] = mellowVaults[mellowVaults.length - 1];
         mellowVaults.pop();
@@ -296,13 +291,13 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         address mellowVault,
         uint256 newAllocation
     ) external onlyOwner {
-        if (mellowVault == address(0)) revert ZeroAddress();
+        require(mellowVault != address(0), ZeroAddress());
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             if (mellowVault == address(mellowVaults[i])) exists = true;
         }
-        if (!exists) revert InvalidVault();
+        require(exists, InvalidVault());
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
 
@@ -315,7 +310,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @notice Claim rewards from Mellow protocol.
      * @dev Rewards distribution functionality is not yet available in the Mellow protocol.
      */
-    function claimRewards(address /*rewardToken*/, bytes memory /*rewardsData*/) external onlyTrustee {
+    function claimRewards(address /*rewardToken*/, bytes memory /*rewardsData*/) external view onlyTrustee {
         // Rewards distribution functionality is not yet available in the Mellow protocol.
         revert("Mellow distribution rewards not implemented yet");
     }
@@ -343,7 +338,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(claimerVaults[pendingClaimers.at(i)])
+            total += IMellowSymbioticVault(_claimerVaults[pendingClaimers.at(i)])
                 .claimableAssetsOf(pendingClaimers.at(i));
         }
         return total;
@@ -372,7 +367,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(claimerVaults[pendingClaimers.at(i)])
+            total += IMellowSymbioticVault(_claimerVaults[pendingClaimers.at(i)])
                 .pendingAssetsOf(pendingClaimers.at(i));
         }
         return total;
@@ -387,12 +382,13 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     function pendingWithdrawalAmount(
         address _mellowVault, bool emergency
     ) public view returns (uint256 total) {
-        if (emergency) {
+        if (emergency)
             return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(_emergencyClaimer);
-        }
+
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
             total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(pendingClaimers.at(i));
         }
+
         return total;
     }
 
@@ -413,10 +409,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
 
     /**
      * @notice Returns the total amount deposited across all vaults
-     * @return Total amount deposited
+     * @return total is the total amount deposited
      */
-    function getTotalDeposited() public view override returns (uint256) {
-        uint256 total;
+    function getTotalDeposited() public view override returns (uint256 total) {
         for (uint256 i = 0; i < mellowVaults.length; i++) {
             uint256 balance = mellowVaults[i].balanceOf(address(this));
             if (balance > 0)
@@ -474,8 +469,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param newEthWrapper Address of the new ETH wrapper
      */
     function setEthWrapper(address newEthWrapper) external onlyOwner {
-        if (!Address.isContract(newEthWrapper)) revert NotContract();
-        if (newEthWrapper == address(0)) revert ZeroAddress();
+        require(Address.isContract(newEthWrapper), NotContract());
+        require(newEthWrapper != address(0), ZeroAddress());
 
         address oldWrapper = ethWrapper;
         ethWrapper = newEthWrapper;
@@ -520,7 +515,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     * @param claimer The address of the claimer to be removed from pending status
     */
     function _removePendingClaimer(address claimer) internal {
-        delete claimerVaults[claimer];
+        delete _claimerVaults[claimer];
         pendingClaimers.remove(claimer);
         availableClaimers.push(claimer);
     }

@@ -71,12 +71,10 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
     function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
         (uint256 maxPerDeposit, uint256 maxTotalDeposits) = _strategy.getTVLLimits();
 
-        if (amount > maxPerDeposit)
-            revert ExceedsMaxPerDeposit(maxPerDeposit, amount);
+        require(amount <= maxPerDeposit, ExceedsMaxPerDeposit(maxPerDeposit, amount));
 
         uint256 currentBalance = _asset.balanceOf(address(_strategy));
-        if (currentBalance + amount > maxTotalDeposits)
-            revert ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance);
+        require(currentBalance + amount <= maxTotalDeposits, ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance));
     }
 
     /**
@@ -230,9 +228,7 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
         bool receiveAsTokens = abi.decode(_data[2], (bool[]))[0];
 
         // emergency claim available only for emergency queued withdrawals
-        if (emergency) {
-            require(_emergencyQueuedWithdrawals[withdrawal.nonce] == true, OnlyEmergency());
-        }
+        require(emergency == _emergencyQueuedWithdrawals[withdrawal.nonce], OnlyEmergency());
 
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens, receiveAsTokens);

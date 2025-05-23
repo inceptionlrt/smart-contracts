@@ -11,15 +11,15 @@ import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IInceptionBaseAdapter} from "../interfaces/adapters/IInceptionBaseAdapter.sol";
 
 /**
- * @title The InceptionBaseAdapter.sol Contract
+ * @title InceptionBaseAdapter
  * @author The InceptionLRT team
  */
 abstract contract InceptionBaseAdapter is
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-ERC165Upgradeable,
-OwnableUpgradeable,
-IInceptionBaseAdapter
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC165Upgradeable,
+    OwnableUpgradeable,
+    IInceptionBaseAdapter
 {
     using SafeERC20 for IERC20;
 
@@ -57,7 +57,7 @@ IInceptionBaseAdapter
      * @notice Claims the free balance held by this contract and transfers it to the Inception Vault.
      * @dev Can only be called by a trustee.
      */
-    function claimFreeBalance() external onlyTrustee() {
+    function claimFreeBalance() external onlyTrustee {
         _asset.safeTransfer(_inceptionVault, claimableAmount());
     }
 
@@ -74,7 +74,9 @@ IInceptionBaseAdapter
      * @param claimer Address to check claimable amount for
      * @return Amount of claimable tokens for the specified address
      */
-    function claimableAmount(address claimer) public view virtual returns (uint256) {
+    function claimableAmount(
+        address claimer
+    ) public view virtual returns (uint256) {
         return _asset.balanceOf(claimer);
     }
 
@@ -84,7 +86,7 @@ IInceptionBaseAdapter
      * @param inceptionVault New inception vault address
      */
     function setInceptionVault(address inceptionVault) external onlyOwner {
-        if (!Address.isContract(inceptionVault)) revert NotContract();
+        require(Address.isContract(inceptionVault), NotContract());
         emit InceptionVaultSet(_inceptionVault, inceptionVault);
         _inceptionVault = inceptionVault;
     }
@@ -123,3 +125,4 @@ IInceptionBaseAdapter
         return 1;
     }
 }
+
