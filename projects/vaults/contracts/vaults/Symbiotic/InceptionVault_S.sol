@@ -223,7 +223,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         // update deposit bonus state
         depositBonusAmount -= depositBonus;
         // get the amount from the sender
-        _transferAssetFrom(sender, amount);
+        _asset.safeTransferFrom(sender, address(this), amount);
         // mint new shares
         inceptionToken.mint(receiver, iShares);
         __afterDeposit(iShares);
@@ -322,7 +322,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         assets = withdrawalQueue.redeem(receiver);
         if (assets > 0) {
             // transfer to receiver
-            _transferAssetTo(receiver, assets);
+            _asset.safeTransfer(receiver, assets);
             emit Redeem(msg.sender, receiver, assets);
         }
     }
@@ -338,7 +338,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         assets = withdrawalQueue.redeem(receiver, userEpochIndex);
         if (assets > 0) {
             // transfer to receiver
-            _transferAssetTo(receiver, assets);
+            _asset.safeTransfer(receiver, assets);
             emit Redeem(msg.sender, receiver, assets);
         }
     }
@@ -418,10 +418,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
-            _transferAssetTo(treasury, protocolWithdrawalFee);
+            _asset.safeTransfer(treasury, protocolWithdrawalFee);
         if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
         /// @notice instant transfer amount to the receiver
-        _transferAssetTo(receiver, amount);
+        _asset.safeTransfer(receiver, amount);
 
         return (amount, fee);
     }
@@ -802,7 +802,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 amount = depositBonusAmount;
         depositBonusAmount = 0;
 
-        _transferAssetTo(newVault, amount);
+        _asset.safeTransfer(newVault, amount);
 
         emit DepositBonusTransferred(newVault, amount);
     }

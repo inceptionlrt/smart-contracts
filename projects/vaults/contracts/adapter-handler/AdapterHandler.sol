@@ -87,15 +87,10 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     IWithdrawalQueue public withdrawalQueue;
 
     /**
-     * @dev Address of treasury which holds rewards.
-     */
-    address public rewardsTreasury;
-
-    /**
      * @dev Reserved storage gap to allow for future upgrades without shifting storage layout.
      * @notice Occupies 38 slots (50 total slots minus 12 used).
      */
-    uint256[50 - 12] private __gap;
+    uint256[50 - 11] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
@@ -364,7 +359,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
             if (dayNum < totalDays) revert TimelineNotOver();
         }
 
-        _transferAssetFrom(_operator, amount);
+        _asset.safeTransferFrom(_operator, address(this), amount);
 
         currentRewards = amount;
         startTimeline = block.timestamp;
@@ -531,27 +526,5 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         if (!_adapters.contains(adapter)) revert AdapterNotFound();
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
-    }
-
-    /**
-     * @notice Set rewards treasury address
-     * @param treasury Address of the treasury which holds rewards
-     */
-    function setRewardsTreasury(address treasury) external onlyOwner {
-        emit SetRewardsTreasury(rewardsTreasury);
-        rewardsTreasury = treasury;
-    }
-
-    /**
-     * @notice Updates the duration of the rewards timeline.
-     * @dev The new timeline must be at least 1 day (86400 seconds)
-     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
-     */
-    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOwner {
-        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
-            revert InconsistentData();
-
-        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
-        rewardsTimeline = newTimelineInSeconds;
     }
 }

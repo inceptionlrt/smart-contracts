@@ -75,35 +75,12 @@ interface IAdapterHandler {
     event AdapterRemoved(address adapter);
 
     /**
-     * @dev Emitted when new rewards treasury set.
-     * @param treasury The address of the new treasury.
-     */
-    event SetRewardsTreasury(address treasury);
-
-    /**
      * @dev Emitted when rewards claimed from adapter.
      * @param adapter The address of the removed adapter.
      * @param token The address of reward token.
      * @param amount Amount of reward.
      */
     event RewardsClaimed(address adapter, address token, uint256 amount);
-
-    /**
-     * @dev Emitted when rewards added to vault.
-     * @param amount Amount of reward.
-     * @param startTimeline timestamp of added rewards.
-     */
-    event RewardsAdded(uint256 amount, uint256 startTimeline);
-
-    /**
-     * @dev Emitted when rewards timeline changed.
-     * @param rewardsTimeline new rewards timeline.
-     * @param newTimelineInSeconds new rewards timeline in seconds.
-     */
-    event RewardsTimelineChanged(
-        uint256 rewardsTimeline,
-        uint256 newTimelineInSeconds
-    );
 
     /**
      * @dev Deprecated structure representing a withdrawal request.

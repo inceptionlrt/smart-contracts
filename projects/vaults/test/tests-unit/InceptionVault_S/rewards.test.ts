@@ -163,5 +163,10 @@ describe("Farm rewards", function() {
       await expect(iVault.connect(iVaultOperator).addRewards(toWei(1)))
         .to.be.revertedWithCustomError(iVault, "TimelineNotOver");
     });
+
+    it("add rewards: only operator", async function() {
+      await expect(iVault.connect(staker).addRewards(toWei(1)))
+        .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+    });
   });
 });
