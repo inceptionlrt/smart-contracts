@@ -500,10 +500,7 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     */
     function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
         if (emergency) {
-            if (_emergencyClaimer == address(0)) {
-                _emergencyClaimer = _deployClaimer();
-            }
-            return _emergencyClaimer;
+            return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
         }
 
         if (availableClaimers.length > 0) {
