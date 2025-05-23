@@ -7,6 +7,8 @@ import { stETH } from "../../data/assets/inception-vault-s";
 import { vaults } from "../../data/vaults";
 import { adapters, emptyBytes } from "../../src/constants";
 import { initVault } from "../../src/init-vault";
+import { calculateRatio, toWei } from "../../helpers/utils";
+import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 const { ethers, network } = hardhat;
 
 const symbioticVaults = vaults.symbiotic;
@@ -15,6 +17,7 @@ const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
   let iToken, iVault, mellowAdapter, symbioticAdapter, withdrawalQueue;
   let iVaultOperator, staker, staker2, staker3;
+  let snapshot;
 
   before(async function () {
     if (process.env.ASSETS) {
@@ -42,6 +45,8 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     staker = await assetData.impersonateStaker(staker, iVault);
     staker2 = await assetData.impersonateStaker(staker2, iVault);
     staker3 = await assetData.impersonateStaker(staker3, iVault);
+
+    snapshot = await helpers.takeSnapshot();
   });
 
   after(async function () {
@@ -178,6 +183,49 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         mellowAdapter,
         "NotContract",
       );
+    });
+  });
+
+  describe("Adapter claimers", function() {
+    let mellowClaimerAddr, symbioticClaimerAddr;
+
+    before(async function() {
+      await snapshot.restore();
+
+      iVault.setTargetFlashCapacity(1n);
+      // deposit
+      await iVault.connect(staker).deposit(toWei(100), staker.address);
+      // delegate mellow
+      await iVault.connect(iVaultOperator)
+        .delegate(mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5), emptyBytes);
+      // delegate symbiotic
+      await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(5), emptyBytes);
+      // withdraw
+      await iVault.connect(staker).withdraw(toWei(2), staker.address);
+      // undelegate
+      const tx = await iVault.connect(iVaultOperator)
+        .undelegate(await withdrawalQueue.currentEpoch(), [
+          [await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, toWei(1), emptyBytes],
+          [await symbioticAdapter.getAddress(), symbioticVaults[0].vaultAddress, toWei(1), emptyBytes]
+        ]);
+      const receipt = await tx.wait();
+      let adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address).map(log => mellowAdapter.interface.parseLog(log));
+      mellowClaimerAddr = adapterEvents[0].args["claimer"];
+      adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address).map(log => symbioticAdapter.interface.parseLog(log));
+      symbioticClaimerAddr = adapterEvents[0].args["claimer"];
+    });
+
+    it("mellow claimer: only adapter claim", async function() {
+      const mellowClaimer = await ethers.getContractAt("MellowAdapterClaimer", mellowClaimerAddr);
+      await expect(mellowClaimer.claim(ethers.ZeroAddress, ethers.ZeroAddress, 0n))
+        .to.be.revertedWithCustomError(mellowClaimer, "OnlyAdapter");
+    });
+
+    it("symbiotic claimer: only adapter claim", async function() {
+      const symbioticClaimer = await ethers.getContractAt("SymbioticAdapterClaimer", symbioticClaimerAddr);
+      await expect(symbioticClaimer.claim(ethers.ZeroAddress, ethers.ZeroAddress, 0n))
+        .to.be.revertedWithCustomError(symbioticClaimer, "OnlyAdapter");
     });
   });
 });
