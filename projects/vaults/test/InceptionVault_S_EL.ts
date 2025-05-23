@@ -941,5 +941,12 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       expect(vaultBalanceAfter - vaultBalanceBefore).to.be.closeTo(toWei(5), transactErr);
     });
   });
+
+  describe("Rewards", function() {
+    it("Can be called only by trustee", async function() {
+      await expect(eigenLayerAdapter.connect(staker).claimRewards(assetData.assetAddress, "0x"))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
+    });
+  });
 });
 

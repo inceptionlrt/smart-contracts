@@ -12,6 +12,7 @@ import { abi, initVault } from "../../src/init-vault";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import exp from "node:constants";
 import { ZeroAddress, ZeroHash } from "ethers";
+import { eigenLayer } from "../../../typechain-types/contracts/vaults";
 
 const { ethers, network } = hardhat;
 const assetData = stETH;
@@ -185,6 +186,14 @@ describe("Farm rewards", function() {
     it("Can be called only by operator", async function() {
       await expect(iVault.connect(staker).claimAdapterRewards(symbioticAdapter.address, assetData.assetAddress, "0x"))
         .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+    });
+
+    it("Can be called only by trustee", async function() {
+      await expect(symbioticAdapter.connect(staker).claimRewards(assetData.assetAddress, "0x"))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotVaultOrTrusteeManager");
+
+      await expect(mellowAdapter.connect(staker).claimRewards(assetData.assetAddress, "0x"))
+        .to.be.revertedWithCustomError(mellowAdapter, "NotVaultOrTrusteeManager");
     });
   });
 });
