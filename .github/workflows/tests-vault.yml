@@ -1,6 +1,8 @@
 name: Vault tests
 on:
   pull_request:
+  workflow_dispatch:
+    
 # cancel previous runs if a new one is triggered
 concurrency:
   group: vault-tests-${{github.event.pull_request.number}}
@@ -18,14 +20,21 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
-          node-version: 'node'
+          node-version: '22.x'
+      
+      - name: check node version
+        run: |
+          node --version
+          yarn --version
 
       - name: Install deps
         run: yarn install --frozen-lockfile && cd projects/vaults && yarn install --frozen-lockfile
 
       - name: Run tests
         working-directory: projects/vaults
-        run: npm run test:actual
+        run: npm run test
         env:
           MAINNET_RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
           RPC: https://rpc.ankr.com/eth/fc046d362fd7826a53b96763a67c6338518a402f7764b10eb99eebfc0543a700
+          ASSET_NAME: stETH
+          NETWORK: mainnet
