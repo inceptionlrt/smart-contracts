@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -22,7 +22,10 @@ import {MellowAdapterClaimer} from "../adapter-claimers/MellowAdapterClaimer.sol
  * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
  */
-contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseAdapter {
+contract InceptionWstETHMellowAdapter is
+    IInceptionMellowAdapter,
+    InceptionBaseAdapter
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -47,6 +50,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     EnumerableSet.AddressSet internal pendingClaimers;
     address[] internal availableClaimers;
 
+    address internal _claimerImplementation;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
@@ -68,7 +73,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         uint256 totalAllocations_;
         for (uint256 i = 0; i < _mellowVaults.length; i++) {
             for (uint8 j = 0; j < i; j++)
-                if (address(_mellowVaults[i]) == address(_mellowVaults[j])) revert AlreadyAdded();
+                if (address(_mellowVaults[i]) == address(_mellowVaults[j]))
+                    revert AlreadyAdded();
             mellowVaults.push(_mellowVaults[i]);
             allocations[address(_mellowVaults[i])] = 1;
             totalAllocations_ += 1;
@@ -89,19 +95,27 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         address mellowVault,
         uint256 amount,
         bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount)
+    )
+        external
+        override
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 depositedAmount)
     {
-        (address referral, bool delegateAuto) = abi.decode(_data[0], (address, bool));
+        (address referral, bool delegateAuto) = abi.decode(
+            _data[0],
+            (address, bool)
+        );
         if (!delegateAuto) return _delegate(mellowVault, amount, referral);
         else return _delegateAuto(amount, referral);
     }
 
     /**
-    * @notice Checks if the specified Mellow Vault address is in the list of allowed vaults
-    * @dev Iterates through the mellowVaults array and compares the provided address with each element
-    * @param mellowVault The address of the vault to check
-    * @return bool Returns true if the vault is found in the list, false otherwise
-    **/
+     * @notice Checks if the specified Mellow Vault address is in the list of allowed vaults
+     * @dev Iterates through the mellowVaults array and compares the provided address with each element
+     * @param mellowVault The address of the vault to check
+     * @return bool Returns true if the vault is found in the list, false otherwise
+     **/
     function _beforeDelegate(address mellowVault) internal view returns (bool) {
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             if (mellowVault == address(mellowVaults[i])) return true;
@@ -199,13 +213,16 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         uint256 undelegatedAmount = amount - claimedAmount;
 
         if (claimedAmount > 0) {
-            claimer == address(this) ?
-                _asset.safeTransfer(_inceptionVault, claimedAmount) :
-                _asset.safeTransferFrom(claimer, _inceptionVault, claimedAmount);
+            claimer == address(this)
+                ? _asset.safeTransfer(_inceptionVault, claimedAmount)
+                : _asset.safeTransferFrom(
+                    claimer,
+                    _inceptionVault,
+                    claimedAmount
+                );
         }
 
         if (undelegatedAmount == 0) _removePendingClaimer(claimer);
-
 
         emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
         return (undelegatedAmount, claimedAmount);
@@ -218,18 +235,26 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param emergency Flag for emergency claim process
      * @return Amount of tokens claimed
      */
-    function claim(bytes[] calldata _data, bool emergency) external override onlyTrustee whenNotPaused returns (uint256) {
+    function claim(
+        bytes[] calldata _data,
+        bool emergency
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length > 0, ValueZero());
 
-        (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
+        (address _mellowVault, address claimer) = abi.decode(
+            _data[0],
+            (address, address)
+        );
         // emergency claim available only for emergency claimer
-        require(emergency && _emergencyClaimer != claimer, OnlyEmergency());
-        require(!emergency && _claimerVaults[claimer] != _mellowVault, InvalidVault());
+        if (emergency && _emergencyClaimer != claimer) revert OnlyEmergency();
+        if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
         if (!emergency) _removePendingClaimer(claimer);
 
-        uint256 amount = MellowAdapterClaimer(
-            claimer
-        ).claim(_mellowVault, address(this), type(uint256).max);
+        uint256 amount = MellowAdapterClaimer(claimer).claim(
+            _mellowVault,
+            address(this),
+            type(uint256).max
+        );
 
         require(amount > 0, ValueZero());
         _asset.safeTransfer(_inceptionVault, amount);
@@ -254,15 +279,15 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /**
-    * @notice Remove a Mellow vault from the adapter
-    * @param vault Address of the mellow vault to be removed
-    */
+     * @notice Remove a Mellow vault from the adapter
+     * @param vault Address of the mellow vault to be removed
+     */
     function removeVault(address vault) external onlyOwner {
         require(vault != address(0), ZeroAddress());
         require(
             getDeposited(vault) == 0 &&
-            pendingWithdrawalAmount(vault, true) == 0 &&
-            pendingWithdrawalAmount(vault, false) == 0,
+                pendingWithdrawalAmount(vault, true) == 0 &&
+                pendingWithdrawalAmount(vault, false) == 0,
             VaultNotEmpty()
         );
 
@@ -310,7 +335,10 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @notice Claim rewards from Mellow protocol.
      * @dev Rewards distribution functionality is not yet available in the Mellow protocol.
      */
-    function claimRewards(address /*rewardToken*/, bytes memory /*rewardsData*/) external view onlyTrustee {
+    function claimRewards(
+        address /*rewardToken*/,
+        bytes memory /*rewardsData*/
+    ) external view onlyTrustee {
         // Rewards distribution functionality is not yet available in the Mellow protocol.
         revert("Mellow distribution rewards not implemented yet");
     }
@@ -328,7 +356,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
-    function _claimableWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
+    function _claimableWithdrawalAmount(
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             for (uint256 i = 0; i < mellowVaults.length; i++) {
                 total += IMellowSymbioticVault(address(mellowVaults[i]))
@@ -338,8 +368,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(_claimerVaults[pendingClaimers.at(i)])
-                .claimableAssetsOf(pendingClaimers.at(i));
+            total += IMellowSymbioticVault(
+                _claimerVaults[pendingClaimers.at(i)]
+            ).claimableAssetsOf(pendingClaimers.at(i));
         }
         return total;
     }
@@ -348,7 +379,12 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @notice Returns the total amount of pending withdrawals
      * @return total Amount of pending withdrawals
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
+    {
         return _pendingWithdrawalAmount(false);
     }
 
@@ -357,7 +393,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
-    function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
+    function _pendingWithdrawalAmount(
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             for (uint256 i = 0; i < mellowVaults.length; i++) {
                 total += IMellowSymbioticVault(address(mellowVaults[i]))
@@ -367,8 +405,9 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
         }
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(_claimerVaults[pendingClaimers.at(i)])
-                .pendingAssetsOf(pendingClaimers.at(i));
+            total += IMellowSymbioticVault(
+                _claimerVaults[pendingClaimers.at(i)]
+            ).pendingAssetsOf(pendingClaimers.at(i));
         }
         return total;
     }
@@ -380,13 +419,19 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @return total Amount of pending withdrawals for the vault
      */
     function pendingWithdrawalAmount(
-        address _mellowVault, bool emergency
+        address _mellowVault,
+        bool emergency
     ) public view returns (uint256 total) {
         if (emergency)
-            return IMellowSymbioticVault(_mellowVault).pendingAssetsOf(_emergencyClaimer);
+            return
+                IMellowSymbioticVault(_mellowVault).pendingAssetsOf(
+                    _emergencyClaimer
+                );
 
         for (uint256 i = 0; i < pendingClaimers.length(); i++) {
-            total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(pendingClaimers.at(i));
+            total += IMellowSymbioticVault(_mellowVault).pendingAssetsOf(
+                pendingClaimers.at(i)
+            );
         }
 
         return total;
@@ -435,7 +480,8 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
      * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
      */
     function inactiveBalanceEmergency() public view returns (uint256) {
-        return _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
+        return
+            _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
     }
 
     /**
@@ -478,6 +524,17 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /**
+     * @notice Sets the implementation address for the claimer
+     * @param newImplementation The address of the new implementation
+     */
+    function setClaimerImplementation(
+        address newImplementation
+    ) external onlyOwner {
+        emit EmergencyClaimerSet(_claimerImplementation, newImplementation);
+        _claimerImplementation = newImplementation;
+    }
+
+    /**
      * @notice Returns the contract version
      * @return Current version number (3)
      */
@@ -486,16 +543,21 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Retrieves or creates a claimer address based on the emergency condition
-    * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
-    *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
-    *      The returned claimer is added to the `pendingClaimers` set
-    * @param emergency Boolean indicating whether an emergency claimer is required
-    * @return claimer The address of the claimer to be used
-    */
-    function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
+     * @notice Retrieves or creates a claimer address based on the emergency condition
+     * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
+     *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
+     *      The returned claimer is added to the `pendingClaimers` set
+     * @param emergency Boolean indicating whether an emergency claimer is required
+     * @return claimer The address of the claimer to be used
+     */
+    function _getOrCreateClaimer(
+        bool emergency
+    ) internal virtual returns (address claimer) {
         if (emergency) {
-            return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
+            return
+                _emergencyClaimer != address(0)
+                    ? _emergencyClaimer
+                    : (_emergencyClaimer = _deployClaimer());
         }
 
         if (availableClaimers.length > 0) {
@@ -510,10 +572,10 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Removes a claimer from the pending list and recycles it to the available claimers
-    * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
-    * @param claimer The address of the claimer to be removed from pending status
-    */
+     * @notice Removes a claimer from the pending list and recycles it to the available claimers
+     * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
+     * @param claimer The address of the claimer to be removed from pending status
+     */
     function _removePendingClaimer(address claimer) internal {
         delete _claimerVaults[claimer];
         pendingClaimers.remove(claimer);
@@ -521,11 +583,35 @@ contract InceptionWstETHMellowAdapter is IInceptionMellowAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Deploys a new SymbioticAdapterClaimer contract instance
-    * @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter
-    * @return The address of the newly deployed SymbioticAdapterClaimer contract
-    */
+     * @notice Deploys a new MellowAdapterClaimer contract instance
+     * @dev Creates a new claimer contract with the `_asset` address passed as a initialize parameter
+     * @dev ownership is transferred to the adapter owner
+     * @return The address of the newly deployed MellowAdapterClaimer contract
+     */
     function _deployClaimer() internal returns (address) {
-        return address(new MellowAdapterClaimer(address(_asset)));
+        if (_claimerImplementation == address(0))
+            revert ClaimerImplementationNotSet();
+        // deploy new beacon proxy and do init call
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address)",
+            address(_asset)
+        );
+        address claimer = address(new BeaconProxy(address(this), data));
+
+        (bool success,) = claimer.call(
+            abi.encodeWithSignature("transferOwnership(address)", owner())
+        );
+        require(success, TransferOwnershipFailed());
+
+        emit ClaimerDeployed(claimer);
+        return claimer;
+    }
+
+    /**
+     * @notice Beacon proxy implementation address
+     * @return The address of the claimer implementation
+     */
+    function implementation() external view returns (address) {
+        return _claimerImplementation;
     }
 }

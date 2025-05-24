@@ -228,7 +228,7 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
         bool receiveAsTokens = abi.decode(_data[2], (bool[]))[0];
 
         // emergency claim available only for emergency queued withdrawals
-        require(emergency == _emergencyQueuedWithdrawals[withdrawal.nonce], OnlyEmergency());
+        if (emergency) require(_emergencyQueuedWithdrawals[withdrawal.nonce] == true, OnlyEmergency());
 
         // claim from EL
         _delegationManager.completeQueuedWithdrawal(withdrawal, tokens, receiveAsTokens);

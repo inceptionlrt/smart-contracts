@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -22,7 +22,10 @@ import {SymbioticAdapterClaimer} from "../adapter-claimers/SymbioticAdapterClaim
  * @dev Handles delegation and withdrawal requests within the SymbioticFi Protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseAdapter {
+contract InceptionSymbioticAdapter is
+    IInceptionSymbioticAdapter,
+    InceptionBaseAdapter
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -36,6 +39,8 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     address internal _emergencyClaimer;
     EnumerableSet.AddressSet internal _pendingClaimers;
     address[] internal _availableClaimers;
+
+    address internal _claimerImplementation;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
@@ -56,7 +61,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         __InceptionBaseAdapter_init(asset, trusteeManager);
 
         for (uint256 i = 0; i < vaults.length; i++) {
-            require(IVault(vaults[i]).collateral() == address(asset), InvalidCollateral());
+            require(
+                IVault(vaults[i]).collateral() == address(asset),
+                InvalidCollateral()
+            );
             require(_symbioticVaults.add(vaults[i]), AlreadyAdded());
             emit VaultAdded(vaults[i]);
         }
@@ -72,7 +80,13 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         address vaultAddress,
         uint256 amount,
         bytes[] calldata /* _data */
-    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount) {
+    )
+        external
+        override
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 depositedAmount)
+    {
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         IERC20(_asset).safeIncreaseAllowance(vaultAddress, amount);
@@ -105,9 +119,15 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
 
         address claimer = _getOrCreateClaimer(emergency);
-        require(withdrawals[vaultAddress][claimer] == 0, WithdrawalInProgress());
+        require(
+            withdrawals[vaultAddress][claimer] == 0,
+            WithdrawalInProgress()
+        );
 
-        (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(claimer, amount);
+        (uint256 burnedShares, uint256 mintedShares) = vault.withdraw(
+            claimer,
+            amount
+        );
         withdrawals[vaultAddress][claimer] = vault.currentEpoch() + 1;
         _claimerVaults[claimer] = vaultAddress;
 
@@ -128,7 +148,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length == 1, InvalidDataLength(1, _data.length));
-        (address vaultAddress, address claimer) = abi.decode(_data[0], (address, address));
+        (address vaultAddress, address claimer) = abi.decode(
+            _data[0],
+            (address, address)
+        );
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
         require(!emergency || _emergencyClaimer == claimer, OnlyEmergency());
         require(withdrawals[vaultAddress][claimer] != 0, NothingToClaim());
@@ -139,9 +162,12 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
             _removePendingClaimer(claimer);
         }
 
-        return SymbioticAdapterClaimer(claimer).claim(
-            vaultAddress, _inceptionVault, epoch
-        );
+        return
+            SymbioticAdapterClaimer(claimer).claim(
+                vaultAddress,
+                _inceptionVault,
+                epoch
+            );
     }
 
     /**
@@ -150,9 +176,19 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @param rewardToken Reward token.
      * @param rewardsData Adapter related bytes of data for rewards.
      */
-    function claimRewards(address rewardToken, bytes memory rewardsData) external onlyTrustee {
-        (address symbioticFarm, bytes memory farmData) = abi.decode(rewardsData, (address, bytes));
-        IStakerRewards(symbioticFarm).claimRewards(_inceptionVault, rewardToken, farmData);
+    function claimRewards(
+        address rewardToken,
+        bytes memory rewardsData
+    ) external onlyTrustee {
+        (address symbioticFarm, bytes memory farmData) = abi.decode(
+            rewardsData,
+            (address, bytes)
+        );
+        IStakerRewards(symbioticFarm).claimRewards(
+            _inceptionVault,
+            rewardToken,
+            farmData
+        );
     }
 
     /**
@@ -194,7 +230,11 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @notice Returns the total amount pending withdrawal
      * @return total Amount of pending withdrawals for non-emergency claims
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total)
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
     {
         return _pendingWithdrawalAmount(false);
     }
@@ -204,11 +244,14 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
-    function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total)
-    {
+    function _pendingWithdrawalAmount(
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             for (uint256 i = 0; i < _symbioticVaults.length(); i++) {
-                if (withdrawals[_symbioticVaults.at(i)][_emergencyClaimer] != 0) {
+                if (
+                    withdrawals[_symbioticVaults.at(i)][_emergencyClaimer] != 0
+                ) {
                     total += IVault(_symbioticVaults.at(i)).withdrawalsOf(
                         withdrawals[_symbioticVaults.at(i)][_emergencyClaimer],
                         _emergencyClaimer
@@ -222,7 +265,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             address _claimer = _pendingClaimers.at(i);
             address _vault = _claimerVaults[_claimer];
-            total += IVault(_vault).withdrawalsOf(withdrawals[_vault][_claimer], _claimer);
+            total += IVault(_vault).withdrawalsOf(
+                withdrawals[_vault][_claimer],
+                _claimer
+            );
         }
 
         return total;
@@ -234,17 +280,24 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
      * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
-    function _pendingWithdrawalAmount(address vault, bool emergency) internal view returns (uint256 total)
-    {
+    function _pendingWithdrawalAmount(
+        address vault,
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency)
-            return IVault(vault).withdrawalsOf(withdrawals[vault][_emergencyClaimer], _emergencyClaimer);
-
+            return
+                IVault(vault).withdrawalsOf(
+                    withdrawals[vault][_emergencyClaimer],
+                    _emergencyClaimer
+                );
 
         for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             address _claimer = _pendingClaimers.at(i);
             if (_claimerVaults[_claimer] == vault)
-                total += IVault(vault).withdrawalsOf(withdrawals[vault][_claimer], _claimer);
-
+                total += IVault(vault).withdrawalsOf(
+                    withdrawals[vault][_claimer],
+                    _claimer
+                );
         }
 
         return total;
@@ -274,7 +327,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
         require(vaultAddress != address(0), ZeroAddress());
         require(Address.isContract(vaultAddress), NotContract());
         require(!_symbioticVaults.contains(vaultAddress), AlreadyAdded());
-        require(IVault(vaultAddress).collateral() == address(_asset), InvalidCollateral());
+        require(
+            IVault(vaultAddress).collateral() == address(_asset),
+            InvalidCollateral()
+        );
 
         _symbioticVaults.add(vaultAddress);
 
@@ -301,6 +357,17 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     }
 
     /**
+     * @notice Sets the implementation address for the claimer
+     * @param newImplementation The address of the new implementation
+     */
+    function setClaimerImplementation(
+        address newImplementation
+    ) external onlyOwner {
+        emit EmergencyClaimerSet(_claimerImplementation, newImplementation);
+        _claimerImplementation = newImplementation;
+    }
+
+    /**
      * @notice Returns all supported vault addresses
      * @return vaults Array of supported vault addresses
      */
@@ -311,16 +378,21 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Retrieves or creates a claimer address based on the emergency condition
-    * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
-    *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
-    *      The returned claimer is added to the `pendingClaimers` set
-    * @param emergency Boolean indicating whether an emergency claimer is required
-    * @return claimer The address of the claimer to be used
-    */
-    function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
+     * @notice Retrieves or creates a claimer address based on the emergency condition
+     * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
+     *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
+     *      The returned claimer is added to the `pendingClaimers` set
+     * @param emergency Boolean indicating whether an emergency claimer is required
+     * @return claimer The address of the claimer to be used
+     */
+    function _getOrCreateClaimer(
+        bool emergency
+    ) internal virtual returns (address claimer) {
         if (emergency)
-            return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
+            return
+                _emergencyClaimer != address(0)
+                    ? _emergencyClaimer
+                    : (_emergencyClaimer = _deployClaimer());
 
         if (_availableClaimers.length > 0) {
             claimer = _availableClaimers[_availableClaimers.length - 1];
@@ -334,10 +406,10 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Removes a claimer from the pending list and recycles it to the available claimers
-    * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
-    * @param claimer The address of the claimer to be removed from pending status
-    */
+     * @notice Removes a claimer from the pending list and recycles it to the available claimers
+     * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
+     * @param claimer The address of the claimer to be removed from pending status
+     */
     function _removePendingClaimer(address claimer) internal {
         delete _claimerVaults[claimer];
         _pendingClaimers.remove(claimer);
@@ -345,11 +417,35 @@ contract InceptionSymbioticAdapter is IInceptionSymbioticAdapter, InceptionBaseA
     }
 
     /*
-    * @notice Deploys a new SymbioticAdapterClaimer contract instance
-    * @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter
-    * @return The address of the newly deployed SymbioticAdapterClaimer contract
-    */
+     * @notice Deploys a new SymbioticAdapterClaimer contract instance
+     * @dev Creates a new claimer contract with the `_asset` address passed as a initialize parameter
+     * @dev ownership is transferred to the adapter owner
+     * @return The address of the newly deployed SymbioticAdapterClaimer contract
+     */
     function _deployClaimer() internal returns (address) {
-        return address(new SymbioticAdapterClaimer(address(_asset)));
+        if (_claimerImplementation == address(0))
+            revert ClaimerImplementationNotSet();
+        // deploy new beacon proxy and do init call
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address)",
+            address(_asset)
+        );
+        address claimer = address(new BeaconProxy(address(this), data));
+
+        (bool success,) = claimer.call(
+            abi.encodeWithSignature("transferOwnership(address)", owner())
+        );
+        require(success, TransferOwnershipFailed());
+
+        emit ClaimerDeployed(claimer);
+        return claimer;
+    }
+
+    /**
+     * @notice Beacon proxy implementation address
+     * @return The address of the claimer implementation
+     */
+    function implementation() external view returns (address) {
+        return _claimerImplementation;
     }
 }

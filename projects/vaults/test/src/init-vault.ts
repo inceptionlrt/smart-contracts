@@ -1,16 +1,18 @@
-
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
 import { AssetData } from "../data/assets/stETH";
 import { vaults } from "../data/vaults";
 import { e18, impersonateWithEth } from "../helpers/utils";
-import { Adapter, adapters, emptyBytes } from './constants';
+import { Adapter, adapters, emptyBytes } from "./constants";
 const { ethers, upgrades, network } = hardhat;
 
 let symbioticVaults = vaults.symbiotic;
 let mellowVaults = vaults.mellow;
 
-export async function initVault(assetData: AssetData, options?: { adapters?: Adapter[], eigenAdapterContractName?: string }) {
+export async function initVault(
+  assetData: AssetData,
+  options?: { adapters?: Adapter[]; eigenAdapterContractName?: string },
+) {
   if (options?.adapters?.includes(adapters.EigenLayer) && !options.eigenAdapterContractName) {
     throw new Error("EigenLayer adapter requires eigenAdapterContractName");
   }
@@ -32,13 +34,18 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
       const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mVaultInfo.bondStrategyAddress]);
       mellowVaultOperatorMock.address = await mellowVaultOperatorMock.getAddress();
       await network.provider.send("hardhat_setCode", [
-        mVaultInfo.curatorAddress, await mellowVaultOperatorMock.getDeployedCode(),
+        mVaultInfo.curatorAddress,
+        await mellowVaultOperatorMock.getDeployedCode(),
       ]);
 
       //Copy storage values
       for (let i = 0; i < 5; i++) {
         const slot = "0x" + i.toString(16);
-        const value = await network.provider.send("eth_getStorageAt", [mellowVaultOperatorMock.address, slot, "latest"]);
+        const value = await network.provider.send("eth_getStorageAt", [
+          mellowVaultOperatorMock.address,
+          slot,
+          "latest",
+        ]);
         await network.provider.send("hardhat_setStorageAt", [mVaultInfo.curatorAddress, slot, value]);
       }
 
@@ -59,15 +66,22 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
 
   const iVaultOperator = await impersonateWithEth(assetData.iVaultOperator, e18);
 
-  let mellowAdapter: any,
-    symbioticAdapter: any,
-    eigenLayerAdapter: any;
+  let mellowAdapter: any, symbioticAdapter: any, eigenLayerAdapter: any;
 
   if (options?.adapters?.includes(adapters.Mellow)) {
     const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowAdapter");
     mellowAdapter = await upgrades.deployProxy(mellowAdapterFactory, [
-      [mellowVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
+      [mellowVaults[0].vaultAddress],
+      assetData.assetAddress,
+      assetData.iVaultOperator,
     ]);
+
+    // deploy a claimer implementation
+    const MellowAdapterClaimerFactory = await ethers.getContractFactory("MellowAdapterClaimer");
+    const claimerImplementation = await MellowAdapterClaimerFactory.deploy();
+    await claimerImplementation.waitForDeployment();
+
+    await mellowAdapter.setClaimerImplementation(await claimerImplementation.getAddress());
 
     mellowAdapter.address = await mellowAdapter.getAddress();
   }
@@ -75,8 +89,18 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     const symbioticAdapterFactory = await ethers.getContractFactory("InceptionSymbioticAdapter");
     symbioticAdapter = await upgrades.deployProxy(symbioticAdapterFactory, [
-      [symbioticVaults[0].vaultAddress], assetData.assetAddress, assetData.iVaultOperator,
+      [symbioticVaults[0].vaultAddress],
+      assetData.assetAddress,
+      assetData.iVaultOperator,
     ]);
+
+    // deploy a claimer implementation
+    const SymbioticAdapterClaimerFactory = await ethers.getContractFactory("SymbioticAdapterClaimer");
+    const claimerImplementation = await SymbioticAdapterClaimerFactory.deploy();
+    await claimerImplementation.waitForDeployment();
+
+    await symbioticAdapter.setClaimerImplementation(await claimerImplementation.getAddress());
+
     symbioticAdapter.address = await symbioticAdapter.getAddress();
   }
 
@@ -134,26 +158,31 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
 
     iVault.withdrawFromMellowAndClaim = async function (mellowVaultAddress, amount) {
       const tx = await this.connect(iVaultOperator).emergencyUndelegate(
-        [await mellowAdapter.getAddress()], [mellowVaultAddress], [amount], [emptyBytes],
+        [await mellowAdapter.getAddress()],
+        [mellowVaultAddress],
+        [amount],
+        [emptyBytes],
       );
 
       const receipt = await tx.wait();
       let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       // NEW
-      const adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
+      const adapterEvents = receipt.logs
+        ?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
       let claimer = adapterEvents[0].args["claimer"];
-
 
       await helpers.time.increase(1209900);
       const params = abi.encode(["address", "address"], [mellowVaultAddress, claimer]);
       if (events[0].args["actualAmounts"] > 0) {
         await this.connect(iVaultOperator).emergencyClaim(
-          [await mellowAdapter.getAddress()], [mellowVaultAddress], [[params]],
+          [await mellowAdapter.getAddress()],
+          [mellowVaultAddress],
+          [[params]],
         );
       }
-    }
+    };
   }
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     await iVault.addAdapter(symbioticAdapter.address);
@@ -168,10 +197,19 @@ export async function initVault(assetData: AssetData, options?: { adapters?: Ada
   await iToken.setVault(iVault.address);
 
   return {
-    iToken, iVault, ratioFeed, asset, iVaultOperator, iLibrary, withdrawalQueue,
-    mellowAdapter, symbioticAdapter, eigenLayerAdapter,
+    iToken,
+    iVault,
+    ratioFeed,
+    asset,
+    iVaultOperator,
+    iLibrary,
+    withdrawalQueue,
+    mellowAdapter,
+    symbioticAdapter,
+    eigenLayerAdapter,
   };
-};
+}
 
 export const abi = ethers.AbiCoder.defaultAbiCoder();
 export let MAX_TARGET_PERCENT: BigInt;
+

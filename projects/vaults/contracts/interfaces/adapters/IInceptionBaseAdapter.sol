@@ -36,6 +36,10 @@ interface IInceptionBaseAdapter {
 
     error VaultNotEmpty();
 
+    error ClaimerImplementationNotSet();
+
+    error TransferOwnershipFailed();
+
     /************************************
      ************** Events **************
      ************************************/
@@ -47,7 +51,16 @@ interface IInceptionBaseAdapter {
         address indexed _newTrusteeManager
     );
 
-    event EmergencyClaimerSet(address indexed oldClaimer, address indexed newClaimer);
+    event EmergencyClaimerSet(
+        address indexed oldClaimer,
+        address indexed newClaimer
+    );
+
+    event ClaimerDeployed(address indexed claimer);
+
+    /************************************
+     ************** Functions **************
+     ************************************/
 
     function pendingWithdrawalAmount() external view returns (uint256);
 
@@ -74,9 +87,15 @@ interface IInceptionBaseAdapter {
         bool emergency
     ) external returns (uint256 undelegated, uint256 claimed);
 
-    function claim(bytes[] calldata _data, bool emergency) external returns (uint256);
+    function claim(
+        bytes[] calldata _data,
+        bool emergency
+    ) external returns (uint256);
 
     function claimFreeBalance() external;
 
-    function claimRewards(address rewardToken, bytes memory rewardData) external;
+    function claimRewards(
+        address rewardToken,
+        bytes memory rewardData
+    ) external;
 }

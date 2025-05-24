@@ -282,9 +282,9 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
         ?.filter(log => log.address === symbioticAdapter.address)
         .map(log => symbioticAdapter.interface.parseLog(log));
 
-      expect(events.length).to.be.eq(2);
+      expect(events.length).to.be.eq(4);
       undelegateClaimer1 = events[0].args["claimer"];
-      undelegateClaimer2 = events[1].args["claimer"];
+      undelegateClaimer2 = events[2].args["claimer"];
 
       symbioticVaultEpoch1 = (await symbioticVaults[0].vault.currentEpoch()) + 1n;
       symbioticVaultEpoch2 = (await symbioticVaults[1].vault.currentEpoch()) + 1n;
@@ -648,9 +648,9 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
         ?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
 
-      expect(events.length).to.be.eq(2);
+      expect(events.length).to.be.eq(4);
       undelegateClaimer1 = events[0].args["claimer"];
-      undelegateClaimer2 = events[1].args["claimer"];
+      undelegateClaimer2 = events[2].args["claimer"];
 
       console.log(
         "Mellow1 delegated",
@@ -952,7 +952,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
         ?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
 
-      expect(events.length).to.be.eq(1);
+      expect(events.length).to.be.eq(2);
       undelegateClaimer = events[0].args["claimer"];
 
       const totalAssetsAfter = await iVault.totalAssets();
