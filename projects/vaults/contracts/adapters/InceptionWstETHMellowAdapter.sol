@@ -516,7 +516,6 @@ contract InceptionWstETHMellowAdapter is
      */
     function setEthWrapper(address newEthWrapper) external onlyOwner {
         require(Address.isContract(newEthWrapper), NotContract());
-        require(newEthWrapper != address(0), ZeroAddress());
 
         address oldWrapper = ethWrapper;
         ethWrapper = newEthWrapper;

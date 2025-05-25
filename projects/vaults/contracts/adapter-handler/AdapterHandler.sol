@@ -158,7 +158,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ) external whenNotPaused nonReentrant onlyOperator {
         if (requests.length == 0) return _undelegateAndClaim(undelegatedEpoch);
 
-
         uint256[] memory undelegatedAmounts = new uint256[](requests.length);
         uint256[] memory claimedAmounts = new uint256[](requests.length);
         address[] memory adapters = new address[](requests.length);

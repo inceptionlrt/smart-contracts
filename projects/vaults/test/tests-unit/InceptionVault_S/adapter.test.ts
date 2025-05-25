@@ -127,6 +127,9 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await expect(
         iVault.connect(iVaultOperator).claim(0, [staker.address], [mellowVaults[0].vaultAddress], [emptyBytes]),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
+
+      await expect(iVault.connect(iVaultOperator).claim(0, [], [], []))
+        .to.be.revertedWithCustomError(iVault, "ValueZero");
     });
 
     it("addAdapter input args", async function() {
@@ -152,6 +155,27 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       ).to.be.revertedWith("Ownable: caller is not the owner");
 
       await iVault.removeAdapter(mellowAdapter.address);
+    });
+
+    it("emergencyClaim input args", async function() {
+      await expect(iVault.connect(staker).emergencyClaim([], [], []))
+        .to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
+
+      await iVault.pause();
+      await expect(iVault.connect(iVaultOperator).emergencyClaim([], [], []))
+        .to.be.revertedWith("Pausable: paused");
+      await iVault.unpause();
+
+      await expect(iVault.connect(iVaultOperator).emergencyClaim([], [], []))
+        .to.be.revertedWithCustomError(iVault, "ValueZero");
+    });
+
+    it("unavailable to set empty inception vault", async function() {
+      await expect(mellowAdapter.setInceptionVault(ZeroAddress))
+        .to.be.revertedWithCustomError(mellowAdapter, "NotContract");
+
+      await expect(symbioticAdapter.setInceptionVault(ZeroAddress))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
     });
   });
 
@@ -229,14 +253,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     });
 
     it("setEthWrapper input args", async function() {
-      await expect(mellowAdapter.connect(iVaultOperator).setEthWrapper(staker.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
+      await expect(mellowAdapter.connect(iVaultOperator).setEthWrapper(staker.address))
+        .to.be.revertedWith("Ownable: caller is not the owner");
 
-      await expect(mellowAdapter.setEthWrapper(ethers.Wallet.createRandom().address)).to.be.revertedWithCustomError(
-        mellowAdapter,
-        "NotContract",
-      );
+      await expect(mellowAdapter.setEthWrapper(ethers.Wallet.createRandom().address))
+        .to.be.revertedWithCustomError(mellowAdapter, "NotContract");
     });
 
     it("unable to run while paused", async function() {
@@ -257,6 +278,9 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     it("change allocation input args", async function() {
       await expect(mellowAdapter.connect(staker).changeAllocation(ZeroAddress, 0n))
         .to.be.revertedWith("Ownable: caller is not the owner");
+
+      await expect(mellowAdapter.changeAllocation(ZeroAddress, 0n))
+        .to.be.revertedWithCustomError(mellowAdapter, "ZeroAddress");
 
       await expect(mellowAdapter.changeAllocation(ethers.Wallet.createRandom().address, 0n))
         .to.be.revertedWithCustomError(mellowAdapter, "InvalidVault");

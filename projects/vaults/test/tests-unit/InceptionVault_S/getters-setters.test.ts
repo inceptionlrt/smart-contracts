@@ -13,6 +13,7 @@ import {
 } from "../../helpers/utils";
 import { adapters, emptyBytes } from "../../src/constants";
 import { initVault, MAX_TARGET_PERCENT } from "../../src/init-vault";
+import { ZeroAddress } from "ethers";
 
 const { ethers, network } = hardhat;
 const mellowVaults = vaults.mellow;
@@ -152,6 +153,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await expect(iVault.setWithdrawMinAmount(0)).to.be.revertedWithCustomError(iVault, "NullParams");
     });
 
+    it("setWithdrawalQueue(): only owner can", async function () {
+      await expect(iVault.connect(staker).setWithdrawalQueue(ZeroAddress)).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
     it("setName(): only owner can", async function () {
       const prevValue = await iVault.name();
       const newValue = "New name";
@@ -246,6 +251,16 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await expect(iVault.connect(staker).setProtocolFee(newValue)).to.be.revertedWith(
         "Ownable: caller is not the owner",
       );
+    });
+
+    it("redeem not available while paused", async function () {
+      await iVault.pause();
+      await expect(iVault.connect(staker)["redeem(address,uint256)"](ZeroAddress, 0n)).to.be.revertedWith("Pausable: paused");
+    });
+
+    it("deposit not available while paused", async function () {
+      await iVault.pause();
+      await expect(iVault.connect(staker)["deposit(uint256,address)"](0n, ZeroAddress)).to.be.revertedWith("Pausable: paused");
     });
   });
 

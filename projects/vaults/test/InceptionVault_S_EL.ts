@@ -947,6 +947,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await expect(eigenLayerAdapter.connect(staker).claimRewards(assetData.assetAddress, "0x"))
         .to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
     });
+
+    it("Can set rewards coordinator", async function() {
+      await expect(eigenLayerAdapter.setRewardsCoordinator(assetData.rewardsCoordinator, ethers.Wallet.createRandom().address))
+        .to.be.emit(eigenLayerAdapter, "RewardCoordinatorChanged");
+    });
   });
 
   describe("Eigenlayer: input args", function() {
