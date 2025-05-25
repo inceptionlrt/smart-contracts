@@ -8,6 +8,7 @@ import { adapters, emptyBytes } from './src/constants';
 import { abi, initVault } from "./src/init-vault-new";
 import { testrunConfig } from './testrun.config';
 import { withdrawals } from "../typechain-types/contracts";
+import { ZeroAddress } from "ethers";
 
 const assetDataNew = testrunConfig.assetData;
 
@@ -1500,13 +1501,23 @@ describe("Symbiotic Vault Slashing", function() {
         .claim(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n]))
         .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
 
+      await expect(withdrawalQueue.connect(staker)
+        .forceUndelegateAndClaim(0n, 0n))
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+
       await expect(withdrawalQueue.connect(staker).redeem(iVault.address))
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+
+      await expect(withdrawalQueue.connect(staker)["redeem(address,uint256)"](iVault.address, 0n))
         .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
     });
 
     it("zero value", async function() {
-      await expect(withdrawalQueue.connect(customVault).request(iVault.address, 0)).to.be.revertedWithCustomError(
-        withdrawalQueue, "ValueZero");
+      await expect(withdrawalQueue.connect(customVault).request(iVault.address, 0))
+        .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
+
+      await expect(withdrawalQueue.connect(customVault).request(ZeroAddress, 10n))
+        .to.be.revertedWithCustomError(withdrawalQueue, "ValueZero");
 
       await expect(withdrawalQueue.connect(customVault)
         .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [0], [0n]))
@@ -1537,6 +1548,11 @@ describe("Symbiotic Vault Slashing", function() {
 
       await expect(withdrawalQueue.initialize(iVault.address, [], [], 0))
         .to.be.revertedWith("Initializable: contract is already initialized");
+    });
+
+    it("Reverts: forceUndelegateAndClaim when epoch less higher than current", async function() {
+      await expect(withdrawalQueue.connect(customVault).forceUndelegateAndClaim(10n, 0n))
+        .to.be.revertedWithCustomError(withdrawalQueue, "UndelegateEpochMismatch");
     });
   });
 

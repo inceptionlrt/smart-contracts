@@ -261,6 +261,19 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     it("deposit not available while paused", async function () {
       await iVault.pause();
       await expect(iVault.connect(staker)["deposit(uint256,address)"](0n, ZeroAddress)).to.be.revertedWith("Pausable: paused");
+      await expect(iVault.connect(staker)["deposit(uint256,address,uint256)"](0n, ZeroAddress, 0n)).to.be.revertedWith("Pausable: paused");
+    });
+
+    it("Reverts: previewDeposit when asset less than depositMinAmount", async function () {
+      await iVault.setDepositMinAmount(100n);
+      await expect(iVault.connect(staker).previewDeposit(10n))
+        .to.be.revertedWithCustomError(iVault, "LowerMinAmount");
+    });
+
+    it("Reverts: previewMint when asset less than depositMinAmount", async function () {
+      await iVault.setDepositMinAmount(100n);
+      await expect(iVault.connect(staker).previewMint(10n))
+        .to.be.revertedWithCustomError(iVault, "LowerMinAmount");
     });
   });
 
