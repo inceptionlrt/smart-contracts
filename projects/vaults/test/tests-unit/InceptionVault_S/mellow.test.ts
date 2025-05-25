@@ -126,6 +126,17 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       );
     });
 
+    it("change allocation for specific vault", async function() {
+      await expect(mellowAdapter.changeAllocation(mellowVaults[0].vaultAddress, 1n))
+        .to.be.emit(mellowAdapter, "AllocationChanged");
+    });
+
+    it("set claimer implementation only owner", async function() {
+      await expect(mellowAdapter.connect(staker).setClaimerImplementation(ZeroAddress)).to.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
     //   it("changeMellowWrapper", async function () {
     //     const mellowVault = mellowVaults[1].vaultAddress;
     //     const prevValue = mellowVaults[1].wrapperAddress;
@@ -1008,5 +1019,4 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       ).to.be.revertedWithCustomError(mellowAdapter, "OnlyEmergency");
     });
   });
-
 });

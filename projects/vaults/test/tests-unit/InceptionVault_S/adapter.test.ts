@@ -9,6 +9,7 @@ import { adapters, emptyBytes } from "../../src/constants";
 import { initVault, abi } from "../../src/init-vault";
 import { calculateRatio, toWei } from "../../helpers/utils";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { ZeroAddress } from "ethers";
 
 const { ethers, network } = hardhat;
 
@@ -161,28 +162,38 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
           .connect(iVaultOperator)
           .undelegate(await withdrawalQueue.currentEpoch(), [[await symbioticAdapter.getAddress(), staker.address, 1n, emptyBytes]]),
       ).to.be.revertedWithCustomError(symbioticAdapter, "InvalidVault");
+
+      await expect(symbioticAdapter.connect(staker).withdraw(ZeroAddress, 0n, [], false))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotVaultOrTrusteeManager");
+
+      await expect(symbioticAdapter.setClaimerImplementation(ZeroAddress));
+      await expect(symbioticAdapter.connect(iVaultOperator).withdraw(symbioticVaults[0].vaultAddress, 1n, [], false))
+        .to.be.revertedWithCustomError(symbioticAdapter, "ClaimerImplementationNotSet");
+      await snapshot.restore();
     });
 
     it("claim input args", async function() {
+      await expect(symbioticAdapter.connect(staker).claim(["0x", "0x"], false))
+        .to.be.revertedWithCustomError(symbioticAdapter, "NotVaultOrTrusteeManager");
+
       await expect(symbioticAdapter.connect(iVaultOperator).claim(["0x", "0x"], false))
         .to.be.revertedWithCustomError(symbioticAdapter, "InvalidDataLength");
 
       await expect(symbioticAdapter.connect(iVaultOperator).claim(
-        [abi.encode(["address", "address"], [symbioticVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], true)
+        [abi.encode(["address", "address"], [symbioticVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], true),
       ).to.be.revertedWithCustomError(symbioticAdapter, "OnlyEmergency");
     });
 
     it("add & remove vaults input args", async function() {
-      await expect(symbioticAdapter.connect(iVaultOperator).addVault(staker.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
+      await expect(symbioticAdapter.connect(iVaultOperator).addVault(staker.address))
+        .to.be.revertedWith("Ownable: caller is not the owner");
 
       await expect(
         symbioticAdapter.connect(iVaultOperator).removeVault(symbioticVaults[0].vaultAddress),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Symbiotic adapter", async function() {
+    it("unavailable to while paused", async function() {
       await symbioticAdapter.pause();
 
       await expect(symbioticAdapter.connect(iVaultOperator).delegate(ethers.ZeroAddress, 0n, []))
@@ -196,6 +207,11 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
       await symbioticAdapter.unpause();
     });
+
+    it("set claimer implementation", async function() {
+      await expect(symbioticAdapter.connect(staker).setClaimerImplementation(ZeroAddress))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
   });
 
   describe("MellowAdapter input args", function() {
@@ -204,8 +220,12 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .to.be.revertedWithCustomError(mellowAdapter, "ValueZero");
 
       await expect(mellowAdapter.connect(iVaultOperator).claim(
-        [abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], true)
+        [abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], true),
       ).to.be.revertedWithCustomError(mellowAdapter, "OnlyEmergency");
+
+      await expect(mellowAdapter.connect(iVaultOperator).claim(
+        [abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, ethers.Wallet.createRandom().address])], false),
+      ).to.be.revertedWithCustomError(mellowAdapter, "InvalidVault");
     });
 
     it("setEthWrapper input args", async function() {
@@ -232,6 +252,21 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .to.be.revertedWith("Pausable: paused");
 
       await mellowAdapter.unpause();
+    });
+
+    it("change allocation input args", async function() {
+      await expect(mellowAdapter.connect(staker).changeAllocation(ZeroAddress, 0n))
+        .to.be.revertedWith("Ownable: caller is not the owner");
+
+      await expect(mellowAdapter.changeAllocation(ethers.Wallet.createRandom().address, 0n))
+        .to.be.revertedWithCustomError(mellowAdapter, "InvalidVault");
+    });
+
+    it("mellow input args", async function() {
+      await expect(mellowAdapter.setClaimerImplementation(ZeroAddress));
+      await expect(mellowAdapter.connect(iVaultOperator).withdraw(mellowVaults[0].vaultAddress, 1n, [], false))
+        .to.be.revertedWithCustomError(mellowAdapter, "ClaimerImplementationNotSet");
+      await snapshot.restore();
     });
   });
 

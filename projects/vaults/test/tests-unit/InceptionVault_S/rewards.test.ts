@@ -135,6 +135,18 @@ describe("Farm rewards", function() {
     });
   });
 
+  describe("Mellow farm rewards", function() {
+    it("available to run only by trustee", async function() {
+      await expect(mellowAdapter.connect(staker).claimRewards(ZeroAddress, "0x"))
+        .to.be.revertedWithCustomError(mellowAdapter, "NotVaultOrTrusteeManager");
+    });
+
+    it("claim rewards reverts", async function() {
+      await expect(mellowAdapter.connect(iVaultOperator).claimRewards(ZeroAddress, "0x"))
+        .to.be.revertedWith("Mellow distribution rewards not implemented yet");
+    });
+  });
+
   describe("Add rewards to vault", function () {
     before(async function () {
       await snapshot.restore();
