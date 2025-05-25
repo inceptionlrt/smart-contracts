@@ -468,6 +468,23 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         );
     }
 
+    /**
+     * @dev Migrates deposit bonus to a new vault
+     * @param newVault Address of the new vault
+     */
+    function migrateDepositBonus(address newVault) external onlyOwner {
+        require(getTotalDelegated() == 0, ValueZero());
+        require(newVault != address(0), InvalidAddress());
+        require(depositBonusAmount > 0, NullParams());
+
+        uint256 amount = depositBonusAmount;
+        depositBonusAmount = 0;
+
+        _asset.safeTransfer(newVault, amount);
+
+        emit DepositBonusTransferred(newVault, amount);
+    }
+
     /*//////////////////////////////
     ////// Factory functions //////
     ////////////////////////////*/
@@ -788,23 +805,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function setWithdrawalQueue(IWithdrawalQueue _withdrawalQueue) external onlyOwner {
         withdrawalQueue = _withdrawalQueue;
         emit WithdrawalQueueChanged(address(withdrawalQueue));
-    }
-
-    /**
-     * @dev Migrates deposit bonus to a new vault
-     * @param newVault Address of the new vault
-     */
-    function migrateDepositBonus(address newVault) external onlyOwner {
-        require(getTotalDelegated() == 0, ValueZero());
-        require(newVault != address(0), InvalidAddress());
-        require(depositBonusAmount > 0, NullParams());
-
-        uint256 amount = depositBonusAmount;
-        depositBonusAmount = 0;
-
-        _asset.safeTransfer(newVault, amount);
-
-        emit DepositBonusTransferred(newVault, amount);
     }
 
     /*///////////////////////////////
