@@ -797,7 +797,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Sets the withdrawal queue
-     * @param _withdrawalQueue New withdrawal queue address
+     * @param newWithdrawalQueue New withdrawal queue address
      * @notice Ensure the protocol was paused during deployment of the new withdrawal queue
      *         if the previous one contained legacy withdrawals..
      */
