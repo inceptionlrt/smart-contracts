@@ -419,7 +419,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         /// @notice instant transfer fee to the treasury
         if (protocolWithdrawalFee != 0)
             _asset.safeTransfer(treasury, protocolWithdrawalFee);
-        if (minOut != 0 && amount < minOut) revert LowerThanMinOut(amount);
+        if (minOut != 0 && amount < minOut) revert SlippageMinOut(minOut, amount);
         /// @notice instant transfer amount to the receiver
         _asset.safeTransfer(receiver, amount);
 
