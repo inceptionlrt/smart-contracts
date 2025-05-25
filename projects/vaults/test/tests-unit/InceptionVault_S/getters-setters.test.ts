@@ -157,6 +157,10 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await expect(iVault.connect(staker).setWithdrawalQueue(ZeroAddress)).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
+    it("setWithdrawalQueue(): reverts when zero address", async function () {
+      await expect(iVault.setWithdrawalQueue(ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
+    });
+
     it("setName(): only owner can", async function () {
       const prevValue = await iVault.name();
       const newValue = "New name";

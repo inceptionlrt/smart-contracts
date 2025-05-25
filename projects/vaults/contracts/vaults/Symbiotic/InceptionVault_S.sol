@@ -802,6 +802,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      *         if the previous one contained legacy withdrawals..
      */
     function setWithdrawalQueue(IWithdrawalQueue newWithdrawalQueue) external onlyOwner {
+        if (address(newWithdrawalQueue) == address(0)) revert NullParams();
         withdrawalQueue = newWithdrawalQueue;
         emit WithdrawalQueueChanged(address(withdrawalQueue));
     }
