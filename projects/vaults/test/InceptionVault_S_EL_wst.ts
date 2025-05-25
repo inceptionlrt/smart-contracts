@@ -689,10 +689,79 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
     });
   });
 
-  describe("Rewards", function() {
+  describe("Eigenlayer: rewards", function() {
     it("Can be called only by trustee", async function() {
       await expect(eigenLayerAdapter.connect(staker).claimRewards(assetData.assetAddress, "0x"))
         .to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
+    });
+  });
+
+  describe("Eigenlayer: input args", function() {
+    beforeEach(async function() {
+      await snapshot.restore();
+    });
+
+    it("Delegate: input args", async function() {
+      await eigenLayerAdapter.pause();
+      await expect(eigenLayerAdapter.connect(iVaultOperator).delegate(eigenLayerVaults[0], 0n, []))
+        .to.be.revertedWith("Pausable: paused");
+    });
+
+    it("Undelegate: input args", async function() {
+      await expect(eigenLayerAdapter.connect(staker).undelegate())
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
+
+      await eigenLayerAdapter.pause();
+      await expect(eigenLayerAdapter.connect(iVaultOperator).undelegate())
+        .to.be.revertedWith("Pausable: paused");
+    });
+
+    it("Redelegate: input args", async function() {
+      await expect(eigenLayerAdapter.connect(staker).redelegate(
+        vaults.eigenLayer[1], {
+          signature: "0x",
+          expiry: 0,
+        }, ethers.ZeroHash,
+      )).to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
+
+      await expect(eigenLayerAdapter.connect(iVaultOperator).redelegate(
+        ZeroAddress, {
+          signature: "0x",
+          expiry: 0,
+        }, ethers.ZeroHash,
+      )).to.be.revertedWithCustomError(eigenLayerAdapter, "ZeroAddress");
+
+      await eigenLayerAdapter.pause();
+      await expect(eigenLayerAdapter.connect(iVaultOperator).redelegate(
+        ZeroAddress, {
+          signature: "0x",
+          expiry: 0,
+        }, ethers.ZeroHash,
+      )).to.be.revertedWith("Pausable: paused");
+    });
+
+    it("Withdraw: input args", async function() {
+      await expect(eigenLayerAdapter.connect(iVaultOperator).withdraw(ZeroAddress, 0n, ["0x"], false))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "InvalidDataLength");
+
+      await eigenLayerAdapter.pause();
+      await expect(eigenLayerAdapter.connect(iVaultOperator).withdraw(ZeroAddress, 0n, [], false))
+        .to.be.revertedWith("Pausable: paused");
+    });
+
+    it("Claim: input args", async function() {
+      await expect(eigenLayerAdapter.connect(staker).claim([], false))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "NotVaultOrTrusteeManager");
+
+      await expect(eigenLayerAdapter.connect(iVaultOperator).claim(["0x", "0x"], false))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "InvalidDataLength");
+
+      await expect(eigenLayerAdapter.connect(iVaultOperator).claim(["0x", "0x", "0x", "0x"], false))
+        .to.be.revertedWithCustomError(eigenLayerAdapter, "InvalidDataLength");
+
+      await eigenLayerAdapter.pause();
+      await expect(eigenLayerAdapter.connect(iVaultOperator).claim([], false))
+        .to.be.revertedWith("Pausable: paused");
     });
   });
 });
