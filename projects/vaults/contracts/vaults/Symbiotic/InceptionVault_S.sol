@@ -558,13 +558,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     function maxRedeem(address owner) public view returns (uint256) {
         if (paused()) {
             return 0;
-        } else {
-            uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(
-                owner
-            );
-            uint256 flashShares = convertToShares(getFlashCapacity());
-            return flashShares > ownerShares ? ownerShares : flashShares;
         }
+
+        uint256 ownerShares = IERC20(address(inceptionToken)).balanceOf(owner);
+        uint256 flashShares = convertToShares(getFlashCapacity());
+        return flashShares > ownerShares ? ownerShares : flashShares;
     }
 
     /**
@@ -574,11 +572,11 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      */
     function previewDeposit(uint256 assets) public view returns (uint256) {
         if (assets < depositMinAmount) revert LowerMinAmount(depositMinAmount);
+
         uint256 depositBonus;
         if (depositBonusAmount > 0) {
             depositBonus = calculateDepositBonus(assets);
-            if (depositBonus > depositBonusAmount)
-                depositBonus = depositBonusAmount;
+            if (depositBonus > depositBonusAmount) depositBonus = depositBonusAmount;
         }
 
         return convertToShares(assets + depositBonus);
@@ -803,8 +801,8 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
      * @notice Ensure the protocol was paused during deployment of the new withdrawal queue
      *         if the previous one contained legacy withdrawals..
      */
-    function setWithdrawalQueue(IWithdrawalQueue _withdrawalQueue) external onlyOwner {
-        withdrawalQueue = _withdrawalQueue;
+    function setWithdrawalQueue(IWithdrawalQueue newWithdrawalQueue) external onlyOwner {
+        withdrawalQueue = newWithdrawalQueue;
         emit WithdrawalQueueChanged(address(withdrawalQueue));
     }
 
