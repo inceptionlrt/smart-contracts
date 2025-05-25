@@ -201,9 +201,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         address receiver,
         uint256 minOut
     ) internal returns (uint256) {
-        // transfers assets from the sender and returns the received amount
-        // the actual received amount might slightly differ from the specified amount,
-        // approximately by -2 wei
         __beforeDeposit(receiver, amount);
 
         // calculate deposit bonus
