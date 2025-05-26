@@ -244,7 +244,6 @@ contract InceptionWstETHMellowAdapter is
             _data[0],
             (address, address)
         );
-
         // emergency claim available only for emergency claimer
         if ((emergency && _emergencyClaimer != claimer) || (!emergency && claimer == _emergencyClaimer)) revert OnlyEmergency();
         if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
@@ -284,7 +283,12 @@ contract InceptionWstETHMellowAdapter is
      */
     function removeVault(address vault) external onlyOwner {
         require(vault != address(0), ZeroAddress());
-        require(getTotalBalance() == 0, VaultNotEmpty());
+        require(
+            getDeposited(vault) == 0 &&
+            pendingWithdrawalAmount(vault, true) == 0 &&
+            pendingWithdrawalAmount(vault, false) == 0,
+            VaultNotEmpty()
+        );
 
         uint256 index = type(uint256).max;
         for (uint256 i = 0; i < mellowVaults.length; i++) {

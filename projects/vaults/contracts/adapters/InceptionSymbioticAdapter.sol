@@ -348,6 +348,7 @@ contract InceptionSymbioticAdapter is
         require(vaultAddress != address(0), ZeroAddress());
         require(Address.isContract(vaultAddress), NotContract());
         require(_symbioticVaults.contains(vaultAddress), NotAdded());
+
         if (
             getDeposited(vaultAddress) != 0 ||
             _pendingWithdrawalAmount(vaultAddress, false) > 0 ||
