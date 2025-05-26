@@ -303,7 +303,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     }
 
     /**
-     * @notice Claim rewards from given adapter.
+     * @notice Claim and transfer rewards from the specified adapter to the rewards treasury.
+     * The treasury may optionally swap the received tokens and forward them to the operator
+     * for further distribution to the vault as additional rewards.
      * @dev Can only be called by an operator, when the contract is not paused, and is non-reentrant.
      * @param adapter The address of the adapter contract from which to claim rewards.
      * @param token Reward token.

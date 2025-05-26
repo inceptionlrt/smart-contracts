@@ -14,10 +14,10 @@ import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
  * @dev Handles operations with the Inception Vault withdrawals
  */
 contract WithdrawalQueue is
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-Ownable2StepUpgradeable,
-IWithdrawalQueue
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    Ownable2StepUpgradeable,
+    IWithdrawalQueue
 {
     using Math for uint256;
 
