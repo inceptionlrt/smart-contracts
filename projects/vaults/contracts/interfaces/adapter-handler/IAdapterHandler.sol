@@ -83,6 +83,12 @@ interface IAdapterHandler {
     event RewardsClaimed(address adapter, address token, uint256 amount);
 
     /**
+     * @dev Emitted when free balance claimed from adapter
+     * @param adapter The address of the claimed adapter.
+     */
+    event AdapterFreeBalanceClaimed(address adapter);
+
+    /**
      * @dev Deprecated structure representing a withdrawal request.
      * @param epoch The epoch in which the withdrawal was requested.
      * @param receiver The address receiving the withdrawn funds.

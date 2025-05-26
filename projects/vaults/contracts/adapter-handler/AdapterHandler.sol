@@ -300,6 +300,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      */
     function claimAdapterFreeBalance(address adapter) external onlyOperator nonReentrant {
         IInceptionBaseAdapter(adapter).claimFreeBalance();
+        emit AdapterFreeBalanceClaimed(adapter);
     }
 
     /**
