@@ -381,7 +381,7 @@ contract InceptionSymbioticAdapter is
             vaults[i] = _symbioticVaults.at(i);
     }
 
-    /*
+    /**
      * @notice Retrieves or creates a claimer address based on the emergency condition
      * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
      *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
@@ -409,7 +409,7 @@ contract InceptionSymbioticAdapter is
         return claimer;
     }
 
-    /*
+    /**
      * @notice Removes a claimer from the pending list and recycles it to the available claimers
      * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
      * @param claimer The address of the claimer to be removed from pending status
@@ -420,7 +420,7 @@ contract InceptionSymbioticAdapter is
         _availableClaimers.push(claimer);
     }
 
-    /*
+    /**
      * @notice Deploys a new SymbioticAdapterClaimer contract instance
      * @dev Creates a new claimer contract with the `_asset` address passed as a initialize parameter
      * @dev ownership is transferred to the adapter owner

@@ -127,7 +127,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         return 0;
     }
 
-    /*
+    /**
      * @notice Undelegates the contract from the current operator.
      * @dev Can only be called by the trustee when the contract is not paused.
      * Emits an `Undelegated` event upon successful undelegation.
@@ -140,7 +140,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         emit Undelegated(undelegatedFrom);
     }
 
-    /*
+    /**
      * @notice Redelegates the contract to a new operator.
      * @dev Can only be called by the trustee when the contract is not paused.
      * Emits a `RedelegatedTo` event upon successful redelegation.
