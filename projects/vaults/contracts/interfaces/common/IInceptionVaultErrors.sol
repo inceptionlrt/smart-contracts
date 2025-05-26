@@ -74,6 +74,8 @@ interface IInceptionVaultErrors {
 
     error AdapterNotFound();
 
+    error AdapterNotEmpty();
+
     error ClaimFailed();
 
     error WithdrawalFailed();

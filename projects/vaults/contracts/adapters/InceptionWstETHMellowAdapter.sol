@@ -385,7 +385,16 @@ contract InceptionWstETHMellowAdapter is
         override
         returns (uint256 total)
     {
-        return _pendingWithdrawalAmount(false);
+        return _pendingWithdrawalAmount(false) + _claimableWithdrawalAmount(false);
+    }
+
+    /**
+     * @notice Returns the total inactive balance for emergency situations
+     * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
+     */
+    function pendingEmergencyWithdrawalAmount() public view returns (uint256) {
+        return
+            _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
     }
 
     /**
@@ -453,6 +462,22 @@ contract InceptionWstETHMellowAdapter is
     }
 
     /**
+     * @notice Returns the total amount tokens related to adapter
+     * @return total is the total amount tokens related to adapter
+     */
+    function getTotalBalance() external view returns(uint256) {
+        return inactiveBalance() + getTotalDeposited();
+    }
+
+    /**
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals, pending emergency withdrawals, claimable amounts
+     */
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + pendingEmergencyWithdrawalAmount() + claimableAmount();
+    }
+
+    /**
      * @notice Returns the total amount deposited across all vaults
      * @return total is the total amount deposited
      */
@@ -465,23 +490,6 @@ contract InceptionWstETHMellowAdapter is
                 );
         }
         return total;
-    }
-
-    /**
-     * @notice Returns the total inactive balance
-     * @return Sum of pending withdrawals, claimable withdrawals
-     */
-    function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableWithdrawalAmount();
-    }
-
-    /**
-     * @notice Returns the total inactive balance for emergency situations
-     * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
-     */
-    function inactiveBalanceEmergency() public view returns (uint256) {
-        return
-            _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
     }
 
     /**

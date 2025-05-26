@@ -377,8 +377,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         return
             getTotalDelegated() +
             totalAssets() +
-            getTotalPendingWithdrawals() +
-            getTotalPendingEmergencyWithdrawals() -
+            getTotalInactiveBalance() -
             redeemReservedAmount() -
             depositBonusAmount;
     }
@@ -426,7 +425,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getPendingWithdrawals(
         address adapter
     ) public view returns (uint256) {
-        return IInceptionBaseAdapter(adapter).inactiveBalance();
+        return IInceptionBaseAdapter(adapter).pendingWithdrawalAmount();
     }
 
     /**
@@ -436,7 +435,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalPendingWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IInceptionBaseAdapter(_adapters.at(i)).inactiveBalance();
+            total += getPendingWithdrawals(_adapters.at(i));
         }
         return total;
     }
@@ -448,7 +447,19 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getTotalPendingEmergencyWithdrawals() public view returns (uint256) {
         uint256 total;
         for (uint256 i = 0; i < _adapters.length(); i++) {
-            total += IInceptionBaseAdapter(_adapters.at(i)).inactiveBalanceEmergency();
+            total += IInceptionBaseAdapter(_adapters.at(i)).pendingEmergencyWithdrawalAmount();
+        }
+        return total;
+    }
+
+    /**
+     * @notice Returns total pending emergency withdrawals across all adapters
+     * @return Total amount of emergency withdrawals
+     */
+    function getTotalInactiveBalance() public view returns (uint256) {
+        uint256 total;
+        for (uint256 i = 0; i < _adapters.length(); i++) {
+            total += IInceptionBaseAdapter(_adapters.at(i)).inactiveBalance();
         }
         return total;
     }
@@ -460,8 +471,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 _assets = totalAssets();
         uint256 _sum = redeemReservedAmount() + depositBonusAmount;
-        if (_sum > _assets) return 0;
-        else return _assets - _sum;
+        return _sum > _assets ? 0 : _assets - _sum;
     }
 
     /**
@@ -510,8 +520,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param adapter Address of the adapter to add
      */
     function addAdapter(address adapter) external onlyOwner {
-        if (!Address.isContract(adapter)) revert NotContract();
-        if (_adapters.contains(adapter)) revert AdapterAlreadyAdded();
+        require(Address.isContract(adapter), NotContract());
+        require(!_adapters.contains(adapter), AdapterAlreadyAdded());
+
         emit AdapterAdded(adapter);
         _adapters.add(adapter);
     }
@@ -521,7 +532,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param adapter Address of the adapter to remove
      */
     function removeAdapter(address adapter) external onlyOwner {
-        if (!_adapters.contains(adapter)) revert AdapterNotFound();
+        require(_adapters.contains(adapter), AdapterNotFound());
+        require(IInceptionBaseAdapter(adapter).getTotalBalance() == 0, AdapterNotEmpty());
+
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
     }

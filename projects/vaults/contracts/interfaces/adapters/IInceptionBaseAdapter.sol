@@ -62,17 +62,19 @@ interface IInceptionBaseAdapter {
      ************** Functions **************
      ************************************/
 
-    function pendingWithdrawalAmount() external view returns (uint256);
-
     function getDeposited(address vaultAddress) external view returns (uint256);
 
     function getTotalDeposited() external view returns (uint256);
+
+    function pendingWithdrawalAmount() external view returns (uint256);
+
+    function pendingEmergencyWithdrawalAmount() external view returns (uint256);
 
     function claimableAmount() external view returns (uint256);
 
     function inactiveBalance() external view returns (uint256);
 
-    function inactiveBalanceEmergency() external view returns (uint256);
+    function getTotalBalance() external view returns(uint256);
 
     function delegate(
         address vault,

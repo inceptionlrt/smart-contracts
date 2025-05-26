@@ -272,6 +272,15 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     }
 
     /**
+     * @notice Returns the total amount pending emergency withdrawal
+     * @return total Total amount of emergency pending withdrawals
+     */
+    function pendingEmergencyWithdrawalAmount() public view override returns (uint256 total)
+    {
+        return _pendingWithdrawalAmount(true);
+    }
+
+    /**
      * @notice Internal function to calculate pending withdrawal amount
      * @dev Filters withdrawals based on emergency status
      * @param emergency Flag to filter emergency withdrawals
@@ -295,19 +304,19 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     }
 
     /**
-     * @notice Returns the total inactive balance
-     * @return Sum of pending withdrawals and claimable amounts
+     * @notice Returns the total amount tokens related to adapter
+     * @return total is the total amount tokens related to adapter
      */
-    function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableAmount();
+    function getTotalBalance() external view returns(uint256) {
+        return inactiveBalance() + getTotalDeposited();
     }
 
     /**
-     * @notice Returns the total inactive balance for emergency withdrawals
-     * @return Sum of emergency pending withdrawals and claimable amounts
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals, pending emergency withdrawals, claimable amounts
      */
-    function inactiveBalanceEmergency() public view override returns (uint256) {
-        return _pendingWithdrawalAmount(true) + claimableAmount();
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + pendingEmergencyWithdrawalAmount() + claimableAmount();
     }
 
     /**
@@ -334,7 +343,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
      * @notice Returns the total amount deposited in the strategy
      * @return Total amount of underlying tokens deposited
      */
-    function getTotalDeposited() external view override returns (uint256) {
+    function getTotalDeposited() public view override returns (uint256) {
         IStrategy[] memory strategies = new IStrategy[](1);
         strategies[0] = _strategy;
 

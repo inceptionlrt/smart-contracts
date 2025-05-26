@@ -66,18 +66,7 @@ abstract contract InceptionBaseAdapter is
      * @return Amount of claimable tokens for the adapter
      */
     function claimableAmount() public view virtual override returns (uint256) {
-        return claimableAmount(address(this));
-    }
-
-    /**
-     * @notice Returns the amount of tokens that can be claimed for a specific address
-     * @param claimer Address to check claimable amount for
-     * @return Amount of claimable tokens for the specified address
-     */
-    function claimableAmount(
-        address claimer
-    ) public view virtual returns (uint256) {
-        return _asset.balanceOf(claimer);
+        return _asset.balanceOf(address(this));
     }
 
     /**

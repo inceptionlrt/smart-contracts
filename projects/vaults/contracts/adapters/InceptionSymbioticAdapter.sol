@@ -214,6 +214,22 @@ contract InceptionSymbioticAdapter is
     }
 
     /**
+     * @notice Returns the total amount tokens related to adapter
+     * @return total is the total amount tokens related to adapter
+     */
+    function getTotalBalance() external view returns(uint256) {
+        return inactiveBalance() + getTotalDeposited();
+    }
+
+    /**
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals, pending emergency withdrawals, claimable amounts
+     */
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + pendingEmergencyWithdrawalAmount() + claimableAmount();
+    }
+
+    /**
      * @notice Returns the total amount deposited across all vaults
      * @return total Sum of active balances in all vaults
      */
@@ -230,13 +246,16 @@ contract InceptionSymbioticAdapter is
      * @notice Returns the total amount pending withdrawal
      * @return total Amount of pending withdrawals for non-emergency claims
      */
-    function pendingWithdrawalAmount()
-        public
-        view
-        override
-        returns (uint256 total)
-    {
+    function pendingWithdrawalAmount() public view override returns (uint256 total) {
         return _pendingWithdrawalAmount(false);
+    }
+
+    /**
+     * @notice Returns the total amount pending emergency withdrawal
+     * @return total Amount of pending withdrawals for emergency claims
+     */
+    function pendingEmergencyWithdrawalAmount() public view override returns (uint256 total) {
+        return _pendingWithdrawalAmount(true);
     }
 
     /**
@@ -301,22 +320,6 @@ contract InceptionSymbioticAdapter is
         }
 
         return total;
-    }
-
-    /**
-     * @notice Returns the total inactive balance
-     * @return Pending withdrawals
-     */
-    function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount();
-    }
-
-    /**
-     * @notice Returns the total inactive balance for emergency situations
-     * @return Sum of emergency pending withdrawals and claimable amounts
-     */
-    function inactiveBalanceEmergency() public view override returns (uint256) {
-        return _pendingWithdrawalAmount(true);
     }
 
     /**
