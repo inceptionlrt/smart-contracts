@@ -14,10 +14,10 @@ import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
  * @dev Handles operations with the Inception Vault withdrawals
  */
 contract WithdrawalQueue is
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    Ownable2StepUpgradeable,
-    IWithdrawalQueue
+PausableUpgradeable,
+ReentrancyGuardUpgradeable,
+Ownable2StepUpgradeable,
+IWithdrawalQueue
 {
     using Math for uint256;
 
@@ -182,7 +182,13 @@ contract WithdrawalQueue is
         uint256 undelegatedAmount,
         uint256 claimedAmount
     ) internal {
-        require(undelegatedAmount > 0 || claimedAmount > 0, ValueZero());
+        require(
+            undelegatedAmount > 0 &&
+            claimedAmount > 0 &&
+            adapter != address(0)
+            && vault != address(0),
+            ValueZero()
+        );
 
         // update withdrawal data
         withdrawal.adapterUndelegated[adapter][vault] = undelegatedAmount;
