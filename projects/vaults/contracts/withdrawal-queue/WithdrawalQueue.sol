@@ -228,7 +228,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             _claim(withdrawal, adapters[i], vaults[i], claimedAmounts[i]);
         }
 
-        _afterClaim(epoch, withdrawal);
+        _afterClaim(epoch, withdrawal, adapters, vaults);
     }
 
     /*
@@ -254,9 +254,18 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     /*
     * @notice Updates the redeemable status after a claim
     * @param withdrawal The storage reference to the withdrawal epoch
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
     */
-    function _afterClaim(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
-        _isSlashed(withdrawal) ? _resetEpoch(epoch, withdrawal) : _makeRedeemable(withdrawal);
+    function _afterClaim(
+        uint256 epoch,
+        WithdrawalEpoch storage withdrawal,
+        address[] calldata adapters,
+        address[] calldata vaults
+    ) internal {
+        _isSlashed(withdrawal) ?
+            _resetEpoch(epoch, withdrawal, adapters, vaults)
+            : _makeRedeemable(withdrawal);
     }
 
     /*
@@ -298,12 +307,23 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @notice Resets the state of a withdrawal epoch to its initial values.
     * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
+    * @param adapters Array of adapter addresses
+    * @param vaults Array of vault addresses
     */
-    function _resetEpoch(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
+    function _resetEpoch(
+        uint256 epoch,
+        WithdrawalEpoch storage withdrawal,
+        address[] calldata adapters,
+        address[] calldata vaults
+    ) internal {
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
         withdrawal.adaptersClaimedCounter = 0;
         withdrawal.adaptersUndelegatedCounter = 0;
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            delete withdrawal.adapterUndelegated[adapters[i]][vaults[i]];
+        }
 
         emit EpochReset(epoch);
     }

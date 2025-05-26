@@ -1976,7 +1976,14 @@ describe("Symbiotic Vault Slashing", function() {
         .claim(events[0].args["epoch"], [mellowAdapter.address], [mellowVaults[0].vaultAddress], [[params]]);
       await tx.wait();
 
+      let withdrawalEpoch = await withdrawalQueue.withdrawals(events[0].args["epoch"]);
+      expect(withdrawalEpoch[0]).to.be.eq(false);
+      expect(withdrawalEpoch[1]).to.be.eq(epochShares);
+      expect(withdrawalEpoch[2]).to.be.eq(0n);
+      expect(withdrawalEpoch[3]).to.be.eq(0n);
+      expect(withdrawalEpoch[4]).to.be.eq(0n);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
+      expect(await withdrawalQueue.getPendingWithdrawalOf(staker)).to.be.greaterThan(0);
       // ----------------
 
       // force undelegate and claim
