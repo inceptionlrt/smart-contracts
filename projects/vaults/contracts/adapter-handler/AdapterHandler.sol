@@ -112,16 +112,6 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     ////////////////////////////*/
 
     /**
-     * @notice Checks if the deposit amount is within available capacity
-     * @param amount The amount to be deposited
-     * @dev Reverts if amount exceeds free balance
-     */
-    function _beforeDeposit(uint256 amount) internal view {
-        uint256 freeBalance = getFreeBalance();
-        require(amount <= freeBalance, InsufficientCapacity(freeBalance));
-    }
-
-    /**
      * @notice Delegates assets to a specific adapter and vault
      * @param adapter The address of the adapter to delegate to
      * @param vault The address of the vault to delegate to
@@ -135,8 +125,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         uint256 amount,
         bytes[] calldata _data
     ) external nonReentrant whenNotPaused onlyOperator {
-        _beforeDeposit(amount);
+        uint256 freeBalance = getFreeBalance();
 
+        require(amount <= freeBalance, InsufficientCapacity(freeBalance));
         require(adapter != address(0), NullParams());
         require(_adapters.contains(adapter), AdapterNotFound());
 
@@ -224,33 +215,22 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
     /**
      * @notice Initiates emergency undelegation from multiple adapters
-     * @param adapters Array of adapter addresses
-     * @param vaults Array of vault addresses
-     * @param amounts Array of amounts to undelegate
-     * @param _data Array of additional data required for undelegation
+     * @param requests An array of UndelegateRequest structs containing undelegation details.
+     * Each UndelegateRequest specifies the adapter, vault, amount, and additional data for undelegation.
      */
     function emergencyUndelegate(
-        address[] calldata adapters,
-        address[] calldata vaults,
-        uint256[] calldata amounts,
-        bytes[][] calldata _data
+        UndelegateRequest[] calldata requests
     ) external whenNotPaused nonReentrant onlyOperator {
-        require(
-            adapters.length > 0 &&
-            adapters.length == vaults.length &&
-            vaults.length == amounts.length &&
-            amounts.length == _data.length,
-            ValueZero()
-        );
+        require(requests.length > 0, ValueZero());
 
         uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
-        for (uint256 i = 0; i < adapters.length; i++) {
-            (uint256 undelegatedAmount,) = _undelegate(
-                adapters[i], vaults[i], amounts[i], _data[i], true
+        for (uint256 i = 0; i < requests.length; i++) {
+            (uint256 undelegatedAmount,) =  _undelegate(
+                requests[i].adapter, requests[i].vault, requests[i].amount, requests[i].data, true
             );
 
             emit UndelegatedFrom(
-                adapters[i], vaults[i], undelegatedAmount, 0, epoch
+                requests[i].adapter, requests[i].vault, undelegatedAmount, 0, epoch
             );
         }
     }
@@ -330,6 +310,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param rewardsData Adapter related bytes of data for rewards.
      */
     function claimAdapterRewards(address adapter, address token, bytes calldata rewardsData) external onlyOperator nonReentrant {
+        require(adapter != address(0) && token != address(0), NullParams());
         require(rewardsTreasury != address(0), RewardsTreasuryNotSet());
 
         IERC20 rewardToken = IERC20(token);

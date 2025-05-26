@@ -1001,7 +1001,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await iVault.connect(staker).withdraw(toWei(3), staker.address);
 
       // emergency undelegate 5
-      await iVault.connect(iVaultOperator).emergencyUndelegate([await mellowAdapter.getAddress()], [mellowVaults[0].vaultAddress], [toWei(5)], [emptyBytes]);
+      await iVault.connect(iVaultOperator).emergencyUndelegate([[await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, toWei(5),[]]]);
       // normal undelegate 3
       let tx = await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [[await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, toWei(3), emptyBytes]]);
 

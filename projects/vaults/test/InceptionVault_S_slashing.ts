@@ -1214,12 +1214,7 @@ describe("Symbiotic Vault Slashing", function() {
 
       // emergency undelegate
       tx = await iVault.connect(iVaultOperator)
-        .emergencyUndelegate(
-          [symbioticAdapter.address],
-          [symbioticVaults[0].vaultAddress],
-          [toWei(5)],
-          [emptyBytes],
-        );
+        .emergencyUndelegate([[symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(5), []]]);
 
       let receipt = await tx.wait();
       let adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address)
@@ -1629,7 +1624,7 @@ describe("Symbiotic Vault Slashing", function() {
 
       // emergency undelegate
       tx = await iVault.connect(iVaultOperator)
-        .emergencyUndelegate([symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [toWei(5)], [emptyBytes]);
+        .emergencyUndelegate([[symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(5), []]]);
       let receipt = await tx.wait();
       let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
       const adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address)
@@ -1693,7 +1688,7 @@ describe("Symbiotic Vault Slashing", function() {
 
       // emergency undelegate
       tx = await iVault.connect(iVaultOperator)
-        .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [toWei(5)], [emptyBytes]);
+        .emergencyUndelegate([[mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5), []]]);
       await tx.wait();
 
       let receipt = await tx.wait();
@@ -1872,12 +1867,7 @@ describe("Symbiotic Vault Slashing", function() {
 
       // undelegate #2
       tx = await iVault.connect(iVaultOperator)
-        .emergencyUndelegate(
-          [mellowAdapter.address],
-          [mellowVaults[0].vaultAddress],
-          [toWei(5)],
-          [emptyBytes],
-        )
+        .emergencyUndelegate([[mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5), []]]);
       receipt = await tx.wait();
       adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));

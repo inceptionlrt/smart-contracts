@@ -157,12 +157,9 @@ export async function initVault(
     console.log("... iVault initialization completed ....");
 
     iVault.withdrawFromMellowAndClaim = async function (mellowVaultAddress, amount) {
-      const tx = await this.connect(iVaultOperator).emergencyUndelegate(
-        [await mellowAdapter.getAddress()],
-        [mellowVaultAddress],
-        [amount],
-        [emptyBytes],
-      );
+      const tx = await this.connect(iVaultOperator).emergencyUndelegate([
+        [await mellowAdapter.getAddress(), mellowVaultAddress, amount, []]
+      ]);
 
       const receipt = await tx.wait();
       let events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");

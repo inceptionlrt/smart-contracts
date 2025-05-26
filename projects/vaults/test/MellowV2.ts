@@ -671,67 +671,49 @@ describe("Mellow v2", function () {
 
       let tx = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0x5fD13359Ba15A84B76f7F87568309040176167cd"],
-          ["10000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x5fD13359Ba15A84B76f7F87568309040176167cd", "10000000000000000000", ["0x"]],
+        ]);
       let receipt = await tx.wait();
       let events1 = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       let tx2 = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0x7a4EffD87C2f3C55CA251080b1343b605f327E3a"],
-          ["15000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x7a4EffD87C2f3C55CA251080b1343b605f327E3a", "15000000000000000000", ["0x"]],
+        ]);
       let receipt2 = await tx2.wait();
       let events2 = receipt2.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       let tx3 = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a"],
-          ["10000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x84631c0d0081FDe56DeB72F6DE77abBbF6A9f93a", "10000000000000000000", ["0x"]],
+        ]);
       let receipt3 = await tx3.wait();
       let events3 = receipt3.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       let tx4 = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0x49cd586dd9BA227Be9654C735A659a1dB08232a9"],
-          ["15000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0x49cd586dd9BA227Be9654C735A659a1dB08232a9", "15000000000000000000", ["0x"]],
+        ]);
       let receipt4 = await tx4.wait();
       let events4 = receipt4.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       let tx5 = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0xd6E09a5e6D719d1c881579C9C8670a210437931b"],
-          ["10000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xd6E09a5e6D719d1c881579C9C8670a210437931b", "10000000000000000000", ["0x"]],
+        ]);
       let receipt5 = await tx5.wait();
       let events5 = receipt5.logs?.filter(e => e.eventName === "UndelegatedFrom");
 
       let tx6 = await vault
         .connect(operator)
-        .emergencyUndelegate(
-          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378"],
-          ["0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD"],
-          ["15000000000000000000"],
-          [["0x"]],
-        );
+        .emergencyUndelegate([
+          ["0x09740e3B2CCF6e82F4fb3A57519c8b65dA728378", "0xcC36e5272c422BEE9A8144cD2493Ac472082eBaD", "15000000000000000000", ["0x"]]
+        ]);
       let receipt6 = await tx6.wait();
       let events6 = receipt6.logs?.filter(e => e.eventName === "UndelegatedFrom");
 

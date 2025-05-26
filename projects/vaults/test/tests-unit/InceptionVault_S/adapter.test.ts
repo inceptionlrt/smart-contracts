@@ -92,30 +92,24 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await expect(
         iVault
           .connect(iVaultOperator)
-          .emergencyUndelegate([staker.address], [mellowVaults[0].vaultAddress], [1n], [emptyBytes]),
+          .emergencyUndelegate([[staker.address, mellowVaults[0].vaultAddress, 1n, []]]),
       ).to.be.revertedWithCustomError(iVault, "AdapterNotFound");
 
       await expect(
-        iVault
-          .connect(iVaultOperator)
-          .emergencyUndelegate(
-            [mellowAdapter.address],
-            ["0x0000000000000000000000000000000000000000"],
-            [1n],
-            [emptyBytes],
-          ),
+        iVault.connect(iVaultOperator)
+          .emergencyUndelegate([[mellowAdapter.address, "0x0000000000000000000000000000000000000000", 1n, []]]),
       ).to.be.revertedWithCustomError(iVault, "InvalidAddress");
 
       await expect(
         iVault
           .connect(iVaultOperator)
-          .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+          .emergencyUndelegate([[mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, []]]),
       ).to.be.revertedWithCustomError(iVault, "ValueZero");
 
       await expect(
         iVault
           .connect(staker)
-          .emergencyUndelegate([mellowAdapter.address], [mellowVaults[0].vaultAddress], [0n], [emptyBytes]),
+          .emergencyUndelegate([[mellowAdapter.address, mellowVaults[0].vaultAddress, 0n, []]]),
       ).to.be.revertedWithCustomError(iVault, "OnlyOperatorAllowed");
     });
 

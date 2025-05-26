@@ -446,7 +446,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
 
     it("Emergency undelegate", async function () {
       undelegateTx = await iVault.connect(iVaultOperator)
-        .emergencyUndelegate([eigenLayerAdapter.address], [eigenLayerVaults[0]], [toWei(5)], [[]]);
+        .emergencyUndelegate([[eigenLayerAdapter.address, eigenLayerVaults[0], toWei(5), []]]);
 
       expect(await iVault.getTotalPendingWithdrawals()).to.be.eq(0);
       expect(await iVault.getTotalDelegated()).to.be.closeTo(toWei(15), transactErr);
@@ -548,7 +548,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
       await iVault.connect(staker).withdraw(toWei(3), staker.address);
 
       // emergency undelegate 5
-      await iVault.connect(iVaultOperator).emergencyUndelegate([await eigenLayerAdapter.getAddress()], [elVault], [toWei(5)], [[]]);
+      await iVault.connect(iVaultOperator).emergencyUndelegate([[await eigenLayerAdapter.getAddress(), elVault, toWei(5), []]]);
       // normal undelegate 3
       let tx = await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), [[await eigenLayerAdapter.getAddress(), elVault, toWei(3), []]]);
 
