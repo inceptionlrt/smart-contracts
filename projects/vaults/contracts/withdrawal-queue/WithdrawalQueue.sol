@@ -183,8 +183,7 @@ IWithdrawalQueue
         uint256 claimedAmount
     ) internal {
         require(
-            undelegatedAmount > 0 &&
-            claimedAmount > 0 &&
+            (undelegatedAmount > 0 || claimedAmount > 0) &&
             adapter != address(0)
             && vault != address(0),
             ValueZero()
