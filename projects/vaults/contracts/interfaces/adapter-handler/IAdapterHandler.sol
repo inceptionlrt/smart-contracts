@@ -100,7 +100,7 @@ interface IAdapterHandler {
         uint256 amount;
     }
 
-    /*
+    /**
      * Struct to define an undelegation request.
      * @param adapter The address of the adapter contract handling the undelegation.
      * @param vault The address of the vault from which assets are undelegated.

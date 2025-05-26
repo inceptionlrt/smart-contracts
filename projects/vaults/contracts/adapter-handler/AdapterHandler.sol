@@ -137,7 +137,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
         emit DelegatedTo(adapter, vault, amount);
     }
 
-    /*
+    /**
      * Undelegates assets from specified vaults and adapters for a given epoch.
      * @param undelegatedEpoch The epoch in which the undelegation occurs.
      * @param requests An array of UndelegateRequest structs containing undelegation details.
