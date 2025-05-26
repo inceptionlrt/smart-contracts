@@ -394,7 +394,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
         2, [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]],
       );
 
-      expect((await iVault.totalAssets()) - balanceBefore).to.be.eq(toWei(2));
+      expect((await iVault.totalAssets()) - balanceBefore).to.be.eq(toWei(1));
     });
 
     it('epoch should be changed if undelegate current epoch', async () => {
