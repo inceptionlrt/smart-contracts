@@ -69,7 +69,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function () {
         .connect(iVaultOperator)
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, firstDeposit, emptyBytes);
       await assetData.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       ratio = await iVault.ratio();
       console.log(`Initial ratio: ${ratio.format()}`);

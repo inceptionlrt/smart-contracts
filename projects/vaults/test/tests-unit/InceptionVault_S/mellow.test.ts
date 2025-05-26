@@ -251,7 +251,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     it("undelegateFromMellow from mellowVault#1 by operator", async function() {
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       const pendingWithdrawalsBefore = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
-      const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioBefore = await iVault.ratio();
 
       let tx = await iVault
         .connect(iVaultOperator)
@@ -270,7 +270,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       const pendingWithdrawalsAfter = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
       const vault1DelegatedAfter = await mellowAdapter.getDeposited(mellowVaults[0].vaultAddress);
       // const withdrawRequest = await mellowAdapter.pendingMellowRequest(mellowVaults[0].vaultAddress);
-      const ratioAfter = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioAfter = await iVault.ratio();
 
       expect(totalDelegatedBefore - totalDelegatedAfter).to.be.closeTo(assets1, transactErr);
       expect(pendingWithdrawalsAfter - pendingWithdrawalsBefore).to.be.closeTo(assets1, transactErr);
@@ -295,7 +295,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     //   vault1Delegated += rewards;
     //   totalDeposited += rewards;
     //   //Update ratio
-    //   const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+    //   const calculatedRatio = await iVault.ratio();
     //   await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
     //   ratio = await iVault.ratio();
     //   ratioDiff = ratioBefore - ratio;
@@ -336,7 +336,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     //   const pendingMellowWithdrawalsAfter = await mellowAdapter.pendingWithdrawalAmount();
     //   const totalPendingMellowWithdrawalsAfter = await iVault.getPendingWithdrawals(await mellowAdapter.getAddress());
     //   const totalDelegatedAfter = await iVault.getTotalDelegated();
-    //   const ratioAfter = await calculateRatio(iVault, iToken, withdrawalQueue);
+    //   const ratioAfter = await iVault.ratio();
 
     //   expect(pendingMellowWithdrawalsAfter).to.be.closeTo(amount, transactErr);
     //   expect(totalPendingMellowWithdrawalsAfter).to.be.closeTo(amount, transactErr);
@@ -393,7 +393,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         transactErr,
       );
       expect(totalDeposited - totalDelegatedAfter).to.be.closeTo(undelegatedAmount + assets2, transactErr);
-      expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), transactErr);
+      expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), transactErr);
     });
 
     it("Can not claim when adapter balance is 0", async function() {
@@ -433,7 +433,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       // expect(pendingMellowWithdrawalsAfter).to.be.closeTo(0, transactErr);
       // expect(totalPendingMellowWithdrawalsAfter).to.be.closeTo(vault2Delegated + assets1, transactErr);
       // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-      // expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), transactErr);
+      // expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), transactErr);
     });
 
     // it("Process pending withdrawal from mellowVault#2 to mellowAdapter", async function () {
@@ -459,7 +459,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     //   expect(pendingMellowWithdrawalsAfter).to.be.eq(0n);
     //   expect(totalPendingMellowWithdrawalsAfter).to.be.eq(totalPendingMellowWithdrawalsBefore);
     //   expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr);
-    //   expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), transactErr);
+    //   expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), transactErr);
     // });
 
     it("Can not claim funds from mellowAdapter when iVault is paused", async function() {
@@ -516,9 +516,9 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       // );
 
       console.log("vault ratio:", await iVault.ratio());
-      console.log("calculated ratio:", await calculateRatio(iVault, iToken, withdrawalQueue));
+      console.log("calculated ratio:", await iVault.ratio());
 
-      expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), transactErr);
+      expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), transactErr);
     });
 
     it("Staker is able to redeem", async function() {
@@ -542,7 +542,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
       expect(stakerPWBefore - stakerPWAfter).to.be.closeTo(assets1, transactErr * 2n);
       expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(assets1, transactErr * 2n);
-      expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), 1n);
+      expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), 1n);
     });
   });
 
@@ -662,7 +662,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
           await iVault.getFreeBalance(),
           emptyBytes,
         );
-      await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken, withdrawalQueue)]);
+      await ratioFeed.updateRatioBatch([iToken.address], [await iVault.ratio()]);
       ratio = await iVault.ratio();
     });
 
@@ -677,7 +677,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .connect(iVaultOperator)
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, delegated, emptyBytes);
 
-      await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken, withdrawalQueue)]);
+      await ratioFeed.updateRatioBatch([iToken.address], [await iVault.ratio()]);
       console.log(`Staker amount: ${stakerAmount}`);
       console.log(`Staker2 amount: ${staker2Amount}`);
       console.log(`Ratio: ${await iVault.ratio()}`);
@@ -691,7 +691,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       const shares = await iToken.balanceOf(staker.address);
       stakerUnstakeAmount1 = shares / 2n;
       await iVault.connect(staker).withdraw(stakerUnstakeAmount1, staker.address);
-      await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken, withdrawalQueue)]);
+      await ratioFeed.updateRatioBatch([iToken.address], [await iVault.ratio()]);
       console.log(`Ratio: ${await iVault.ratio()}`);
     });
 
@@ -749,7 +749,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
       const redeemReserveAfter = await iVault.redeemReservedAmount();
       const freeBalanceAfter = await iVault.getFreeBalance();
-      await ratioFeed.updateRatioBatch([iToken.address], [await calculateRatio(iVault, iToken, withdrawalQueue)]);
+      await ratioFeed.updateRatioBatch([iToken.address], [await iVault.ratio()]);
       console.log(`Total assets:\t\t${(await iVault.totalAssets()).format()}`);
       console.log(`Pending withdrawals:\t${(await iVault.getPendingWithdrawalOf(staker.address)).format()}`);
       console.log(`Ratio: ${await iVault.ratio()}`);
@@ -792,7 +792,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     //
     //   console.log(`Pending withdrawals: ${await iVault.getPendingWithdrawalOf(staker.address)}`);
     //   console.log(`Unstake amount: ${stakerUnstakeAmount2.toString()}`);
-    //   console.log(`Ratio: ${await calculateRatio(iVault, iToken, withdrawalQueue)}`);
+    //   console.log(`Ratio: ${await iVault.ratio()}`);
     //
     //   expect(newQueuedWithdrawal.epoch).to.be.eq(2n); //queue length - 1
     //   expect(newQueuedWithdrawal.receiver).to.be.eq(staker.address);
@@ -858,7 +858,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       // expect(stakerPendingWithdrawalsAfter).to.be.closeTo(stakerPendingAmount, transactErr);
       expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerRedeemedAmount, transactErr);
       expect((await iVault.isAbleToRedeem(staker.address))[0]).to.be.false;
-      expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), ratioErr);
+      expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), ratioErr);
     });
 
     // todo: recheck
@@ -879,7 +879,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     //   );
     //   expect(stakerBalanceAfter - stakerBalanceBefore).to.be.closeTo(stakerUnstakeAmountAssetValue, transactErr * 2n);
     //   expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.false;
-    //   expect(await iVault.ratio()).to.be.closeTo(await calculateRatio(iVault, iToken, withdrawalQueue), ratioErr);
+    //   expect(await iVault.ratio()).to.be.closeTo(await iVault.ratio(), ratioErr);
     // });
   });
 
@@ -926,7 +926,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         let claimer = adapterEvents[0].args["claimer"];
 
         await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-        const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+        const calculatedRatio = await iVault.ratio();
         await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
         ratio = await iVault.ratio();
         console.log(`New ratio is: ${ratio}`);
@@ -968,7 +968,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
     it("Update asset ratio and withdraw the rest", async function() {
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       ratio = await iVault.ratio();
       console.log(`New ratio is: ${ratio}`);

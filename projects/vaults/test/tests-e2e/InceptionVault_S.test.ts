@@ -101,7 +101,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(await iVault.totalAssets()).to.be.closeTo(totalDeposited, transactErr);
       expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
       expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      expect(await iVault.ratio()).to.be.closeTo(e18, 1n);
     });
 
     it("Delegate to symbioticVault#1", async function() {
@@ -140,7 +140,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr);
       expect(symbioticBalance).to.be.gte(amount / 2n);
       expect(symbioticBalance2).to.be.eq(0n);
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
+      expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
     });
 
     it("Add new symbioticVault", async function() {
@@ -192,11 +192,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(delegatedTo2).to.be.closeTo(amount, transactErr);
       expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr * 2n);
       expect(symbioticBalance2).to.be.gte(amount / 2n);
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
+      expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
     });
 
     it("Update ratio", async function() {
-      const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratio = await iVault.ratio();
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
       console.log(`iVault ratio:\t\t\t\t${(await iVault.ratio()).format()}`);
@@ -204,7 +204,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Add rewards to Symbiotic protocol and estimate ratio, it remains the same", async function() {
-      const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioBefore = await iVault.ratio();
       const totalDelegatedToBefore = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
@@ -214,7 +214,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       await asset.connect(staker3).transfer(symbioticVaults[0].vaultAddress, e18);
       console.log(`vault bal after: ${await asset.balanceOf(symbioticVaults[0].vaultAddress)}`);
 
-      const ratioAfter = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioAfter = await iVault.ratio();
       const totalDelegatedToAfter = await symbioticAdapter.getDeposited(symbioticVaults[0].vaultAddress);
       const totalDelegatedAfter = await iVault.getTotalDelegated();
       expect(ratioAfter).to.be.eq(ratioBefore);
@@ -246,7 +246,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Update ratio after all shares burn", async function() {
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       console.log(`Calculated ratio:\t\t\t${calculatedRatio.format()}`);
       expect(calculatedRatio).to.be.eq(e18); //Because all shares have been burnt at this point
 
@@ -467,7 +467,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(await iVault.totalAssets()).to.be.closeTo(totalDeposited, transactErr);
       expect(await iVault.getTotalDeposited()).to.be.closeTo(totalDeposited, transactErr);
       expect(await iVault.getTotalDelegated()).to.be.eq(0); //Nothing has been delegated yet
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
+      expect(await iVault.ratio()).to.be.closeTo(e18, 1n);
     });
 
     it("Delegate to mellowVault#1", async function() {
@@ -498,7 +498,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr);
       expect(mellowBalance).to.be.gte(amount / 2n);
       expect(mellowBalance2).to.be.eq(0n);
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
+      expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
     });
 
     it("Add new mellowVault", async function() {
@@ -532,11 +532,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
       expect(delegatedTo2).to.be.closeTo(amount, transactErr);
       expect(totalDepositedAfter).to.be.closeTo(totalDeposited, transactErr * 2n);
       expect(mellowBalance2).to.be.gte(amount / 2n);
-      expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
+      expect(await iVault.ratio()).to.be.closeTo(e18, ratioErr);
     });
 
     it("Update ratio", async function() {
-      const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratio = await iVault.ratio();
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
       console.log(`iVault ratio:\t\t\t\t${(await iVault.ratio()).format()}`);
@@ -544,7 +544,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Add rewards to Mellow protocol and estimate ratio", async function() {
-      const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioBefore = await iVault.ratio();
       const totalDelegatedToBefore = await iVault.getDelegatedTo(
         await mellowAdapter.getAddress(),
         mellowVaults[0].vaultAddress,
@@ -555,7 +555,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
 
       await asset.connect(staker3).transfer(mellowVaults[0].vaultAddress, e18);
 
-      const ratioAfter = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const ratioAfter = await iVault.ratio();
       const totalDelegatedToAfter = await iVault.getDelegatedTo(
         await mellowAdapter.getAddress(),
         mellowVaults[0].vaultAddress,
@@ -600,7 +600,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     // it("Update ratio after all shares burn", async function () {
-    //   const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+    //   const calculatedRatio = await iVault.ratio();
     //   console.log(`Calculated ratio:\t\t\t${calculatedRatio.format()}`);
     //   expect(calculatedRatio).to.be.eq(e18); //Because all shares have been burnt at this point
     //
@@ -838,7 +838,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
 
     it("Update asset ratio", async function() {
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       console.log(`New ratio is:\t\t\t\t\t${(await iVault.ratio()).format()}`);
       expect(await iVault.ratio()).lt(e18);

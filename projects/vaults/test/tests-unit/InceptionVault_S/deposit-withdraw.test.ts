@@ -517,7 +517,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .connect(iVaultOperator)
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, amount, emptyBytes);
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-      ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      ratio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
       console.log(`Initial ratio: ${ratio.format()}`);
     });
@@ -1048,7 +1048,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .connect(iVaultOperator)
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       totalDeposited = await iVault.getTotalDeposited();
       TARGET = 1000_000n;
@@ -1163,7 +1163,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .connect(iVaultOperator)
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
       await assetData.addRewardsMellowVault(toWei(0.001), mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
     });
 
@@ -1258,7 +1258,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, freeBalance, emptyBytes);
 
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
       await iVault.setTargetFlashCapacity(targetCapacityPercent);
     });
@@ -1534,7 +1534,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
         .delegate(await mellowAdapter.getAddress(), mellowVaults[0].vaultAddress, freeBalance / 2n, emptyBytes);
       await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
 
-      const calculatedRatio = await calculateRatio(iVault, iToken, withdrawalQueue);
+      const calculatedRatio = await iVault.ratio();
       await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
     });
 
