@@ -977,7 +977,7 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
             );
           await iVault.setTargetFlashCapacity(targetCapacityPercent);
           await assetData.addRewardsMellowVault(e18, mellowVaults[0].vaultAddress);
-          const calculatedRatio = await calculateRatio(iVault, iToken);
+          const calculatedRatio = await iVault.ratio();
           await ratioFeed.updateRatioBatch([iToken.address], [calculatedRatio]);
           const ratioBefore = await iVault.ratio();
 
