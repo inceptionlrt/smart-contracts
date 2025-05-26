@@ -91,7 +91,7 @@ contract WithdrawalQueue is
 
         for (uint256 i = 0; i < legacyWithdrawalAddresses.length; i++) {
             epoch.userShares[legacyWithdrawalAddresses[i]] = legacyWithdrawalAmounts[i];
-            addUserEpoch(legacyWithdrawalAddresses[i], currentEpoch);
+            _addUserEpoch(legacyWithdrawalAddresses[i], currentEpoch);
         }
 
         // update global state
@@ -114,7 +114,7 @@ contract WithdrawalQueue is
         withdrawal.totalRequestedShares += shares;
         totalSharesToWithdraw += shares;
 
-        addUserEpoch(receiver, currentEpoch);
+        _addUserEpoch(receiver, currentEpoch);
     }
 
     /**
@@ -122,7 +122,7 @@ contract WithdrawalQueue is
     * @param receiver The address of the user
     * @param epoch The epoch number to add
     */
-    function addUserEpoch(address receiver, uint256 epoch) internal {
+    function _addUserEpoch(address receiver, uint256 epoch) internal {
         uint256[] storage receiverEpochs = userEpoch[receiver];
         if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
             receiverEpochs.push(epoch);
