@@ -263,6 +263,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         address[] calldata adapters,
         address[] calldata vaults
     ) internal {
+        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
+
         _isSlashed(withdrawal) ?
             _resetEpoch(epoch, withdrawal, adapters, vaults)
             : _makeRedeemable(withdrawal);
@@ -297,7 +299,6 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _makeRedeemable(WithdrawalEpoch storage withdrawal) internal {
-        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
         withdrawal.ableRedeem = true;
         totalAmountRedeem += withdrawal.totalClaimedAmount;
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
