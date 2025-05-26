@@ -3,12 +3,12 @@ pragma solidity ^0.8.28;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IIEigenLayerAdapter} from "../interfaces/adapters/IIEigenLayerAdapter.sol";
+import {IInceptionEigenLayerAdapter} from "../interfaces/adapters/IInceptionEigenLayerAdapter.sol";
 import {IDelegationManager} from "../interfaces/eigenlayer-vault/eigen-core/IDelegationManager.sol";
 import {IStrategy} from "../interfaces/eigenlayer-vault/eigen-core/IStrategy.sol";
 import {IStrategyManager} from "../interfaces/eigenlayer-vault/eigen-core/IStrategyManager.sol";
 import {IRewardsCoordinator} from "../interfaces/eigenlayer-vault/eigen-core/IRewardsCoordinator.sol";
-import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter, IInceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 /**
  * @title The InceptionEigenAdapter Contract
@@ -16,7 +16,7 @@ import {IBaseAdapter, IIBaseAdapter} from "./IBaseAdapter.sol";
  * @dev Handles delegation and withdrawal requests within the EigenLayer protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
+contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdapter {
     using SafeERC20 for IERC20;
 
     IStrategy internal _strategy;
@@ -51,7 +51,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         address trusteeManager,
         address inceptionVault
     ) public initializer {
-        __IBaseAdapter_init(IERC20(asset), trusteeManager);
+        __InceptionBaseAdapter_init(IERC20(asset), trusteeManager);
 
         _delegationManager = IDelegationManager(delegationManager);
         _strategyManager = IStrategyManager(strategyManager);
@@ -61,6 +61,20 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
         // approve spending by strategyManager
         _asset.safeApprove(strategyManager, type(uint256).max);
+    }
+
+    /**
+    * @dev checks whether it's still possible to deposit into the strategy
+    * @param amount Amount of tokens to delegate/deposit
+    * @notice Be cautious when using this function, as certain strategies may not enforce TVL limits by inheritance.
+    */
+    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
+        (uint256 maxPerDeposit, uint256 maxTotalDeposits) = _strategy.getTVLLimits();
+
+        require(amount <= maxPerDeposit, ExceedsMaxPerDeposit(maxPerDeposit, amount));
+
+        uint256 currentBalance = _asset.balanceOf(address(_strategy));
+        require(currentBalance + amount <= maxTotalDeposits, ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance));
     }
 
     /**
@@ -78,6 +92,8 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
+            _beforeDepositAssetIntoStrategy(amount);
+
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
             // deposit the asset to the appropriate strategy
@@ -95,13 +111,50 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         memory approverSignatureAndExpiry = abi.decode(_data[1], (IDelegationManager.SignatureWithExpiry));
 
         // delegate to EL
-            _delegationManager.delegateTo(
+        _delegationManager.delegateTo(
             operator,
             approverSignatureAndExpiry,
             approverSalt
         );
 
         return 0;
+    }
+
+    /**
+     * @notice Undelegates the contract from the current operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits an `Undelegated` event upon successful undelegation.
+    */
+    function undelegate() external onlyTrustee whenNotPaused {
+        address undelegatedFrom = getOperatorAddress();
+        bytes32[] memory withdrawalRoots = _delegationManager.undelegate(address(this));
+
+        emit WithdrawalsQueued(withdrawalRoots);
+        emit Undelegated(undelegatedFrom);
+    }
+
+    /**
+     * @notice Redelegates the contract to a new operator.
+     * @dev Can only be called by the trustee when the contract is not paused.
+     * Emits a `RedelegatedTo` event upon successful redelegation.
+     * @param newOperator The address of the new operator to delegate to.
+     * @param newOperatorApproverSig The signature and expiry details for the new operator's approval.
+     * @param approverSalt A unique salt used for the approval process to prevent replay attacks.
+    */
+    function redelegate(
+        address newOperator,
+        IDelegationManager.SignatureWithExpiry memory newOperatorApproverSig,
+        bytes32 approverSalt
+    ) external onlyTrustee whenNotPaused {
+        require(newOperator != address(0), ZeroAddress());
+
+        address undelegatedFrom = getOperatorAddress();
+        bytes32[] memory withdrawalRoots = _delegationManager.redelegate(
+            newOperator, newOperatorApproverSig, approverSalt
+        );
+
+        emit WithdrawalsQueued(withdrawalRoots);
+        emit RedelegatedTo(undelegatedFrom, newOperator);
     }
 
     /**
@@ -140,8 +193,9 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         });
 
         // queue from EL
-        _delegationManager.queueWithdrawals(withdrawals);
+        bytes32[] memory withdrawalRoots = _delegationManager.queueWithdrawals(withdrawals);
 
+        emit WithdrawalsQueued(withdrawalRoots);
         emit StartWithdrawal(
             staker,
             _strategy,
@@ -170,14 +224,26 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
         // prepare withdrawal
         IDelegationManager.Withdrawal memory withdrawal = abi.decode(_data[0], (IDelegationManager.Withdrawal));
-        IERC20[][] memory tokens = abi.decode(_data[1], (IERC20[][]));
-        bool[] memory receiveAsTokens = abi.decode(_data[2], (bool[]));
+        IERC20[] memory tokens = abi.decode(_data[1], (IERC20[][]))[0];
+        bool receiveAsTokens = abi.decode(_data[2], (bool[]))[0];
+
+        // emergency claim available only for emergency queued withdrawals
+        require(
+            (emergency && _emergencyQueuedWithdrawals[withdrawal.nonce]) ||
+            (!emergency && !_emergencyQueuedWithdrawals[withdrawal.nonce]),
+            OnlyEmergency()
+        );
 
         // claim from EL
-        _delegationManager.completeQueuedWithdrawal(withdrawal, tokens[0], receiveAsTokens[0]);
-        uint256 withdrawnAmount = _asset.balanceOf(address(this)) - balanceBefore;
+        _delegationManager.completeQueuedWithdrawal(withdrawal, tokens, receiveAsTokens);
+
         // send tokens to the vault
-        _asset.safeTransfer(_inceptionVault, withdrawnAmount);
+        uint256 withdrawnAmount;
+        if (receiveAsTokens) {
+            withdrawnAmount = _asset.balanceOf(address(this)) - balanceBefore;
+            // send tokens to the vault
+            _asset.safeTransfer(_inceptionVault, withdrawnAmount);
+        }
 
         // update emergency withdrawal state
         _emergencyQueuedWithdrawals[withdrawal.nonce] = false;
@@ -187,11 +253,20 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
 
     /**
      * @notice Returns the total amount pending withdrawal
-     * @return total Total amount of non-emergency pending withdrawals
+     * @return Total amount of non-emergency pending withdrawals
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total)
+    function pendingWithdrawalAmount() public view override returns (uint256)
     {
         return _pendingWithdrawalAmount(false);
+    }
+
+    /**
+     * @notice Returns the total amount pending emergency withdrawal
+     * @return Total amount of emergency pending withdrawals
+     */
+    function pendingEmergencyWithdrawalAmount() public view override returns (uint256)
+    {
+        return _pendingWithdrawalAmount(true);
     }
 
     /**
@@ -216,22 +291,6 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     }
 
     /**
-     * @notice Returns the total inactive balance
-     * @return Sum of pending withdrawals and claimable amounts
-     */
-    function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + claimableAmount();
-    }
-
-    /**
-     * @notice Returns the total inactive balance for emergency withdrawals
-     * @return Sum of emergency pending withdrawals and claimable amounts
-     */
-    function inactiveBalanceEmergency() public view override returns (uint256) {
-        return _pendingWithdrawalAmount(true) + claimableAmount();
-    }
-
-    /**
      * @notice Returns the current operator address for this adapter
      * @return Address of the operator this adapter is delegated to
      */
@@ -253,7 +312,7 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
      * @notice Returns the total amount deposited in the strategy
      * @return Total amount of underlying tokens deposited
      */
-    function getTotalDeposited() external view override returns (uint256) {
+    function getTotalDeposited() public view override returns (uint256) {
         IStrategy[] memory strategies = new IStrategy[](1);
         strategies[0] = _strategy;
 
@@ -262,6 +321,22 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         return _strategy.sharesToUnderlyingView(withdrawableShares[0]);
+    }
+
+    /**
+     * @notice Returns the total amount tokens related to adapter
+     * @return total is the total amount tokens related to adapter
+     */
+    function getTotalBalance() external view returns(uint256) {
+        return inactiveBalance() + getTotalDeposited();
+    }
+
+    /**
+     * @notice Returns the total inactive balance
+     * @return Sum of pending withdrawals, pending emergency withdrawals, claimable amounts
+     */
+    function inactiveBalance() public view override returns (uint256) {
+        return pendingWithdrawalAmount() + pendingEmergencyWithdrawalAmount() + claimableAmount();
     }
 
     /**
@@ -279,6 +354,10 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
     function getVersion() external pure override returns (uint256) {
         return 3;
     }
+
+    /*******************************************************************************
+                        Rewards
+    *******************************************************************************/
 
     /**
      * @notice Updates the rewards coordinator address
@@ -308,5 +387,15 @@ contract InceptionEigenAdapter is IBaseAdapter, IIEigenLayerAdapter {
         );
 
         rewardsCoordinator = IRewardsCoordinator(newRewardsCoordinator);
+    }
+
+    /**
+     * @notice Claim rewards from Eigenlayer protocol.
+     * @dev Can only be called by trustee
+     * @param rewardsData Adapter related bytes of data for rewards.
+     */
+    function claimRewards(address /* rewardToken */, bytes memory rewardsData) external onlyTrustee {
+        IRewardsCoordinator.RewardsMerkleClaim memory data = abi.decode(rewardsData, (IRewardsCoordinator.RewardsMerkleClaim));
+        IRewardsCoordinator(rewardsCoordinator).processClaim(data, _inceptionVault);
     }
 }

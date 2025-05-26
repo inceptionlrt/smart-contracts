@@ -49,6 +49,13 @@ interface IAdapterHandler {
     );
 
     /**
+    * @dev Emitted when a user forcefully undelegates their claim.
+    * @param amount The amount of tokens undelegated.
+    * @param epoch The epoch in which the undelegation occurs.
+    */
+    event ClaimFromVault(uint256 indexed amount, uint256 epoch);
+
+    /**
      * @dev Emitted when the target capacity of the system is changed.
      * @param prevValue The previous target capacity value.
      * @param newValue The new target capacity value.
@@ -68,6 +75,20 @@ interface IAdapterHandler {
     event AdapterRemoved(address adapter);
 
     /**
+     * @dev Emitted when rewards claimed from adapter.
+     * @param adapter The address of the removed adapter.
+     * @param token The address of reward token.
+     * @param amount Amount of reward.
+     */
+    event RewardsClaimed(address adapter, address token, uint256 amount);
+
+    /**
+     * @dev Emitted when free balance claimed from adapter
+     * @param adapter The address of the claimed adapter.
+     */
+    event AdapterFreeBalanceClaimed(address adapter);
+
+    /**
      * @dev Deprecated structure representing a withdrawal request.
      * @param epoch The epoch in which the withdrawal was requested.
      * @param receiver The address receiving the withdrawn funds.
@@ -77,5 +98,19 @@ interface IAdapterHandler {
         uint256 epoch;
         address receiver;
         uint256 amount;
+    }
+
+    /**
+     * Struct to define an undelegation request.
+     * @param adapter The address of the adapter contract handling the undelegation.
+     * @param vault The address of the vault from which assets are undelegated.
+     * @param amount The amount of assets to undelegate.
+     * @param data An array of bytes for additional parameters or instructions specific to the adapter.
+     */
+    struct UndelegateRequest {
+        address adapter;
+        address vault;
+        uint256 amount;
+        bytes[] data;
     }
 }
