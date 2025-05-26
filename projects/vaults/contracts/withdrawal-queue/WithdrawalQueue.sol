@@ -375,6 +375,7 @@ contract WithdrawalQueue is
         require(epoch <= currentEpoch, UndelegateEpochMismatch());
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        require(withdrawal.totalRequestedShares > 0, InvalidEpoch());
         require(!withdrawal.ableRedeem, EpochAlreadyRedeemable());
 
         // update epoch state
