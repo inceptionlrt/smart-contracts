@@ -85,4 +85,6 @@ interface IInceptionVaultErrors {
     error MintedLess();
 
     error LowerThanMinOut(uint256 minOut);
+
+    error RewardsTreasuryNotSet();
 }
