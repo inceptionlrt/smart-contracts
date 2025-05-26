@@ -266,18 +266,18 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
 
     /**
      * @notice Returns the total amount pending withdrawal
-     * @return total Total amount of non-emergency pending withdrawals
+     * @return Total amount of non-emergency pending withdrawals
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total)
+    function pendingWithdrawalAmount() public view override returns (uint256)
     {
         return _pendingWithdrawalAmount(false);
     }
 
     /**
      * @notice Returns the total amount pending emergency withdrawal
-     * @return total Total amount of emergency pending withdrawals
+     * @return Total amount of emergency pending withdrawals
      */
-    function pendingEmergencyWithdrawalAmount() public view override returns (uint256 total)
+    function pendingEmergencyWithdrawalAmount() public view override returns (uint256)
     {
         return _pendingWithdrawalAmount(true);
     }

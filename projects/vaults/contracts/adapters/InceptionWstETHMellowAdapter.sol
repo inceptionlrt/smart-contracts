@@ -379,12 +379,7 @@ contract InceptionWstETHMellowAdapter is
      * @notice Returns the total amount of pending withdrawals
      * @return total Amount of pending withdrawals
      */
-    function pendingWithdrawalAmount()
-        public
-        view
-        override
-        returns (uint256 total)
-    {
+    function pendingWithdrawalAmount() public view override returns (uint256 total) {
         return _pendingWithdrawalAmount(false) + _claimableWithdrawalAmount(false);
     }
 
@@ -393,8 +388,7 @@ contract InceptionWstETHMellowAdapter is
      * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
      */
     function pendingEmergencyWithdrawalAmount() public view returns (uint256) {
-        return
-            _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
+        return _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
     }
 
     /**

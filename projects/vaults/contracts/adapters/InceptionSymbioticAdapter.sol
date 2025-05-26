@@ -244,17 +244,17 @@ contract InceptionSymbioticAdapter is
 
     /**
      * @notice Returns the total amount pending withdrawal
-     * @return total Amount of pending withdrawals for non-emergency claims
+     * @return Amount of pending withdrawals for non-emergency claims
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
+    function pendingWithdrawalAmount() public view override returns (uint256) {
         return _pendingWithdrawalAmount(false);
     }
 
     /**
      * @notice Returns the total amount pending emergency withdrawal
-     * @return total Amount of pending withdrawals for emergency claims
+     * @return Amount of pending withdrawals for emergency claims
      */
-    function pendingEmergencyWithdrawalAmount() public view override returns (uint256 total) {
+    function pendingEmergencyWithdrawalAmount() public view override returns (uint256) {
         return _pendingWithdrawalAmount(true);
     }
 
