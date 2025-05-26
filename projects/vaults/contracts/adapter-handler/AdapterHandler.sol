@@ -225,12 +225,12 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
 
         uint256 epoch = withdrawalQueue.EMERGENCY_EPOCH();
         for (uint256 i = 0; i < requests.length; i++) {
-            (uint256 undelegatedAmount,) =  _undelegate(
+            (uint256 undelegatedAmount, uint256 claimedAmount) = _undelegate(
                 requests[i].adapter, requests[i].vault, requests[i].amount, requests[i].data, true
             );
 
             emit UndelegatedFrom(
-                requests[i].adapter, requests[i].vault, undelegatedAmount, 0, epoch
+                requests[i].adapter, requests[i].vault, undelegatedAmount, claimedAmount, epoch
             );
         }
     }
