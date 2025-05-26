@@ -3,10 +3,16 @@ pragma solidity ^0.8.28;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
-contract WithdrawalQueue is IWithdrawalQueue, Initializable {
+/**
+ * @title The WithdrawalQueue contract
+ * @author The InceptionLRT teams
+ * @dev Handles operations with the Inception Vault withdrawals
+ */
+contract WithdrawalQueue is PausableUpgradeable, Ownable2StepUpgradeable, IWithdrawalQueue {
     using Math for uint256;
 
     /// @dev emergency epoch number
@@ -15,7 +21,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 internal constant MAX_CONVERT_THRESHOLD = 50;
 
     /// @dev withdrawal queue owner
-    address public vaultOwner;
+    address public inceptionVault;
 
     /// @dev withdrawal epochs data
     mapping(uint256 => WithdrawalEpoch) public withdrawals;
@@ -26,8 +32,8 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     uint256 public totalAmountRedeem;
     uint256 public totalSharesToWithdraw;
 
-    modifier onlyVault() {
-        require(msg.sender == vaultOwner, OnlyVaultAllowed());
+    modifier onlyVaultOrOwner() {
+        require(msg.sender == inceptionVault || msg.sender == owner(), OnlyVaultOrOwnerAllowed());
         _;
     }
 
@@ -46,7 +52,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         uint256 legacyClaimedAmount
     ) external initializer {
         require(_vault != address(0), ValueZero());
-        vaultOwner = _vault;
+        inceptionVault = _vault;
         currentEpoch = EMERGENCY_EPOCH + 1;
 
         _initLegacyWithdrawals(
@@ -93,7 +99,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param receiver The address requesting the withdrawal
     * @param shares The number of shares to request for withdrawal
     */
-    function request(address receiver, uint256 shares) external onlyVault {
+    function request(address receiver, uint256 shares) external whenNotPaused onlyVaultOrOwner {
         require(shares > 0, ValueZero());
         require(receiver != address(0), ValueZero());
 
@@ -110,7 +116,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param receiver The address of the user
     * @param epoch The epoch number to add
     */
-    function addUserEpoch(address receiver, uint256 epoch) private {
+    function addUserEpoch(address receiver, uint256 epoch) internal {
         uint256[] storage receiverEpochs = userEpoch[receiver];
         if (receiverEpochs.length == 0 || receiverEpochs[receiverEpochs.length - 1] != epoch) {
             receiverEpochs.push(epoch);
@@ -131,10 +137,17 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         address[] calldata vaults,
         uint256[] calldata undelegatedAmounts,
         uint256[] calldata claimedAmounts
-    ) external onlyVault {
+    ) external whenNotPaused onlyVaultOrOwner {
         require(epoch >= 0 && epoch <= currentEpoch, UndelegateEpochMismatch());
-        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
+        require(
+            adapters.length > 0 &&
+            adapters.length == vaults.length &&
+            adapters.length == undelegatedAmounts.length &&
+            adapters.length == claimedAmounts.length,
+            ValueZero()
+        );
 
+        WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         for (uint256 i = 0; i < adapters.length; i++) {
             _undelegate(
                 withdrawal,
@@ -184,7 +197,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _afterUndelegate(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
-        uint256 requested = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+        uint256 requested = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
         uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
         require(
@@ -215,7 +228,14 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         address[] calldata adapters,
         address[] calldata vaults,
         uint256[] calldata claimedAmounts
-    ) external onlyVault {
+    ) external whenNotPaused onlyVaultOrOwner {
+        require(
+            adapters.length > 0 &&
+            adapters.length == vaults.length &&
+            adapters.length == claimedAmounts.length,
+            ValueZero()
+        );
+
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
         require(!withdrawal.ableRedeem, EpochAlreadyRedeemable());
 
@@ -277,7 +297,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @return bool True if the withdrawal is slashed, false otherwise.
     */
     function _isSlashed(WithdrawalEpoch storage withdrawal) internal view returns (bool) {
-        uint256 currentAmount = IERC4626(vaultOwner).convertToAssets(withdrawal.totalRequestedShares);
+        uint256 currentAmount = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
 
         if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
             if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
@@ -334,7 +354,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param epoch The epoch number to process, must match the current epoch
     * @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree
     */
-    function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external onlyVault {
+    function forceUndelegateAndClaim(uint256 epoch, uint256 claimedAmount) external whenNotPaused onlyVaultOrOwner {
         require(epoch <= currentEpoch, UndelegateEpochMismatch());
 
         WithdrawalEpoch storage withdrawal = withdrawals[epoch];
@@ -351,7 +371,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param receiver The address to redeem for
     * @return amount The total amount redeemed
     */
-    function redeem(address receiver) external onlyVault returns (uint256 amount) {
+    function redeem(address receiver) external whenNotPaused onlyVaultOrOwner returns (uint256 amount) {
         uint256[] storage epochs = userEpoch[receiver];
         uint256 i = 0;
 
@@ -378,7 +398,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
     * @param userEpochIndex user epoch index
     * @return amount The total amount redeemed
     */
-    function redeem(address receiver, uint256 userEpochIndex) external onlyVault returns (uint256 amount) {
+    function redeem(address receiver, uint256 userEpochIndex) external whenNotPaused onlyVaultOrOwner returns (uint256 amount) {
         uint256[] storage epochs = userEpoch[receiver];
         require(userEpochIndex < epochs.length, InvalidEpoch());
 
@@ -460,7 +480,7 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
             }
 
             if (withdrawal.ableRedeem) amount += _getRedeemAmount(withdrawal, receiver);
-            else amount += IERC4626(vaultOwner).convertToAssets(withdrawal.userShares[receiver]);
+            else amount += IERC4626(inceptionVault).convertToAssets(withdrawal.userShares[receiver]);
         }
 
         return amount;
@@ -490,5 +510,23 @@ contract WithdrawalQueue is IWithdrawalQueue, Initializable {
         }
 
         return (able, withdrawalIndexes);
+    }
+
+    /*///////////////////////////////
+    ////// Pausable functions //////
+    /////////////////////////////*/
+
+    /**
+     * @dev Pauses the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpauses the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

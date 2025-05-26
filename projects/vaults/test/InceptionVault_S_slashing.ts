@@ -1486,25 +1486,25 @@ describe("Symbiotic Vault Slashing", function() {
 
     it("only vault", async function() {
       await expect(withdrawalQueue.connect(staker).request(iVault.address, toWei(1)))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
 
       await expect(withdrawalQueue.connect(staker)
         .undelegate(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n], [0n]))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
 
       await expect(withdrawalQueue.connect(staker)
         .claim(await withdrawalQueue.currentEpoch(), [iVault.address], [iVault.address], [1n]))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
 
       await expect(withdrawalQueue.connect(staker)
         .forceUndelegateAndClaim(0n, 0n))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
 
       await expect(withdrawalQueue.connect(staker).redeem(iVault.address))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
 
       await expect(withdrawalQueue.connect(staker)["redeem(address,uint256)"](iVault.address, 0n))
-        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultAllowed");
+        .to.be.revertedWithCustomError(withdrawalQueue, "OnlyVaultOrOwnerAllowed");
     });
 
     it("zero value", async function() {

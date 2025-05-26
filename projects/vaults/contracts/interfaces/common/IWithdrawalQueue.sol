@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 interface IWithdrawalQueueErrors {
     error ValueZero();
-    error OnlyVaultAllowed();
+    error OnlyVaultOrOwnerAllowed();
     error InvalidEpoch();
     error EpochAlreadyRedeemable();
     error UndelegateEpochMismatch();
