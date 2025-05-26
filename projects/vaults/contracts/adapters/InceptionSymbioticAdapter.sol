@@ -148,12 +148,12 @@ contract InceptionSymbioticAdapter is
         bool emergency
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length == 1, InvalidDataLength(1, _data.length));
-        (address vaultAddress, address claimer) = abi.decode(
-            _data[0],
+        (address vaultAddress, address claimer) = abi.decode(_data[0],
             (address, address)
         );
+
         require(_symbioticVaults.contains(vaultAddress), InvalidVault());
-        require(!emergency || _emergencyClaimer == claimer, OnlyEmergency());
+        require((emergency && claimer == _emergencyClaimer) || (!emergency && claimer != _emergencyClaimer), OnlyEmergency());
         require(withdrawals[vaultAddress][claimer] != 0, NothingToClaim());
 
         uint256 epoch = withdrawals[vaultAddress][claimer];
