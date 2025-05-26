@@ -58,6 +58,11 @@ contract WithdrawalQueue is
         uint256 legacyClaimedAmount
     ) external initializer {
         require(_vault != address(0), ValueZero());
+
+        __Pausable_init();
+        __ReentrancyGuard_init();
+        __Ownable2Step_init();
+
         inceptionVault = _vault;
         currentEpoch = EMERGENCY_EPOCH + 1;
 
