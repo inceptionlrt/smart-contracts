@@ -377,13 +377,16 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       await skipEpoch(symbioticVaults[0]);
       expect(await symbioticVaults[0].vault.currentEpoch()).to.be.greaterThan(previousSymbioticVault);
 
+      let balanceBefore = await iVault.totalAssets();
+
       // claim
       let params = await symbioticClaimParams(symbioticVaults[0], claimer1);
       await iVault.connect(iVaultOperator).claim(
         1, [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]],
       );
 
-      expect(await iVault.totalAssets()).to.be.eq(toWei(1));
+      expect((await iVault.totalAssets()) - balanceBefore).to.be.eq(toWei(1));
+      balanceBefore = await iVault.totalAssets();
 
       // claim
       params = await symbioticClaimParams(symbioticVaults[0], claimer2);
@@ -391,7 +394,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
         2, [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]],
       );
 
-      expect(await iVault.totalAssets()).to.be.eq(toWei(2));
+      expect((await iVault.totalAssets()) - balanceBefore).to.be.eq(toWei(2));
     });
 
     it('epoch should be changed if undelegate current epoch', async () => {
