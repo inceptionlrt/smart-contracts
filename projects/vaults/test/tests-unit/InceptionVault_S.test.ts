@@ -2,7 +2,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import { e18, toWei } from "../helpers/utils";
+import { e18, skipEpoch, symbioticClaimParams, toWei } from "../helpers/utils";
 import { initVault } from "../src/init-vault-new";
 const { ethers, network } = hardhat;
 import { testrunConfig } from '../testrun.config';
@@ -340,6 +340,58 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
     beforeEach(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
+    });
+
+    it("request two withdrawals in the same epoch", async function () {
+      const depositAmount = toWei(10);
+
+      await (await iVault.connect(staker).deposit(depositAmount, staker.address)).wait();
+
+      await (await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, depositAmount, emptyBytes)).wait();
+
+      // first withdraw
+      await iVault.connect(staker).withdraw(toWei(1), staker.address);
+
+      const previousSymbioticVault = await symbioticVaults[0].vault.currentEpoch();
+
+      // first undelegate
+      let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
+      let receipt = await (await iVault.connect(iVaultOperator)
+        .undelegate(await withdrawalQueue.currentEpoch(), [[symbioticAdapter.address, symbioticVaults[0].vaultAddress, epochShares, []]]))
+        .wait();
+      let adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address).map(log => symbioticAdapter.interface.parseLog(log));
+      let claimer1 = adapterEvents[0].args["claimer"];
+
+      // second withdraw
+      await iVault.connect(staker).withdraw(toWei(1), staker.address);
+
+      // second undelegate
+      epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
+      receipt = await (await iVault.connect(iVaultOperator)
+        .undelegate(await withdrawalQueue.currentEpoch(), [[symbioticAdapter.address, symbioticVaults[0].vaultAddress, epochShares, []]]))
+        .wait();
+      adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address).map(log => symbioticAdapter.interface.parseLog(log));
+      let claimer2 = adapterEvents[0].args["claimer"];
+
+      await skipEpoch(symbioticVaults[0]);
+      expect(await symbioticVaults[0].vault.currentEpoch()).to.be.greaterThan(previousSymbioticVault);
+
+      // claim
+      let params = await symbioticClaimParams(symbioticVaults[0], claimer1);
+      await iVault.connect(iVaultOperator).claim(
+        1, [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]],
+      );
+
+      expect(await iVault.totalAssets()).to.be.eq(toWei(1));
+
+      // claim
+      params = await symbioticClaimParams(symbioticVaults[0], claimer2);
+      await iVault.connect(iVaultOperator).claim(
+        2, [symbioticAdapter.address], [symbioticVaults[0].vaultAddress], [[params]],
+      );
+
+      expect(await iVault.totalAssets()).to.be.eq(toWei(2));
     });
 
     it('epoch should be changed if undelegate current epoch', async () => {
