@@ -15,11 +15,11 @@ import {IInceptionAssetsHandler} from "../interfaces/common/IInceptionAssetsHand
  * @dev Handles operations with the corresponding asset
  */
 contract InceptionAssetsHandler is
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-Ownable2StepUpgradeable,
-IInceptionAssetsHandler,
-IInceptionVaultErrors
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    Ownable2StepUpgradeable,
+    IInceptionAssetsHandler,
+    IInceptionVaultErrors
 {
     using SafeERC20 for IERC20;
 
@@ -63,8 +63,6 @@ IInceptionVaultErrors
      * @param treasury Address of the treasury which holds rewards
      */
     function setRewardsTreasury(address treasury) external onlyOwner {
-        require(treasury != address(0), NullParams());
-
         emit SetRewardsTreasury(rewardsTreasury);
         rewardsTreasury = treasury;
     }
