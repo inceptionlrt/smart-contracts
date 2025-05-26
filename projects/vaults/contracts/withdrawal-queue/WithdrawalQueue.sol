@@ -206,6 +206,7 @@ contract WithdrawalQueue is
         uint256 requested = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
         uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
+        // ensure that the undelegated assets are relevant to the ratio
         require(
             requested >= totalUndelegated ?
                 requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
