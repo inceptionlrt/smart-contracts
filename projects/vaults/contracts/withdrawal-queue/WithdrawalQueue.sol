@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
@@ -12,7 +13,12 @@ import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
  * @author The InceptionLRT teams
  * @dev Handles operations with the Inception Vault withdrawals
  */
-contract WithdrawalQueue is PausableUpgradeable, Ownable2StepUpgradeable, IWithdrawalQueue {
+contract WithdrawalQueue is
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    Ownable2StepUpgradeable,
+    IWithdrawalQueue
+{
     using Math for uint256;
 
     /// @dev emergency epoch number
