@@ -63,6 +63,8 @@ IInceptionVaultErrors
      * @param treasury Address of the treasury which holds rewards
      */
     function setRewardsTreasury(address treasury) external onlyOwner {
+        require(treasury != address(0), NullParams());
+
         emit SetRewardsTreasury(rewardsTreasury);
         rewardsTreasury = treasury;
     }
