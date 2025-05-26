@@ -43,7 +43,7 @@ contract WithdrawalQueue is
         _;
     }
 
-    /*
+    /**
     * @notice Initializes the contract with a vault address and legacy withdrawal data.
     *         Vault must be paused while deploying the new queue instance if it contains legacy withdrawals.
     * @param _vault The address of the vault contract that will interact with this queue
@@ -68,7 +68,7 @@ contract WithdrawalQueue is
         );
     }
 
-    /*
+    /**
     * @notice Initializes legacy withdrawal data for the first epoch
     * @param legacyWithdrawalAddresses Array of addresses with legacy withdrawal requests
     * @param legacyWithdrawalAmounts Array of amounts corresponding to legacy withdrawal requests
@@ -100,7 +100,7 @@ contract WithdrawalQueue is
         currentEpoch++;
     }
 
-    /*
+    /**
     * @notice Requests a withdrawal for a receiver in the current epoch
     * @param receiver The address requesting the withdrawal
     * @param shares The number of shares to request for withdrawal
@@ -117,7 +117,7 @@ contract WithdrawalQueue is
         addUserEpoch(receiver, currentEpoch);
     }
 
-    /*
+    /**
     * @notice Adds an epoch to the user's list of epochs if not already present
     * @param receiver The address of the user
     * @param epoch The epoch number to add
@@ -129,7 +129,7 @@ contract WithdrawalQueue is
         }
     }
 
-    /*
+    /**
     * @notice Processes undelegation for multiple adapters and vaults in a given epoch
     * @param epoch The epoch to undelegate from (must match current epoch)
     * @param adapters Array of adapter addresses
@@ -167,7 +167,7 @@ contract WithdrawalQueue is
         _afterUndelegate(epoch, withdrawal);
     }
 
-    /*
+    /**
     * @notice Internal function to process undelegation for a specific adapter and vault
     * @param withdrawal The storage reference to the withdrawal epoch
     * @param adapter The adapter address
@@ -198,7 +198,7 @@ contract WithdrawalQueue is
         }
     }
 
-    /*
+    /**
     * @notice Finalizes undelegation by advancing the epoch if completed
     * @param withdrawal The storage reference to the withdrawal epoch
     */
@@ -222,7 +222,7 @@ contract WithdrawalQueue is
         }
     }
 
-    /*
+    /**
     * @notice Claims an amount for a specific adapter and vault in an epoch
     * @param epoch The epoch to claim from
     * @param adapters Array of adapter addresses
@@ -257,7 +257,7 @@ contract WithdrawalQueue is
         _afterClaim(epoch, withdrawal, adapters, vaults);
     }
 
-    /*
+    /**
     * @notice Claims an amount for a specific adapter and vault in an epoch
     * @param withdrawal The storage reference to the withdrawal epoch
     * @param adapter The adapter address
@@ -277,7 +277,7 @@ contract WithdrawalQueue is
         withdrawal.adaptersClaimedCounter++;
     }
 
-    /*
+    /**
     * @notice Updates the redeemable status after a claim
     * @param withdrawal The storage reference to the withdrawal epoch
     * @param adapters Array of adapter addresses
@@ -296,7 +296,7 @@ contract WithdrawalQueue is
             : _makeRedeemable(withdrawal);
     }
 
-    /*
+    /**
     * @notice Checks if a withdrawal epoch is considered slashed based on the difference between claimed and current amounts.
     * @dev Compares the current asset value of requested shares against the total claimed amount, considering a maximum threshold.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct.
@@ -318,7 +318,7 @@ contract WithdrawalQueue is
         return false;
     }
 
-    /*
+    /**
     * @notice Marks a withdrawal epoch as redeemable and updates global state
     * @dev Ensures all adapters have completed claiming by checking if the claimed counter equals the undelegated counter.
     *      Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
@@ -330,7 +330,7 @@ contract WithdrawalQueue is
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
     }
 
-    /*
+    /**
     * @notice Resets the state of a withdrawal epoch to its initial values.
     * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
@@ -355,7 +355,7 @@ contract WithdrawalQueue is
         emit EpochReset(epoch);
     }
 
-    /*
+    /**
     * @notice Forces undelegation and claims a specified amount for the current epoch
     * @param epoch The epoch number to process, must match the current epoch
     * @param claimedAmount The amount to claim, must not exceed totalAmountRedeemFree
@@ -372,7 +372,7 @@ contract WithdrawalQueue is
         _afterUndelegate(epoch, withdrawal);
     }
 
-    /*
+    /**
     * @notice Redeems available amounts for a receiver across their epochs
     * @param receiver The address to redeem for
     * @return amount The total amount redeemed
@@ -398,7 +398,7 @@ contract WithdrawalQueue is
         return amount;
     }
 
-    /*
+    /**
     * @notice Redeems available amounts for a receiver with given user epoch index
     * @param receiver The address to redeem for
     * @param userEpochIndex user epoch index
@@ -417,7 +417,7 @@ contract WithdrawalQueue is
         return amount;
     }
 
-    /*
+    /**
     * @notice Redeems the available amount for a receiver in a specific user epoch index
     * @dev Processes the redemption by checking if the withdrawal is redeemable and if the receiver has shares.
     *      Calculates the redeemable amount, clears the receiver's shares, removes the epoch from the user's epoch list,
@@ -445,7 +445,7 @@ contract WithdrawalQueue is
         return amount;
     }
 
-    /*
+    /**
     * @notice Calculates the redeemable amount for a user in an epoch
     * @param withdrawal The storage reference to the withdrawal epoch
     * @param receiver The address of the user
@@ -463,7 +463,7 @@ contract WithdrawalQueue is
     //// GET functions ////
     ////////////////////*/
 
-    /*
+    /**
     * @notice Retrieves the total number of requested shares for a specific epoch
     * @param epoch The epoch number for which to retrieve the requested shares
     * @return The total number of shares requested in the specified epoch
@@ -472,7 +472,7 @@ contract WithdrawalQueue is
         return withdrawals[epoch].totalRequestedShares;
     }
 
-    /*
+    /**
     * @notice Returns the total pending withdrawal amount for a receiver
     * @param receiver The address to check
     * @return amount The total pending withdrawal amount
@@ -492,7 +492,7 @@ contract WithdrawalQueue is
         return amount;
     }
 
-    /*
+    /**
     * @notice Checks if a claimer has redeemable withdrawals and their epoch indexes inside userEpoch mapping
     * @param claimer The address to check
     * @return able Whether there are redeemable withdrawals
