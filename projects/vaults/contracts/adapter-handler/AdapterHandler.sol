@@ -330,6 +330,8 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @param rewardsData Adapter related bytes of data for rewards.
      */
     function claimAdapterRewards(address adapter, address token, bytes calldata rewardsData) external onlyOperator nonReentrant {
+        require(token != address(0) && adapter != address(0), NullParams());
+
         IERC20 rewardToken = IERC20(token);
         uint256 rewardAmount = rewardToken.balanceOf(address(this));
 

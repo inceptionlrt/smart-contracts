@@ -244,6 +244,7 @@ contract InceptionWstETHMellowAdapter is
             _data[0],
             (address, address)
         );
+
         // emergency claim available only for emergency claimer
         if ((emergency && _emergencyClaimer != claimer) || (!emergency && claimer == _emergencyClaimer)) revert OnlyEmergency();
         if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
