@@ -64,6 +64,30 @@ Additionally, the corresponding _RateProviders_ were deployed for all LRT (Incep
 - [x] [wstETH](https://etherscan.io/address/0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0): Wrapped liquid staked Ether 2.0.
   - [inwstETHVault_S](https://etherscan.io/address/0xf9D9F828989A624423C48b95BC04E9Ae0ef5Ec97).
   - [inwstETHs](https://etherscan.io/address/0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552).
+- [x] [EIGEN](https://etherscan.io/address/0xec53bF9167f50cDEB3Ae105f56099aaaB9061F83): Eigen
+  - [InEigenVault](https://etherscan.io/address/0xC6Cc133477f63D9c0C53D1eF7DA83fa250778DB4).
+  - [inEIGEN](https://etherscan.io/address/0xf21014B114bb976F890E15c19900cE9bE5Fb1e12).
+  - [InEIGENRateProvider](https://etherscan.io/address/0xF3207c4A1FC0d32CcD1159f47A8E5A4b1C0fD59F).
+- [x] [tBTC](https://etherscan.io/address/0x18084fbA666a33d37592fA2633fD49a74DD93a88): tBTC v2
+  - [IntBtcVault](https://etherscan.io/address/0x016E074Ca7304b815E29A9b9d8CF7a5603DA2A5f).
+  - [intBTC](https://etherscan.io/address/0x1AEe5EC60fc79B669f11FE368fDe789E267649e2).
+  - [IntBTCRateProvider](https://etherscan.io/address/0x12181a5454542610f524e53650038889EDC6a07f)
+- [x] [sFRAX](https://etherscan.io/address/0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32): Staked FRAX
+  - [InsFraxVault](https://etherscan.io/address/0xeFaF124849b11b513C35350CD8643d29DE49c2ba).
+  - [insFRAX](https://etherscan.io/address/0x50253dc4a01c6408Fab9646e804FCbFDb74e3E4c).
+  - [InsFRAXRateProvider](https://etherscan.io/address/0xD8554b2075E9b403d26c8cC444B2dd3b929162c2).
+  - [InsFRAXRateProvider](https://fraxscan.com/address/0xDA9B11Cd701e10C2Ec1a284f80820eDD128c5246).
+- [x] [slisBNB](https://etherscan.io/address/0xf9B24C9364457Ea85792179D285855753549eBAa): Staked Lista BNB
+  - [InslisBnbVault](https://etherscan.io/address/0xC7373753E8991cEa030B01D580c53dDA4DA31D18).
+  - [inslisBNB](https://etherscan.io/address/0x74D1984A64F447371Be4019920180b52A33aDAdD).
+  - [InslisBNBRateProvider](https://etherscan.io/address/0xC88B97CEe6dB90c1186497619Eb43Cc8160e391C).
+- [x] [LBTC](https://etherscan.io/address/0x8236a87084f8B84306f72007F36F2618A5634494): Lombard Staked BTC
+  - [inLBTCVault_S](https://etherscan.io/address/0xD496417a50DB34279631e0aF459493Cf9685F529).
+  - [inBTCs](https://etherscan.io/address/0xF07052b5A61bbcc8d14a8567494ae8AD688641F9).
+  - [InLBTCsRateProvider](https://etherscan.io/address/0xeB49d254631e564D77AA6CC3057Bd99915930E57).
+- [x] [USBD](https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c): US Bitcoin Dollar
+    - [inUSBD_S](https://etherscan.io/address/0x3AeB6059B8C5E3656122E1B780E8f5765f6F7193).
+    - [inUSBDs](https://etherscan.io/address/0x0c0F7e04B460A57a294bEBC6ed0360d0606eC479).
 
 ## Testing
 
@@ -91,7 +115,6 @@ To run tests for the Inception Protocol, please follow these instructions:
 
 ## InceptionVault_S
 1. User flow:
-   
     1. Deposit
         - Approve vault's underlying `InceptionVault_S.asset()` to the vault
         - Call `deposit(uint256 amount, address receiver)`
@@ -101,7 +124,6 @@ To run tests for the Inception Protocol, please follow these instructions:
         - Vault burns inception tokens of `owner` equal to `shares`
         - Corresponding vault's underlying `InceptionVault_S.asset()` are received by `receiver`
 2. Mellow Integration:
-   
     1. Deposit flow
         - `InceptionVault_S` via the `InceptionMellowAdapter` deposits assets into mellow vaults proportional to assigned allocations
         - `InceptionVault_S.delegate(address adapter, address vault, uint256 amount, bytes[] calldata _data)` calls `InceptionMellowAdapter.delegate( address mellowVault, uint256 amount, bytes[] calldata _data )` to forward assets to `InceptionMellowAdapter`
