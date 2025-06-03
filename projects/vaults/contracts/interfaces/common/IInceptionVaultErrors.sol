@@ -48,6 +48,8 @@ interface IInceptionVaultErrors {
 
     error LowerMinAmount(uint256 minAmount);
 
+    error SlippageMinOut(uint256 minOut, uint256 resultAmount);
+
     error ZeroFlashWithdrawFee();
 
     /// TVL errors
@@ -74,6 +76,8 @@ interface IInceptionVaultErrors {
 
     error AdapterNotFound();
 
+    error AdapterNotEmpty();
+
     error ClaimFailed();
 
     error WithdrawalFailed();
@@ -83,4 +87,6 @@ interface IInceptionVaultErrors {
     error MintedLess();
 
     error LowerThanMinOut(uint256 minOut);
+
+    error RewardsTreasuryNotSet();
 }

@@ -7,6 +7,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IInceptionVaultErrors} from "../interfaces/common/IInceptionVaultErrors.sol";
+import {IInceptionAssetsHandler} from "../interfaces/common/IInceptionAssetsHandler.sol";
 
 /**
  * @title The InceptionAssetsHandler contract
@@ -17,13 +18,22 @@ contract InceptionAssetsHandler is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,
+    IInceptionAssetsHandler,
     IInceptionVaultErrors
 {
     using SafeERC20 for IERC20;
 
     IERC20 internal _asset;
 
-    uint256[50 - 1] private __reserver;
+    uint256 public currentRewards;
+    /// @dev blockTime
+    uint256 public startTimeline;
+    /// @dev in seconds
+    uint256 public rewardsTimeline;
+    /// @dev Address of treasury which holds rewards.
+    address public rewardsTreasury;
+
+    uint256[50 - 5] private __reserver;
 
     function __InceptionAssetsHandler_init(
         IERC20 assetAddress
@@ -41,29 +51,34 @@ contract InceptionAssetsHandler is
 
     /// @dev returns the balance of iVault in the asset
     function totalAssets() public view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        uint256 elapsedDays = (block.timestamp - startTimeline) / 1 days;
+        uint256 totalDays = rewardsTimeline / 1 days;
+        if (elapsedDays > totalDays) return _asset.balanceOf(address(this));
+        uint256 reservedRewards = (currentRewards / totalDays) * (totalDays - elapsedDays);
+        return (_asset.balanceOf(address(this)) - reservedRewards);
     }
 
-    function _transferAssetFrom(address staker, uint256 amount) internal {
-        _asset.safeTransferFrom(staker, address(this), amount);
+    /**
+     * @notice Set rewards treasury address
+     * @param treasury Address of the treasury which holds rewards
+     */
+    function setRewardsTreasury(address treasury) external onlyOwner {
+        require(treasury != address(0), NullParams());
+
+        emit SetRewardsTreasury(rewardsTreasury);
+        rewardsTreasury = treasury;
     }
 
-    function _transferAssetTo(address receiver, uint256 amount) internal {
-        _asset.safeTransfer(receiver, amount);
-    }
+    /**
+     * @notice Updates the duration of the rewards timeline.
+     * @dev The new timeline must be at least 1 day (86400 seconds)
+     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
+     */
+    function setRewardsTimeline(uint256 newTimelineInSeconds) external onlyOwner {
+        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
+            revert InconsistentData();
 
-    /// @dev The functions below serve the proper withdrawal and claiming operations
-    /// @notice Since a particular LST loses some wei on each transfer,
-    /// this needs to be taken into account
-    function _getAssetWithdrawAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
-    }
-
-    function _getAssetReceivedAmount(
-        uint256 amount
-    ) internal view virtual returns (uint256) {
-        return amount;
+        emit RewardsTimelineChanged(rewardsTimeline, newTimelineInSeconds);
+        rewardsTimeline = newTimelineInSeconds;
     }
 }
