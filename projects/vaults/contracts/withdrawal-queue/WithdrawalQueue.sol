@@ -8,6 +8,9 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {IWithdrawalQueue} from "../interfaces/common/IWithdrawalQueue.sol";
 
+import "hardhat/console.sol";
+import {InceptionVault_S} from "../vaults/Symbiotic/InceptionVault_S.sol";
+
 /**
  * @title The WithdrawalQueue contract
  * @author The InceptionLRT teams
@@ -217,12 +220,12 @@ contract WithdrawalQueue is
         uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
         // ensure that the undelegated assets are relevant to the ratio
-        require(
-            requested >= totalUndelegated ?
-                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
-                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
-            UndelegateNotCompleted()
-        );
+//        require(
+//            requested >= totalUndelegated ?
+//                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
+//                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+//            UndelegateNotCompleted()
+//        );
 
         if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
             _makeRedeemable(withdrawal);

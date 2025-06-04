@@ -15,6 +15,7 @@ export const emptyBytes = [
 export const adapters = {
   EigenLayer: 'EigenLayer',
   Mellow: 'Mellow',
+  MellowV3: 'MellowV3',
   Symbiotic: 'Symbiotic',
 };
 

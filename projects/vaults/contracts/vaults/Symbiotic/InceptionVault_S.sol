@@ -12,6 +12,8 @@ import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
 import {IWithdrawalQueue} from "../../interfaces/common/IWithdrawalQueue.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title InceptionVault_S
  * @author The InceptionLRT team
@@ -506,7 +508,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
         uint256 numeral = totalSupply + totalSharesToWithdraw();
         uint256 denominator = getTotalDeposited();
 
-        if (denominator == 0 || numeral == 0) {
+        if (denominator <= 10 || numeral <= 10) {
             return 1e18;
         }
 

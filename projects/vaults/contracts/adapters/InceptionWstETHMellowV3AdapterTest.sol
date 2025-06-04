@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BeaconProxy, Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {Address} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import {IIMellowAdapter} from "../interfaces/adapters/IIMellowAdapter.sol";
+import {IInceptionMellowAdapter} from "../interfaces/adapters/IInceptionMellowAdapter.sol";
 import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/IMellowDepositWrapper.sol";
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IEthWrapper} from "../interfaces/symbiotic-vault/mellow-core/IEthWrapper.sol";
@@ -17,11 +18,13 @@ import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMul
 import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
 import {IClaimer} from "../interfaces/symbiotic-vault/mellow-core/IClaimer.sol";
 
-import {IBaseAdapter} from "./IBaseAdapter.sol";
+import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowV3AdapterClaimer} from "../adapter-claimers/MellowV3AdapterClaimer.sol";
 
 import "hardhat/console.sol";
 import {stETH} from "../tests/Lido/stETH.sol";
+import {IInceptionMellowAdapter} from "../interfaces/adapters/IInceptionMellowAdapter.sol";
+import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 
 interface IWithdrawalQueueERC721 {
     struct WithdrawalRequestStatus {
@@ -49,12 +52,12 @@ interface IWeth {
 }
 
 /**
- * @title The MellowAdapter Contract
+ * @title The InceptionWstETHMellowV3Adapter.sol Contract
  * @author The InceptionLRT team
  * @dev Handles delegation and withdrawal requests within the Mellow protocol.
  * @notice Can only be executed by InceptionVault/InceptionOperator or the owner.
  */
-contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
+contract InceptionWstETHMellowV3AdapterTest is IInceptionMellowAdapter, InceptionBaseAdapter {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -76,23 +79,30 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
 
     address public withdrawalQueue;
 
+    mapping(address => address) internal _claimerVaults;
     address internal _emergencyClaimer;
-    address internal _mellowClaimer;
     EnumerableSet.AddressSet internal pendingClaimers;
-    mapping(address => address) internal claimerVaults;
     address[] internal availableClaimers;
+
+    address internal _claimerImplementation;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() payable {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the Mellow adapter with vaults and parameters
+     * @param _mellowVaults Array of Mellow vault addresses
+     * @param asset Address of the underlying asset
+     * @param trusteeManager Address of the trustee manager
+     */
     function initialize(
         IMellowVault[] memory _mellowVaults,
         IERC20 asset,
         address trusteeManager
     ) public initializer {
-        __IBaseAdapter_init(asset, trusteeManager);
+        __InceptionBaseAdapter_init(asset, trusteeManager);
 
         uint256 totalAllocations_;
         for (uint256 i = 0; i < _mellowVaults.length; i++) {
@@ -106,11 +116,24 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         totalAllocations = totalAllocations_;
     }
 
+    /**
+     * @notice Delegates funds to a Mellow vault either directly or automatically
+     * @dev Can only be called by trustee when contract is not paused
+     * @param mellowVault Address of the target Mellow vault
+     * @param amount Amount of tokens to delegate
+     * @param _data Additional data containing referral address and auto-delegation flag
+     * @return depositedAmount The amount successfully deposited
+     */
     function delegate(
         address mellowVault,
         uint256 amount,
         bytes[] calldata _data
-    ) external override onlyTrustee whenNotPaused returns (uint256 depositedAmount)
+    )
+        external
+        override
+        onlyTrustee
+        whenNotPaused
+        returns (uint256 depositedAmount)
     {
         (address referral, bool delegateAuto) = abi.decode(_data[0], (address, bool));
 
@@ -134,6 +157,13 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         return false;
     }
 
+    /**
+     * @notice Internal function to delegate funds to a specific vault
+     * @param mellowVault Address of the Mellow vault
+     * @param amount Amount to delegate
+     * @param referral Referral address
+     * @return Amount successfully deposited
+     */
     function _delegate(
         address mellowVault,
         uint256 amount,
@@ -191,6 +221,14 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         if (left != 0) _asset.safeTransfer(_inceptionVault, left);
     }
 
+    /**
+     * @notice Withdraws funds from a Mellow vault
+     * @dev Can only be called by trustee when contract is not paused
+     * @param _mellowVault Address of the Mellow vault to withdraw from
+     * @param amount Amount to withdraw
+     * @param emergency Flag for emergency withdrawal
+     * @return Tuple of (remaining amount to withdraw, amount claimed)
+     */
     function withdraw(
         address _mellowVault,
         uint256 amount,
@@ -206,7 +244,7 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         );
 
         // save vault for given claimer
-        claimerVaults[claimer] = _mellowVault;
+        _claimerVaults[claimer] = _mellowVault;
 
         uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
         if (claimedAmount > 0) {
@@ -218,6 +256,13 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         return (amount - claimedAmount, claimedAmount);
     }
 
+    /**
+     * @notice Claims available rewards or withdrawn funds
+     * @dev Can only be called by trustee
+     * @param _data Array containing vault address and claim parameters
+     * @param emergency Flag for emergency claim process
+     * @return Amount of tokens claimed
+     */
     function claimFromMellow(
         bytes[] calldata _data,
         bool emergency
@@ -319,11 +364,15 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         if (ethBalance != 0) IWeth(address(_asset)).deposit{value: ethBalance}();
     }
 
+    /**
+     * @notice Adds a new Mellow vault to the adapter
+     * @param mellowVault Address of the new vault
+     */
     function addMellowVault(address mellowVault) external onlyOwner {
-        if (mellowVault == address(0)) revert ZeroAddress();
+        require(mellowVault != address(0), ZeroAddress());
 
         for (uint8 i = 0; i < mellowVaults.length; i++) {
-            if (mellowVault == address(mellowVaults[i])) revert AlreadyAdded();
+            require(mellowVault != address(mellowVaults[i]), AlreadyAdded());
         }
 
         mellowVaults.push(IMellowVault(mellowVault));
@@ -331,23 +380,40 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         emit VaultAdded(mellowVault);
     }
 
-    function changeAllocation(
-        address mellowVault,
-        uint256 newAllocation
-    ) external onlyOwner {
-        if (mellowVault == address(0)) revert ZeroAddress();
+    /**
+     * @notice Changes allocation for a specific vault
+     * @param mellowVault Address of the vault
+     * @param newAllocation New allocation amount
+     */
+    function changeAllocation(address mellowVault, uint256 newAllocation)
+        external
+        onlyOwner
+    {
+        require(mellowVault != address(0), ZeroAddress());
 
         bool exists;
         for (uint8 i = 0; i < mellowVaults.length; i++) {
             if (mellowVault == address(mellowVaults[i])) exists = true;
         }
-        if (!exists) revert InvalidVault();
+        require(exists, InvalidVault());
         uint256 oldAllocation = allocations[mellowVault];
         allocations[mellowVault] = newAllocation;
 
         totalAllocations = totalAllocations + newAllocation - oldAllocation;
 
         emit AllocationChanged(mellowVault, oldAllocation, newAllocation);
+    }
+
+    /**
+     * @notice Claim rewards from Mellow protocol.
+     * @dev Rewards distribution functionality is not yet available in the Mellow protocol.
+     */
+    function claimRewards(
+        address /*rewardToken*/,
+        bytes memory /*rewardsData*/
+    ) external view onlyTrustee {
+        // Rewards distribution functionality is not yet available in the Mellow protocol.
+        revert("Mellow distribution rewards not implemented yet");
     }
 
     function claimableWithdrawalLido() public view returns (uint256 total) {
@@ -392,10 +458,10 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
     }
 
     function pendingWithdrawalAmount()
-    public
-    view
-    override
-    returns (uint256 total)
+        public
+        view
+        override
+        returns (uint256 total)
     {
         uint256 length;
 
@@ -440,6 +506,14 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         }
     }
 
+    /**
+     * @notice Returns the total amount tokens related to adapter
+     * @return total is the total amount tokens related to adapter
+     */
+    function getTotalBalance() external view returns(uint256) {
+        return inactiveBalance() + getTotalDeposited();
+    }
+
     function inactiveBalance() public view override returns (uint256) {
         return
             pendingWithdrawalAmount() +
@@ -450,6 +524,14 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
     }
 
     function inactiveBalanceEmergency() public view returns (uint256) {
+        return 0;
+    }
+
+    /**
+     * @notice Returns the total inactive balance for emergency situations
+     * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
+     */
+    function pendingEmergencyWithdrawalAmount() public view returns (uint256) {
         return 0;
     }
 
@@ -476,24 +558,10 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         emit EthWrapperChanged(oldWrapper, newEthWrapper);
     }
 
-    function setMellowClaimer(address newClaimer) external onlyOwner {
-        if (!Address.isContract(newClaimer)) revert NotContract();
-        if (newClaimer == address(0)) revert ZeroAddress();
-
-        address oldClaimer = _mellowClaimer;
-        _mellowClaimer = newClaimer;
-
-        emit ClaimerChanged(oldClaimer, newClaimer);
-    }
-
     function setLidoWithdrawalQueue(address queue) external onlyOwner {
         if (!Address.isContract(queue)) revert NotContract();
 
         withdrawalQueue = queue;
-    }
-
-    function getVersion() external pure override returns (uint256) {
-        return 3;
     }
 
     function convertUnderlyingToAsset(uint256 amount) private view returns (uint256) {
@@ -521,18 +589,41 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         ).getWstETHByStETH(amount);
     }
 
-    /// @notice Retrieves or creates a claimer address based on the emergency condition.
-    /// @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
-    ///      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
-    ///      The returned claimer is added to the `pendingClaimers` set.
-    /// @param emergency Boolean indicating whether an emergency claimer is required.
-    /// @return claimer The address of the claimer to be used.
-    function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
+    /**
+     * @notice Sets the implementation address for the claimer
+     * @param newImplementation The address of the new implementation
+     */
+    function setClaimerImplementation(
+        address newImplementation
+    ) external onlyOwner {
+        emit EmergencyClaimerSet(_claimerImplementation, newImplementation);
+        _claimerImplementation = newImplementation;
+    }
+
+    /**
+     * @notice Returns the contract version
+     * @return Current version number (3)
+     */
+    function getVersion() external pure override returns (uint256) {
+        return 3;
+    }
+
+    /**
+     * @notice Retrieves or creates a claimer address based on the emergency condition
+     * @dev If `emergency` is true, returns the existing emergency claimer or deploys a new one if it doesn't exist.
+     *      If `emergency` is false, reuses an available claimer from the `availableClaimers` array or deploys a new one.
+     *      The returned claimer is added to the `pendingClaimers` set
+     * @param emergency Boolean indicating whether an emergency claimer is required
+     * @return claimer The address of the claimer to be used
+     */
+    function _getOrCreateClaimer(
+        bool emergency
+    ) internal virtual returns (address claimer) {
         if (emergency) {
-            if (_emergencyClaimer == address(0)) {
-                _emergencyClaimer = _deployClaimer();
-            }
-            return _emergencyClaimer;
+            return
+                _emergencyClaimer != address(0)
+                    ? _emergencyClaimer
+                    : (_emergencyClaimer = _deployClaimer());
         }
 
         if (availableClaimers.length > 0) {
@@ -546,19 +637,47 @@ contract IMellowAdapterV3 is IIMellowAdapter, IBaseAdapter {
         return claimer;
     }
 
-    /// @notice Removes a claimer from the pending list and recycles it to the available claimers.
-    /// @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`.
-    /// @param claimer The address of the claimer to be removed from pending status.
+    /**
+     * @notice Removes a claimer from the pending list and recycles it to the available claimers
+     * @dev Deletes the claimer's vault mapping, removes it from `pendingClaimers`, and adds it to `availableClaimers`
+     * @param claimer The address of the claimer to be removed from pending status
+     */
     function _removePendingClaimer(address claimer) internal {
-        delete claimerVaults[claimer];
+        delete _claimerVaults[claimer];
         pendingClaimers.remove(claimer);
         availableClaimers.push(claimer);
     }
 
-    /// @notice Deploys a new contract instance.
-    /// @dev Creates a new claimer contract with the `_asset` address passed as a constructor parameter.
-    /// @return The address of the newly deployed MellowAdapterClaimer contract.
+    /**
+     * @notice Deploys a new MellowAdapterClaimer contract instance
+     * @dev Creates a new claimer contract with the `_asset` address passed as a initialize parameter
+     * @dev ownership is transferred to the adapter owner
+     * @return The address of the newly deployed MellowAdapterClaimer contract
+     */
     function _deployClaimer() internal returns (address) {
-        return address(new MellowV3AdapterClaimer(address(_asset)));
+        if (_claimerImplementation == address(0))
+            revert ClaimerImplementationNotSet();
+        // deploy new beacon proxy and do init call
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address)",
+            address(_asset)
+        );
+        address claimer = address(new BeaconProxy(address(this), data));
+
+        (bool success,) = claimer.call(
+            abi.encodeWithSignature("transferOwnership(address)", owner())
+        );
+        require(success, TransferOwnershipFailed());
+
+        emit ClaimerDeployed(claimer);
+        return claimer;
+    }
+
+    /**
+     * @notice Beacon proxy implementation address
+     * @return The address of the claimer implementation
+     */
+    function implementation() external view returns (address) {
+        return _claimerImplementation;
     }
 }

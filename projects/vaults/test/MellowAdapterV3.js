@@ -154,7 +154,7 @@ const initVault = async a => {
   const iVaultOperator = await impersonateWithEth(a.iVaultOperator, e18);
 
   console.log("- Mellow Adapter");
-  const mellowAdapterFactory = await ethers.getContractFactory("IMellowAdapterV3");
+  const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowV3Adapter.sol.sol");
   let mellowAdapterV3 = await upgrades.deployProxy(mellowAdapterFactory, [
     [mellowVaults[0].vaultAddress],
     a.assetAddress,
