@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 const wETHAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // Lido stETH
 
 export const wETH = {
-  blockNumber: 22166925,
+  blockNumber: 22644352,
   ratioErr: 3n,
   transactErr: 5n,
   vault: {
@@ -19,7 +19,7 @@ export const wETH = {
     address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     donor: "0x57757E3D981446D585Af0D9Ae4d7DF6D64647806",
     wstETH: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-    wstETHDonor: "0xd85351181b3F264ee0FDFa94518464d7c3DefaDa"
+    wstETHDonor: "0xb99a2c4C1C4F1fc27150681B740396F6CE1cBcF5"
   },
 
   adapters: {

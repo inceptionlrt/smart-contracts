@@ -20,10 +20,6 @@ interface IWithdrawalQueueERC721 {
     function WSTETH() external view returns (address);
 }
 
-interface IWETH {
-    function deposit() payable external;
-}
-
 /**
  * @title MellowV3AdapterClaimer
  * @author The InceptionLRT team
@@ -98,4 +94,6 @@ contract MellowV3AdapterClaimer is
         (bool success,) = msg.sender.call{value: ethBalanceAfter - ethBalanceBefore}("");
         require(success);
     }
+
+    receive() external payable {}
 }

@@ -14,6 +14,7 @@ interface IInceptionMellowAdapter is IInceptionBaseAdapter {
     error InvalidAllocation();
     error TooMuchSlippage();
     error AlreadyDeactivated();
+    error LidoRequestNotFinalized();
 
     event AllocationChanged(
         address mellowVault,
@@ -33,7 +34,7 @@ interface IInceptionMellowAdapter is IInceptionBaseAdapter {
 
     event ClaimerChanged(address indexed _old, address indexed _new);
 
-    event LidoUnstaked(uint256 indexed requestID);
+    event LidoUnstaked(uint256 indexed requestID, uint256 wrappedAmount);
 
     function claimableWithdrawalAmount() external view returns (uint256);
 }
