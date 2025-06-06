@@ -22,10 +22,10 @@ import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowV3AdapterClaimer} from "../adapter-claimers/MellowV3AdapterClaimer.sol";
 
 /**
- * @title The InceptionWstETHMellowAdapter Contract
+ * @title The InceptionWstETHMellowV3Adapter Contract
  * @author The InceptionLRT team
- * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
- * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol for wETH asset token.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wETH asset.
  */
 contract InceptionWstETHMellowV3Adapter is
     IInceptionMellowAdapter,
