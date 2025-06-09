@@ -473,6 +473,39 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
     ////// SET functions //////
     ////////////////////////*/
 
+    /**
+     * @notice Adds new rewards to the contract, starting a new rewards timeline.
+     * @dev The function allows the operator to deposit Ether as rewards.
+     * It verifies that the previous rewards timeline is over before accepting new rewards.
+     */
+    function setCurrentRewards(
+        uint256 newCurrentRewards,
+        uint256 newStartTimeline,
+        uint256 rewardRefundAmount
+    ) external nonReentrant onlyOwner {
+        require(currentRewards > 0, NullParams());
+        require(rewardRefundAmount <= currentRewards, InconsistentData());
+
+        currentRewards = newCurrentRewards;
+        startTimeline = newStartTimeline;
+
+        _transferAssetTo(_operator, rewardRefundAmount);
+    }
+
+    /**
+     * @notice Updates the duration of the rewards timeline.
+     * @dev The new timeline must be at least 1 day (86400 seconds)
+     * @param newTimelineInSeconds The new duration of the rewards timeline, measured in seconds.
+     */
+    function setRewardsTimeline(
+        uint256 newTimelineInSeconds
+    ) external onlyOwner {
+        if (newTimelineInSeconds < 1 days || newTimelineInSeconds % 1 days != 0)
+            revert InconsistentData();
+
+        rewardsTimeline = newTimelineInSeconds;
+    }
+
     function setRewardsCoordinator(
         IRewardsCoordinator newRewardsCoordinator
     ) external onlyOwner {
@@ -482,7 +515,6 @@ contract InceptionVault is IInceptionVault, EigenLayerHandler {
 
         newRewardsCoordinator.setClaimerFor(owner());
 
-        // emit NameChanged(name, newVaultName);
         rewardsCoordinator = newRewardsCoordinator;
     }
 

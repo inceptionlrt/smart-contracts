@@ -364,22 +364,4 @@ contract EigenLayerHandler is InceptionAssetsHandler, IEigenLayerHandler {
         emit TargetCapacityChanged(targetCapacity, newTargetCapacity);
         targetCapacity = newTargetCapacity;
     }
-
-    function forceUndelegateRecovery(
-        uint256 amount,
-        address restaker
-    ) external onlyOperator {
-        if (restaker == address(0)) revert NullParams();
-        for (uint256 i = 0; i < restakers.length; ++i) {
-            if (
-                restakers[i] == restaker &&
-                !delegationManager.isDelegated(restakers[i])
-            ) {
-                restakers[i] = _MOCK_ADDRESS;
-                break;
-            }
-        }
-        _pendingWithdrawalAmount += amount;
-    }
 }
-

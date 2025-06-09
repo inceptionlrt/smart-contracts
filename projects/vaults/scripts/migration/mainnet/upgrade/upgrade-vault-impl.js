@@ -1,28 +1,14 @@
 const { ethers, upgrades } = require("hardhat");
 
-const vaults = [
-  "0x814CC6B8fd2555845541FB843f37418b05977d8d",
-  "0x1Aa53BC4Beb82aDf7f5EDEE9e3bBF3434aD59F12",
-  "0x4878F636A9Aa314B776Ac51A25021C44CAF86bEd",
-  "0xA9F8c770661BeE8DF2D026edB1Cb6FF763C780FF",
-  "0x36B429439AB227fAB170A4dFb3321741c8815e55",
-  "0xC0660932C5dCaD4A1409b7975d147203B1e9A2B6",
-  "0x90E80E25ABDB6205B08DeBa29a87f7eb039023C2",
-  "0x295234B7E370a5Db2D2447aCA83bc7448f151161",
-  "0xd0ee89d82183D7Ddaef14C6b4fC0AA742F426355",
-];
-
 async function main() {
   [deployer] = await ethers.getSigners();
   console.log("Scheduling with the account:", deployer.address);
-  // get all current vaults
-  for (const vaultAddress of vaults) {
-    console.log(`Upgdading the InceptionVault with the address: ${vaultAddress}`);
 
-    let newImpl = "0xAA95D02E9C75804E6C7ba03fBD420A5D7F5fEA5a";
-    console.log(vaultAddress, newImpl);
-    await upgradeVaultImpl(vaultAddress, newImpl);
-  }
+  const vaultAddress = "0x295234B7E370a5Db2D2447aCA83bc7448f151161";
+  let newImpl = "0x13e4a6a36b61bef57f2f4b6032da945a33af144e";
+  console.log(vaultAddress, newImpl);
+
+  await upgradeVaultImpl(vaultAddress, newImpl);
 }
 
 const upgradeVaultImpl = async (vaultAddress, newImpl) => {
@@ -36,6 +22,7 @@ const upgradeVaultImpl = async (vaultAddress, newImpl) => {
 
   const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(vaultAddress);
   console.log(`proxyAdminAddress: ${proxyAdminAddress} || delay: ${delay}`);
+
   const proxyAdmin = await ethers.getContractAt("ProxyAdminMock", proxyAdminAddress);
   const transaction = await proxyAdmin.upgrade.populateTransaction(vaultAddress, newImpl);
 
