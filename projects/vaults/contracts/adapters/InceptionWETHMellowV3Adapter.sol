@@ -14,17 +14,20 @@ import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/I
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMultiVaultStorage.sol";
 import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
+import {IWithdrawalQueueERC721} from "../interfaces/common/IWithdrawalQueueERC721.sol";
+import {IWStethInterface as IWstETH} from "../interfaces/common/IStEth.sol";
+import {IWETH} from "../interfaces/common/IWETH.sol";
 
 import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowV3AdapterClaimer} from "../adapter-claimers/MellowV3AdapterClaimer.sol";
 
 /**
- * @title The InceptionWstETHMellowV3Adapter Contract
+ * @title The InceptionWETHMellowV3Adapter Contract
  * @author The InceptionLRT team
- * @dev Handles delegation and withdrawal requests within the Mellow protocol for wstETH asset token.
- * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wstETH asset.
+ * @dev Handles delegation and withdrawal requests within the Mellow protocol for wETH asset token.
+ * @notice Can only be executed by InceptionVault/InceptionOperator or the owner and used for wETH asset.
  */
-contract InceptionWstETHMellowV3Adapter is
+contract InceptionWETHMellowV3Adapter is
     IInceptionMellowAdapter,
     InceptionBaseAdapter
 {
@@ -210,29 +213,44 @@ contract InceptionWstETHMellowV3Adapter is
         returns (uint256, uint256)
     {
         address claimer = _getOrCreateClaimer(emergency);
-        uint256 balanceState = _asset.balanceOf(claimer);
 
         // claim from mellow
         _claimerVaults[claimer] = _mellowVault;
-        IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
+        IERC4626(_mellowVault).withdraw(
+            convertAssetToUnderlying(amount), claimer, address(this)
+        );
 
-        uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
-        uint256 undelegatedAmount = amount - claimedAmount;
+        emit MellowWithdrawn(amount, 0, claimer);
 
-        if (claimedAmount > 0) {
-            claimer == address(this)
-                ? _asset.safeTransfer(_inceptionVault, claimedAmount)
-                : _asset.safeTransferFrom(
-                    claimer,
-                    _inceptionVault,
-                    claimedAmount
-                );
-        }
+        return (amount, 0);
+    }
 
-        if (undelegatedAmount == 0 && !emergency) _removePendingClaimer(claimer);
+    /**
+     * @notice Claims available rewards or withdrawn funds
+     * @dev Can only be called by trustee
+     * @param _data Array containing vault address and claim parameters
+     * @param emergency Flag for emergency claim process
+     * @return Amount of tokens claimed
+     */
+    function claimFromMellow(bytes[] calldata _data, bool emergency)
+        external
+        onlyTrustee
+        whenNotPaused
+        returns (uint256)
+    {
+        require(_data.length > 0, ValueZero());
+        (address _mellowVault, address payable claimer) = abi.decode(_data[0], (address, address));
 
-        emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
-        return (undelegatedAmount, claimedAmount);
+        // emergency claim available only for emergency claimer
+        if ((emergency && _emergencyClaimer != claimer) || (!emergency && claimer == _emergencyClaimer)) revert OnlyEmergency();
+        if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
+
+        _claimPending(_mellowVault, claimer);
+
+        (uint256 amount, uint256 requestID) = _unstakeFromLido(claimer);
+        emit LidoUnstaked(requestID, amount);
+
+        return amount;
     }
 
     /**
@@ -250,18 +268,15 @@ contract InceptionWstETHMellowV3Adapter is
         returns (uint256)
     {
         require(_data.length > 0, ValueZero());
-        (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
+        (address _mellowVault, address payable claimer) = abi.decode(_data[0], (address, address));
 
         // emergency claim available only for emergency claimer
         if ((emergency && _emergencyClaimer != claimer) || (!emergency && claimer == _emergencyClaimer)) revert OnlyEmergency();
         if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
+        if (!emergency) _removePendingClaimer(claimer);
 
-        uint256 balanceState = _asset.balanceOf(address(this));
-        _claimPending(_mellowVault, claimer);
-
-        uint256 amount = _asset.balanceOf(address(this)) - balanceState;
+        uint256 amount = _claimFromLido(claimer);
         require(amount > 0, ValueZero());
-
         _asset.safeTransfer(_inceptionVault, amount);
 
         return amount;
@@ -276,7 +291,7 @@ contract InceptionWstETHMellowV3Adapter is
      * @param claimer The address that will receive the claimed assets.
      * @return The total amount of assets successfully claimed.
      */
-    function _claimPending(address _mellowVault, address claimer) internal returns (uint256) {
+    function _claimPending(address _mellowVault, address payable claimer) internal returns (uint256) {
         uint256 totalClaimable;
         uint256 claimableCount;
         uint256 subvaultCount = IMultiVaultStorage(_mellowVault).subvaultsCount();
@@ -323,6 +338,58 @@ contract InceptionWstETHMellowV3Adapter is
             claimer,
             totalClaimable
         );
+    }
+
+    /**
+     * @notice Claims all pending assets for the specified claimer from Lido-related subvaults.
+     * @dev This function is intended to interact specifically with Lido's withdrawal queues.
+     *      It aggregates claimable assets across relevant subvaults and executes the claim
+     *      via the MellowV3AdapterClaimer contract.
+     * @param claimer The address that will receive the claimed Lido assets.
+     * @return The total amount of Lido assets successfully claimed.
+     */
+    function _claimFromLido(address payable claimer) internal returns (uint256) {
+        uint256 ethBalanceBefore = address(this).balance;
+
+        uint256[] memory ids = IWithdrawalQueueERC721(lidoWithdrawalQueue)
+            .getWithdrawalRequests(claimer);
+        IWithdrawalQueueERC721.WithdrawalRequestStatus[] memory status
+        = IWithdrawalQueueERC721(lidoWithdrawalQueue)
+            .getWithdrawalStatus(ids);
+
+        for (uint256 i = 0; i < status.length; i++) {
+            require(status[i].isFinalized, LidoRequestNotFinalized());
+
+            MellowV3AdapterClaimer(claimer).claimLidoWithdrawal(
+                lidoWithdrawalQueue, ids[i], address(_asset)
+            );
+        }
+
+        uint256 ethBalanceAfter = address(this).balance;
+        uint256 claimedAmount = ethBalanceAfter - ethBalanceBefore;
+        require(claimedAmount > 0, ValueZero());
+
+        // convert ETH to wETH
+        IWETH(address(_asset)).deposit{value: claimedAmount}();
+
+        return claimedAmount;
+    }
+
+    /**
+     * @notice Initiates an unstake request from Lido on behalf of the given claimer.
+     * @dev This function interacts with Lido's withdrawal queue to request the withdrawal
+     *      of all available staked assets for the claimer. It returns the amount requested
+     *      and the associated request ID.
+     * @param claimer The address on whose behalf the unstake request is made.
+     * @return balance The total amount of stETH (or wstETH) requested for withdrawal.
+     * @return requestId The ID of the unstake request created in Lido's withdrawal queue.
+     */
+    function _unstakeFromLido(address payable claimer) internal returns (uint256 balance, uint256 requestId) {
+        balance = IERC20(IEthWrapper(ethWrapper).wstETH()).balanceOf(claimer);
+        requestId = MellowV3AdapterClaimer(claimer).requestWithdrawalsWstETH(
+            lidoWithdrawalQueue,
+            balance
+        )[0];
     }
 
     /**
@@ -601,7 +668,33 @@ contract InceptionWstETHMellowV3Adapter is
         uint256 balance = mellowVault.balanceOf(address(this));
         if (balance == 0) return 0;
 
-        return IERC4626(address(mellowVault)).previewRedeem(balance);
+        return convertUnderlyingToAsset(
+            IERC4626(address(mellowVault)).previewRedeem(balance)
+        );
+    }
+
+    /**
+     * @notice Converts the given amount of underlying tokens to the equivalent amount of asset tokens.
+     * @dev This function performs a view operation and does not modify the state.
+     * @param amount The amount of underlying tokens to convert.
+     * @return The equivalent amount of asset tokens.
+     */
+    function convertUnderlyingToAsset(uint256 amount) private view returns (uint256) {
+        return IWstETH(
+            IEthWrapper(ethWrapper).wstETH()
+        ).getStETHByWstETH(amount);
+    }
+
+    /**
+     * @notice Converts the given amount of asset tokens to the equivalent amount of underlying tokens.
+     * @dev This is a view function that does not alter the contract state.
+     * @param amount The amount of asset tokens to convert.
+     * @return The equivalent amount of underlying tokens.
+     */
+    function convertAssetToUnderlying(uint256 amount) private view returns (uint256) {
+        return IWstETH(
+            IEthWrapper(ethWrapper).wstETH()
+        ).getWstETHByStETH(amount);
     }
 
     /**
@@ -648,6 +741,16 @@ contract InceptionWstETHMellowV3Adapter is
         require(Address.isContract(newImplementation), NotContract());
         emit EmergencyClaimerSet(_claimerImplementation, newImplementation);
         _claimerImplementation = newImplementation;
+    }
+
+    /**
+     * @notice Sets the address of the Lido Withdrawal Queue contract.
+     * @dev Can only be called by the contract owner.
+     * @param queue The address of the Lido Withdrawal Queue to set.
+     */
+    function setLidoWithdrawalQueue(address queue) external onlyOwner {
+        require(Address.isContract(queue), NotContract());
+        lidoWithdrawalQueue = queue;
     }
 
     /**
