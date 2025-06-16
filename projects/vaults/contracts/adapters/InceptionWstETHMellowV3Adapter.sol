@@ -47,8 +47,6 @@ contract InceptionWstETHMellowV3Adapter is
 
     address public ethWrapper;
 
-    address public lidoWithdrawalQueue;
-
     mapping(address => address) internal _claimerVaults;
     address internal _emergencyClaimer;
     EnumerableSet.AddressSet internal pendingClaimers;
