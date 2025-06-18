@@ -262,7 +262,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
 
       // Act
       const { iVault: iVaultNew } = await initVault(assetData);
-      await (await iVault.migrateDepositBonus(await iVaultNew.getAddress())).wait();
+      await (await iVault.migrateDepositBonus(await iVaultNew.getAddress(), false)).wait();
 
       // Assert: bonus migrated
       const oldDepositBonus = await iVault.depositBonusAmount();
@@ -273,7 +273,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
     });
 
     it('should revert if the new vault address is zero', async () => {
-      await expect(iVault.migrateDepositBonus(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+      await expect(iVault.migrateDepositBonus(ethers.ZeroAddress, false)).to.be.revertedWithCustomError(
         iVault,
         'InvalidAddress'
       );
@@ -282,7 +282,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
     it('should revert if there is no deposit bonus to migrate', async () => {
       expect(await iVault.depositBonusAmount(), 'Deposit bonus should be 0').to.be.eq(0);
 
-      await expect(iVault.migrateDepositBonus(staker.address)).to.be.revertedWithCustomError(iVault, 'NullParams');
+      await expect(iVault.migrateDepositBonus(staker.address, false)).to.be.revertedWithCustomError(iVault, 'NullParams');
     });
 
     it('should revert if there are delegated funds', async () => {
@@ -304,11 +304,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
       const { iVault: iVaultNew } = await initVault(assetData);
 
       // Act/Assert
-      await expect(iVault.migrateDepositBonus(iVaultNew.address)).to.be.revertedWithCustomError(iVault, 'ValueZero');
+      await expect(iVault.migrateDepositBonus(iVaultNew.address, false)).to.be.revertedWithCustomError(iVault, 'ValueZero');
     });
 
     it('should only allow the owner to migrate the deposit bonus', async () => {
-      await expect(iVault.connect(staker).migrateDepositBonus(staker.address)).to.be.revertedWith(
+      await expect(iVault.connect(staker).migrateDepositBonus(staker.address, false)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       );
     });
@@ -327,7 +327,7 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name}`, function () {
 
       // Act
       const { iVault: iVaultNew } = await initVault(assetData);
-      const migrateTx = await (await iVault.migrateDepositBonus(await iVaultNew.getAddress())).wait();
+      const migrateTx = await (await iVault.migrateDepositBonus(await iVaultNew.getAddress(), false)).wait();
 
       // Assert: event emitted
       await expect(migrateTx)
