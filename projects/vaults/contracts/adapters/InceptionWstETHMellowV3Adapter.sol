@@ -358,15 +358,18 @@ contract InceptionWstETHMellowV3Adapter is
     /**
      * @notice Remove a Mellow vault from the adapter
      * @param vault Address of the mellow vault to be removed
+     * @param skipEmptyCheck Skip check vault to empty
      */
-    function removeVault(address vault) external onlyOwner {
+    function removeVault(address vault, bool skipEmptyCheck) external onlyOwner {
         require(vault != address(0), ZeroAddress());
         require(
-            getDeposited(vault) == 0 &&
-            pendingWithdrawalAmount(vault, true) == 0 &&
-            pendingWithdrawalAmount(vault, false) == 0 &&
-            _claimableWithdrawalAmount(vault, true) == 0 &&
-            _claimableWithdrawalAmount(vault, false) == 0,
+            skipEmptyCheck || (
+                getDeposited(vault) == 0 &&
+                pendingWithdrawalAmount(vault, true) == 0 &&
+                pendingWithdrawalAmount(vault, false) == 0 &&
+                _claimableWithdrawalAmount(vault, true) == 0 &&
+                _claimableWithdrawalAmount(vault, false) == 0
+            ),
             VaultNotEmpty()
         );
 
