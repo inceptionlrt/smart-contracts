@@ -27,6 +27,9 @@ abstract contract InceptionBaseAdapter is
     address internal _trusteeManager;
     address internal _inceptionVault;
 
+    // @notice This variable must not be used for already deployed vaults — take care during upgrades
+    uint256[50 - 3] private __gap;
+
     modifier onlyTrustee() {
         require(
             msg.sender == _inceptionVault || msg.sender == _trusteeManager,
