@@ -5,7 +5,6 @@ import {AdapterHandler, IERC20} from "../../adapter-handler/AdapterHandler.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
@@ -37,7 +36,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
-    IInceptionRatioFeed public ratioFeed;
+    address private __deprecated_ratioFeed;
     address public treasury;
     uint64 public protocolFee;
 
@@ -730,17 +729,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         emit TreasuryChanged(treasury, newTreasury);
         treasury = newTreasury;
-    }
-
-    /**
-     * @dev Sets the ratio feed
-     * @param newRatioFeed New ratio feed address
-     */
-    function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
-        if (address(newRatioFeed) == address(0)) revert NullParams();
-
-        emit RatioFeedChanged(address(ratioFeed), address(newRatioFeed));
-        ratioFeed = newRatioFeed;
     }
 
     /**
