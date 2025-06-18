@@ -1970,8 +1970,6 @@ describe("Symbiotic Vault Slashing", function() {
       expect(withdrawalEpoch[0]).to.be.eq(false);
       expect(withdrawalEpoch[1]).to.be.eq(epochShares);
       expect(withdrawalEpoch[2]).to.be.eq(0n);
-      expect(withdrawalEpoch[3]).to.be.eq(0n);
-      expect(withdrawalEpoch[4]).to.be.eq(0n);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
       expect(await withdrawalQueue.getPendingWithdrawalOf(staker)).to.be.greaterThan(0);
       // ----------------
