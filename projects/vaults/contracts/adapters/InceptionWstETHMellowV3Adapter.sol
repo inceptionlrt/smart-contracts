@@ -138,15 +138,21 @@ contract InceptionWstETHMellowV3Adapter is
         require(_beforeDelegate(mellowVault), NotAdded());
 
         _asset.safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(_asset).safeIncreaseAllowance(ethWrapper, amount);
 
-        uint256 lpAmount = IEthWrapper(ethWrapper).deposit(
-            address(_asset),
-            amount,
-            mellowVault,
-            address(this),
-            referral
-        );
+        uint256 lpAmount;
+        if(ethWrapper != address(0)) {
+            IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
+            lpAmount = IEthWrapper(ethWrapper).deposit(
+                address(_asset),
+                amount,
+                mellowVault,
+                address(this),
+                referral
+            );
+        } else {
+            IERC20(_asset).safeIncreaseAllowance(mellowVault, amount);
+            lpAmount = IERC4626(mellowVault).deposit(amount, address(this));
+        }
 
         return lpAmountToAmount(lpAmount, IMellowVault(mellowVault));
     }
@@ -319,7 +325,7 @@ contract InceptionWstETHMellowV3Adapter is
             _mellowVault,
             claimableIndices,
             withdrawalIndices,
-            claimer,
+            address(this),
             totalClaimable
         );
     }

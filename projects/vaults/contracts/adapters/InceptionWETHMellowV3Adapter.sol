@@ -19,7 +19,7 @@ import {IWStethInterface as IWstETH} from "../interfaces/common/IStEth.sol";
 import {IWETH} from "../interfaces/common/IWETH.sol";
 
 import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
-import {MellowV3AdapterClaimer} from "../adapter-claimers/MellowV3AdapterClaimer.sol";
+import {MellowV3AdapterLidoClaimer} from "../adapter-claimers/MellowV3AdapterLidoClaimer.sol";
 
 /**
  * @title The InceptionWETHMellowV3Adapter Contract
@@ -285,7 +285,7 @@ contract InceptionWETHMellowV3Adapter is
     /**
      * @notice Claims all pending assets for a given claimer from all subvaults of the specified Mellow Vault.
      * @dev Iterates through all subvaults to find claimable assets for the `claimer`.
-     *      Constructs an array of indices for subvaults that have claimable assets and passes it to the MellowV3AdapterClaimer.
+     *      Constructs an array of indices for subvaults that have claimable assets and passes it to the MellowV3AdapterLidoClaimer.
      *      If no assets are claimable, the function returns 0 without calling the adapter.
      * @param _mellowVault The address of the Mellow Vault containing multiple subvaults.
      * @param claimer The address that will receive the claimed assets.
@@ -330,7 +330,7 @@ contract InceptionWETHMellowV3Adapter is
             }
         }
 
-        return MellowV3AdapterClaimer(claimer).claim(
+        return MellowV3AdapterLidoClaimer(claimer).claim(
             mellowClaimer,
             _mellowVault,
             claimableIndices,
@@ -344,7 +344,7 @@ contract InceptionWETHMellowV3Adapter is
      * @notice Claims all pending assets for the specified claimer from Lido-related subvaults.
      * @dev This function is intended to interact specifically with Lido's withdrawal queues.
      *      It aggregates claimable assets across relevant subvaults and executes the claim
-     *      via the MellowV3AdapterClaimer contract.
+     *      via the MellowV3AdapterLidoClaimer contract.
      * @param claimer The address that will receive the claimed Lido assets.
      * @return The total amount of Lido assets successfully claimed.
      */
@@ -360,7 +360,7 @@ contract InceptionWETHMellowV3Adapter is
         for (uint256 i = 0; i < status.length; i++) {
             require(status[i].isFinalized, LidoRequestNotFinalized());
 
-            MellowV3AdapterClaimer(claimer).claimLidoWithdrawal(
+            MellowV3AdapterLidoClaimer(claimer).claimLidoWithdrawal(
                 lidoWithdrawalQueue, ids[i], address(_asset)
             );
         }
@@ -386,7 +386,7 @@ contract InceptionWETHMellowV3Adapter is
      */
     function _unstakeFromLido(address payable claimer) internal returns (uint256 balance, uint256 requestId) {
         balance = IERC20(IEthWrapper(ethWrapper).wstETH()).balanceOf(claimer);
-        requestId = MellowV3AdapterClaimer(claimer).requestWithdrawalsWstETH(
+        requestId = MellowV3AdapterLidoClaimer(claimer).requestWithdrawalsWstETH(
             lidoWithdrawalQueue,
             balance
         )[0];

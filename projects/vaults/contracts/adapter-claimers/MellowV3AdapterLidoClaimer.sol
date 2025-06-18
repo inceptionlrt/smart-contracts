@@ -21,13 +21,13 @@ interface IWithdrawalQueueERC721 {
 }
 
 /**
- * @title MellowV3AdapterClaimer
+ * @title MellowV3AdapterLidoClaimer
  * @author The InceptionLRT team
  * @notice Adapter claimer for Mellow Vaults
  * @notice In order to claim withdrawals multiple times
  * @dev This contract is used to claim rewards from Mellow Vaults
  */
-contract MellowV3AdapterClaimer is
+contract MellowV3AdapterLidoClaimer is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC165Upgradeable,
@@ -68,4 +68,32 @@ contract MellowV3AdapterClaimer is
             multiVault, subvaultIndices, indices, recipient, maxAssets
         );
     }
+
+    function requestWithdrawalsWstETH(
+        address withdrawalQueue, uint256 balance
+    ) external returns (uint256[] memory requestIds) {
+        require(msg.sender == _adapter, OnlyAdapter());
+
+        uint256[] memory _amounts = new uint256[](1);
+        _amounts[0] = balance;
+
+        IERC20(
+            IWithdrawalQueueERC721(withdrawalQueue).WSTETH()
+        ).safeIncreaseAllowance(withdrawalQueue, balance);
+
+        return IWithdrawalQueueERC721(withdrawalQueue).requestWithdrawalsWstETH(_amounts, address(this));
+    }
+
+    function claimLidoWithdrawal(address withdrawalQueue, uint256 requestID, address asset) external {
+        require(msg.sender == _adapter, OnlyAdapter());
+
+        uint256 ethBalanceBefore = address(this).balance;
+        IWithdrawalQueueERC721(withdrawalQueue).claimWithdrawal(requestID);
+        uint256 ethBalanceAfter = address(this).balance;
+
+        (bool success,) = msg.sender.call{value: ethBalanceAfter - ethBalanceBefore}("");
+        require(success);
+    }
+
+    receive() external payable {}
 }
