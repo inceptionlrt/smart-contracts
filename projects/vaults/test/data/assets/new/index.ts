@@ -32,22 +32,24 @@ try {
   throw new Error(`File with data for ${assetName} not found.`);
 }
 
-assetData.impersonateStaker = async function (staker, iVault) {
-  const donor = await impersonateWithEth(assetData.asset.donor, toWei(1));
-  const stEth = await ethers.getContractAt("stETH", assetData.asset.nonWrappedAssetAddress);
-  const stEthAmount = toWei(1000);
-  await stEth.connect(donor).approve(this.asset.address, stEthAmount);
+if (assetData.impersonateStaker === undefined) {
+  assetData.impersonateStaker = async function(staker, iVault) {
+    const donor = await impersonateWithEth(assetData.asset.donor, toWei(1));
+    const stEth = await ethers.getContractAt("stETH", assetData.asset.nonWrappedAssetAddress);
+    const stEthAmount = toWei(1000);
+    await stEth.connect(donor).approve(this.asset.address, stEthAmount);
 
-  const wstEth = await ethers.getContractAt("IWSteth", this.asset.address);
-  const balanceBefore = await wstEth.balanceOf(donor.address);
-  await wstEth.connect(donor).wrap(stEthAmount);
-  const balanceAfter = await wstEth.balanceOf(donor.address);
+    const wstEth = await ethers.getContractAt("IWSteth", this.asset.address);
+    const balanceBefore = await wstEth.balanceOf(donor.address);
+    await wstEth.connect(donor).wrap(stEthAmount);
+    const balanceAfter = await wstEth.balanceOf(donor.address);
 
-  const wstAmount = balanceAfter - balanceBefore;
-  await wstEth.connect(donor).transfer(staker.address, wstAmount);
-  await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
-  return staker;
-};
+    const wstAmount = balanceAfter - balanceBefore;
+    await wstEth.connect(donor).transfer(staker.address, wstAmount);
+    await wstEth.connect(staker).approve(await iVault.getAddress(), wstAmount);
+    return staker;
+  };
+}
 
 assetData.addRewardsMellowVault = async function (amount, mellowVault) {
   const donor = await impersonateWithEth(this.asset.donor, toWei(1));

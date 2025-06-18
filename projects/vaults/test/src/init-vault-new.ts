@@ -1,7 +1,7 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import hardhat from "hardhat";
 import { stETH } from "../data/assets/new/stETH";
-import { e18, impersonateWithEth } from "../helpers/utils";
+import { e18, impersonateWithEth, toWei } from "../helpers/utils";
 import { Adapter, adapters, emptyBytes } from "./constants";
 const { ethers, upgrades, network } = hardhat;
 
@@ -58,13 +58,21 @@ export async function initVault(
     }
   }
 
+  if (options?.adapters?.includes(adapters.MellowV3)) {
+    // for (const mVaultInfo of mellowVaults) {
+    for (const mVaultInfo of assetData.adapters.mellowV3) {
+      console.log(`- MellowVaultV3 ${mVaultInfo.name} and curator`);
+      mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
+    }
+  }
+
   const iTokenFactory = await ethers.getContractFactory("InceptionToken");
   const iToken = await upgrades.deployProxy(iTokenFactory, ["TEST InceptionLRT Token", "tINt"]);
   iToken.address = await iToken.getAddress();
 
   const iVaultOperator = await impersonateWithEth(assetData.vault.operator, e18);
 
-  let mellowAdapter: any, symbioticAdapter: any, eigenLayerAdapter: any;
+  let mellowAdapter: any, symbioticAdapter: any, eigenLayerAdapter: any, mellowV3Adapter: any;
 
   if (options?.adapters?.includes(adapters.Mellow)) {
     const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowAdapter");
@@ -83,6 +91,24 @@ export async function initVault(
     await mellowAdapter.setClaimerImplementation(await claimerImplementation.getAddress());
 
     mellowAdapter.address = await mellowAdapter.getAddress();
+  }
+
+  if (options?.adapters?.includes(adapters.MellowV3)) {
+    const mellowAdapterFactory = await ethers.getContractFactory("InceptionWstETHMellowV3Adapter");
+    mellowV3Adapter = await upgrades.deployProxy(mellowAdapterFactory, [
+      [assetData.adapters.mellowV3[0].vaultAddress],
+      assetData.asset.address,
+      assetData.vault.operator,
+    ]);
+
+    // deploy a claimer implementation
+    const MellowAdapterClaimerFactory = await ethers.getContractFactory("MellowV3AdapterClaimer");
+    const claimerImplementation = await MellowAdapterClaimerFactory.deploy();
+    await claimerImplementation.waitForDeployment();
+
+    await mellowV3Adapter.setClaimerImplementation(await claimerImplementation.getAddress());
+
+    mellowV3Adapter.address = await mellowV3Adapter.getAddress();
   }
 
   if (options?.adapters?.includes(adapters.Symbiotic)) {
@@ -179,6 +205,16 @@ export async function initVault(
       }
     };
   }
+  if (options?.adapters?.includes(adapters.MellowV3)) {
+    await iVault.addAdapter(mellowV3Adapter.address);
+    await mellowV3Adapter.setInceptionVault(iVault.address);
+    // await mellowV3Adapter.setEthWrapper("0xfd4a4922d1afe70000ce0ec6806454e78256504e");
+    // await mellowV3Adapter.setLidoWithdrawalQueue("0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1");
+
+    // await emergencyClaimer.approveSpender(assetData.assetAddress, mellowAdapter.address);
+    MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
+    console.log("... iVault initialization completed ....");
+  }
   if (options?.adapters?.includes(adapters.Symbiotic)) {
     await iVault.addAdapter(symbioticAdapter.address);
     await symbioticAdapter.setInceptionVault(iVault.address);
@@ -202,9 +238,9 @@ export async function initVault(
     mellowAdapter,
     symbioticAdapter,
     eigenLayerAdapter,
+    mellowV3Adapter,
   };
 }
 
 export const abi = ethers.AbiCoder.defaultAbiCoder();
 export let MAX_TARGET_PERCENT: BigInt;
-
