@@ -114,26 +114,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       );
     });
 
-    it("setRatioFeed(): only owner can", async function() {
-      const ratioFeed = await iVault.ratioFeed();
-      const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(iVault.setRatioFeed(newRatioFeed))
-        .to.emit(iVault, "RatioFeedChanged")
-        .withArgs(ratioFeed, newRatioFeed);
-      expect(await iVault.ratioFeed()).to.be.eq(newRatioFeed);
-    });
-
-    it("setRatioFeed(): reverts when new value is zero address", async function() {
-      await expect(iVault.setRatioFeed(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
-    });
-
-    it("setRatioFeed(): reverts when caller is not an owner", async function() {
-      const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
-    });
-
     it("setWithdrawMinAmount(): only owner can", async function() {
       const prevValue = await iVault.withdrawMinAmount();
       const newMinAmount = randomBI(3);

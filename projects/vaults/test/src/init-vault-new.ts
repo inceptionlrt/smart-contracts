@@ -145,8 +145,6 @@ export async function initVault(
   const withdrawalQueue = await upgrades.deployProxy(withdrawalQueueFactory, [iVault.address, [], [], 0]);
   withdrawalQueue.address = await withdrawalQueue.getAddress();
 
-  await iVault.setRatioFeed(ratioFeed.address);
-
   if (options?.adapters?.includes(adapters.Mellow)) {
     await iVault.addAdapter(mellowAdapter.address);
     await mellowAdapter.setInceptionVault(iVault.address);
