@@ -308,7 +308,11 @@ contract WithdrawalQueue is
     function _isSlashed(WithdrawalEpoch storage withdrawal) internal view returns (bool) {
         uint256 currentAmount = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
 
-        if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
+        if (
+            withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount ?
+                withdrawal.totalClaimedAmount - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD :
+                withdrawal.totalUndelegatedAmount - withdrawal.totalClaimedAmount <= MAX_CONVERT_THRESHOLD
+        ) {
             if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
                 return true;
             }
