@@ -180,15 +180,21 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
-        uint256[] memory sharesToWithdraw = new uint256[](1);
+        address staker = address(this);
+        uint256[] memory withdrawableShares = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
 
         strategies[0] = _strategy;
-        sharesToWithdraw[0] = _strategy.underlyingToShares(
+        withdrawableShares[0] = _strategy.underlyingToShares(
             wrappedAsset().getStETHByWstETH(amount)
         );
 
-        address staker = address(this);
+        uint256[] memory sharesToWithdraw = _delegationManager.convertToDepositShares(
+            staker,
+            strategies,
+            withdrawableShares
+        );
+
         uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
         if (emergency) _emergencyQueuedWithdrawals[nonce] = true;
 
