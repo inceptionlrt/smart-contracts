@@ -222,7 +222,7 @@ contract InceptionWstETHMellowAdapter is
                 );
         }
 
-        if (undelegatedAmount == 0) _removePendingClaimer(claimer);
+        if (undelegatedAmount == 0 && !emergency) _removePendingClaimer(claimer);
 
         emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
         return (undelegatedAmount, claimedAmount);
