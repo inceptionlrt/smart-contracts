@@ -201,6 +201,7 @@ contract WithdrawalQueue is
 
         if (claimedAmount > 0) {
             totalPendingRedeemAmount += claimedAmount;
+            withdrawal.totalUndelegatedAmount += claimedAmount;
             withdrawal.totalClaimedAmount += claimedAmount;
         }
     }
@@ -211,17 +212,16 @@ contract WithdrawalQueue is
     */
     function _afterUndelegate(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
         uint256 requested = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
-        uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
         // ensure that the undelegated assets are relevant to the ratio
         require(
-            requested >= totalUndelegated ?
-                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
-                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+            requested >= withdrawal.totalUndelegatedAmount ?
+                requested - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD
+                : withdrawal.totalUndelegatedAmount - requested <= MAX_CONVERT_THRESHOLD,
             UndelegateNotCompleted()
         );
 
-        if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
+        if (withdrawal.totalClaimedAmount == withdrawal.totalUndelegatedAmount) {
             _makeRedeemable(withdrawal);
         }
 
@@ -380,6 +380,7 @@ contract WithdrawalQueue is
 
         // update epoch state
         withdrawal.totalClaimedAmount = claimedAmount;
+        withdrawal.totalUndelegatedAmount = claimedAmount;
         // update global state
         totalPendingRedeemAmount += claimedAmount;
 
