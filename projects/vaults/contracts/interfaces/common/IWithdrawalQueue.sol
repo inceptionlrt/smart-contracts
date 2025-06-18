@@ -114,6 +114,12 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     function totalAmountRedeem() external view returns (uint256);
 
     /*
+    * @notice Returns the total amount reserved for future redeem
+    * @return The total pending redeem amount
+    */
+    function totalPendingRedeemAmount() external view returns (uint256);
+
+    /*
     * @notice Returns the total pending withdrawal amount for a receiver
     * @param receiver The address to check
     * @return amount The total pending withdrawal amount

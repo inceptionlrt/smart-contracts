@@ -456,7 +456,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      */
     function getFlashCapacity() public view returns (uint256 total) {
         uint256 _assets = totalAssets();
-        uint256 _sum = redeemReservedAmount() + depositBonusAmount;
+        uint256 _sum = redeemReservedAmount() + depositBonusAmount + withdrawalQueue.totalPendingRedeemAmount();
         return _sum > _assets ? 0 : _assets - _sum;
     }
 

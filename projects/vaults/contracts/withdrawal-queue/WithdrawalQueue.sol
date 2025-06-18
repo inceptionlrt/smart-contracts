@@ -37,6 +37,7 @@ contract WithdrawalQueue is
     uint256 public currentEpoch;
     uint256 public totalAmountRedeem;
     uint256 public totalSharesToWithdraw;
+    uint256 public totalPendingRedeemAmount;
 
     modifier onlyVaultOrOwner() {
         require(msg.sender == inceptionVault || msg.sender == owner(), OnlyVaultOrOwnerAllowed());
@@ -199,6 +200,7 @@ contract WithdrawalQueue is
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
 
         if (claimedAmount > 0) {
+            totalPendingRedeemAmount += claimedAmount;
             withdrawal.totalClaimedAmount += claimedAmount;
         }
     }
@@ -280,6 +282,8 @@ contract WithdrawalQueue is
 
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
+        // update global state
+        totalPendingRedeemAmount += claimedAmount;
     }
 
     /**
@@ -310,8 +314,8 @@ contract WithdrawalQueue is
 
         if (
             withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount ?
-                withdrawal.totalClaimedAmount - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD :
-                withdrawal.totalUndelegatedAmount - withdrawal.totalClaimedAmount <= MAX_CONVERT_THRESHOLD
+            withdrawal.totalClaimedAmount - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD :
+            withdrawal.totalUndelegatedAmount - withdrawal.totalClaimedAmount <= MAX_CONVERT_THRESHOLD
         ) {
             if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
                 return true;
@@ -334,6 +338,7 @@ contract WithdrawalQueue is
         withdrawal.ableRedeem = true;
         totalAmountRedeem += withdrawal.totalClaimedAmount;
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
+        totalPendingRedeemAmount -= withdrawal.totalClaimedAmount;
     }
 
     /**
@@ -349,6 +354,8 @@ contract WithdrawalQueue is
         address[] calldata adapters,
         address[] calldata vaults
     ) internal {
+        totalPendingRedeemAmount -= withdrawal.totalClaimedAmount;
+
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
 
@@ -373,6 +380,8 @@ contract WithdrawalQueue is
 
         // update epoch state
         withdrawal.totalClaimedAmount = claimedAmount;
+        // update global state
+        totalPendingRedeemAmount += claimedAmount;
 
         _afterUndelegate(epoch, withdrawal);
     }
