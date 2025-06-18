@@ -470,10 +470,10 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Migrates deposit bonus to a new vault
-     * @param newVault Address of the new vault
+     * @param skipEmptyCheck Skip check vault to empty
      */
-    function migrateDepositBonus(address newVault) external onlyOwner {
-        require(getTotalDelegated() == 0, ValueZero());
+    function migrateDepositBonus(address newVault, bool skipEmptyCheck) external onlyOwner {
+        require(skipEmptyCheck || getTotalDelegated() == 0, ValueZero());
         require(newVault != address(0), InvalidAddress());
         require(depositBonusAmount > 0, NullParams());
 

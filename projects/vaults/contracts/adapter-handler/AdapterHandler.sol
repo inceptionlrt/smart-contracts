@@ -516,10 +516,11 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
     /**
      * @notice Removes an adapter from the system
      * @param adapter Address of the adapter to remove
+     * @param skipEmptyCheck Skip check adapter to empty
      */
-    function removeAdapter(address adapter) external onlyOwner {
+    function removeAdapter(address adapter, bool skipEmptyCheck) external onlyOwner {
         require(_adapters.contains(adapter), AdapterNotFound());
-        require(IInceptionBaseAdapter(adapter).getTotalBalance() == 0, AdapterNotEmpty());
+        require(skipEmptyCheck || IInceptionBaseAdapter(adapter).getTotalBalance() == 0, AdapterNotEmpty());
 
         emit AdapterRemoved(adapter);
         _adapters.remove(adapter);
