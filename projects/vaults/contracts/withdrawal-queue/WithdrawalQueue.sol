@@ -197,14 +197,9 @@ contract WithdrawalQueue is
         // update withdrawal data
         withdrawal.adapterUndelegated[adapter][vault] = undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
-        withdrawal.adaptersUndelegatedCounter++;
 
         if (claimedAmount > 0) {
             withdrawal.totalClaimedAmount += claimedAmount;
-        }
-
-        if (claimedAmount > 0 && undelegatedAmount == 0) {
-            withdrawal.adaptersClaimedCounter++;
         }
     }
 
@@ -285,7 +280,6 @@ contract WithdrawalQueue is
 
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
-        withdrawal.adaptersClaimedCounter++;
     }
 
     /**
@@ -300,8 +294,6 @@ contract WithdrawalQueue is
         address[] calldata adapters,
         address[] calldata vaults
     ) internal {
-        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
-
         _isSlashed(withdrawal) ?
             _resetEpoch(epoch, withdrawal, adapters, vaults)
             : _makeRedeemable(withdrawal);
@@ -331,8 +323,7 @@ contract WithdrawalQueue is
 
     /**
     * @notice Marks a withdrawal epoch as redeemable and updates global state
-    * @dev Ensures all adapters have completed claiming by checking if the claimed counter equals the undelegated counter.
-    *      Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
+    * @dev Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _makeRedeemable(WithdrawalEpoch storage withdrawal) internal {
@@ -343,7 +334,7 @@ contract WithdrawalQueue is
 
     /**
     * @notice Resets the state of a withdrawal epoch to its initial values.
-    * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
+    * @dev Clears the total claimed amount, total undelegated amount for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
     * @param adapters Array of adapter addresses
     * @param vaults Array of vault addresses
@@ -356,8 +347,6 @@ contract WithdrawalQueue is
     ) internal {
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
-        withdrawal.adaptersClaimedCounter = 0;
-        withdrawal.adaptersUndelegatedCounter = 0;
 
         for (uint256 i = 0; i < adapters.length; i++) {
             delete withdrawal.adapterUndelegated[adapters[i]][vaults[i]];
