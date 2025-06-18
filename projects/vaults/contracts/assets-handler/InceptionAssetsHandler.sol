@@ -65,7 +65,7 @@ contract InceptionAssetsHandler is
     function setRewardsTreasury(address treasury) external onlyOwner {
         require(treasury != address(0), NullParams());
 
-        emit SetRewardsTreasury(rewardsTreasury);
+        emit SetRewardsTreasury(treasury);
         rewardsTreasury = treasury;
     }
 
