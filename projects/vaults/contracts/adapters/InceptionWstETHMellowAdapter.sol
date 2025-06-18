@@ -289,7 +289,9 @@ contract InceptionWstETHMellowAdapter is
             skipEmptyCheck || (
                 getDeposited(vault) == 0 &&
                 pendingWithdrawalAmount(vault, true) == 0 &&
-                pendingWithdrawalAmount(vault, false) == 0
+                pendingWithdrawalAmount(vault, false) == 0 &&
+                _claimableWithdrawalAmount(vault, true) == 0 &&
+                _claimableWithdrawalAmount(vault, false) == 0
             ),
             VaultNotEmpty()
         );
@@ -356,7 +358,7 @@ contract InceptionWstETHMellowAdapter is
     }
 
     /**
-     * @notice Internal function to calculate claimable withdrawal amount for an address
+     * @notice Internal function to calculate claimable withdrawal amount
      * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
@@ -376,6 +378,27 @@ contract InceptionWstETHMellowAdapter is
                 _claimerVaults[pendingClaimers.at(i)]
             ).claimableAssetsOf(pendingClaimers.at(i));
         }
+        return total;
+    }
+
+    /**
+     * @notice Internal function to calculate claimable withdrawal amount for given vault
+     * @param mellowVault Mellow vault address
+     * @param emergency Emergency flag for claimer
+     * @return total Total claimable amount
+     */
+    function _claimableWithdrawalAmount(
+        address mellowVault,
+        bool emergency
+    ) internal view returns (uint256 total) {
+        if (emergency) {
+            return IMellowSymbioticVault(mellowVault).claimableAssetsOf(_emergencyClaimer);
+        }
+
+        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+            total += IMellowSymbioticVault(mellowVault).claimableAssetsOf(pendingClaimers.at(i));
+        }
+
         return total;
     }
 
