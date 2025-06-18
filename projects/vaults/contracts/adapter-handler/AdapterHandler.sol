@@ -335,7 +335,9 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @dev The function allows the operator to deposit asset as rewards.
      * It verifies that the previous rewards timeline is over before accepting new rewards.
      */
-    function addRewards(uint256 amount) external onlyOperator nonReentrant {
+    function addRewards(uint256 amount) external onlyOperator {
+        require(rewardsTimeline > 0, RewardsTimelineNotSet());
+
         /// @dev verify whether the prev timeline is over
         if (currentRewards > 0) {
             uint256 totalDays = rewardsTimeline / 1 days;
