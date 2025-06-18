@@ -83,7 +83,11 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         if (amount > 0 && operator == address(0)) {
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
-            amount = wrappedAsset().unwrap(amount);
+
+            uint256 balanceBefore = wrappedAsset().stETH().balanceOf(address(this));
+            wrappedAsset().unwrap(amount);
+            amount = wrappedAsset().stETH().balanceOf(address(this)) - balanceBefore;
+
             // deposit the asset to the appropriate strategy
             return wrappedAsset().getWstETHByStETH(_strategy.sharesToUnderlying(
                 _strategyManager.depositIntoStrategy(
