@@ -49,8 +49,8 @@ contract InceptionWstETHMellowV3Adapter is
 
     mapping(address => address) internal _claimerVaults;
     address internal _emergencyClaimer;
-    EnumerableSet.AddressSet internal pendingClaimers;
-    address[] internal availableClaimers;
+    EnumerableSet.AddressSet internal _pendingClaimers;
+    address[] internal _availableClaimers;
 
     address internal _claimerImplementation;
 
@@ -452,7 +452,7 @@ contract InceptionWstETHMellowV3Adapter is
             return total;
         }
 
-        for (uint256 claimerIndex = 0; claimerIndex < pendingClaimers.length(); claimerIndex++) {
+        for (uint256 claimerIndex = 0; claimerIndex < _pendingClaimers.length(); claimerIndex++) {
             uint256 length;
             for (uint256 i = 0; i < mellowVaults.length; i++) {
                 length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
@@ -463,7 +463,7 @@ contract InceptionWstETHMellowV3Adapter is
 
                     total += IWithdrawalQueue(
                         subvault.withdrawalQueue
-                    ).claimableAssetsOf(pendingClaimers.at(claimerIndex));
+                    ).claimableAssetsOf(_pendingClaimers.at(claimerIndex));
                 }
             }
         }
@@ -489,13 +489,13 @@ contract InceptionWstETHMellowV3Adapter is
             return total;
         }
 
-        for (uint256 claimerIndex = 0; claimerIndex < pendingClaimers.length(); claimerIndex++) {
+        for (uint256 claimerIndex = 0; claimerIndex < _pendingClaimers.length(); claimerIndex++) {
             uint256 length = IMultiVaultStorage(mellowVault).subvaultsCount();
             for (uint256 j = 0; j < length; j++) {
                 IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(mellowVault)
                     .subvaultAt(j);
                 total += IWithdrawalQueue(subvault.withdrawalQueue)
-                    .claimableAssetsOf(pendingClaimers.at(claimerIndex));
+                    .claimableAssetsOf(_pendingClaimers.at(claimerIndex));
             }
         }
 
@@ -541,7 +541,7 @@ contract InceptionWstETHMellowV3Adapter is
             return total;
         }
 
-        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+        for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             uint256 length;
             for (uint256 j = 0; j < mellowVaults.length; j++) {
                 length = IMultiVaultStorage(address(mellowVaults[j])).subvaultsCount();
@@ -551,7 +551,7 @@ contract InceptionWstETHMellowV3Adapter is
                     ).subvaultAt(k);
 
                     total += IWithdrawalQueue(subvault.withdrawalQueue).pendingAssetsOf(
-                        pendingClaimers.at(i)
+                        _pendingClaimers.at(i)
                     );
                 }
             }
@@ -582,7 +582,7 @@ contract InceptionWstETHMellowV3Adapter is
             return total;
         }
 
-        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+        for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
             for (uint256 j = 0; j < length; j++) {
                 IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
@@ -591,7 +591,7 @@ contract InceptionWstETHMellowV3Adapter is
 
                 total += IWithdrawalQueue(
                     subvault.withdrawalQueue
-                ).pendingAssetsOf(pendingClaimers.at(i));
+                ).pendingAssetsOf(_pendingClaimers.at(i));
             }
         }
 
@@ -703,14 +703,14 @@ contract InceptionWstETHMellowV3Adapter is
             return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
         }
 
-        if (availableClaimers.length > 0) {
-            claimer = availableClaimers[availableClaimers.length - 1];
-            availableClaimers.pop();
+        if (_availableClaimers.length > 0) {
+            claimer = _availableClaimers[_availableClaimers.length - 1];
+            _availableClaimers.pop();
         } else {
             claimer = _deployClaimer();
         }
 
-        pendingClaimers.add(claimer);
+        _pendingClaimers.add(claimer);
         return claimer;
     }
 
@@ -721,8 +721,8 @@ contract InceptionWstETHMellowV3Adapter is
      */
     function _removePendingClaimer(address claimer) internal {
         delete _claimerVaults[claimer];
-        pendingClaimers.remove(claimer);
-        availableClaimers.push(claimer);
+        _pendingClaimers.remove(claimer);
+        _availableClaimers.push(claimer);
     }
 
     /**
