@@ -61,7 +61,9 @@ describe("Farm rewards", function() {
 
     it("Set rewards treasury address", async function() {
       rewardsTreasury = ethers.Wallet.createRandom().address;
-      await iVault.setRewardsTreasury(rewardsTreasury);
+      await expect(iVault.setRewardsTreasury(rewardsTreasury))
+        .to.emit(iVault, "SetRewardsTreasury")
+        .withArgs(rewardsTreasury);
     });
 
     it("Deposit and delegate to symbiotic vault", async function() {
