@@ -348,10 +348,11 @@ contract InceptionWstETHMellowAdapter is
 
     /**
      * @notice Returns the total amount available for withdrawal
+     * @param emergency Emergency flag for claimer
      * @return total Amount that can be claimed
      */
-    function claimableWithdrawalAmount() public view returns (uint256 total) {
-        return _claimableWithdrawalAmount(false);
+    function claimableWithdrawalAmount(bool emergency) public view returns (uint256 total) {
+        return _claimableWithdrawalAmount(emergency);
     }
 
     /**
