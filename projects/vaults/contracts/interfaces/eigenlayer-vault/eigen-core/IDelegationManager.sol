@@ -28,7 +28,7 @@ interface IDelegationManager {
         // Array containing the amount of shares in each Strategy in the `strategies` array
         uint256[] shares;
         // The address of the withdrawer
-        address withdrawer;
+        address __deprecated_withdrawer;
     }
 
     struct Withdrawal {

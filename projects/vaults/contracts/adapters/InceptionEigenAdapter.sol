@@ -179,7 +179,7 @@ contract InceptionEigenAdapter is InceptionBaseAdapter, IInceptionEigenLayerAdap
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: staker
+            __deprecated_withdrawer: staker
         });
 
         // queue from EL
