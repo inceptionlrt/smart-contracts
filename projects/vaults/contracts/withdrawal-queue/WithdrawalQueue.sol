@@ -196,7 +196,7 @@ contract WithdrawalQueue is
         );
 
         // update withdrawal data
-        withdrawal.adapterUndelegated[adapter][vault] = undelegatedAmount;
+        withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
 
         if (claimedAmount > 0) {
