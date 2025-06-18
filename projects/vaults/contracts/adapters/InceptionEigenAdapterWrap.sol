@@ -63,7 +63,6 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         _setRewardsCoordinator(rewardCoordinator, claimer);
 
         // approve spending by strategyManager
-        _asset.safeApprove(strategyManager, type(uint256).max);
         wrappedAsset().stETH().approve(strategyManager, type(uint256).max);
     }
 
