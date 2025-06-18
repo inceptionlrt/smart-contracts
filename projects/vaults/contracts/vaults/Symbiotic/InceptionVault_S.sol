@@ -234,6 +234,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Mints shares for assets. See {IERC4626-mint}.
+     * @notice It can return more assets than expected because of deposit bonus.
      * @param shares Amount of shares to mint
      * @param receiver Address to receive the minted shares
      * @return Amount of assets deposited
