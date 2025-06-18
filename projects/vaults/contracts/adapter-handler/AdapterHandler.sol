@@ -90,7 +90,7 @@ contract AdapterHandler is InceptionAssetsHandler, IAdapterHandler {
      * @dev Reserved storage gap to allow for future upgrades without shifting storage layout.
      * @notice Occupies 38 slots (50 total slots minus 12 used).
      */
-    uint256[50 - 11] private __gap;
+    uint256[50 - 12] private __gap;
 
     modifier onlyOperator() {
         require(msg.sender == _operator, OnlyOperatorAllowed());
