@@ -114,7 +114,7 @@ contract EigenLayerFacet is InceptionVaultStorage_EL {
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: address(this)
+            __deprecated_withdrawer: address(this)
         });
         delegationManager.queueWithdrawals(withdrawals);
     }
