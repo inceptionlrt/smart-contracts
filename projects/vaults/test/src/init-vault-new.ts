@@ -63,26 +63,6 @@ export async function initVault(
     for (const mVaultInfo of assetData.adapters.mellowV3) {
       console.log(`- MellowVaultV3 ${mVaultInfo.name} and curator`);
       mVaultInfo.vault = await ethers.getContractAt("IMellowVault", mVaultInfo.vaultAddress);
-
-      const mellowVaultOperatorMock = await ethers.deployContract("OperatorMock", [mVaultInfo.bondStrategyAddress]);
-      mellowVaultOperatorMock.address = await mellowVaultOperatorMock.getAddress();
-      await network.provider.send("hardhat_setCode", [
-        mVaultInfo.curatorAddress,
-        await mellowVaultOperatorMock.getDeployedCode(),
-      ]);
-
-      //Copy storage values
-      for (let i = 0; i < 5; i++) {
-        const slot = "0x" + i.toString(16);
-        const value = await network.provider.send("eth_getStorageAt", [
-          mellowVaultOperatorMock.address,
-          slot,
-          "latest",
-        ]);
-        await network.provider.send("hardhat_setStorageAt", [mVaultInfo.curatorAddress, slot, value]);
-      }
-
-      mVaultInfo.curator = await ethers.getContractAt("OperatorMock", mVaultInfo.curatorAddress);
     }
   }
 
@@ -230,8 +210,8 @@ export async function initVault(
   if (options?.adapters?.includes(adapters.MellowV3)) {
     await iVault.addAdapter(mellowV3Adapter.address);
     await mellowV3Adapter.setInceptionVault(iVault.address);
-    await mellowV3Adapter.setEthWrapper("0xfd4a4922d1afe70000ce0ec6806454e78256504e");
-    await mellowV3Adapter.setLidoWithdrawalQueue("0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1");
+    // await mellowV3Adapter.setEthWrapper("0xfd4a4922d1afe70000ce0ec6806454e78256504e");
+    // await mellowV3Adapter.setLidoWithdrawalQueue("0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1");
 
     // await emergencyClaimer.approveSpender(assetData.assetAddress, mellowAdapter.address);
     MAX_TARGET_PERCENT = await iVault.MAX_TARGET_PERCENT();
