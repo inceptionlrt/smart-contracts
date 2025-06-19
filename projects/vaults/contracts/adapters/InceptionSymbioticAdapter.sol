@@ -343,17 +343,19 @@ contract InceptionSymbioticAdapter is
     /**
      * @notice Removes a vault from the adapter
      * @param vaultAddress Address of the vault to remove
+     * @param skipEmptyCheck Skip check vault to empty
      */
-    function removeVault(address vaultAddress) external onlyOwner {
+    function removeVault(address vaultAddress, bool skipEmptyCheck) external onlyOwner {
         require(vaultAddress != address(0), ZeroAddress());
         require(Address.isContract(vaultAddress), NotContract());
         require(_symbioticVaults.contains(vaultAddress), NotAdded());
 
         if (
+            !skipEmptyCheck && (
             getDeposited(vaultAddress) != 0 ||
             _pendingWithdrawalAmount(vaultAddress, false) > 0 ||
             _pendingWithdrawalAmount(vaultAddress, true) > 0
-        ) revert VaultNotEmpty();
+        )) revert VaultNotEmpty();
 
         _symbioticVaults.remove(vaultAddress);
 

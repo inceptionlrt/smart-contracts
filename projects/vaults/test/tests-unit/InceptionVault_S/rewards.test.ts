@@ -61,7 +61,9 @@ describe("Farm rewards", function() {
 
     it("Set rewards treasury address", async function() {
       rewardsTreasury = ethers.Wallet.createRandom().address;
-      await iVault.setRewardsTreasury(rewardsTreasury);
+      await expect(iVault.setRewardsTreasury(rewardsTreasury))
+        .to.emit(iVault, "SetRewardsTreasury")
+        .withArgs(rewardsTreasury);
     });
 
     it("Deposit and delegate to symbiotic vault", async function() {
@@ -153,13 +155,6 @@ describe("Farm rewards", function() {
       await iVault.setTargetFlashCapacity(1n);
     });
 
-    it("set rewards timeline", async function () {
-      const timeline = 86400;
-
-      await iVault.setRewardsTimeline(timeline);
-      expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
-    });
-
     it("set rewards timeline: invalid data", async function() {
       await expect(iVault.setRewardsTimeline(3600n))
         .to.be.revertedWithCustomError(iVault, "InconsistentData");
@@ -176,6 +171,18 @@ describe("Farm rewards", function() {
     it("set rewards treasury: only owner", async function() {
       await expect(iVault.connect(staker).setRewardsTreasury(ZeroAddress))
         .to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("failed to add rewards when timeline empty", async function() {
+      await expect(iVault.connect(iVaultOperator).addRewards(1n))
+        .to.be.revertedWithCustomError(iVault, "RewardsTimelineNotSet");
+    });
+
+    it("set rewards timeline", async function () {
+      const timeline = 86400;
+
+      await iVault.setRewardsTimeline(timeline);
+      expect(await iVault.rewardsTimeline()).to.be.eq(timeline);
     });
 
     it("add rewards for the first time", async function() {

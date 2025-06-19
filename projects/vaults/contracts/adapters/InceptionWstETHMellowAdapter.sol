@@ -222,7 +222,7 @@ contract InceptionWstETHMellowAdapter is
                 );
         }
 
-        if (undelegatedAmount == 0) _removePendingClaimer(claimer);
+        if (undelegatedAmount == 0 && !emergency) _removePendingClaimer(claimer);
 
         emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
         return (undelegatedAmount, claimedAmount);
@@ -281,13 +281,18 @@ contract InceptionWstETHMellowAdapter is
     /**
      * @notice Remove a Mellow vault from the adapter
      * @param vault Address of the mellow vault to be removed
+     * @param skipEmptyCheck Skip check vault to empty
      */
-    function removeVault(address vault) external onlyOwner {
+    function removeVault(address vault, bool skipEmptyCheck) external onlyOwner {
         require(vault != address(0), ZeroAddress());
         require(
-            getDeposited(vault) == 0 &&
-            pendingWithdrawalAmount(vault, true) == 0 &&
-            pendingWithdrawalAmount(vault, false) == 0,
+            skipEmptyCheck || (
+                getDeposited(vault) == 0 &&
+                pendingWithdrawalAmount(vault, true) == 0 &&
+                pendingWithdrawalAmount(vault, false) == 0 &&
+                _claimableWithdrawalAmount(vault, true) == 0 &&
+                _claimableWithdrawalAmount(vault, false) == 0
+            ),
             VaultNotEmpty()
         );
 
@@ -345,14 +350,15 @@ contract InceptionWstETHMellowAdapter is
 
     /**
      * @notice Returns the total amount available for withdrawal
+     * @param emergency Emergency flag for claimer
      * @return total Amount that can be claimed
      */
-    function claimableWithdrawalAmount() public view returns (uint256 total) {
-        return _claimableWithdrawalAmount(false);
+    function claimableWithdrawalAmount(bool emergency) public view returns (uint256 total) {
+        return _claimableWithdrawalAmount(emergency);
     }
 
     /**
-     * @notice Internal function to calculate claimable withdrawal amount for an address
+     * @notice Internal function to calculate claimable withdrawal amount
      * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
@@ -372,6 +378,27 @@ contract InceptionWstETHMellowAdapter is
                 _claimerVaults[pendingClaimers.at(i)]
             ).claimableAssetsOf(pendingClaimers.at(i));
         }
+        return total;
+    }
+
+    /**
+     * @notice Internal function to calculate claimable withdrawal amount for given vault
+     * @param mellowVault Mellow vault address
+     * @param emergency Emergency flag for claimer
+     * @return total Total claimable amount
+     */
+    function _claimableWithdrawalAmount(
+        address mellowVault,
+        bool emergency
+    ) internal view returns (uint256 total) {
+        if (emergency) {
+            return IMellowSymbioticVault(mellowVault).claimableAssetsOf(_emergencyClaimer);
+        }
+
+        for (uint256 i = 0; i < pendingClaimers.length(); i++) {
+            total += IMellowSymbioticVault(mellowVault).claimableAssetsOf(pendingClaimers.at(i));
+        }
+
         return total;
     }
 

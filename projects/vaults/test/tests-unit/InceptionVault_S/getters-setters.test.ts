@@ -14,9 +14,11 @@ import {
 import { adapters, emptyBytes } from "../../src/constants";
 import { initVault, MAX_TARGET_PERCENT } from "../../src/init-vault";
 import { ZeroAddress } from "ethers";
+import { mellow } from "../../../typechain-types/contracts/tests";
 
 const { ethers, network } = hardhat;
 const mellowVaults = vaults.mellow;
+const symbioticVaults = vaults.symbiotic;
 
 const assetData = stETH;
 describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
@@ -110,26 +112,6 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
 
     it("setOperator(): reverts when caller is not an operator", async function() {
       await expect(iVault.connect(staker).setOperator(staker2.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
-    });
-
-    it("setRatioFeed(): only owner can", async function() {
-      const ratioFeed = await iVault.ratioFeed();
-      const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(iVault.setRatioFeed(newRatioFeed))
-        .to.emit(iVault, "RatioFeedChanged")
-        .withArgs(ratioFeed, newRatioFeed);
-      expect(await iVault.ratioFeed()).to.be.eq(newRatioFeed);
-    });
-
-    it("setRatioFeed(): reverts when new value is zero address", async function() {
-      await expect(iVault.setRatioFeed(ethers.ZeroAddress)).to.be.revertedWithCustomError(iVault, "NullParams");
-    });
-
-    it("setRatioFeed(): reverts when caller is not an owner", async function() {
-      const newRatioFeed = ethers.Wallet.createRandom().address;
-      await expect(iVault.connect(staker).setRatioFeed(newRatioFeed)).to.be.revertedWith(
         "Ownable: caller is not the owner",
       );
     });
@@ -395,6 +377,74 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     it("unpause(): reverts when caller is not an owner", async function() {
       await mellowAdapter.pause();
       await expect(mellowAdapter.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  describe("Adapter claimers setters", function() {
+    let owner, symbioticClaimer, mellowClaimer;
+
+    before(async function() {
+      await snapshot.restore();
+      await iVault.setTargetFlashCapacity(1n);
+
+      await iVault.connect(staker).deposit(toWei(10), staker.address);
+
+      await iVault.connect(iVaultOperator)
+        .delegate(symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(4), emptyBytes);
+      await iVault.connect(iVaultOperator)
+        .delegate(mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(4), emptyBytes);
+
+      await iVault.connect(staker).withdraw(toWei(2), staker.address);
+
+      const tx = await iVault.connect(iVaultOperator)
+        .undelegate(await withdrawalQueue.currentEpoch(), [
+          [symbioticAdapter.address, symbioticVaults[0].vaultAddress, toWei(1), emptyBytes],
+          [mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(1), emptyBytes]
+        ]);
+      const receipt = await tx.wait();
+
+      let adapterEvents = receipt.logs?.filter(log => log.address === symbioticAdapter.address)
+        .map(log => symbioticAdapter.interface.parseLog(log));
+      const symbioticClaimerAddr = adapterEvents[0].args["claimer"];
+
+      adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
+        .map(log => mellowAdapter.interface.parseLog(log));
+      const mellowClaimerAddr = adapterEvents[0].args["claimer"];
+
+      [owner] = await ethers.getSigners();
+
+      mellowClaimer = await ethers.getContractAt("MellowAdapterClaimer", mellowClaimerAddr);
+      symbioticClaimer = await ethers.getContractAt("SymbioticAdapterClaimer", symbioticClaimerAddr);
+    });
+
+    it("pause mellow claimer", async function() {
+      expect(await mellowClaimer.paused()).equal(false);
+      await expect(mellowClaimer.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await mellowClaimer.connect(owner).pause();
+      await expect(mellowClaimer.connect(owner).pause()).to.be.revertedWith("Pausable: paused");
+      expect(await mellowClaimer.paused()).equal(true);
+    });
+
+    it("unpause mellow claimer", async function() {
+      await expect(mellowClaimer.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await mellowClaimer.connect(owner).unpause();
+      await expect(mellowClaimer.connect(owner).unpause()).to.be.revertedWith("Pausable: not paused");
+      expect(await mellowClaimer.paused()).equal(false);
+    });
+
+    it("pause symbiotic claimer", async function() {
+      expect(await symbioticClaimer.paused()).equal(false);
+      await expect(symbioticClaimer.connect(staker).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await symbioticClaimer.connect(owner).pause();
+      await expect(symbioticClaimer.connect(owner).pause()).to.be.revertedWith("Pausable: paused");
+      expect(await symbioticClaimer.paused()).equal(true);
+    });
+
+    it("unpause symbiotic claimer", async function() {
+      await expect(symbioticClaimer.connect(staker).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+      await symbioticClaimer.connect(owner).unpause();
+      await expect(symbioticClaimer.connect(owner).unpause()).to.be.revertedWith("Pausable: not paused");
+      expect(await symbioticClaimer.paused()).equal(false);
     });
   });
 });

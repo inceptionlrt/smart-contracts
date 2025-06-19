@@ -329,11 +329,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Cannot remove symbioticVault", async function() {
-      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress))
+      await expect(symbioticAdapter.removeVault(ethers.ZeroAddress, false))
         .to.be.revertedWithCustomError(symbioticAdapter, "ZeroAddress");
-      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress()))
+      await expect(symbioticAdapter.removeVault(await iVaultOperator.getAddress(), false))
         .to.be.revertedWithCustomError(symbioticAdapter, "NotContract");
-      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress, false))
         .to.be.revertedWithCustomError(symbioticAdapter, "VaultNotEmpty");
     });
 
@@ -381,11 +381,11 @@ describe(`Inception Symbiotic Vault ${assetData.asset.name} e2e tests`, function
     });
 
     it("Remove symbioticVault", async function() {
-      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress, false))
         .to.emit(symbioticAdapter, "VaultRemoved")
         .withArgs(symbioticVaults[1].vaultAddress);
 
-      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress))
+      await expect(symbioticAdapter.removeVault(symbioticVaults[1].vaultAddress, false))
         .to.be.revertedWithCustomError(symbioticAdapter, "NotAdded");
     });
 

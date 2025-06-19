@@ -6,7 +6,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IAdapterClaimer} from "../interfaces/adapter-claimer/IAdapterClaimer.sol";
 import {IMellowSymbioticVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowSymbioticVault.sol";
@@ -25,6 +25,8 @@ contract MellowAdapterClaimer is
     OwnableUpgradeable,
     IAdapterClaimer
 {
+    using SafeERC20 for IERC20;
+
     address internal _adapter;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -39,10 +41,7 @@ contract MellowAdapterClaimer is
         __ERC165_init();
 
         _adapter = msg.sender;
-        require(
-            IERC20(asset).approve(_adapter, type(uint256).max),
-            ApprovalFailed()
-        );
+        IERC20(asset).safeIncreaseAllowance(_adapter, type(uint256).max);
     }
 
     /**
@@ -65,5 +64,23 @@ contract MellowAdapterClaimer is
                 recipient,
                 amount
             );
+    }
+
+    /*///////////////////////////////
+    ////// Pausable functions //////
+    /////////////////////////////*/
+
+    /**
+     * @dev Pauses the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpauses the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

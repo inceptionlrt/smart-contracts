@@ -31,5 +31,5 @@ interface IInceptionMellowAdapter is IInceptionBaseAdapter {
 
     event MellowWithdrawn(uint256 amount, uint256 claimedAmount, address claimer);
 
-    function claimableWithdrawalAmount() external view returns (uint256);
+    function claimableWithdrawalAmount(bool emergency) external view returns (uint256);
 }

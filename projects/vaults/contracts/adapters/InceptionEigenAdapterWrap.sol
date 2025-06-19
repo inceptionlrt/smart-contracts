@@ -63,22 +63,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         _setRewardsCoordinator(rewardCoordinator, claimer);
 
         // approve spending by strategyManager
-        _asset.safeApprove(strategyManager, type(uint256).max);
         wrappedAsset().stETH().approve(strategyManager, type(uint256).max);
-    }
-
-    /**
-    * @dev checks whether it's still possible to deposit into the strategy
-    * @param amount Amount of tokens to delegate/deposit
-    * @notice Be cautious when using this function, as certain strategies may not enforce TVL limits by inheritance.
-    */
-    function _beforeDepositAssetIntoStrategy(uint256 amount) internal view {
-        (uint256 maxPerDeposit, uint256 maxTotalDeposits) = _strategy.getTVLLimits();
-
-        require(amount <= maxPerDeposit, ExceedsMaxPerDeposit(maxPerDeposit, amount));
-
-        uint256 currentBalance = _asset.balanceOf(address(_strategy));
-        require(currentBalance + amount <= maxTotalDeposits, ExceedsMaxTotalDeposited(maxTotalDeposits, currentBalance));
     }
 
     /**
@@ -96,11 +81,13 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     ) external override onlyTrustee whenNotPaused returns (uint256) {
         // depositIntoStrategy
         if (amount > 0 && operator == address(0)) {
-            _beforeDepositAssetIntoStrategy(amount);
-
             // transfer from the vault
             _asset.safeTransferFrom(msg.sender, address(this), amount);
-            amount = wrappedAsset().unwrap(amount);
+
+            uint256 balanceBefore = wrappedAsset().stETH().balanceOf(address(this));
+            wrappedAsset().unwrap(amount);
+            amount = wrappedAsset().stETH().balanceOf(address(this)) - balanceBefore;
+
             // deposit the asset to the appropriate strategy
             return wrappedAsset().getWstETHByStETH(_strategy.sharesToUnderlying(
                 _strategyManager.depositIntoStrategy(
@@ -180,15 +167,21 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
     ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         require(_data.length == 0, InvalidDataLength(0, _data.length));
 
-        uint256[] memory sharesToWithdraw = new uint256[](1);
+        address staker = address(this);
+        uint256[] memory withdrawableShares = new uint256[](1);
         IStrategy[] memory strategies = new IStrategy[](1);
 
         strategies[0] = _strategy;
-        sharesToWithdraw[0] = _strategy.underlyingToShares(
+        withdrawableShares[0] = _strategy.underlyingToShares(
             wrappedAsset().getStETHByWstETH(amount)
         );
 
-        address staker = address(this);
+        uint256[] memory sharesToWithdraw = _delegationManager.convertToDepositShares(
+            staker,
+            strategies,
+            withdrawableShares
+        );
+
         uint256 nonce = _delegationManager.cumulativeWithdrawalsQueued(staker);
         if (emergency) _emergencyQueuedWithdrawals[nonce] = true;
 
@@ -198,7 +191,7 @@ contract InceptionEigenAdapterWrap is InceptionBaseAdapter, IInceptionEigenLayer
         withdrawals[0] = IDelegationManager.QueuedWithdrawalParams({
             strategies: strategies,
             shares: sharesToWithdraw,
-            withdrawer: staker
+            __deprecated_withdrawer: staker
         });
 
         // queue withdrawal from EL

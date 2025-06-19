@@ -28,7 +28,7 @@ interface IDelegationManager {
         // Array containing the amount of shares in each Strategy in the `strategies` array
         uint256[] shares;
         // The address of the withdrawer
-        address withdrawer;
+        address __deprecated_withdrawer;
     }
 
     struct Withdrawal {
@@ -116,4 +116,18 @@ interface IDelegationManager {
         address staker
     ) external view returns (bytes32[] memory);
 
+    /**
+     * @notice Converts shares for a set of strategies to deposit shares, likely in order to input into `queueWithdrawals`.
+     * This function will revert from a division by 0 error if any of the staker's strategies have a slashing factor of 0.
+     * @param staker the staker to convert shares for
+     * @param strategies the strategies to convert shares for
+     * @param withdrawableShares the shares to convert
+     * @return the deposit shares
+     * @dev will be a few wei off due to rounding errors
+     */
+    function convertToDepositShares(
+        address staker,
+        IStrategy[] memory strategies,
+        uint256[] memory withdrawableShares
+    ) external view returns (uint256[] memory);
 }

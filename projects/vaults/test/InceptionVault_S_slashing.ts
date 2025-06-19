@@ -1076,12 +1076,10 @@ describe("Symbiotic Vault Slashing", function() {
         .map(log => mellowAdapter.interface.parseLog(log));
       let claimer1 = adapterEvents[0].args["claimer"];
 
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(events[0].args["claimedAmount"]);
+      expect(await iVault.getFlashCapacity()).to.be.eq(0n);
       expect(await iVault.ratio()).to.be.closeTo(toWei(1), ratioErr);
       // ----------------
-
-      console.log("before", await symbioticVaults[0].vault.totalStake());
-      console.log("before totalDelegated", await iVault.getTotalDelegated());
-      console.log("pending withdrawals", await iVault.getTotalPendingWithdrawals());
 
       // apply slash
       let totalStake = await symbioticVaults[0].vault.totalStake();
@@ -1109,6 +1107,8 @@ describe("Symbiotic Vault Slashing", function() {
         );
       await tx.wait();
 
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
+      expect(await iVault.getFlashCapacity()).to.be.eq(0n);
       expect(await iVault.ratio()).to.be.closeTo(1053370378591850307n, ratioErr);
       // ----------------
 
@@ -1163,6 +1163,8 @@ describe("Symbiotic Vault Slashing", function() {
 
       expect(events[0].args["actualAmounts"]).to.be.eq(813088477205661249n);
       expect(await iVault.ratio()).to.be.closeTo(999822420543056026n, ratioErr);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(events[0].args["claimedAmount"]);
+      expect(await iVault.getFlashCapacity()).to.be.eq(0n);
       // ----------------
 
       // claim
@@ -1175,6 +1177,8 @@ describe("Symbiotic Vault Slashing", function() {
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.closeTo(undelegateAmount, transactErr);
       expect(await withdrawalQueue.totalSharesToWithdraw()).to.be.eq(0n);
       expect(await iVault.ratio()).to.be.closeTo(999822420543056026n, ratioErr);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
+      expect(await iVault.getFlashCapacity()).to.be.eq(0n);
       // ----------------
 
       // redeem
@@ -1258,6 +1262,7 @@ describe("Symbiotic Vault Slashing", function() {
       tx = await iVault.connect(iVaultOperator).undelegate(await withdrawalQueue.currentEpoch(), []);
 
       expect(await iVault.ratio()).to.be.closeTo(1112752741401218766n, ratioErr);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
       // ----------------
 
       // redeem
@@ -1661,6 +1666,7 @@ describe("Symbiotic Vault Slashing", function() {
       expect(await asset.balanceOf(iVault.address)).to.be.eq(toWei(5));
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(toWei(2));
       expect(await iVault.ratio()).to.be.closeTo(toWei(1), ratioErr);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
       // ----------------
 
       // redeem
@@ -1730,6 +1736,7 @@ describe("Symbiotic Vault Slashing", function() {
       expect(await asset.balanceOf(iVault.address)).to.be.eq(toWei(5));
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(toWei(2));
       expect(await iVault.ratio()).to.be.closeTo(toWei(1), ratioErr);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
       // ----------------
 
       // redeem
@@ -1866,13 +1873,17 @@ describe("Symbiotic Vault Slashing", function() {
       // ----------------
 
       // undelegate #2
+      let flashCapBefore = await iVault.getFlashCapacity();
       tx = await iVault.connect(iVaultOperator)
         .emergencyUndelegate([[mellowAdapter.address, mellowVaults[0].vaultAddress, toWei(5), []]]);
       receipt = await tx.wait();
+      events = receipt.logs?.filter(e => e.eventName === "UndelegatedFrom");
       adapterEvents = receipt.logs?.filter(log => log.address === mellowAdapter.address)
         .map(log => mellowAdapter.interface.parseLog(log));
       claimer = adapterEvents[0].args["claimer"];
 
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(events[0].args["claimedAmount"]);
+      expect(await iVault.getFlashCapacity()).to.be.eq(flashCapBefore);
       expect(await iVault.ratio()).to.be.eq(1852573758880544819n);
 
       // claim #2
@@ -1882,6 +1893,8 @@ describe("Symbiotic Vault Slashing", function() {
       )
       // ----------------
 
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
+      expect(await iVault.getFlashCapacity()).to.be.greaterThan(flashCapBefore);
       expect(await iVault.ratio()).to.be.closeTo(1852573758880544819n, 10n);
 
 
@@ -1889,6 +1902,8 @@ describe("Symbiotic Vault Slashing", function() {
       const redeemReservedBefore = await iVault.redeemReservedAmount();
       await iVault.connect(iVaultOperator).undelegate(1, []);
       const redeemReservedAfter = await iVault.redeemReservedAmount();
+
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
       // ----------------
 
       // redeem
@@ -1934,6 +1949,7 @@ describe("Symbiotic Vault Slashing", function() {
       await tx.wait();
 
       // undelegate
+      let flashCapBefore = await iVault.getFlashCapacity();
       let epochShares = await withdrawalQueue.getRequestedShares(await withdrawalQueue.currentEpoch());
       expect(epochShares).to.be.eq(toWei(5));
       tx = await iVault.connect(iVaultOperator)
@@ -1948,6 +1964,8 @@ describe("Symbiotic Vault Slashing", function() {
       expect(events[0].args["epoch"]).to.be.eq(1);
       expect(events[0].args["adapter"]).to.be.eq(mellowAdapter.address);
       expect(events[0].args["actualAmounts"]).to.be.eq(toWei(5));
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(events[0].args["claimedAmount"]);
+      expect(await iVault.getFlashCapacity()).to.be.eq(flashCapBefore);
       expect(await iVault.ratio()).to.be.eq(toWei(1));
       // ----------------
 
@@ -1970,16 +1988,18 @@ describe("Symbiotic Vault Slashing", function() {
       expect(withdrawalEpoch[0]).to.be.eq(false);
       expect(withdrawalEpoch[1]).to.be.eq(epochShares);
       expect(withdrawalEpoch[2]).to.be.eq(0n);
-      expect(withdrawalEpoch[3]).to.be.eq(0n);
-      expect(withdrawalEpoch[4]).to.be.eq(0n);
       expect(await withdrawalQueue.totalAmountRedeem()).to.be.eq(0);
       expect(await withdrawalQueue.getPendingWithdrawalOf(staker)).to.be.greaterThan(0);
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
+      expect(await iVault.getFlashCapacity()).to.be.greaterThan(flashCapBefore);
       // ----------------
 
       // force undelegate and claim
       const redeemReservedBefore = await iVault.redeemReservedAmount();
       await iVault.connect(iVaultOperator).undelegate(1, []);
       const redeemReservedAfter = await iVault.redeemReservedAmount();
+
+      expect(await withdrawalQueue.totalPendingRedeemAmount()).to.be.eq(0n);
       // ----------------
 
       // redeem

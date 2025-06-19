@@ -5,7 +5,6 @@ import {AdapterHandler, IERC20} from "../../adapter-handler/AdapterHandler.sol";
 import {Convert} from "../../lib/Convert.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IInceptionRatioFeed} from "../../interfaces/common/IInceptionRatioFeed.sol";
 import {IInceptionToken} from "../../interfaces/common/IInceptionToken.sol";
 import {IInceptionVault_S} from "../../interfaces/symbiotic-vault/IInceptionVault_S.sol";
 import {InceptionLibrary} from "../../lib/InceptionLibrary.sol";
@@ -37,7 +36,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
     /// @dev 100%
     uint64 public constant MAX_PERCENT = 100 * 1e8;
 
-    IInceptionRatioFeed public ratioFeed;
+    address private __deprecated_ratioFeed;
     address public treasury;
     uint64 public protocolFee;
 
@@ -235,6 +234,7 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Mints shares for assets. See {IERC4626-mint}.
+     * @notice It can return more assets than expected because of deposit bonus.
      * @param shares Amount of shares to mint
      * @param receiver Address to receive the minted shares
      * @return Amount of assets deposited
@@ -471,19 +471,18 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
     /**
      * @dev Migrates deposit bonus to a new vault
-     * @param newVault Address of the new vault
+     * @param skipEmptyCheck Skip check vault to empty
      */
-    function migrateDepositBonus(address newVault) external onlyOwner {
-        require(getTotalDelegated() == 0, ValueZero());
-        require(newVault != address(0), InvalidAddress());
+    function migrateDepositBonus(bool skipEmptyCheck) external onlyOwner {
+        require(skipEmptyCheck || getTotalDelegated() == 0, ValueZero());
         require(depositBonusAmount > 0, NullParams());
 
         uint256 amount = depositBonusAmount;
         depositBonusAmount = 0;
 
-        _asset.safeTransfer(newVault, amount);
+        _asset.safeTransfer(msg.sender, amount);
 
-        emit DepositBonusTransferred(newVault, amount);
+        emit DepositBonusTransferred(amount);
     }
 
     /*//////////////////////////////
@@ -730,17 +729,6 @@ contract InceptionVault_S is AdapterHandler, IInceptionVault_S {
 
         emit TreasuryChanged(treasury, newTreasury);
         treasury = newTreasury;
-    }
-
-    /**
-     * @dev Sets the ratio feed
-     * @param newRatioFeed New ratio feed address
-     */
-    function setRatioFeed(IInceptionRatioFeed newRatioFeed) external onlyOwner {
-        if (address(newRatioFeed) == address(0)) revert NullParams();
-
-        emit RatioFeedChanged(address(ratioFeed), address(newRatioFeed));
-        ratioFeed = newRatioFeed;
     }
 
     /**

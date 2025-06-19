@@ -24,9 +24,6 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
 
         mapping(address => uint256) userShares;
         mapping(address => mapping(address => uint256)) adapterUndelegated;
-
-        uint8 adaptersUndelegatedCounter;
-        uint8 adaptersClaimedCounter;
     }
 
     /*
@@ -115,6 +112,12 @@ interface IWithdrawalQueue is IWithdrawalQueueErrors {
     * @return The total redeemed amount
     */
     function totalAmountRedeem() external view returns (uint256);
+
+    /*
+    * @notice Returns the total amount reserved for future redeem
+    * @return The total pending redeem amount
+    */
+    function totalPendingRedeemAmount() external view returns (uint256);
 
     /*
     * @notice Returns the total pending withdrawal amount for a receiver

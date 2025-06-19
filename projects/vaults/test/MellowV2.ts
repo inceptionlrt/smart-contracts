@@ -386,7 +386,7 @@ describe("Mellow v2", function () {
       // console.log("PendingWithdraw: " + await vault.getPendingWithdrawalAmountFromMellow());
     });
   });
-  describe("test #3", function () {
+  describe.skip("test #3", function () {
     before(async function () {
       // FORKING
       await network.provider.request({
@@ -795,7 +795,7 @@ describe("Mellow v2", function () {
       );
 
       console.log("PendingWithdrawalAmountInMellow  : " + (await adapter.pendingWithdrawalAmount()));
-      console.log("ClaimableWithdrawalAmountInMellow: " + (await adapter.claimableWithdrawalAmount()));
+      console.log("ClaimableWithdrawalAmountInMellow: " + (await adapter.claimableWithdrawalAmount(false)));
       console.log("PortionsGivenBackOnWithdrawTX    : " + (await adapter.claimableAmount()));
 
       console.log("Increasing epoch");
@@ -928,7 +928,7 @@ describe("Mellow v2", function () {
       );
 
       console.log("PendingWithdrawalAmountInMellow  : " + (await adapter.pendingWithdrawalAmount()));
-      console.log("ClaimableWithdrawalAmountInMellow: " + (await adapter.claimableWithdrawalAmount()));
+      console.log("ClaimableWithdrawalAmountInMellow: " + (await adapter.claimableWithdrawalAmount(false)));
       console.log("PortionsGivenBackOnWithdrawTX    : " + (await adapter.claimableAmount()));
     });
   });

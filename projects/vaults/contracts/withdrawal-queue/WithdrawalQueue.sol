@@ -37,6 +37,7 @@ contract WithdrawalQueue is
     uint256 public currentEpoch;
     uint256 public totalAmountRedeem;
     uint256 public totalSharesToWithdraw;
+    uint256 public totalPendingRedeemAmount;
 
     modifier onlyVaultOrOwner() {
         require(msg.sender == inceptionVault || msg.sender == owner(), OnlyVaultOrOwnerAllowed());
@@ -195,16 +196,13 @@ contract WithdrawalQueue is
         );
 
         // update withdrawal data
-        withdrawal.adapterUndelegated[adapter][vault] = undelegatedAmount;
+        withdrawal.adapterUndelegated[adapter][vault] += undelegatedAmount;
         withdrawal.totalUndelegatedAmount += undelegatedAmount;
-        withdrawal.adaptersUndelegatedCounter++;
 
         if (claimedAmount > 0) {
+            totalPendingRedeemAmount += claimedAmount;
+            withdrawal.totalUndelegatedAmount += claimedAmount;
             withdrawal.totalClaimedAmount += claimedAmount;
-        }
-
-        if (claimedAmount > 0 && undelegatedAmount == 0) {
-            withdrawal.adaptersClaimedCounter++;
         }
     }
 
@@ -214,17 +212,16 @@ contract WithdrawalQueue is
     */
     function _afterUndelegate(uint256 epoch, WithdrawalEpoch storage withdrawal) internal {
         uint256 requested = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
-        uint256 totalUndelegated = withdrawal.totalUndelegatedAmount + withdrawal.totalClaimedAmount;
 
         // ensure that the undelegated assets are relevant to the ratio
         require(
-            requested >= totalUndelegated ?
-                requested - totalUndelegated <= MAX_CONVERT_THRESHOLD
-                : totalUndelegated - requested <= MAX_CONVERT_THRESHOLD,
+            requested >= withdrawal.totalUndelegatedAmount ?
+                requested - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD
+                : withdrawal.totalUndelegatedAmount - requested <= MAX_CONVERT_THRESHOLD,
             UndelegateNotCompleted()
         );
 
-        if (withdrawal.totalClaimedAmount > 0 && withdrawal.totalUndelegatedAmount == 0) {
+        if (withdrawal.totalClaimedAmount == withdrawal.totalUndelegatedAmount) {
             _makeRedeemable(withdrawal);
         }
 
@@ -285,7 +282,8 @@ contract WithdrawalQueue is
 
         // update withdrawal state
         withdrawal.totalClaimedAmount += claimedAmount;
-        withdrawal.adaptersClaimedCounter++;
+        // update global state
+        totalPendingRedeemAmount += claimedAmount;
     }
 
     /**
@@ -300,8 +298,6 @@ contract WithdrawalQueue is
         address[] calldata adapters,
         address[] calldata vaults
     ) internal {
-        require(withdrawal.adaptersClaimedCounter == withdrawal.adaptersUndelegatedCounter, ClaimNotCompleted());
-
         _isSlashed(withdrawal) ?
             _resetEpoch(epoch, withdrawal, adapters, vaults)
             : _makeRedeemable(withdrawal);
@@ -316,7 +312,11 @@ contract WithdrawalQueue is
     function _isSlashed(WithdrawalEpoch storage withdrawal) internal view returns (bool) {
         uint256 currentAmount = IERC4626(inceptionVault).convertToAssets(withdrawal.totalRequestedShares);
 
-        if (withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount) {
+        if (
+            withdrawal.totalClaimedAmount >= withdrawal.totalUndelegatedAmount ?
+            withdrawal.totalClaimedAmount - withdrawal.totalUndelegatedAmount <= MAX_CONVERT_THRESHOLD :
+            withdrawal.totalUndelegatedAmount - withdrawal.totalClaimedAmount <= MAX_CONVERT_THRESHOLD
+        ) {
             if (currentAmount < withdrawal.totalClaimedAmount && withdrawal.totalClaimedAmount - currentAmount > MAX_CONVERT_THRESHOLD) {
                 return true;
             }
@@ -331,19 +331,19 @@ contract WithdrawalQueue is
 
     /**
     * @notice Marks a withdrawal epoch as redeemable and updates global state
-    * @dev Ensures all adapters have completed claiming by checking if the claimed counter equals the undelegated counter.
-    *      Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
+    * @dev Sets the epoch as redeemable, updates the total redeemable amount, and reduces the total shares queued for withdrawal
     * @param withdrawal The storage reference to the withdrawal epoch
     */
     function _makeRedeemable(WithdrawalEpoch storage withdrawal) internal {
         withdrawal.ableRedeem = true;
         totalAmountRedeem += withdrawal.totalClaimedAmount;
         totalSharesToWithdraw -= withdrawal.totalRequestedShares;
+        totalPendingRedeemAmount -= withdrawal.totalClaimedAmount;
     }
 
     /**
     * @notice Resets the state of a withdrawal epoch to its initial values.
-    * @dev Clears the total claimed amount, total undelegated amount, and adapter counters for the specified withdrawal epoch.
+    * @dev Clears the total claimed amount, total undelegated amount for the specified withdrawal epoch.
     * @param withdrawal The storage reference to the WithdrawalEpoch struct to be refreshed.
     * @param adapters Array of adapter addresses
     * @param vaults Array of vault addresses
@@ -354,10 +354,10 @@ contract WithdrawalQueue is
         address[] calldata adapters,
         address[] calldata vaults
     ) internal {
+        totalPendingRedeemAmount -= withdrawal.totalClaimedAmount;
+
         withdrawal.totalClaimedAmount = 0;
         withdrawal.totalUndelegatedAmount = 0;
-        withdrawal.adaptersClaimedCounter = 0;
-        withdrawal.adaptersUndelegatedCounter = 0;
 
         for (uint256 i = 0; i < adapters.length; i++) {
             delete withdrawal.adapterUndelegated[adapters[i]][vaults[i]];
@@ -380,6 +380,9 @@ contract WithdrawalQueue is
 
         // update epoch state
         withdrawal.totalClaimedAmount = claimedAmount;
+        withdrawal.totalUndelegatedAmount = claimedAmount;
+        // update global state
+        totalPendingRedeemAmount += claimedAmount;
 
         _afterUndelegate(epoch, withdrawal);
     }

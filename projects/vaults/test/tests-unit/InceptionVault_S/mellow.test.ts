@@ -82,17 +82,17 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
     });
 
     it("remove vault: reverts when not an owner", async function() {
-      await expect(mellowAdapter.connect(staker).removeVault(ZeroAddress))
+      await expect(mellowAdapter.connect(staker).removeVault(ZeroAddress, false))
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("remove vault: reverts when unknown vault", async function() {
-      await expect(mellowAdapter.removeVault(mellowVaults[2].vaultAddress))
+      await expect(mellowAdapter.removeVault(mellowVaults[2].vaultAddress, false))
         .to.be.revertedWithCustomError(mellowAdapter, "InvalidVault");
     });
 
     it("remove vault: reverts when vault is zero address", async function() {
-      await expect(mellowAdapter.removeVault(ZeroAddress)).to.be.revertedWithCustomError(mellowAdapter, "ZeroAddress");
+      await expect(mellowAdapter.removeVault(ZeroAddress, false)).to.be.revertedWithCustomError(mellowAdapter, "ZeroAddress");
     });
 
     it("remove vault: reverts when vault is not empty", async function() {
@@ -101,12 +101,12 @@ describe(`Inception Symbiotic Vault ${assetData.assetName}`, function() {
       await iVault.connect(staker).deposit(toWei(10), staker.address);
       await iVault.connect(iVaultOperator).delegate(mellowAdapter.address, vault, toWei(2), emptyBytes);
       // try to remove vault
-      await expect(mellowAdapter.removeVault(vault)).to.be.revertedWithCustomError(mellowAdapter, "VaultNotEmpty");
+      await expect(mellowAdapter.removeVault(vault, false)).to.be.revertedWithCustomError(mellowAdapter, "VaultNotEmpty");
     });
 
     it("remove vault: success", async function() {
       const vault = mellowVaults[0].vaultAddress;
-      await expect(mellowAdapter.removeVault(vault)).to.emit(mellowAdapter, "VaultRemoved");
+      await expect(mellowAdapter.removeVault(vault, false)).to.emit(mellowAdapter, "VaultRemoved");
     });
 
     // it("addMellowVault wrapper is 0 address", async function () {
