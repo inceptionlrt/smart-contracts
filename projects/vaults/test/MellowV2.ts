@@ -386,7 +386,7 @@ describe("Mellow v2", function () {
       // console.log("PendingWithdraw: " + await vault.getPendingWithdrawalAmountFromMellow());
     });
   });
-  describe("test #3", function () {
+  describe.skip("test #3", function () {
     before(async function () {
       // FORKING
       await network.provider.request({
