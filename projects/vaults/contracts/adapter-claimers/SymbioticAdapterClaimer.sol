@@ -61,4 +61,22 @@ contract SymbioticAdapterClaimer is
         require(msg.sender == _adapter, OnlyAdapter());
         return IVault(vault).claim(recipient, epoch);
     }
+
+    /*///////////////////////////////
+    ////// Pausable functions //////
+    /////////////////////////////*/
+
+    /**
+     * @dev Pauses the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpauses the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 }
