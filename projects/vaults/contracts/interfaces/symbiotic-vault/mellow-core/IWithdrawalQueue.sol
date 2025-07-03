@@ -50,11 +50,18 @@ interface IWithdrawalQueue {
      * @custom:effects
      * - Emits a `Claimed` event.
      */
-    function claim(address account, address recipient, uint256 maxAmount)
-        external
-        returns (uint256 amount);
+    function claim(
+        address account,
+        address recipient,
+        uint256 maxAmount
+    ) external returns (uint256 amount);
 
     function transferPendingAssets(address recipient, uint256 assets) external;
 
     function claimer() external view returns (address);
+
+    function acceptPendingAssets(
+        address account,
+        uint256[] calldata withdrawals_
+    ) external;
 }

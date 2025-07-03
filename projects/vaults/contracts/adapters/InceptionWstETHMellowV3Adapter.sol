@@ -14,6 +14,7 @@ import {IMellowDepositWrapper} from "../interfaces/symbiotic-vault/mellow-core/I
 import {IMellowVault} from "../interfaces/symbiotic-vault/mellow-core/IMellowVault.sol";
 import {IMultiVaultStorage} from "../interfaces/symbiotic-vault/mellow-core/IMultiVaultStorage.sol";
 import {IWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IWithdrawalQueue.sol";
+import {IEigenLayerWithdrawalQueue} from "../interfaces/symbiotic-vault/mellow-core/IEigenLayerWithdrawalQueue.sol";
 
 import {InceptionBaseAdapter} from "./InceptionBaseAdapter.sol";
 import {MellowV3AdapterClaimer} from "../adapter-claimers/MellowV3AdapterClaimer.sol";
@@ -69,10 +70,7 @@ contract InceptionWstETHMellowV3Adapter is
         IMellowVault[] memory _mellowVaults,
         IERC20 asset,
         address trusteeManager
-    )
-        public
-        initializer
-    {
+    ) public initializer {
         __InceptionBaseAdapter_init(asset, trusteeManager);
 
         uint256 totalAllocations_;
@@ -107,7 +105,10 @@ contract InceptionWstETHMellowV3Adapter is
         whenNotPaused
         returns (uint256 depositedAmount)
     {
-        (address referral, bool delegateAuto) = abi.decode(_data[0], (address, bool));
+        (address referral, bool delegateAuto) = abi.decode(
+            _data[0],
+            (address, bool)
+        );
         if (!delegateAuto) return _delegate(mellowVault, amount, referral);
         else return _delegateAuto(amount, referral);
     }
@@ -137,16 +138,13 @@ contract InceptionWstETHMellowV3Adapter is
         address mellowVault,
         uint256 amount,
         address referral
-    )
-        internal
-        returns (uint256)
-    {
+    ) internal returns (uint256) {
         require(_beforeDelegate(mellowVault), NotAdded());
 
         _asset.safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 lpAmount;
-        if(ethWrapper != address(0)) {
+        if (ethWrapper != address(0)) {
             IERC20(_asset).safeIncreaseAllowance(address(ethWrapper), amount);
             lpAmount = IEthWrapper(ethWrapper).deposit(
                 address(_asset),
@@ -172,10 +170,7 @@ contract InceptionWstETHMellowV3Adapter is
     function _delegateAuto(
         uint256 amount,
         address referral
-    )
-        internal
-        returns (uint256 depositedAmount)
-    {
+    ) internal returns (uint256 depositedAmount) {
         uint256 allocationsTotal = totalAllocations;
         _asset.safeTransferFrom(msg.sender, address(this), amount);
 
@@ -210,27 +205,88 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Flag for emergency withdrawal
      * @return Tuple of (remaining amount to withdraw, amount claimed)
      */
+    // function wxithdraw(
+    //     address _mellowVault,
+    //     uint256 amount,
+    //     bytes[] calldata /*_data*/,
+    //     bool emergency
+    // ) external onlyTrustee whenNotPaused returns (uint256, uint256) {
+    //     address claimer = _getOrCreateClaimer(emergency);
+    //     uint256 balanceState = _asset.balanceOf(claimer);
+
+    //     // claim from mellow
+    //     _claimerVaults[claimer] = _mellowVault;
+    //     IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
+
+    //     uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
+    //     uint256 undelegatedAmount = amount - claimedAmount;
+
+    //     if (claimedAmount > 0) {
+    //         claimer == address(this)
+    //             ? _asset.safeTransfer(_inceptionVault, claimedAmount)
+    //             : _asset.safeTransferFrom(
+    //                 claimer,
+    //                 _inceptionVault,
+    //                 claimedAmount
+    //             );
+    //     }
+
+    //     if (undelegatedAmount == 0 && !emergency)
+    //         _removePendingClaimer(claimer);
+
+    //     emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
+    //     return (undelegatedAmount, claimedAmount);
+    // }
+
+    /**
+     * @notice Withdraws funds from a Mellow vault
+     * @dev Can only be called by trustee when contract is not paused
+     * @param _mellowVault Address of the Mellow vault to withdraw from
+     * @param amount Amount to withdraw
+     * @param emergency Flag for emergency withdrawal
+     * @return Tuple of (remaining amount to withdraw, amount claimed)
+     */
     function withdraw(
         address _mellowVault,
         uint256 amount,
-        bytes[] calldata /*_data*/,
+        bytes[] calldata /*_data */,
         bool emergency
-    )
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256, uint256)
-    {
+    ) external override onlyTrustee whenNotPaused returns (uint256, uint256) {
         address claimer = _getOrCreateClaimer(emergency);
-        uint256 balanceState = _asset.balanceOf(claimer);
+        uint256 balanceState = _asset.balanceOf(address(this));
 
-        // claim from mellow
-        _claimerVaults[claimer] = _mellowVault;
-        IERC4626(_mellowVault).withdraw(amount, claimer, address(this));
+        // Step 1: Fetch all withdrawal indices related to EigenLayer subvaults
+        uint256 subvaultCount = IMultiVaultStorage(_mellowVault)
+            .subvaultsCount();
+        uint256[][] memory withdrawalIndices = new uint256[][](subvaultCount);
+
+        for (uint256 i = 0; i < subvaultCount; i++) {
+            IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
+                _mellowVault
+            ).subvaultAt(i);
+            if (subvault.protocol == IMultiVaultStorage.Protocol.EIGEN_LAYER) {
+                (, withdrawalIndices[i], ) = IEigenLayerWithdrawalQueue(
+                    subvault.withdrawalQueue
+                ).getAccountData(_mellowVault, 0, type(uint256).max, 0, 0);
+            }
+        }
+
+        // Step 2: Initiate withdrawal
+        IERC4626(_mellowVault).withdraw(amount, address(this), address(this));
 
         uint256 claimedAmount = (_asset.balanceOf(claimer) - balanceState);
         uint256 undelegatedAmount = amount - claimedAmount;
+
+        // Step 3: Accept transferred pending assets from previous rebalances
+        for (uint256 i = 0; i < subvaultCount; i++) {
+            if (withdrawalIndices[i].length != 0) {
+                IWithdrawalQueue(
+                    IMultiVaultStorage(_mellowVault)
+                        .subvaultAt(i)
+                        .withdrawalQueue
+                ).acceptPendingAssets(address(this), withdrawalIndices[i]);
+            }
+        }
 
         if (claimedAmount > 0) {
             claimer == address(this)
@@ -242,7 +298,8 @@ contract InceptionWstETHMellowV3Adapter is
                 );
         }
 
-        if (undelegatedAmount == 0 && !emergency) _removePendingClaimer(claimer);
+        if (undelegatedAmount == 0 && !emergency)
+            _removePendingClaimer(claimer);
 
         emit MellowWithdrawn(undelegatedAmount, claimedAmount, claimer);
         return (undelegatedAmount, claimedAmount);
@@ -255,19 +312,23 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Flag for emergency claim process
      * @return Amount of tokens claimed
      */
-    function claim(bytes[] calldata _data, bool emergency)
-        external
-        override
-        onlyTrustee
-        whenNotPaused
-        returns (uint256)
-    {
+    function claim(
+        bytes[] calldata _data,
+        bool emergency
+    ) external override onlyTrustee whenNotPaused returns (uint256) {
         require(_data.length > 0, ValueZero());
-        (address _mellowVault, address claimer) = abi.decode(_data[0], (address, address));
+        (address _mellowVault, address claimer) = abi.decode(
+            _data[0],
+            (address, address)
+        );
 
         // emergency claim available only for emergency claimer
-        if ((emergency && _emergencyClaimer != claimer) || (!emergency && claimer == _emergencyClaimer)) revert OnlyEmergency();
-        if (!emergency && _claimerVaults[claimer] != _mellowVault) revert InvalidVault();
+        if (
+            (emergency && _emergencyClaimer != claimer) ||
+            (!emergency && claimer == _emergencyClaimer)
+        ) revert OnlyEmergency();
+        if (!emergency && _claimerVaults[claimer] != _mellowVault)
+            revert InvalidVault();
         if (!emergency) _removePendingClaimer(claimer);
 
         uint256 balanceState = _asset.balanceOf(address(this));
@@ -290,10 +351,14 @@ contract InceptionWstETHMellowV3Adapter is
      * @param claimer The address that will receive the claimed assets.
      * @return The total amount of assets successfully claimed.
      */
-    function _claimPending(address _mellowVault, address claimer) internal returns (uint256) {
+    function _claimPending(
+        address _mellowVault,
+        address claimer
+    ) internal returns (uint256) {
         uint256 totalClaimable;
         uint256 claimableCount;
-        uint256 subvaultCount = IMultiVaultStorage(_mellowVault).subvaultsCount();
+        uint256 subvaultCount = IMultiVaultStorage(_mellowVault)
+            .subvaultsCount();
 
         uint256[] memory claimableAmounts = new uint256[](subvaultCount);
         uint256[] memory claimableIndices;
@@ -303,9 +368,12 @@ contract InceptionWstETHMellowV3Adapter is
 
         // Calculate claimable amounts for each subvault
         for (uint256 i = 0; i < subvaultCount; i++) {
-            address withdrawalQueue = IMultiVaultStorage(_mellowVault).subvaultAt(i).withdrawalQueue;
+            address withdrawalQueue = IMultiVaultStorage(_mellowVault)
+                .subvaultAt(i)
+                .withdrawalQueue;
 
-            uint256 claimable = IWithdrawalQueue(withdrawalQueue).claimableAssetsOf(claimer);
+            uint256 claimable = IWithdrawalQueue(withdrawalQueue)
+                .claimableAssetsOf(claimer);
             claimableAmounts[i] = claimable;
 
             if (claimable != 0) {
@@ -329,14 +397,15 @@ contract InceptionWstETHMellowV3Adapter is
             }
         }
 
-        return MellowV3AdapterClaimer(claimer).claim(
-            mellowClaimer,
-            _mellowVault,
-            claimableIndices,
-            withdrawalIndices,
-            address(this),
-            totalClaimable
-        );
+        return
+            MellowV3AdapterClaimer(claimer).claim(
+                mellowClaimer,
+                _mellowVault,
+                claimableIndices,
+                withdrawalIndices,
+                address(this),
+                totalClaimable
+            );
     }
 
     /**
@@ -360,16 +429,18 @@ contract InceptionWstETHMellowV3Adapter is
      * @param vault Address of the mellow vault to be removed
      * @param skipEmptyCheck Skip check vault to empty
      */
-    function removeVault(address vault, bool skipEmptyCheck) external onlyOwner {
+    function removeVault(
+        address vault,
+        bool skipEmptyCheck
+    ) external onlyOwner {
         require(vault != address(0), ZeroAddress());
         require(
-            skipEmptyCheck || (
-                getDeposited(vault) == 0 &&
-                pendingWithdrawalAmount(vault, true) == 0 &&
-                pendingWithdrawalAmount(vault, false) == 0 &&
-                _claimableWithdrawalAmount(vault, true) == 0 &&
-                _claimableWithdrawalAmount(vault, false) == 0
-            ),
+            skipEmptyCheck ||
+                (getDeposited(vault) == 0 &&
+                    pendingWithdrawalAmount(vault, true) == 0 &&
+                    pendingWithdrawalAmount(vault, false) == 0 &&
+                    _claimableWithdrawalAmount(vault, true) == 0 &&
+                    _claimableWithdrawalAmount(vault, false) == 0),
             VaultNotEmpty()
         );
 
@@ -394,7 +465,10 @@ contract InceptionWstETHMellowV3Adapter is
      * @param mellowVault Address of the vault
      * @param newAllocation New allocation amount
      */
-    function changeAllocation(address mellowVault, uint256 newAllocation) external onlyOwner {
+    function changeAllocation(
+        address mellowVault,
+        uint256 newAllocation
+    ) external onlyOwner {
         require(mellowVault != address(0), ZeroAddress());
 
         bool exists;
@@ -414,7 +488,10 @@ contract InceptionWstETHMellowV3Adapter is
      * @notice Claim rewards from Mellow protocol.
      * @dev Rewards distribution functionality is not yet available in the Mellow protocol.
      */
-    function claimRewards(address /*rewardToken*/, bytes memory /*rewardsData*/) external view onlyTrustee {
+    function claimRewards(
+        address /*rewardToken*/,
+        bytes memory /*rewardsData*/
+    ) external view onlyTrustee {
         // Rewards distribution functionality is not yet available in the Mellow protocol.
         revert("Mellow distribution rewards not implemented yet");
     }
@@ -424,7 +501,9 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Emergency flag for claimer
      * @return total Amount that can be claimed
      */
-    function claimableWithdrawalAmount(bool emergency) public view returns (uint256 total) {
+    function claimableWithdrawalAmount(
+        bool emergency
+    ) public view returns (uint256 total) {
         return _claimableWithdrawalAmount(emergency);
     }
 
@@ -433,37 +512,45 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
-    function _claimableWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
+    function _claimableWithdrawalAmount(
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             uint256 length;
             for (uint256 i = 0; i < mellowVaults.length; i++) {
-                length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+                length = IMultiVaultStorage(address(mellowVaults[i]))
+                    .subvaultsCount();
                 for (uint256 j = 0; j < length; j++) {
-                    IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                        address(mellowVaults[i])
-                    ).subvaultAt(j);
+                    IMultiVaultStorage.Subvault
+                        memory subvault = IMultiVaultStorage(
+                            address(mellowVaults[i])
+                        ).subvaultAt(j);
 
-                    total += IWithdrawalQueue(
-                        subvault.withdrawalQueue
-                    ).claimableAssetsOf(_emergencyClaimer);
+                    total += IWithdrawalQueue(subvault.withdrawalQueue)
+                        .claimableAssetsOf(_emergencyClaimer);
                 }
             }
 
             return total;
         }
 
-        for (uint256 claimerIndex = 0; claimerIndex < _pendingClaimers.length(); claimerIndex++) {
+        for (
+            uint256 claimerIndex = 0;
+            claimerIndex < _pendingClaimers.length();
+            claimerIndex++
+        ) {
             uint256 length;
             for (uint256 i = 0; i < mellowVaults.length; i++) {
-                length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+                length = IMultiVaultStorage(address(mellowVaults[i]))
+                    .subvaultsCount();
                 for (uint256 j = 0; j < length; j++) {
-                    IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                        address(mellowVaults[i])
-                    ).subvaultAt(j);
+                    IMultiVaultStorage.Subvault
+                        memory subvault = IMultiVaultStorage(
+                            address(mellowVaults[i])
+                        ).subvaultAt(j);
 
-                    total += IWithdrawalQueue(
-                        subvault.withdrawalQueue
-                    ).claimableAssetsOf(_pendingClaimers.at(claimerIndex));
+                    total += IWithdrawalQueue(subvault.withdrawalQueue)
+                        .claimableAssetsOf(_pendingClaimers.at(claimerIndex));
                 }
             }
         }
@@ -476,12 +563,16 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Emergency flag for claimer
      * @return total Total claimable amount
      */
-    function _claimableWithdrawalAmount(address mellowVault, bool emergency) internal view returns (uint256 total) {
+    function _claimableWithdrawalAmount(
+        address mellowVault,
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             uint256 length = IMultiVaultStorage(mellowVault).subvaultsCount();
             for (uint256 j = 0; j < length; j++) {
-                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(mellowVault)
-                    .subvaultAt(j);
+                IMultiVaultStorage.Subvault
+                    memory subvault = IMultiVaultStorage(mellowVault)
+                        .subvaultAt(j);
                 total += IWithdrawalQueue(subvault.withdrawalQueue)
                     .claimableAssetsOf(_emergencyClaimer);
             }
@@ -489,11 +580,16 @@ contract InceptionWstETHMellowV3Adapter is
             return total;
         }
 
-        for (uint256 claimerIndex = 0; claimerIndex < _pendingClaimers.length(); claimerIndex++) {
+        for (
+            uint256 claimerIndex = 0;
+            claimerIndex < _pendingClaimers.length();
+            claimerIndex++
+        ) {
             uint256 length = IMultiVaultStorage(mellowVault).subvaultsCount();
             for (uint256 j = 0; j < length; j++) {
-                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(mellowVault)
-                    .subvaultAt(j);
+                IMultiVaultStorage.Subvault
+                    memory subvault = IMultiVaultStorage(mellowVault)
+                        .subvaultAt(j);
                 total += IWithdrawalQueue(subvault.withdrawalQueue)
                     .claimableAssetsOf(_pendingClaimers.at(claimerIndex));
             }
@@ -506,8 +602,14 @@ contract InceptionWstETHMellowV3Adapter is
      * @notice Returns the total amount of pending withdrawals
      * @return total Amount of pending withdrawals
      */
-    function pendingWithdrawalAmount() public view override returns (uint256 total) {
-        return _pendingWithdrawalAmount(false) + _claimableWithdrawalAmount(false);
+    function pendingWithdrawalAmount()
+        public
+        view
+        override
+        returns (uint256 total)
+    {
+        return
+            _pendingWithdrawalAmount(false) + _claimableWithdrawalAmount(false);
     }
 
     /**
@@ -515,7 +617,8 @@ contract InceptionWstETHMellowV3Adapter is
      * @return Sum of emergency pending withdrawals, claimable withdrawals, and claimable amount
      */
     function pendingEmergencyWithdrawalAmount() public view returns (uint256) {
-        return _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
+        return
+            _pendingWithdrawalAmount(true) + _claimableWithdrawalAmount(true);
     }
 
     /**
@@ -523,18 +626,25 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Emergency flag for claimer
      * @return total Total pending withdrawal amount
      */
-    function _pendingWithdrawalAmount(bool emergency) internal view returns (uint256 total) {
+    function _pendingWithdrawalAmount(
+        bool emergency
+    ) internal view returns (uint256 total) {
         if (emergency) {
             uint256 length;
 
             for (uint256 i = 0; i < mellowVaults.length; i++) {
-                length = IMultiVaultStorage(address(mellowVaults[i])).subvaultsCount();
+                length = IMultiVaultStorage(address(mellowVaults[i]))
+                    .subvaultsCount();
                 for (uint256 j = 0; j < length; j++) {
-                    IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                        address(mellowVaults[i])
-                    ).subvaultAt(j);
+                    IMultiVaultStorage.Subvault
+                        memory subvault = IMultiVaultStorage(
+                            address(mellowVaults[i])
+                        ).subvaultAt(j);
 
-                    total += pendingWithdrawalAmount(address(mellowVaults[i]), emergency);
+                    total += pendingWithdrawalAmount(
+                        address(mellowVaults[i]),
+                        emergency
+                    );
                 }
             }
 
@@ -544,15 +654,16 @@ contract InceptionWstETHMellowV3Adapter is
         for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             uint256 length;
             for (uint256 j = 0; j < mellowVaults.length; j++) {
-                length = IMultiVaultStorage(address(mellowVaults[j])).subvaultsCount();
+                length = IMultiVaultStorage(address(mellowVaults[j]))
+                    .subvaultsCount();
                 for (uint256 k = 0; k < length; k++) {
-                    IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                        address(mellowVaults[j])
-                    ).subvaultAt(k);
+                    IMultiVaultStorage.Subvault
+                        memory subvault = IMultiVaultStorage(
+                            address(mellowVaults[j])
+                        ).subvaultAt(k);
 
-                    total += IWithdrawalQueue(subvault.withdrawalQueue).pendingAssetsOf(
-                        _pendingClaimers.at(i)
-                    );
+                    total += IWithdrawalQueue(subvault.withdrawalQueue)
+                        .pendingAssetsOf(_pendingClaimers.at(i));
                 }
             }
         }
@@ -566,17 +677,19 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Emergency claimer
      * @return total Amount of pending withdrawals for the vault
      */
-    function pendingWithdrawalAmount(address _mellowVault, bool emergency) public view returns (uint256 total) {
+    function pendingWithdrawalAmount(
+        address _mellowVault,
+        bool emergency
+    ) public view returns (uint256 total) {
         if (emergency) {
             uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
             for (uint256 i = 0; i < length; i++) {
-                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                    _mellowVault
-                ).subvaultAt(i);
+                IMultiVaultStorage.Subvault
+                    memory subvault = IMultiVaultStorage(_mellowVault)
+                        .subvaultAt(i);
 
-                total += IWithdrawalQueue(
-                    subvault.withdrawalQueue
-                ).pendingAssetsOf(_emergencyClaimer);
+                total += IWithdrawalQueue(subvault.withdrawalQueue)
+                    .pendingAssetsOf(_emergencyClaimer);
             }
 
             return total;
@@ -585,13 +698,12 @@ contract InceptionWstETHMellowV3Adapter is
         for (uint256 i = 0; i < _pendingClaimers.length(); i++) {
             uint256 length = IMultiVaultStorage(_mellowVault).subvaultsCount();
             for (uint256 j = 0; j < length; j++) {
-                IMultiVaultStorage.Subvault memory subvault = IMultiVaultStorage(
-                    _mellowVault
-                ).subvaultAt(j);
+                IMultiVaultStorage.Subvault
+                    memory subvault = IMultiVaultStorage(_mellowVault)
+                        .subvaultAt(j);
 
-                total += IWithdrawalQueue(
-                    subvault.withdrawalQueue
-                ).pendingAssetsOf(_pendingClaimers.at(i));
+                total += IWithdrawalQueue(subvault.withdrawalQueue)
+                    .pendingAssetsOf(_pendingClaimers.at(i));
             }
         }
 
@@ -621,7 +733,10 @@ contract InceptionWstETHMellowV3Adapter is
      * @return Sum of pending withdrawals, pending emergency withdrawals, claimable amounts
      */
     function inactiveBalance() public view override returns (uint256) {
-        return pendingWithdrawalAmount() + pendingEmergencyWithdrawalAmount() + claimableAmount();
+        return
+            pendingWithdrawalAmount() +
+            pendingEmergencyWithdrawalAmount() +
+            claimableAmount();
     }
 
     /**
@@ -629,12 +744,9 @@ contract InceptionWstETHMellowV3Adapter is
      * @param _mellowVault Address of the vault to check
      * @return Amount deposited in the vault
      */
-    function getDeposited(address _mellowVault)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getDeposited(
+        address _mellowVault
+    ) public view override returns (uint256) {
         IMellowVault mellowVault = IMellowVault(_mellowVault);
         uint256 balance = mellowVault.balanceOf(address(this));
         if (balance == 0) return 0;
@@ -648,7 +760,10 @@ contract InceptionWstETHMellowV3Adapter is
      * @param mellowVault Vault for conversion calculation
      * @return lpAmount Equivalent amount in LP tokens
      */
-    function amountToLpAmount(uint256 amount, IMellowVault mellowVault) public view returns (uint256 lpAmount) {
+    function amountToLpAmount(
+        uint256 amount,
+        IMellowVault mellowVault
+    ) public view returns (uint256 lpAmount) {
         return IERC4626(address(mellowVault)).convertToShares(amount);
     }
 
@@ -658,7 +773,10 @@ contract InceptionWstETHMellowV3Adapter is
      * @param mellowVault Vault for conversion calculation
      * @return Equivalent amount in underlying tokens
      */
-    function lpAmountToAmount(uint256 lpAmount, IMellowVault mellowVault) public view returns (uint256) {
+    function lpAmountToAmount(
+        uint256 lpAmount,
+        IMellowVault mellowVault
+    ) public view returns (uint256) {
         return IERC4626(address(mellowVault)).convertToAssets(lpAmount);
     }
 
@@ -676,7 +794,9 @@ contract InceptionWstETHMellowV3Adapter is
      * @notice Sets the implementation address for the claimer
      * @param newImplementation The address of the new implementation
      */
-    function setClaimerImplementation(address newImplementation) external onlyOwner {
+    function setClaimerImplementation(
+        address newImplementation
+    ) external onlyOwner {
         require(Address.isContract(newImplementation), NotContract());
         emit EmergencyClaimerSet(_claimerImplementation, newImplementation);
         _claimerImplementation = newImplementation;
@@ -698,9 +818,14 @@ contract InceptionWstETHMellowV3Adapter is
      * @param emergency Boolean indicating whether an emergency claimer is required
      * @return claimer The address of the claimer to be used
      */
-    function _getOrCreateClaimer(bool emergency) internal virtual returns (address claimer) {
+    function _getOrCreateClaimer(
+        bool emergency
+    ) internal virtual returns (address claimer) {
         if (emergency) {
-            return _emergencyClaimer != address(0) ? _emergencyClaimer : (_emergencyClaimer = _deployClaimer());
+            return
+                _emergencyClaimer != address(0)
+                    ? _emergencyClaimer
+                    : (_emergencyClaimer = _deployClaimer());
         }
 
         if (_availableClaimers.length > 0) {
@@ -732,13 +857,21 @@ contract InceptionWstETHMellowV3Adapter is
      * @return The address of the newly deployed MellowAdapterClaimer contract
      */
     function _deployClaimer() internal returns (address) {
-        require(_claimerImplementation != address(0), ClaimerImplementationNotSet());
+        require(
+            _claimerImplementation != address(0),
+            ClaimerImplementationNotSet()
+        );
 
         // deploy new beacon proxy and do init call
-        bytes memory data = abi.encodeWithSignature("initialize(address)", address(_asset));
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address)",
+            address(_asset)
+        );
         address claimer = address(new BeaconProxy(address(this), data));
 
-        (bool success,) = claimer.call(abi.encodeWithSignature("transferOwnership(address)", owner()));
+        (bool success, ) = claimer.call(
+            abi.encodeWithSignature("transferOwnership(address)", owner())
+        );
         require(success, TransferOwnershipFailed());
 
         emit ClaimerDeployed(claimer);
@@ -753,3 +886,4 @@ contract InceptionWstETHMellowV3Adapter is
         return _claimerImplementation;
     }
 }
+

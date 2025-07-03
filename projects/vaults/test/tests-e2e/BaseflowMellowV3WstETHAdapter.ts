@@ -1,15 +1,10 @@
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hardhat from "hardhat";
-import {
-  calculateRatio,
-  e18, impersonateWithEth,
-  setBlockTimestamp,
-  toWei,
-} from "../helpers/utils";
+import { calculateRatio, e18, impersonateWithEth, setBlockTimestamp, toWei } from "../helpers/utils";
 import { adapters, emptyBytes } from "../src/constants";
 import { abi, initVault, MAX_TARGET_PERCENT } from "../src/init-vault-new";
-import { testrunConfig } from '../testrun.config';
+import { testrunConfig } from "../testrun.config";
 
 const { ethers, network } = hardhat;
 const assetData = testrunConfig.assetData;
@@ -23,7 +18,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
   let snapshot;
   let params;
 
-  before(async function() {
+  before(async function () {
     if (process.env.ASSETS) {
       const assets = process.env.ASSETS.toLocaleLowerCase().split(",");
       if (!assets.includes(assetData.asset.name.toLowerCase())) {
@@ -31,6 +26,9 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
         this.skip();
       }
     }
+    console.log("==============================");
+    console.log(adapters.MellowV3);
+    console.log("==============================");
 
     await network.provider.send("hardhat_reset", [
       {
@@ -41,8 +39,17 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       },
     ]);
 
-    ({ iToken, iVault, ratioFeed, asset, iVaultOperator, mellowAdapter, mellowV3Adapter, symbioticAdapter, withdrawalQueue }
-      = await initVault(assetData, { adapters: [adapters.MellowV3] }));
+    ({
+      iToken,
+      iVault,
+      ratioFeed,
+      asset,
+      iVaultOperator,
+      mellowAdapter,
+      mellowV3Adapter,
+      symbioticAdapter,
+      withdrawalQueue,
+    } = await initVault(assetData, { adapters: [adapters.MellowV3] }));
 
     ratioErr = assetData.ratioErr;
     transactErr = assetData.transactErr;
@@ -57,14 +64,14 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
     snapshot = await helpers.takeSnapshot();
   });
 
-  after(async function() {
+  after(async function () {
     if (iVault) {
       await iVault.removeAllListeners();
     }
   });
 
-  describe("Base flow no flash", function() {
-    before(async function() {
+  describe("Base flow no flash", function () {
+    before(async function () {
       await snapshot.restore();
       await iVault.setTargetFlashCapacity(1n);
     });
@@ -72,7 +79,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
     let totalDeposited, delegatedMellow, undelegatedEpoch;
     let rewardsMellow = 0n;
 
-    it("Initial stats", async function() {
+    it("Initial stats", async function () {
       expect(await iVault.ratio()).to.be.eq(e18);
       expect(await iVault.totalAssets()).to.be.eq(0n);
       expect(await iVault.getTotalDeposited()).to.be.eq(0n);
@@ -81,7 +88,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(await iVault.getFreeBalance()).to.be.eq(0n);
     });
 
-    it("User can deposit to iVault", async function() {
+    it("User can deposit to iVault", async function () {
       totalDeposited = toWei(20);
       const expectedShares = totalDeposited; //Because ratio is 1e18 at the first deposit
       const tx = await iVault.connect(staker).deposit(totalDeposited, staker.address);
@@ -100,9 +107,8 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, 1n);
     });
 
-
-    it("Delegate to mellowVault#1", async function() {
-      const amount = (await iVault.getFreeBalance());
+    it("Delegate to mellowVault#1", async function () {
+      const amount = await iVault.getFreeBalance();
       expect(amount).to.be.gt(0n);
       const totalAssetsBefore = await iVault.totalAssets();
 
@@ -128,7 +134,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(await calculateRatio(iVault, iToken, withdrawalQueue)).to.be.closeTo(e18, ratioErr);
     });
 
-    it("Update ratio", async function() {
+    it("Update ratio", async function () {
       const ratio = await calculateRatio(iVault, iToken, withdrawalQueue);
       console.log(`Calculated ratio:\t\t\t${ratio.format()}`);
       await ratioFeed.updateRatioBatch([iToken.address], [ratio]);
@@ -136,9 +142,12 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(await iVault.ratio()).eq(ratio);
     });
 
-    it("Add rewards to Mellow protocol and estimate ratio", async function() {
+    it("Add rewards to Mellow protocol and estimate ratio", async function () {
       const ratioBefore = await calculateRatio(iVault, iToken, withdrawalQueue);
-      const totalDelegatedToBefore = await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress);
+      const totalDelegatedToBefore = await iVault.getDelegatedTo(
+        await mellowV3Adapter.getAddress(),
+        mellowVaults[0].vaultAddress,
+      );
       const totalDelegatedBefore = await iVault.getTotalDelegated();
       console.log(`Ratio before:\t\t\t${ratioBefore.format()}`);
       console.log(`Delegated to before:\t${totalDelegatedToBefore.format()}`);
@@ -147,7 +156,10 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       await wstETHAsset.connect(staker3).transfer(mellowVaults[0].vaultAddress, e18);
 
       const ratioAfter = await calculateRatio(iVault, iToken, withdrawalQueue);
-      const totalDelegatedToAfter = await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress);
+      const totalDelegatedToAfter = await iVault.getDelegatedTo(
+        await mellowV3Adapter.getAddress(),
+        mellowVaults[0].vaultAddress,
+      );
       const totalDelegatedAfter = await iVault.getTotalDelegated();
 
       rewardsMellow += totalDelegatedToAfter - totalDelegatedToBefore;
@@ -159,14 +171,13 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(totalDelegatedAfter - totalDelegatedBefore).to.be.eq(totalDelegatedToAfter - totalDelegatedToBefore);
     });
 
-
-    it("Estimate the amount that user can withdraw", async function() {
+    it("Estimate the amount that user can withdraw", async function () {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       expect(assetValue).closeTo(totalDeposited + rewardsMellow, transactErr * 10n);
     });
 
-    it("User can withdraw all", async function() {
+    it("User can withdraw all", async function () {
       const shares = await iToken.balanceOf(staker.address);
       const assetValue = await iVault.convertToAssets(shares);
       console.log(`Shares:\t\t\t\t\t\t\t${shares.format()}`);
@@ -192,7 +203,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
     let undelegateClaimer1;
     let undelegateClaimer2;
 
-    it("Undelegate from Mellow", async function() {
+    it("Undelegate from Mellow", async function () {
       const totalAssetsBefore = await iVault.totalAssets();
       const totalDepositedBefore = await iVault.getTotalDeposited();
       const totalDelegatedBefore = await iVault.getTotalDelegated();
@@ -200,7 +211,10 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       console.log(`Total deposited before:\t\t\t${totalDepositedBefore.format()}`);
       console.log(`Total delegated before:\t\t\t${totalDelegatedBefore.format()}`);
       console.log(`Total assets before:\t\t\t${totalAssetsBefore.format()}`);
-      console.log("Mellow1 delegated", await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress));
+      console.log(
+        "Mellow1 delegated",
+        await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress),
+      );
 
       const assets1 = await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress);
 
@@ -208,20 +222,27 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       const tx = await iVault
         .connect(iVaultOperator)
         .undelegate(undelegatedEpoch, [
-          [await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress, assets1, []]
+          [await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress, assets1, []],
         ]);
 
       const receipt = await tx.wait();
-      const events = receipt.logs?.filter(log => log.address === mellowV3Adapter.address)
+      const events = receipt.logs
+        ?.filter(log => log.address === mellowV3Adapter.address)
         .map(log => mellowV3Adapter.interface.parseLog(log));
       expect(events.length).to.be.eq(2);
       undelegateClaimer1 = events[1].args["claimer"];
 
-      console.log("Mellow1 delegated", await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress));
+      console.log(
+        "Mellow1 delegated",
+        await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress),
+      );
 
       const totalAssetsAfter = await iVault.totalAssets();
       const totalDelegatedAfter = await iVault.getTotalDelegated();
-      const totalDelegatedTo = await iVault.getDelegatedTo(await mellowV3Adapter.getAddress(), mellowVaults[0].vaultAddress);
+      const totalDelegatedTo = await iVault.getDelegatedTo(
+        await mellowV3Adapter.getAddress(),
+        mellowVaults[0].vaultAddress,
+      );
       const totalDepositedAfter = await iVault.getTotalDeposited();
       console.log(`Total assets after:\t\t\t${totalAssetsAfter.format()}`);
       console.log(`Total delegated after:\t\t${totalDelegatedAfter.format()}`);
@@ -232,7 +253,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       // expect(totalDepositedAfter).to.be.closeTo(totalDepositedBefore, transactErr * 2n); //Total deposited amount did not change
     });
 
-    it("Claim from Mellow", async function() {
+    it("Claim from Mellow", async function () {
       await helpers.time.increase(1209900);
 
       const pendingWithdrawalsMellowBefore = await iVault.getPendingWithdrawals(await mellowV3Adapter.getAddress());
@@ -241,13 +262,9 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
 
       const params1 = abi.encode(["address", "address"], [mellowVaults[0].vaultAddress, undelegateClaimer1]);
 
-      await iVault.connect(iVaultOperator)
-          .claim(
-            undelegatedEpoch,
-            [mellowV3Adapter.address],
-            [mellowVaults[0].vaultAddress],
-            [[params1]],
-          );
+      await iVault
+        .connect(iVaultOperator)
+        .claim(undelegatedEpoch, [mellowV3Adapter.address], [mellowVaults[0].vaultAddress], [[params1]]);
 
       const withdrawalEpochAfter = await withdrawalQueue.withdrawals(1);
       const totalAssetsAfter = await iVault.totalAssets();
@@ -257,10 +274,9 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
 
       // expect(totalAssetsAfter - totalAssetsBefore).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
       // expect(withdrawalEpochAfter[2] - withdrawalEpochBefore[2]).to.be.closeTo(pendingWithdrawalsMellowBefore, transactErr);
-
     });
 
-    it("Staker is able to redeem", async function() {
+    it("Staker is able to redeem", async function () {
       const pendingWithdrawalByStaker = await iVault.getPendingWithdrawalOf(staker2.address);
       const redeemReserve = await iVault.redeemReservedAmount();
       const freeBalance = await iVault.getFreeBalance();
@@ -273,8 +289,7 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect((await iVault.isAbleToRedeem(staker2.address))[0]).to.be.true;
     });
 
-
-    it("Redeem withdraw", async function() {
+    it("Redeem withdraw", async function () {
       const balanceBefore = await asset.balanceOf(staker2.address);
       const staker2PWBefore = await iVault.getPendingWithdrawalOf(staker2.address);
 
@@ -301,6 +316,6 @@ describe(`Baseflow using adapter for Mellow MultiVault ${assetData.asset.name}`,
       expect(totalDepositedAfter).to.be.closeTo(0n, transactErr);
       expect(totalAssetsAfter).to.be.closeTo(0n, transactErr);
     });
-
   });
 });
+
