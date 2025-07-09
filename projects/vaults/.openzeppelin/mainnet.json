@@ -163,7 +163,12 @@
     {
       "address": "0xbcCEe926fd1295B7204C6d3536c7725F12D9Bee6",
       "txHash": "0xc6a4725ac4132e71978a27bcd0f0ac3cc8f9dde4ac2c8707a885a33f96751591",
-       "kind": "transparent"
+      "kind": "transparent"
+    },
+    {
+      "address": "0x3c99910D7FAE79D244c28e1865E16dffa68dD129",
+      "txHash": "0xfd0a4c4289cb36ad058d647f87051f22f58b20496774f819a6ff3b715cc5619f",
+      "kind": "transparent"
     }
   ],
   "impls": {
