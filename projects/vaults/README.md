@@ -85,8 +85,8 @@ Additionally, the corresponding _RateProviders_ were deployed for all LRT (Incep
 - [x] [sFRAX](https://etherscan.io/address/0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32): Staked FRAX
     - [InsFraxVault](https://etherscan.io/address/0xeFaF124849b11b513C35350CD8643d29DE49c2ba).
     - [insFRAX](https://etherscan.io/address/0x50253dc4a01c6408Fab9646e804FCbFDb74e3E4c).
-    - [InsFRAXRateProvider](https://etherscan.io/address/0xD8554b2075E9b403d26c8cC444B2dd3b929162c2).
-    - [InsFRAXRateProvider](https://fraxscan.com/address/0xDA9B11Cd701e10C2Ec1a284f80820eDD128c5246).
+    - [InsFRAXRateProvider - ETH](https://etherscan.io/address/0xD8554b2075E9b403d26c8cC444B2dd3b929162c2).
+    - [InsFRAXRateProvider - FRAX](https://fraxscan.com/address/0xDA9B11Cd701e10C2Ec1a284f80820eDD128c5246).
 - [x] [lsETH](https://etherscan.io/address/0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549): Liquid Staked ETH.
     - [InlsEthVault](https://etherscan.io/address/0x6E17a8b5D33e6DBdB9fC61d758BF554b6AD93322).
     - [InlsETH](https://etherscan.io/address/0x94B888E11a9E960A9c3B3528EB6aC807B27Ca62E).
