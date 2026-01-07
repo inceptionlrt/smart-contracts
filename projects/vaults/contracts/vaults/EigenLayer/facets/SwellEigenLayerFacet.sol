@@ -280,7 +280,7 @@ contract SwellEigenLayerFacet is InceptionVaultStorage_EL {
                 restakers[i] == restaker &&
                 !delegationManager.isDelegated(restakers[i])
             ) {
-                restakers[i] == _MOCK_ADDRESS;
+                restakers[i] = _MOCK_ADDRESS;
                 break;
             }
         }
